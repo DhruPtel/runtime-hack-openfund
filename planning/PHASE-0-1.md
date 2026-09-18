@@ -411,9 +411,11 @@ hash.
 
 **Tradeable** means all three of: a quote at the intended size succeeded; quote
 age is within bound; and impact is either known and within limit, **or null — and
-null blocks**. There is no depth term. Tokenized stocks have no AMM pool of their
-own, so there is no depth number to read, and a filter gating on one would exclude
-every RFQ-tradeable stock.
+null blocks**. There is no depth term in tradeability. Tokenized stocks do have
+AMM pools (F0.4.3 — SPY holds $9.16M in one USDG pool), but execution is RFQ
+against USDG rather than against those pools, so pool depth says nothing about
+our fill. Depth is used for one thing only: grading the GeckoTerminal
+corroborator in 1.4 (0.4 checkpoint decision).
 
 **Artifact:** a real snapshot JSON on disk plus its hash.
 
