@@ -203,6 +203,11 @@ def main() -> int:
     capture = _capture.call(
         label="analyst-call", url=f"{GATEWAY}/chat/completions",
         header_name="X-API-Key", header_value=key, max_body_chars=30000,
+        # `_capture`'s 20s default is right for the read probes it was written
+        # for and wrong for inference: the first attempt at this measurement was
+        # cut off client-side at 20,114 ms while the call was still running, and
+        # was billed anyway (F0.9.3). An analyst call needs a budget in minutes.
+        timeout=180,
         json_body={
             "model": MODEL,
             "messages": [{"role": "system", "content": system},

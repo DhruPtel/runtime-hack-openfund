@@ -2337,3 +2337,216 @@ the issuer's control, not ours.
 - The 4663 explorer is behind Cloudflare, so there is no enumeration of all
   tokens on the chain — "no other token is behind the issuer's beacon" is **not**
   established, only that none of the 381 checked is anomalous.
+
+---
+
+## 0.9 — Analyst cost
+
+**Date:** 2026-09-18 · **Method:** `PYTHONPATH=src python3 -m probes.llm_cost --confirm` ·
+**Captures:** `probes/out/llm_cost.json`
+
+> **Every number below is a FLOOR, not a forecast, and this caveat is the
+> finding's first line rather than its last.** `planning/PHASE-0-1.md` relocated
+> this unit to 1.7 because snapshot bytes dominate the token count and no
+> snapshot exists until 1.6. The prompt here carries **6** hand-assembled assets;
+> the admissible universe is **35** markable ones (0.4 decision) out of 194.
+> F0.9.4 extrapolates the gap. Quoting the cost-per-cycle below as "the analyst
+> cost" would mislead.
+
+### F0.9.1 — One analyst call: 1,793 in, 982 out, $0.013406, 58 seconds
+
+**Confidence: measured.**
+
+`claude-sonnet-5`, one call, temperature 0, `max_tokens` 2000, a rough
+price-trend brief over six assets built from real 0.4 values.
+
+| | |
+|---|---|
+| Input tokens | **1,793** |
+| Output tokens | **982** |
+| Total tokens | 2,775 |
+| **Latency** | **58,070 ms** |
+| Cost | **$0.013406** |
+| Cached tokens | 0 |
+
+Cost checks out against the published rate exactly: 1,793 × $2/M + 982 × $10/M =
+$0.013406, and the credit balance moved by precisely that — `2.813382 →
+2.799976`. **The published price list, the response's `usage` block and the
+credit balance agree to the last digit.**
+
+**58 seconds is the number that should worry a cycle designer, not the cost.**
+`config/models.json` leaves `worker_deadline_seconds` and
+`transport_timeout_seconds` null. A single analyst on six assets took nearly a
+minute; four in parallel plus a risk call that must read all four reports will
+not fit inside a naive 30-second budget, and it dwarfs the ~4.6 s x402 round trip
+(F0.7b.3), which is why the handler must serve a cached record rather than run a
+cycle.
+
+**The model is provisional.** `config/models.json` has `analyst_model: null`,
+pinned at 2.4 and informed by this unit, so `claude-sonnet-5` is a defensible
+mid-tier pick and not a decision. F0.9.5 prices the same token counts across the
+catalogue so nothing here depends on it.
+
+### F0.9.2 — `/v1/usage` was observed going *backwards*
+
+**Confidence: measured. Verdict: fail**, against using it as a per-call check.
+
+Two calls were made (see F0.9.3). `/v1/usage` was read repeatedly around them:
+
+| When | `totalRequests` reported |
+|---|---|
+| shortly after call 1 | **0** |
+| ~a minute later | **1** |
+| immediately before call 2 | **0** ← *went backwards* |
+| ~8 s after call 2 | **2** |
+
+The aggregate is **eventually consistent and not monotonic as observed**. It
+reported a call, then stopped reporting it, then reported both. The final state
+is correct — 2 requests, 3,586 input, 1,846 output, **$0.025632**, exactly the sum
+of the two calls — so nothing is lost; it simply cannot be trusted at a point in
+time.
+
+**Mechanism, inferred not measured:** the gateway documentation states that "each
+gateway instance caches independently" when describing budget enforcement, which
+would produce exactly this if reads land on instances with different views.
+
+**Consequence for 6.3, and it sharpens F0.6.4.** A before/after delta around one
+call is **not** a sound reconciliation technique: the "before" read can already
+be stale and the delta can capture calls that are not the ones being measured —
+here it captured two calls for one. Cost reconciliation must compare a *settled*
+window well after the fact, never a delta taken across an individual call. The
+credit balance, by contrast, moved by the exact amount both times and did not go
+backwards.
+
+### F0.9.3 — The first call was billed and measured nothing, and that is a probe defect worth recording
+
+**Confidence: measured.**
+
+The first attempt returned `HTTP None` after **20,114 ms** — `probes/_capture.py`
+carries a 20-second default timeout, which is right for the read probes it was
+written for and far too short for inference. The call **completed server-side and
+was billed $0.012226**; only the client gave up. It is visible in the aggregate
+as 1,793 input / 864 output tokens.
+
+**Two things follow.**
+
+A timeout that fires client-side does **not** cancel the work or the charge, so a
+transport timeout in the analyst path costs money and returns nothing. Unit 1.3's
+HTTP client and 2.4's `worker_deadline_seconds` must be set from the 58-second
+measurement above, not from a default, and a timed-out analyst call must be
+booked as a cost with no report rather than treated as a non-event.
+
+**The two calls also differ.** Same prompt, same model, `temperature: 0` — and
+output came back **864 tokens** the first time and **982** the second, a 14%
+spread. That is direct corroboration of `tracker/LESSONS.md`
+(2026-09-17, *invariant 6 reworded*): seeding and zero temperature do not produce
+comparable model runs, and deterministic replay has to come from **recorded
+outputs**. Cost per call is therefore a distribution, not a constant, and a
+budget built on one observation should carry headroom.
+
+**Total spend for this unit: $0.025632**, two calls, balance $2.825608 →
+$2.799976.
+
+### F0.9.4 — Multiplied out, with the extrapolation kept separate from the measurement
+
+**Confidence: measured for the 6-asset column; the 35-asset column is
+arithmetic, not a measurement.**
+
+Roster is four analysts plus one risk call (`config/analysts.json`;
+`planning/PHASE-0-1.md` 1.7), daily cadence.
+
+| | 6 assets (**measured**) | 35 assets (**extrapolated**) |
+|---|---|---|
+| Input tokens / call | 1,793 | ~6,400 |
+| Cost / analyst call | **$0.013406** | ~$0.023 |
+| Cost / cycle (5 calls) | **$0.067030** | ~$0.117 |
+| Cost / day | **$0.067030** | ~$0.117 |
+| Cost / 30 days | **$2.011** | ~$3.51 |
+
+The extrapolation splits the measured prompt into ~847 fixed tokens and ~158
+tokens per asset (2.02 chars/token observed), then scales to 35. **It assumes
+output length does not grow with asset count, which it certainly will**, so even
+the right-hand column is a floor. A real snapshot also carries provenance, quote
+data and a content hash per asset that this hand-assembled block does not.
+
+**Against the $0.05 x402 price:** one cycle costs **1.34 decision records** at the
+measured floor, or **~2.3** at the 35-asset extrapolation. The endpoint must sell
+between one and three records a day merely to cover inference — before the $3.00
+credit purchase's 5.8% funding overhead (F0.7b.10), before gas, and before
+anything is earned. **The $0.05 price is not confirmed by this unit**; it is shown
+to need a buyer volume the project has never observed, since no third party has
+ever paid our endpoint (F0.7d.8). Whether the price moves is a decision for the
+0.7 checkpoint and not this probe's to take.
+
+### F0.9.5 — Model choice swings the budget 139×, and it dominates every other lever
+
+**Confidence: measured (the token counts) × published rates.**
+
+Same 1,793 in / 982 out priced across the catalogue:
+
+| Model | $/call | $/cycle (5) | $/30 days |
+|---|---|---|---|
+| `gpt-5-nano` | 0.000482 | 0.002412 | **0.07** |
+| `glm-5.3-flash` | 0.000760 | 0.003800 | 0.11 |
+| `gemini-3-flash` | 0.003842 | 0.019213 | 0.58 |
+| `claude-haiku-4.5` | 0.006703 | 0.033515 | 1.01 |
+| **`claude-sonnet-5`** (measured) | **0.013406** | **0.067030** | **2.01** |
+| `claude-opus-5` | 0.033515 | 0.167575 | 5.03 |
+| `claude-fable-5.1` | 0.067030 | 0.335150 | **10.05** |
+
+The gateway lists 68 text models spanning $0.05–$10 per million input tokens. **A
+monthly budget of $0.07 or $10.05 is the same fund with the same prompt**, so
+unit 2.4's model pin is worth more than any prompt optimisation, and the
+`analyst_model` null in `config/models.json` is the single most expensive
+unresolved value in the config tree.
+
+### F0.9.6 — The analyst abstained on all six, correctly, and that is a snapshot-design signal
+
+**Confidence: measured. Not a capability claim.**
+
+Output quality was explicitly not the subject, and this is recorded because of
+what it says about the *snapshot*, not the model. Every one of the six assets came
+back `NO_CALL`, with the reasoning that a single block-pinned reading carries no
+history:
+
+> *"Snapshot provides only a single point-in-time feed_usd/quote_usd/
+> corroborator_usd reading with no historical price series, so no trend or
+> 'recent price action' can be established."*
+
+**A price-trend analyst cannot function on a single-block snapshot**, which is
+what `planning/PLAN.md` §2 invariant 2 specifies. Either the snapshot carries a
+time series, or the roster's `price-trend` scope has nothing to answer and
+checkpoint 2.1 should replace it. That is a real input to 1.6 and 2.1 and it cost
+nothing to learn — but it is one observation from one model on one prompt, and it
+is evidence about the prompt we wrote, not proof about the design.
+
+It also confirms `NO_CALL` is reachable in practice rather than theoretically
+(invariant 6), which the aggregator must handle as a total function.
+
+### What 0.9 changes
+
+| Change | Where |
+|---|---|
+| Analyst cost floor $0.0134/call, $0.067/cycle, $2.01/30d at Sonnet 5 | 6.3, 7.2; `config/thresholds.json` |
+| Latency 58 s per call sets `worker_deadline_seconds`, not a default | 2.4; `config/models.json` |
+| `/v1/usage` is non-monotonic; reconcile settled windows, never per-call deltas | 6.3, 2.5 |
+| A client timeout still bills; book it as cost with no report | 1.3, 2.4, 6.3 |
+| Model pin is the dominant cost lever — 139× across the catalogue | 2.4; `config/models.json` |
+| $0.05 x402 price needs 1.3–2.3 records/day just to cover inference | 0.7 checkpoint, 7.2 |
+| A single-block snapshot gives a trend analyst nothing | 1.6, 2.1; `config/analysts.json` |
+
+### Method limitations
+
+- **Two calls, one model, one prompt, one day.** The 14% output spread between
+  two identical calls is the only variance evidence there is.
+- The 35-asset column is arithmetic on a per-asset token estimate, not a
+  measurement, and assumes output does not grow with input.
+- The prompt is a rough brief, not the brief; checkpoint 2.1 settles that, and
+  the risk call — which reads all four reports plus the sized plan — is priced
+  here as if it were an analyst call, which it is not.
+- No retries, no cache reads (`cached_tokens: 0` both calls). Prompt caching
+  would change the economics materially and is untested.
+- The response carried an undocumented `buyer_cost_micro: 6033` — $0.006033
+  against the $0.013406 charged. **Unresolved:** it may be the gateway's own
+  wholesale cost, implying roughly a 2.2× markup, but the field is undocumented
+  and nothing was measured that confirms the interpretation.
