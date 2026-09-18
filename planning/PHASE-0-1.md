@@ -912,16 +912,38 @@ decision. **Size:** bigger than drafted.
 
 **Goal:** the demo never depends on the network.
 
-**Build:** a fixture writer that captures raw source responses (not just the
-normalized snapshot), and a replay mode that rebuilds from them.
+**Build:** a fixture writer that captures raw source responses, not just the
+normalized snapshot, and a replay mode that rebuilds from them. What the record
+adds:
 
-**Artifact:** `fixtures/` with at least one full capture.
+- **Fixtures are the only historical reproducibility.** The configured RPC is
+  the public endpoint, which is documented to carry no archive data (LESSONS
+  2026-09-17), and nothing in Phase 0 measured otherwise (1.3).
+- **Capture the series.** With history in the snapshot (invariant 2), a fixture
+  holds each asset's series exactly as fetched: chain reads at the pinned block,
+  or offchain bodies with their own source times.
+- **Capture the offchain sources whole.** GeckoTerminal and Bankr quotes are not
+  block-pinned. Replay reproduces what was captured and never re-fetches, so
+  live-versus-replay equality holds against the same capture, not against a
+  later live fetch.
+- **Reference the pinned inputs; don't copy them.** They already sit in
+  `config/registry/` (1.2) and are referenced by sha256.
+- **Replay never refreshes a fetch time.** Source and fetch time come from the
+  capture.
+- **Captures pass through the redaction derived from the credential table**
+  (0.1). The RPC URL is itself a declared credential.
+
+**Artifact:** `fixtures/snapshots/` with at least one full capture.
 
 **Done when:** live and replayed builds produce identical hashes with the network
 disabled.
 
 **Checkpoint:** you watch it build offline. Judge how much of the demo should run
 from fixtures versus live.
+
+**Changed by:** the 2026-09-17 RPC lesson, the price-history decision, 1.2's
+pinned snapshots, and 0.1's redaction. **Size:** bigger than drafted, by the
+series.
 
 ---
 
