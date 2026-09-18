@@ -214,3 +214,50 @@ by prose, and probe 0.2 verifies the toggles against the live surfaces rather
 than trusting the console.
 **Affects:** 0.2, 4.12 (the isolation test now proves a per-key rather than a
 per-account boundary), planning/PLAN.md §6 and §13.
+
+## 2026-09-17 — Probe 0.2: key scoping is by capability, not by surface
+`BANKR_LLM_KEY`, scoped "gateway only" in planning/PLAN.md §6, returned 200 and a
+full portfolio from `GET /wallet/portfolio`; both Bankr keys reached the Agent
+API's job endpoint; and every authorized call resolved to the same wallet
+(`research/findings.md` F0.2.2–F0.2.3). Scoping on this account separates
+*reading from transacting* via the Read Only toggle, not one surface from
+another, so §6's scope column now states the toggles rather than a surface. This
+does not breach invariant 1 — read access to a portfolio is not spend authority,
+and the analyst role could already read holdings via `BANKR_KEY_READ` — but it
+does retire planning/PLAN-technical-review.md finding 2 as a risk, since with one
+account there is no second portfolio to mistake for the execution wallet.
+**Affects:** planning/PLAN.md §6, `src/fund/credentials.py`, 4.12.
+
+## 2026-09-17 — Probe 0.2 contradicts the openclaude gateway-header finding
+`research/openclaude.md`'s headline correction was that the LLM gateway "does
+**not** take `Authorization: Bearer`. It takes `X-API-Key`," documented as a
+named protocol exception alongside Azure's. Measured: `Authorization: Bearer`
+reaches the gateway and returns a byte-identical response to `X-API-Key`, and the
+same holds on the wallet and agent surfaces, with a never-issued key refused 401
+on all three to prove the header is read at all. The report's evidence was
+`openclaude`'s own client code — honest evidence about what that client *sends*,
+over-read into a claim about what the gateway *accepts*; we keep sending
+`X-API-Key` because it is what both discovery reports observed in production, but
+it is a preference now, not a constraint.
+**Affects:** planning/PLAN.md §6; the reliability weighting we give a scoped
+negative in any discovery report.
+
+## 2026-09-17 — Probe 0.2: Agent API toggle is unresolved, and the check changed
+Unit 0.2's done-condition required confirming the Agent API is **off** for both
+Bankr keys, but `GET /agent/job/{unissued}` returns 404 "Job not found or you
+don't have permission to access it" — a body that conflates the two outcomes the
+check exists to separate, where the gateway by contrast names the missing toggle
+in an explicit 403. Settling it would need `POST /agent/prompt`, a write that
+consumes the daily quota, for a surface nothing in the system calls. The
+done-condition now asserts the property we actually care about — no call to
+`/agent/prompt` exists in the codebase — rather than a toggle we cannot observe.
+**Affects:** 0.2 done-condition in planning/PHASE-0-1.md.
+
+## 2026-09-17 — Probe 0.2: the fund wallet and the LLM balance are both empty
+The portfolio reports zero on every chain (`base`, `robinhood`, `mainnet`,
+`polygon`), and every gateway call returns `402 insufficient_credits`
+(`research/findings.md` F0.2.6–F0.2.7). Nothing is wrong with the code or the
+keys; the account simply has no funds and no inference credits, so §11's "~$200
+capital" is aspirational until it is funded. Blocks probe 0.3's realistic $25
+quote, probe 0.5, unit 1.7's cost measurement, and all of Phase 2.
+**Affects:** 0.3, 0.5, 0.6, 1.7, Phase 2, Phase 5; planning/PLAN.md §11.
