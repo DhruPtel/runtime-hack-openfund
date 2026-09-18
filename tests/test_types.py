@@ -732,3 +732,22 @@ def _leaves(node):
             yield from _leaves(value)
     else:
         yield node
+
+
+def test_corroborator_volume_must_be_usd():
+    gecko = Source("geckoterminal", "/networks/robinhood/tokens/multi")
+    def volume(value):
+        return Observation(value=value, source=gecko, source_time=None,
+                           fetch_time=Instant.from_seconds(T0), block=None,
+                           status=FetchStatus.OK)
+    base = tsla_entry()
+    ok = SnapshotEntry(asset=base.asset, feed_reading=None, series=(), corroboration=None,
+                       corroborator_volume=volume(Fixed.parse("2190000", USD)),
+                       divergence=None, quote=None,
+                       universe_status=UniverseStatus.NOT_TRADEABLE, universe_reason="no quote")
+    roundtrip(ok)
+    with pytest.raises(ValueError):
+        SnapshotEntry(asset=base.asset, feed_reading=None, series=(), corroboration=None,
+                      corroborator_volume=volume(Amount(1, 18, TSLA)), divergence=None,
+                      quote=None, universe_status=UniverseStatus.NOT_TRADEABLE,
+                      universe_reason="no quote")

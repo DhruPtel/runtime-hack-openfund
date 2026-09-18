@@ -959,6 +959,10 @@ class SnapshotEntry:
         if self.quote is not None and self.quote.ok and (
                 not isinstance(self.quote.value, Quote) or self.quote.value.buy.asset != asset):
             raise ValueError("the quote buys the entry's asset")
+        volume = self.corroborator_volume
+        if volume is not None and volume.ok and (
+                not isinstance(volume.value, Fixed) or volume.value.unit != USD):
+            raise ValueError("corroborator volume is USD: the $1M tier reads it (1.4)")
         _is("divergence", self.divergence, Fixed, optional=True)
         if self.divergence is not None and self.divergence.unit != BPS:
             raise ValueError("divergence is in basis points")
