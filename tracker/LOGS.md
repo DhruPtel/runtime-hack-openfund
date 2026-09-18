@@ -120,7 +120,7 @@ rather than assumed.
 
 
 ## Testnet — can chain 46630 host an execution demo?
-**Date:** 2026-09-18 · **Commit:** uncommitted
+**Date:** 2026-09-18 · **Commit:** 0d36743
 
 Built `probes/testnet.py`, an out-of-order read-only probe run because 0.5 closed
 the mainnet stock gate and testnet was still open at the Phase 1 gate: it
@@ -141,7 +141,7 @@ the Robinhood testnet spellings is absence and not a wrong guess).
 
 
 ## 0.6 — Credits and usage
-**Date:** 2026-09-18 · **Commit:** uncommitted
+**Date:** 2026-09-18 · **Commit:** 0d36743
 
 Built `probes/credits.py`, which reads `GET /v1/credits` and `GET /v1/usage` with
 `BANKR_LLM_KEY` across six `days` values, carrying forward probe 0.2's two
@@ -159,7 +159,7 @@ declared credential value appears in the findings file.
 
 
 ## 0.7 ▶ — x402 round trip
-**Date:** 2026-09-18 · **Commit:** uncommitted
+**Date:** 2026-09-18 · **Commit:** 906041c
 
 Checked first that no endpoint already existed on this wallet (`stockwatch` is
 gone), then deployed `probes/x402/roundtrip/index.ts` — a handler that returns a
