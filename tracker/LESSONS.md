@@ -806,3 +806,25 @@ things. That is 2.4's decision, and it does not affect 1.7, which makes single
 calls with no runner.
 **Affects:** 1.3, 1.7, 1.10, 1.11, 2.4; `config/thresholds.json`,
 `config/models.json`, `config/mandate.json`.
+
+## 2026-09-18 — Unit 1.1 narrowed: six types wait for the units that design them
+`planning/PHASE-0-1.md` 1.1 listed ten types, including `AnalystReport`,
+`Proposal`, `Plan`, `Decision`, `JournalEvent` and `Statement`. Building 1.1
+found that nothing in the record fixes those six shapes. Worse, PLAN 2.1
+requires the report format to be designed by hand "before any code", so an
+`AnalystReport` defined in Phase 1 would pre-empt that checkpoint, and the other
+five would be guesses. A type that reads well but cannot express the case it
+later meets is the failure 1.1 exists to avoid.
+
+1.1 therefore defines what the record *has* fixed:
+- the snapshot side — observations, series, assets, quotes, holdings, the
+  snapshot;
+- `Order`, with its execution evidence shaped by F0.10.3.
+
+The six wait for their units: `AnalystReport` for 2.1–2.2, `Proposal` for 3.1,
+`Plan` for 3.3, `Decision` for 3.7, `JournalEvent` for 4.6, and `Statement` for
+6.1. The facts already fixed for them stay where they are recorded. For
+example, chain events carry a UserOperation hash (F0.10.3), and cost lines carry
+`is_estimate` (F0.6.4); `core/types.py` supplies the leaf types those facts need.
+**Affects:** 1.1, 2.1–2.2, 3.1, 3.3, 3.7, 4.6, 6.1; `planning/PHASE-0-1.md` 1.1,
+`planning/PLAN.md` §8, `planning/CODEBASE.md` §2.
