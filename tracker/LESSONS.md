@@ -618,3 +618,20 @@ custodial wallet (F0.7e.4). So "the CLI works" was only ever evidence about
 Bankr users. This is the lesson F0.2.1 and F0.6.1 already taught: a negative
 about the packages examined was recorded as a negative about the ecosystem.
 **Affects:** 0.7 checkpoint, 7.2, 7.3, the pitch; supersedes F0.7.3's headline.
+
+## 2026-09-18 — 0.9 was run in Phase 0 after all, as a floor; 1.7 still owns the number
+The 2026-09-17 entry relocated the analyst-cost probe to unit 1.7, because
+snapshot bytes dominate the token count and no snapshot exists before 1.6, and
+`planning/PHASE-0-1.md` added that "the 0.9 number is not reused". 0.9 was run
+on 2026-09-18 regardless, on six hand-assembled assets with every figure labelled
+a floor (`research/findings.md` §0.9), and nothing recorded the change of plan at
+the time. It found three things 1.7 would otherwise have met late:
+- 58 s per call, against deadlines that are still null in config (F0.9.1);
+- a client-side timeout is still billed (F0.9.3);
+- `/v1/usage` can go backwards (F0.9.2).
+
+It also found one thing 1.7 could not have found in time: a single-block
+snapshot gives a trend analyst nothing to answer (F0.9.6). The relocation itself
+is unchanged. 1.7 still measures against the real snapshot, and 0.9's numbers
+are quoted only as floors.
+**Affects:** 0.9, 1.7, 2.4, 6.3; `planning/PHASE-0-1.md` 0.9, `planning/ROADMAP.md`.
