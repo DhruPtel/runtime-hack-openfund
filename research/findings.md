@@ -356,3 +356,261 @@ came from `https://docs.bankr.bot/wallet-api/swap/`, read 2026-09-17 —
 | Request `amount` is human-readable; adapter owns conversion | 1.5 |
 | HTTP client must send a User-Agent | 1.3 |
 | `swapImpactBps` vs `priceImpactBps` distinction unproven | re-run at 1.5 |
+
+---
+
+## 0.4 — Chainlink equity feeds, coverage, and the multiplier
+
+**Date:** 2026-09-18 · **Method:** `PYTHONPATH=src python3 -m probes.feed` ·
+**Captures:** `probes/out/feed.json` · **Pinned block:** 66,353,908 (`0x3f47af4`)
+on chain 4663
+
+> **This unit opened by correcting the previous session's own record.** At the
+> close of 0.3 the directory was fetched, reported 57 feeds, and four were
+> sampled — BTC, ETH, LINK, USDG. No equity feed was seen, and `tracker/LOGS.md`
+> recorded that as *an observation, not a finding*, because the other 53 were
+> never enumerated. That caution was correct: the equity feeds were there all
+> along.
+
+### F0.4.1 — 35 of the 57 feeds are equity feeds
+
+**Confidence: measured. Verdict: pass.**
+
+Every row of `feeds-robinhood-mainnet.json` enumerated, none sampled:
+
+| Class | Count | Examples |
+|---|---|---|
+| Equity / ETF (`us_equities_24/5`) | **35** | AAPL, NVDA, TSLA, GME, SPY, QQQ, SLV, USO |
+| Crypto, stablecoin, exchange rate | 22 | BTC, ETH, LINK, USDG, USDC, WSTETH/STETH |
+
+The equity feeds are named `Robinhood <TICKER> / USD`, carry
+`docs.assetClass: "Equity"`, `heartbeat` 86,400 s and `threshold` 0.5 %, and
+report 8 decimals. A sample drawn on crypto tickers cannot hit that naming, which
+is exactly how four draws returned four crypto feeds.
+
+**`planning/PLAN.md` §11's "Chainlink marks the book" survives.** It was the
+premise most at risk in this unit and it is now measured rather than assumed. The
+divergence veto has two genuinely different prices to compare (F0.4.2), and
+1.4's design stands as written.
+
+Two equity rows — `Robinhood SGOV-USD` and `Robinhood USAR-USD` — carry no
+`docs.baseAsset`. They are reported unresolved rather than repaired by parsing
+the display name.
+
+### F0.4.2 — GeckoTerminal covers every stock token we could address: 32 of 32
+
+**Confidence: measured. Verdict: pass.**
+
+`planning/PHASE-0-1.md` 0.4 required coverage to be settled before divergence,
+and `tracker/LESSONS.md` (2026-09-17, *probe 0.4 tests GeckoTerminal coverage
+before divergence*) expected it to be **absent**, on the reasoning that
+GeckoTerminal prices come from pools and tokenized stocks have no pool of their
+own. Measured: the `robinhood` network slug returns a `price_usd` for **all 32**
+addressable tickers.
+
+**The fallback is not needed.** The corroborating source stays GeckoTerminal, it
+*is* independent of the execution venue, and the divergence veto stays
+cross-source rather than degrading to quote-versus-feed. The contingency in that
+lessons entry does not fire.
+
+### F0.4.3 — Tokenized stocks do have AMM pools, contradicting the documented claim
+
+**Confidence: measured. Verdict: fail** (against `planning/PLAN.md` §13).
+
+This is why F0.4.2 came out the way it did, and it contradicts a sourced
+statement the plan is built on. `research/bankr-skills.md` quotes
+`bankr/references/tokenized-stocks.md:42`: *"tokenized stocks have no AMM pool of
+their own."* On chain:
+
+| Token | Pools listed | Deepest pool | Reserve |
+|---|---|---|---|
+| SPY | 20 | `SPY / USDG 0.3%` | $9,160,174 |
+| AAPL | 20 | `AAPL / USDG 0.3%` | $1,077,549 |
+| CLSK | 20 | `CLSK / USDG 4.68%` | $2,456 |
+
+Real pairs against USDG and WETH, real reserves, real 24 h volume — $68.8 M on
+SPY, $54.9 M on NVDA, $0.01 on CLSK.
+
+**What this reopens, and it is not ours to close.** `tracker/LESSONS.md`
+(2026-09-17, *"depth" removed as a concept*) deleted depth from the vocabulary
+because the plan asserted there was no pool to measure. The premise was wrong.
+Whether depth returns is a decision for the operator, not a repair to make here;
+the operational definition of tradeable in `config/thresholds.json` is unchanged
+by this probe. **`planning/PLAN.md` §13's "Tokenized stocks have no AMM pool of
+their own" must be corrected regardless of that decision**, because it is stated
+as fact and it is false.
+
+### F0.4.4 — Is the feed already multiplier-adjusted? **Unresolved.**
+
+**Confidence: measured (the numbers). Verdict: unresolved (the question).**
+
+This is the half of 0.4's done-condition that is **not met**, and the reason is
+the effect size, not a gap in the method.
+
+Nine of the 33 tokens carry a `uiMultiplier()` other than exactly 1.0. The other
+23 carry exactly 1.0, where both hypotheses are identical by construction, so
+they measure the noise floor:
+
+| | n | median | mean abs | range |
+|---|---|---|---|---|
+| **The effect** — multiplier size | 9 | 5.7 bps | 8.4 | 0.7 – 22.1 bps |
+| **The noise** — control vs GeckoTerminal | 23 | −4.7 bps | **141.9** | −610.4 – +506.9 |
+| Treatment as-is vs GeckoTerminal | 9 | 18.1 | 62.1 | −168.5 – +112.7 |
+| Treatment ×multiplier vs GeckoTerminal | 9 | 25.9 | 64.4 | −163.7 – +113.4 |
+
+The largest multiplier in the whole set is ORCL at 22.1 bps. The noise between
+the feed and its corroborator averages 141.9 bps and reaches 610. **The effect is
+roughly an order of magnitude smaller than the measurement error**, so neither
+hypothesis can be rejected. Applying the multiplier makes the mean absolute
+divergence marginally *worse* (62.1 → 64.4 bps), which leans toward
+already-adjusted, but 2.3 bps of movement inside a 142 bps noise floor is not
+evidence and is not recorded as any.
+
+**What remains documented, and stays documented.** `research/agent-os.md:333`
+quotes `robinhood-chain-stocks/SKILL.md:51-53` — *"Prices come from a per-asset
+Chainlink `AggregatorV3Interface` feed (8 decimals) and already incorporate the
+multiplier… do not multiply it by `uiMultiplier()` again"* — and
+`planning/PLAN-technical-review.md` finding 6 cites Robinhood's own oracle
+documentation to the same effect. Two independent documented sources agree. This
+probe neither confirms nor contradicts them; it establishes that **at today's
+multiplier sizes the question is not observable from prices**, which is a
+different and weaker statement than agreement.
+
+**The Bankr quote cannot break the tie, and must not be used to.**
+`tokenized-stocks.md:67`, quoted in `research/bankr-skills.md`, states *"Token
+price = the underlying equity's price × that multiplier, so Bankr prices these
+off the equity rather than off pool liquidity."* The venue applies the multiplier
+itself, so comparing the feed against the venue's quote asks the multiplier
+question of a source that has already answered it. It is circular here, on top of
+being venue-dependent.
+
+**What would settle it:** an asset whose multiplier is large enough to clear the
+noise — a corporate action moving it well past 100 bps — or an archive read
+across a multiplier change, which the one public 4663 endpoint cannot serve
+(`research/agent-os.md` §8). Neither is available today.
+
+**Consequence for 1.4.** `planning/PHASE-0-1.md` 1.4 says the mark handles the
+multiplier "per probe 0.4" and warns against applying it twice. 0.4 does not
+supply that answer. 1.4 must follow the documented rule — do not apply
+`uiMultiplier` again — and the comment in `core/valuation.py` must point here and
+say the basis is **documented, corroborated by two sources, and not measured**,
+rather than pointing at a finding that settled it.
+
+### F0.4.5 — Divergence tracks pool liquidity, not feed quality
+
+**Confidence: measured. Verdict: pass.** This is the checkpoint's own question:
+is the divergence threshold we chose for a veto realistic?
+
+| 24 h pool volume | n | median abs divergence | worst |
+|---|---|---|---|
+| ≥ $1 M | 19 | **19.5 bps** | 499.5 bps (AMZN) |
+| < $1 M | 13 | **164.7 bps** | 610.4 bps (EWY) |
+
+The four worst rows — EWY 610, RGTI 545, CLSK 507, IONQ 241 — have 24 h volumes
+of $3,502, $503, $0.01 and $97. The divergence is the *pool* being wrong, not the
+feed.
+
+**AMZN is the exception that stops this being a clean rule.** It diverges 499.5
+bps on $2.19 M of volume, while the feed (252.60) and the Bankr quote (253.11)
+agree to 20 bps. One liquid name can still carry a 5 % stale pool price.
+
+**Consequence for `config/thresholds.json`.** `divergence_max_bps` is null and
+this is the probe that resolves it. A single flat threshold cannot work: set at
+50 bps it vetoes eleven of 32 assets on a quiet day; set above 610 bps to
+accommodate EWY it will not catch a genuinely broken mark. The threshold needs to
+be conditioned on corroborator liquidity, or illiquid names excluded from the
+universe at 1.2 and the veto applied only where the corroborator is worth
+comparing against. **Recommended and not decided** — it changes 3.4's gate shape
+and belongs at the checkpoint.
+
+### F0.4.6 — `uiMultiplier()` reverting is the impersonator discriminator 0.8 needs
+
+**Confidence: measured. Verdict: pass.**
+
+`tracker/LESSONS.md` (2026-09-17, *three tokens answer to GME*) concluded that
+probe 0.8 "cannot lean on the discovery list, the name, or a decimals read". A
+fourth test does work:
+
+| Address | Name | `uiMultiplier()` |
+|---|---|---|
+| `0x1b0e…153e` | GameStop • Robinhood Token | **1.0** |
+| `0x7e86…8123` | GameStop | **execution reverted** |
+| `0xef67…d5f6` | Greatest Meme Ever | **execution reverted** |
+| `0x5fc5…d168` | Global Dollar (USDG) | **execution reverted** |
+
+All 32 addressable RH-marked stock tokens answered; every non-stock address
+tested reverted. This is the ERC-8056 check `research/agent-os.md:374` predicted
+(selector `0xa60bf13d`, recomputed from the signature here rather than copied),
+and it is **positive evidence of a genuine Stock Token**, unlike `decimals()`
+which all three GME tokens answer identically.
+
+**It is a necessary condition, not a sufficient one.** Nothing stops an
+impersonator implementing a function that returns a number. 0.8's allowlist still
+comes from the issuer's own deployment list; this belongs alongside the beacon
+check as a second consistency flag that a counterfeit must also forge.
+
+### F0.4.7 — Feed decimals, staleness, and the block pin
+
+**Confidence: measured. Verdict: pass.**
+
+**Decimals.** All 33 feeds report **8** from `decimals()` on chain, agreeing with
+the directory on every row. Note the asymmetry the sizing code has to carry:
+feeds are 8 decimals, stock tokens are 18, USDG is 6 (F0.3.1).
+
+**Staleness.** Observed `updatedAt` spanned 13,063 s across the 33 feeds at one
+block — oldest SPY at 12:22:01 UTC, newest GOOGL at 15:59:44 UTC, against an
+86,400 s heartbeat and a 0.5 % deviation threshold. A feed 3.6 hours old is
+normal here, not stale. `feed_staleness_max_seconds` is null in
+`config/thresholds.json`; any bound below ~14,000 s would reject live feeds
+during market hours, and this observation is one block on one day and does not
+bound the tail. Unit 1.3's staleness rule should key on the published heartbeat
+per feed rather than a single constant.
+
+**The block pin is real.** `research/agent-os.md` §8 records the one public 4663
+endpoint as carrying no archive data, which would make "readings at one pinned
+block" a fiction if the node ignored the block parameter and served current state
+— self-consistent output either way. Falsified directly: the same feed read at
+block `0x1` returns nothing while the pinned block returns data, so the parameter
+is honoured. **Not** evidence of general archive availability; the deep read
+returning empty is consistent with both an honoured pin and pruned state.
+
+### F0.4.8 — Chainlink covers 19 % of the tokens, which caps the universe
+
+**Confidence: measured. Verdict: pass, as a constraint.**
+
+The discovery list carries 1,062 tokens on 4663, of which 187 carry the
+`• Robinhood Token` marker. Chainlink publishes **35** equity feeds — **19 %**.
+
+If Chainlink marks the book (§11), an asset with no feed cannot be marked, and
+therefore cannot be held. The investable universe is **~35 names, not ~190**.
+This partly answers `planning/PLAN.md` §12's *"how many of the ~190 tickers are
+actually tradeable at our $25 size?"* — tradeability is a separate question, but
+markability already removes 81 % of them before it is asked. Unit 1.2's loader
+should treat presence of a feed as a membership condition.
+
+### What 0.4 changes
+
+| Change | Where |
+|---|---|
+| Chainlink equity feeds exist; §11 survives, 1.4 unchanged in shape | `planning/PLAN.md` §11 |
+| GeckoTerminal coverage is total; the veto stays cross-source and independent | 1.4, 3.4 |
+| "Tokenized stocks have no AMM pool of their own" is false | `planning/PLAN.md` §13 |
+| Multiplier handling is documented-only; 1.4's comment must say so | 1.4, `core/valuation.py` |
+| A flat `divergence_max_bps` cannot work; condition it on liquidity | `config/thresholds.json`, 3.4 |
+| `uiMultiplier()` answering is a second identity flag | 0.8, 1.2 |
+| Staleness should key on per-feed heartbeat, not one constant | 1.3, `config/thresholds.json` |
+| Universe is capped at the 35 assets with feeds | 1.2, `config/universe.json` |
+
+### Method limitations
+
+- **One block, one day, one machine.** Every divergence number is a single
+  observation during US market hours. Nothing here bounds the overnight or
+  weekend tail, which is when `us_equities_24/5` feeds and 24/7 pools drift
+  furthest apart.
+- **Addresses are still unverified.** They come from the 0.3 discovery list,
+  filtered on the name marker and on `uiMultiplier()` answering. That is stronger
+  than 0.3 and still not the issuer-derived allowlist unit 0.8 owns.
+- GeckoTerminal's batch endpoint truncates `top_pools` to one entry where the
+  single-token endpoint lists twenty, so the per-asset pool count in the capture
+  is a floor and is named as one.
+- Nothing was written, submitted or signed. All reads.
