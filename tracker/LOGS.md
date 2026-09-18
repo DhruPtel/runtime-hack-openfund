@@ -334,46 +334,51 @@ live-leg asset.**
 
 ---
 
-## State at close — 2026-09-18 (third session)
+## State at close — 2026-09-18 (third session, at the 0.11 checkpoint)
 
-**Done.** 0.1 through 0.8, the out-of-order Testnet probe, and 0.7's follow-ups
-b–e. 0.9 was run early as a labelled floor; the full cost probe is still unit
-1.7, against the real snapshot. 32 tests, offline, no credentials. Every probe
-has a verdict in `research/findings.md`, marked measured / documented / inferred.
+**Done.** All of Phase 0:
 
-**Decided since the last note.** At the 0.4 checkpoint: a Chainlink feed is a
-membership condition (35 markable assets), divergence is tiered by corroborator
-liquidity, and depth returns as corroborator quality only. At the close of 0.8:
-registry membership on `(chain_id, address)` is the identity test, pinned by
-sha256; `uiMultiplier()` and the name marker are retired; the beacon is a
-cross-check that fails the cycle loudly; feed presence is markability, not
-identity.
+- 0.1 through 0.10, plus the out-of-order Testnet probe and 0.7's follow-ups
+  b–e.
+- 0.9 run early, as a labelled floor; unit 1.7 still owns the number.
+- 0.11's exit summary, written at the head of `research/findings.md`.
 
-**Measured since the last note.** 0.6: provider cost is attributable only in
-aggregate. 0.7–0.7d: our endpoint settles, revenue is an on-chain
-`PaymentSettled`, and a paid round trip is ~4.6 s. 0.7e: the v1 x402 clients
-cannot pay us, while the v2 client `@x402/fetch` can — signed by Bankr's service,
-so a third-party buyer is inferred. 0.9: an analyst call costs $0.0134 and takes
-58 s at the floor, and a single-block snapshot gives a trend analyst nothing.
+Every probe has a verdict. 0.4 and 0.10 are half met: the multiplier question
+is unresolved, and so are the in-flight 409 path and the rate limit. 32 tests,
+offline, no credentials. The plan docs agree with LESSONS, checked entry by
+entry.
 
-**Open.**
+**Decided.**
 
-- Whether the feed already includes `uiMultiplier` is still **not** measured
-  (F0.4.4); 1.4 follows the documented rule and must say so.
-- Whether `BANKR_KEY_EXEC` can **transact** is still unproven (F0.5.5). 0.10 is
-  the first unit that can show it.
-- The 0.7 checkpoint's price question: $0.05 needs 1.3–2.3 sales a day to cover
-  inference at the floor (F0.9.4), and no third party has ever paid us.
-- Config values still null whose named resolver has already run:
-  `feed_staleness_max_seconds`, `quote_max_age_seconds`, `impact_max_bps`,
-  `worker_deadline_seconds`, `analyst_model`.
+- **0.4 checkpoint:** feed presence is a membership condition (35 assets);
+  divergence is tiered, ~100 bps above $1M of daily pool volume with thinner
+  assets excluded, now in `config/thresholds.json`; depth returns as
+  corroborator quality only.
+- **0.8:** registry membership is identity, pinned by sha256; the beacon fails
+  the cycle loudly; `uiMultiplier()` and the name marker are retired; feed
+  presence is markability.
+- **Today:** the snapshot carries price history up to its pinned block
+  (invariant 2 reworded); the x402 buyer client is `@x402/fetch` 2.26.0, and the
+  claim is "payable by any x402 v2 client, and by Bankr users".
 
-**Not run.** 0.10 (idempotency and rate limits; spends) and the 0.11 checkpoint.
+**Settled by 0.10.** `BANKR_KEY_EXEC` can transact, and a same-key repeat does
+not rebroadcast. Swaps arrive as gas-sponsored ERC-4337 UserOperations, and the
+fund's wallet is now EIP-7702-delegated to a Bankr contract on 4663.
 
-**Funding**, wallet balances re-read over RPC. Base: 0.000241 ETH, 0.107346
-USDC, 10 USER. Robinhood Chain: 0.000490 ETH and no USDG, against the ~$200 in
-`planning/PLAN.md` §11. LLM gateway: $2.799976 as last measured, at 0.9 (F0.9.3).
+**Open.** Full list in the findings summary.
 
-**Next.** Sync the plan docs to the decisions above, run 0.10, then hold the
-0.11 checkpoint. Unit 1.5 must still re-run probe 0.3 against a USDG-funded
-wallet before its numbers count as evidence about liquidity.
+- **Blocks Phase 1 code:** whether the staleness and replay rules bind a price
+  series' newest point or every point (1.3, 1.11).
+- **Blocks the named units:** the five null config values.
+- **Contradicted and not reconciled:** PLAN §11's reason for selling on Base.
+- **Undecided:** the 0.7 price, and the live-leg asset.
+
+**Funding**, re-read over RPC.
+
+- Base: 0.000241 ETH, 0.107346 USDC, 10 USER.
+- Robinhood Chain: 0.000460 ETH, 0.078742 USDG.
+- LLM gateway: $2.799976 as last measured (F0.9.3).
+- None of this approaches the ~$200 target.
+
+**Next.** The operator reviews the 0.11 checkpoint. Phase 1 does not start before
+that.
