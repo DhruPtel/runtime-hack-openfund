@@ -20,6 +20,101 @@ the credential table. Public chain addresses are not secrets and are shown.
 
 ---
 
+## Phase 0 exit summary (0.11 ▶)
+
+**Date:** 2026-09-18. The detail sections below are the evidence, in the order
+the probes ran; this is the one page to read first. The Phase 0 exit condition —
+*every probe has a recorded verdict, including fail and unresolved* — **is met**.
+Two units are only **half met** against their own done-conditions (0.4 and 0.10)
+and are marked as such rather than rounded up.
+
+| Probe | Question | Method | Result | Confidence | Verdict |
+|---|---|---|---|---|---|
+| 0.1 | Can a declared credential reach a log? | `tests/test_redaction.py`, offline | Masked, including a credential added after the redactor was written | measured | pass |
+| 0.2 | Which auth header does each Bankr surface take; are the key toggles as planned? | `probes/keys.py`: 20 read GETs, invalid-key control | Both headers work everywhere (F0.2.1). `BANKR_LLM_KEY` reads the Wallet API (F0.2.2). All keys resolve to one wallet (F0.2.3). The gateway toggle behaves as planned (F0.2.4). The Agent API toggle cannot be read (F0.2.5). | measured | pass; F0.2.2 **fail** against the plan's scope; F0.2.5 **unresolved** |
+| 0.3 | What does a real stock quote on 4663 contain? | `probes/quote.py`: 6 quotes, 3 tickers at $5 and $25, empty wallet | All 12 documented fields present (F0.3.2). USDG is 6 decimals, not 18 (F0.3.1). Quotes are not balance-checked (F0.3.3). Impact is signed (F0.3.4). | measured; which impact field gates is documented | pass; F0.3.1 **fail** against two sources; the gating field **unresolved** by measurement |
+| 0.4 ▶ | Do Chainlink equity feeds exist, what corroborates them, is the multiplier applied? | `probes/feed.py`: 33 tickers at one pinned block | 35 of 57 feeds are equity (F0.4.1). GeckoTerminal covers 32 of 32 (F0.4.2). Stocks do have AMM pools (F0.4.3). Divergence tracks the corroborator's liquidity (F0.4.5). Feeds cover 19% of tokens (F0.4.8). | measured | pass; F0.4.3 **fail** against the plan; the multiplier **unresolved** (F0.4.4) — **half met**; checkpoint held, 3 decisions |
+| 0.8 | How does the fund know a token is the real one? | `probes/identity.py`: registry snapshot, 5 checks × 9 candidates, 381-address sweep | The registry is the authority and carries no version, so sha256 serves (F0.8.1). Feed presence admits both counterfeits (F0.8.3). Registry and beacon agree on all 381 (F0.8.4). The registry alone is sufficient (F0.8.5). | measured; the trust argument inferred | pass; 4 decisions |
+| 0.5 | Can this operator execute a stock swap? | `probes/execute.py`: one AAPL attempt | 403 location gate, before broadcast, no gas (F0.5.1–F0.5.2). The body is prose with no code (F0.5.3). | measured; the seven causes documented, one reconstructed (F0.5.4) | **fail**, as expected; whether the key can transact was unresolved (F0.5.5) until 0.10 |
+| Testnet | Can chain 46630 host an execution demo? | `probes/testnet.py` | None of the issuer's 194 assets is there (F0.T.2). The Stock contracts exist (F0.T.3). The identity heuristics invert (F0.T.4). No feed directory (F0.T.5). No Bankr routing (F0.T.6). | measured; F0.T.6 documented | **fail** for the demo |
+| 0.6 | Can cost be reconciled, not just estimated? | `probes/credits.py`: 13 GETs, two controls | Both endpoints answer and are free (F0.6.1–F0.6.2). Attribution is aggregate only (F0.6.4). `days` is silently coerced (F0.6.5). Credits are wallet-scoped and usage key-scoped (F0.6.6). | measured; F0.6.6 documented | pass; per-call attribution **fail**; F0.6.6's gap later explained (F0.7b.10) |
+| 0.7 ▶ (a–e) | Is a paid call fast enough, and who can pay us? | `x402_roundtrip`, `x402_thirdparty`, `portfolio_check`, `x402_logs`, `x402_paid`, `x402_clients/` | Settles once the handler returns a `Response` (F0.7d.2–F0.7d.4). ~4.6 s paid, ~0.5 s cold start (F0.7d.5). Revenue is an on-chain `PaymentSettled` (F0.7b.5–F0.7b.6). The payer header is platform-asserted (F0.7d.7). The portfolio endpoint omits tokens (F0.7b.8). v1 clients cannot pay; `@x402/fetch` v2 can (F0.7e). No in-band receipt (F0.7e.7). | measured; a third-party buyer **inferred** (F0.7e.6) | pass; v1 clients **fail**; checkpoint: buyer client decided, **price undecided** |
+| 0.9 | What does an analyst call cost? (a floor; 1.7 owns the number) | `probes/llm_cost.py`: 2 calls at Sonnet 5, 6 assets | $0.0134 and 58 s per call (F0.9.1). `/v1/usage` went backwards (F0.9.2). A client timeout is still billed (F0.9.3). Model choice is a 139× lever (F0.9.5). One block gives a trend analyst nothing (F0.9.6). | measured; the 35-asset column is arithmetic | pass, as a floor; F0.9.2 **fail** for per-call reconciliation |
+| 0.10 | Does a same-key repeat broadcast twice? What does a rate limit look like? | `probes/idempotency.py` (one $0.08 swap), `idempotency_evidence.py`, `ratelimit.py` | Same-key repeat deduped (F0.10.1). The execution key can transact (F0.10.2). The swap is a sponsored 4337 UserOperation in a 7702 transaction (F0.10.3). 6 bps unaccounted for (F0.10.4). No 429 within 150 requests in 4.1 s (F0.10.5). | measured; the 409 path documented | pass; rate limit **unresolved**; F0.10.4 **unresolved** — **half met** |
+
+### Assumptions that died in Phase 0
+
+Each was stated or relied on somewhere in the plan or the discovery reports, and
+each is now recorded against the finding that ended it:
+
+- **About the data.**
+  - Tokenized stocks have no AMM pool (F0.4.3).
+  - USDG has 18 decimals (F0.3.1).
+  - Chainlink has no equity feeds on 4663 — a sampling artefact (F0.4.1).
+  - A single-block snapshot is enough for an analyst (F0.9.6).
+- **About the Bankr surfaces.**
+  - The credit balance cannot be read (F0.6.1).
+  - `BANKR_LLM_KEY` is gateway-only (F0.2.2).
+  - The gateway rejects `Authorization: Bearer` (F0.2.1).
+  - The portfolio endpoint describes the wallet's holdings (F0.7b.8).
+- **About identity.** The name marker or `uiMultiplier()` identifies a genuine
+  stock (F0.3.6 and F0.4.6, retired by the 0.8 decisions).
+- **About x402 revenue.**
+  - Revenue lands at a shared address we cannot evidence (F0.7.6, corrected by
+    F0.7b.5).
+  - No standard client can pay us (F0.7.3, corrected by F0.7e).
+- **About execution.** The execution wallet sends its own transactions
+  (F0.10.3).
+
+### What Phase 1 needs that Phase 0 did not deliver
+
+**Config values that a probe was named to resolve and did not.** Each is still
+`null`, and `null` blocks the check that reads it:
+
+| Value | File | Named resolver | What Phase 0 did deliver | Still needed | Blocks |
+|---|---|---|---|---|---|
+| `feed_staleness_max_seconds` | `thresholds.json` | probe 0.4 | Across 33 feeds at one block in market hours, `updatedAt` spanned 13,063 s, against an 86,400 s heartbeat and a 0.5% deviation threshold. Any single bound under ~14,000 s rejects live feeds. The recommendation is a per-feed heartbeat rule, not a constant (F0.4.7). | A decision on the rule's shape and its numbers. Overnight and weekend behaviour is unmeasured. | 1.3 |
+| `quote_max_age_seconds` | `thresholds.json` | probe 0.3 | Only that stale `quoteId`s "fall back silently" (documented). Nothing on how fast a quote drifts. | A number, ideally from a measurement of quote drift | 1.5, 1.6 (tradeability) |
+| `impact_max_bps` | `thresholds.json` | probe 0.3 | Impact is signed; observed −15 to +2 bps at $5 and $25 (F0.3.4); platform cap 1,500. `swapImpactBps` gates execution (documented). | A number, compared signed (`impact > limit`) | 1.6 (tradeability) |
+| `worker_deadline_seconds` | `models.json` | 2.4, informed by 1.7 (0.9 relocated) | 58 s for one call at the floor (F0.9.1), and a client-side timeout is still billed (F0.9.3). `transport_timeout_seconds` and `cadence.json`'s `cycle_deadline_seconds` are also null. | Numbers set from 1.7's measurement. 1.7 itself needs a transport timeout above 58 s to run safely. | 1.7, Phase 2 |
+| `analyst_model` | `models.json` | 2.4, informed by 1.7 (0.9 relocated) | Priced across the catalogue: 139×, $0.07–$10.05 a month (F0.9.5). Sonnet 5 was used provisionally. | A decision; 1.7 runs "against the intended model" | 1.7, Phase 2 |
+
+**Open decisions and gaps, as recorded, not resolved:**
+
+- **Contradiction.** `planning/PLAN.md` §11's reason for selling on Base is that
+  "the standard client's network enum excludes 4663". That is true of the v1
+  client and false of the decided v2 client. It is marked in §11 and not
+  reconciled. It does not block Phase 1.
+- **Gap.** The staleness and replay rules in PHASE-0-1 1.11 and PLAN §9 were
+  written for single observations, and invariant 2 now carries a price series.
+  Whether they bind a series' newest point or every point is undecided, and it
+  **blocks 1.3's and 1.11's tests.**
+- **The 0.7 price.** $0.05 needs 1.3–2.3 sales a day to cover inference at the
+  floor (F0.9.4). This is revisited at 1.7 and does not block Phase 1.
+- **The live-leg asset** for Phase 5. This checkpoint is where
+  `planning/PHASE-0-1.md` asks for the decision. The evidence so far is that
+  ETH↔USDG on 4663 executes, deduplicates, and was gas-sponsored for one $0.08
+  sell (§0.10). Not decided.
+- **Funding.** 1.5 must re-run probe 0.3 at $25 against a USDG-funded wallet. The
+  wallet holds 0.078742 USDG and 0.000460 ETH (about $1.21) on 4663, against the
+  ~$200 target.
+- **Still open, but not blocking — each has a stated way to proceed:**
+  - The multiplier (F0.4.4): 1.4 follows the documented rule and says so.
+  - The in-flight `409` path (F0.10.1): exercised at 4.10.
+  - The rate limit (F0.10.5): 1.3 backs off on a bare 429.
+  - What the 7702 delegate permits (F0.10.3).
+  - The 6 bps gap (F0.10.4).
+  - A third-party buyer (F0.7e.6): settled at 7.5.
+  - `config/universe.json`'s own note still calls the beacon a secondary flag;
+    1.2 rewrites that file.
+
+**For the operator at this checkpoint:** which of these to settle before 1.1
+starts, and which ungated asset carries the live leg. Phase 1 does not start
+until you have looked.
+
+---
+
+
 ## 0.2 — Auth headers and key permissions
 
 **Date:** 2026-09-17 · **Method:** `PYTHONPATH=src python3 -m probes.keys` ·
