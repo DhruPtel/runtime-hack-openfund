@@ -39,6 +39,18 @@ class MissingCredentialError(RuntimeError):
     """A credential required by this role is absent from the environment."""
 
 
+class TransactingCredentialLeakError(RuntimeError):
+    """A role without spend authority is holding a transacting key's value.
+
+    Raised when a credential this role loads has the same value as a credential
+    that can transact and that this role may not hold. Since all Bankr keys come
+    from one account, per-key toggles are the only boundary, and two keys sharing
+    a value erases it: the analyst process would hold the fund's spend authority
+    under a different name. Refusing at load is the point where that is still
+    cheap to notice.
+    """
+
+
 class CredentialNotPermittedError(RuntimeError):
     """This role is not allowed to hold this credential.
 
@@ -153,7 +165,34 @@ def load(
             f"Copy .env.example to .env and fill them in."
         )
 
+    _refuse_leaked_spend_authority(role, held)
+
     return Config(role=role, credentials=held)
+
+
+def _refuse_leaked_spend_authority(role: Role, held: Mapping[str, str]) -> None:
+    """planning/PLAN.md section 2 invariant 1, checked against actual values.
+
+    ``can_transact`` says which credential *should* be able to spend; this says
+    whether one of them is in this role's hands under another name. The check is
+    only possible where the risk exists -- a single host whose environment holds
+    both -- and is silently satisfied in the deployed split, where the analyst
+    process never sees the execution key at all.
+    """
+    for spender in CREDENTIALS:
+        if not spender.can_transact or role in spender.used_by:
+            continue
+        spend_value = os.environ.get(spender.name)
+        if not spend_value:
+            continue
+        for name, value in held.items():
+            if value == spend_value:
+                raise TransactingCredentialLeakError(
+                    f"{name} has the same value as {spender.name}, which can "
+                    f"transact and is not available to the {role.value} role. "
+                    f"Issue a separate key with Read Only ON for {name}. "
+                    f"See planning/PLAN.md section 13."
+                )
 
 
 def sharing_a_value(environ: Mapping[str, str] | None = None) -> list[list[str]]:

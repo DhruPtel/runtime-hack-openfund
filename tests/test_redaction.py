@@ -203,6 +203,39 @@ def test_analyst_role_cannot_load_execution_or_signing_secrets(credential_env):
             analyst.secret(forbidden)
 
 
+def test_analyst_load_refuses_a_key_that_is_really_the_execution_key(
+    monkeypatch, credential_env
+):
+    """The failure the can_transact field cannot catch on its own.
+
+    The table says BANKR_LLM_KEY cannot transact. If its *value* is the
+    execution key, that is false, and the analyst process holds spend authority
+    under another name. Load must refuse.
+    """
+    monkeypatch.setenv("BANKR_LLM_KEY", FAKE_VALUES["BANKR_KEY_EXEC"])
+    with pytest.raises(config.TransactingCredentialLeakError) as excinfo:
+        config.load(Role.ANALYST, install_redaction=False)
+    message = str(excinfo.value)
+    assert "BANKR_LLM_KEY" in message and "BANKR_KEY_EXEC" in message
+    for value in FAKE_VALUES.values():
+        assert value not in message
+
+
+def test_treasurer_may_hold_its_own_execution_key(credential_env):
+    """The guard must not fire on the role that is supposed to have it."""
+    treasurer = config.load(Role.TREASURER, install_redaction=False)
+    assert treasurer.secret("BANKR_KEY_EXEC") == FAKE_VALUES["BANKR_KEY_EXEC"]
+
+
+def test_leak_guard_is_silent_when_the_execution_key_is_absent(
+    monkeypatch, credential_env
+):
+    """In the deployed split the analyst environment has no execution key at all."""
+    monkeypatch.delenv("BANKR_KEY_EXEC", raising=False)
+    analyst = config.load(Role.ANALYST, install_redaction=False)
+    assert analyst.has("BANKR_LLM_KEY")
+
+
 def test_treasurer_role_holds_the_spend_authority(credential_env):
     treasurer = config.load(Role.TREASURER, install_redaction=False)
     assert treasurer.secret("BANKR_KEY_EXEC") == FAKE_VALUES["BANKR_KEY_EXEC"]
