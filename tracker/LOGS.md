@@ -353,51 +353,40 @@ access is unverified, since the configured endpoint is the public one.
 
 ---
 
-## State at close — 2026-09-18 (third session, at the 0.11 checkpoint)
+## State at close — 2026-09-18 (Phase 0 closed, Phase 1 replanned)
 
-**Done.** All of Phase 0:
+**Done.** All of Phase 0, with its checkpoint held (0.11). Phase 1 is replanned
+unit by unit against the record in `planning/PHASE-0-1.md`, and **not started**:
+no `src/` code beyond 0.1, 32 tests, offline.
 
-- 0.1 through 0.10, plus the out-of-order Testnet probe and 0.7's follow-ups
-  b–e.
-- 0.9 run early, as a labelled floor; unit 1.7 still owns the number.
-- 0.11's exit summary, written at the head of `research/findings.md`.
+**Decided at 0.11.**
+- Freshness binds a series' newest point only.
+- Five config values, provisional:
+  - feed staleness is each feed's heartbeat plus a margin;
+  - quote age 60 s;
+  - impact 50 bps, compared signed;
+  - worker deadline 120 s;
+  - `claude-sonnet-5` as the provisional analyst model.
+- ETH→USDG on 4663 is Phase 5's live leg.
+- PLAN §11 stays marked contradicted, and $0.05 stays provisional.
 
-Every probe has a verdict. 0.4 and 0.10 are half met: the multiplier question
-is unresolved, and so are the in-flight 409 path and the rate limit. 32 tests,
-offline, no credentials. The plan docs agree with LESSONS, checked entry by
-entry.
+These sit alongside the earlier 0.4 and 0.8 decisions and today's price-history
+and buyer-client decisions.
 
-**Decided.**
+**Open before or during Phase 1** (the full list is at the end of Phase 1 in
+PHASE-0-1):
+- **Unset values:** `feed_staleness_margin_seconds`, which blocks the staleness
+  check; `transport_timeout_seconds`, which blocks 1.7; and `mandate.json`'s
+  `execution_wallet`, which 1.3 and 1.10 need.
+- **Unmeasured:** the price series itself (1.3 chooses and measures it), and
+  weekend behaviour of 24/5 feeds (1.11's checkpoint).
+- **Pending folds** into PLAN.md and ROADMAP.md, listed in the LESSONS preamble.
 
-- **0.4 checkpoint:** feed presence is a membership condition (35 assets);
-  divergence is tiered, ~100 bps above $1M of daily pool volume with thinner
-  assets excluded, now in `config/thresholds.json`; depth returns as
-  corroborator quality only.
-- **0.8:** registry membership is identity, pinned by sha256; the beacon fails
-  the cycle loudly; `uiMultiplier()` and the name marker are retired; feed
-  presence is markability.
-- **Today:** the snapshot carries price history up to its pinned block
-  (invariant 2 reworded); the x402 buyer client is `@x402/fetch` 2.26.0, and the
-  claim is "payable by any x402 v2 client, and by Bankr users".
-
-**Settled by 0.10.** `BANKR_KEY_EXEC` can transact, and a same-key repeat does
-not rebroadcast. Swaps arrive as gas-sponsored ERC-4337 UserOperations, and the
-fund's wallet is now EIP-7702-delegated to a Bankr contract on 4663.
-
-**Open.** Full list in the findings summary.
-
-- **Blocks Phase 1 code:** whether the staleness and replay rules bind a price
-  series' newest point or every point (1.3, 1.11).
-- **Blocks the named units:** the five null config values.
-- **Contradicted and not reconciled:** PLAN §11's reason for selling on Base.
-- **Undecided:** the 0.7 price, and the live-leg asset.
-
-**Funding**, re-read over RPC.
-
+**Funding.**
 - Base: 0.000241 ETH, 0.107346 USDC, 10 USER.
-- Robinhood Chain: 0.000460 ETH, 0.078742 USDG.
-- LLM gateway: $2.799976 as last measured (F0.9.3).
-- None of this approaches the ~$200 target.
+- Robinhood Chain: 0.000460 ETH and 0.078742 USDG; the wallet is EIP-7702-
+  delegated there.
+- LLM gateway: $2.799976 as last measured.
+- Funding blocks 3.3's sizing and Phase 5's volume, not 1.5 (F0.3.3).
 
-**Next.** The operator reviews the 0.11 checkpoint. Phase 1 does not start before
-that.
+**Next.** Unit 1.1, when the operator says go.
