@@ -29,7 +29,7 @@ against it.
 | 0.5 | Execution eligibility: the exact 403, recorded. Expected verdict: fail |
 | 0.6 | Credits and usage endpoints: can we reconcile cost, not just estimate it |
 | 0.7 ▶ | A trivial x402 handler deployed, paid, and timed |
-| 0.9 | *Relocated to unit 1.7* — the cost probe needs a real snapshot |
+| 0.9 | *Relocated to unit 1.7* — the cost probe needs a real snapshot. Run early as a labelled floor; 1.7 still owns the number |
 | 0.10 | Idempotency behaviour and rate-limit response shape |
 | 0.11 ▶ | `findings.md`: every probe marked measured / documented / inferred |
 

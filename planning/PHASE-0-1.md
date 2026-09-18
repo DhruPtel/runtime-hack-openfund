@@ -314,6 +314,22 @@ The analyst cost probe needs a real snapshot, and snapshot bytes dominate the
 token count it is trying to measure. It moves to Phase 1, immediately after the
 snapshot builder, as **unit 1.7**. The 0.9 number is not reused.
 
+**Run anyway, 2026-09-18, as a floor** (`tracker/LESSONS.md`). The run was one
+brief over six hand-assembled assets at `claude-sonnet-5` and measured:
+
+- **Cost:** 1,793 tokens in and 982 out, **$0.013406**, which agrees with the
+  published rate, the response's own usage block and the credit balance to the
+  last digit.
+- **Latency:** **58 s** for the call.
+- **Timeouts:** a client-side timeout was still billed.
+- **`/v1/usage`:** the aggregate went backwards.
+- **Model choice** swings the monthly budget 139×.
+- **The snapshot:** a single-block snapshot gave the trend analyst nothing to
+  answer.
+
+This does not replace 1.7; it gives 1.7 a floor to beat. The numbers are quoted
+only as floors (`research/findings.md` §0.9).
+
 ---
 
 ### 0.10 Idempotency and rate limits
@@ -534,6 +550,12 @@ either confirmed or revised against them.
 
 **Risk:** the prompt is still a draft until checkpoint 2.1, so treat the number as
 a floor. Retries and the risk context bundle are additional.
+
+**What 0.9 already showed.** Set the client timeout from the measured 58 s, not
+from `_capture`'s 20 s default, because a timed-out call is still billed. Read
+cost from the response's own `usage` block, and never from a `/v1/usage` delta
+taken around the call. Price the same token counts across the catalogue as
+well, since the model pin is the largest cost lever (F0.9.1–F0.9.5).
 
 ---
 

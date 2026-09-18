@@ -235,8 +235,10 @@ re-evaluate before detailing the next.
 - **0.8** Identity probe: issuer allowlist source, plus the beacon check against
   a good token and the fake GME. *Runs before 0.3.*
 - **0.9** *Relocated to unit 1.7.* The analyst-cost probe needs the real snapshot
-  from 1.6, whose bytes dominate the token count being measured. The number is
-  not reused.
+  from 1.6, whose bytes dominate the token count being measured. *Also run early,
+  2026-09-18, as a labelled floor on six hand-assembled assets
+  (`research/findings.md` §0.9):* $0.0134 and 58 s per call at Sonnet 5. 1.7
+  still owns the number, and 0.9's figures are only ever quoted as floors.
 - **0.10** Idempotency and rate-limit behaviour: same key twice; deliberately
   exceed a cheap limit and record headers.
 - **0.11** ▶ **`research/findings.md`:** every probe recorded as measured,
@@ -302,7 +304,10 @@ inputs rejected, not absorbed.
   assets.
 - **2.4** Runner: bounded width, per-worker deadline, transport timeout, retry
   budget, pre-allocated result slots, per-worker fallback, partial-failure
-  disclosure.
+  disclosure. Deadlines are set from measured latency, not a default: a single
+  call took 58 s even at the floor (F0.9.1). A client-side timeout does not
+  cancel a billed call, so a timed-out worker is booked as a cost with no report
+  (F0.9.3).
 - **2.5** Token accounting per call, reconciled against `/v1/usage` —
   aggregate to aggregate only. The provider attributes cost to (API key × model
   × day-window) and nothing finer, with no per-request row and no request id
@@ -414,7 +419,9 @@ from its receipt, and booked exactly once. Live stock fills are out of scope
   (F0.6.4). `/v1/credits` is wallet-scoped and `/v1/usage` is key-scoped, so
   they are separate accounts and not a check on each other (F0.6.6). Read
   `days`/`startDate`/`endDate` back off the response rather than trusting the
-  value sent (F0.6.5).
+  value sent (F0.6.5). Compare settled windows well after the fact: the
+  aggregate was observed going backwards, so a before/after delta around one
+  call is not a sound check (F0.9.2).
 - **6.4** Funded contribution: realized P&L allocated once by executed weight,
   with a residual line.
 - **6.5** Call accuracy: hit rate against a stated horizon and benchmark,
