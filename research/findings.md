@@ -1780,3 +1780,94 @@ the boundary problem.
   pinned four-token set, not a sweep.
 - `x-402-payer` remains unobserved. It reaches the handler after settlement, and
   no payment to our handler has settled.
+
+---
+
+## 0.7d — The endpoint fixed, and which hypothesis was right
+
+**Date:** 2026-09-18 · **Captures:** `probes/out/x402_logs_roundtrip.json`
+
+### F0.7d.1 — The handler ran and threw. The config hypothesis is refuted.
+
+**Confidence: measured. Verdict: fail** (against F0.7b.2's leading hypothesis).
+**Method:** `PYTHONPATH=src python3 -m probes.x402_logs`
+
+`bankr x402 revenue` reporting **0 requests** looked like evidence the handler
+never ran. It is not: Bankr counts only **settled** requests, so a request that
+ran, threw, and was therefore never charged also shows 0. The count cannot
+separate the two hypotheses, and this is a small instance of the standing rule —
+an absence produced by a filter is not an absence.
+
+The CLI has no `logs` command, but the dashboard is documented as showing console
+output, so the data exists. Reading the installed CLI's own source
+(`@bankr/cli/dist/commands/x402.js`) gave the path —
+`GET /x402/endpoints/logs/{service}`, undocumented on the docs site and answering
+to the ordinary read key. It returns:
+
+```
+2026-09-18T17:50:54.518Z  GET /0x93fa…a3da/roundtrip
+status=500  settled=false  durationMs=1485
+payerAddress=0x93faecde3c88a713e1edddf417c02c326889a3da
+amount=1000 USDC ($0.001000)
+
+ERROR  error: fetch() did not return a Response
+       at fetch (/opt/runtime.ts:611:17)
+       at async #acceptRequest (/opt/runtime.ts:526:29)
+       at async accept (/opt/runtime.ts:505:32)
+REPORT Duration: 209.24 ms  Billed Duration: 716 ms
+       Memory Size: 256 MB  Max Memory Used: 87 MB  Init Duration: 506.38 ms
+```
+
+**So the platform routed the request, accepted the payment authorization, and
+called our code, which threw.** Everything the config governs — the route, the
+price, the asset, the network, the payment gate — worked. **F0.7b.2's leading
+hypothesis is wrong**, and so is the plan that followed from it: redeploying
+through the wizard would have fixed nothing about the config, because the config
+was never broken.
+
+**`settled: false` confirms settle-after-response from the seller's side.** The
+handler returned 500, so the authorization was never captured — which is why
+nothing was charged and why F0.7b.4's on-chain check found no transfer.
+
+**Two numbers fall out of the trace that 0.7 could not measure:**
+
+| | |
+|---|---|
+| **Init Duration (cold start)** | **506.38 ms** |
+| Handler duration | 209.24 ms |
+| Billed duration | 716 ms |
+| Container | 256 MB, 87 MB used |
+
+That is a **real cold start**, from our own container, on a handler that does no
+work — the number F0.7b.3 could only bound from the outside at ~4.6 s end to end.
+Roughly half a second of it is container init.
+
+**`payerAddress` is recorded by the platform** and appears in the log even for an
+unsettled request. That is adjacent to the `x-402-payer` question (F0.7b.5) but is
+not the same thing: this is a field in an operator-facing log, not a header our
+handler received.
+
+### F0.7d.2 — The cause: the handler's return shape, not the deploy
+
+**Confidence: measured (the error). Verdict: our bug.**
+
+The runtime error is `fetch() did not return a Response`, raised at
+`/opt/runtime.ts:611` — the host expects the module's default export to behave as
+a `fetch` handler returning a `Response`. Our handler was:
+
+```ts
+export default function handler(_req: Request) {
+  return { ok: true, probe: "0.7", work: "none" };
+}
+```
+
+The quick-start documents exactly this as supported — *"You can return plain
+objects, strings, or any JSON-serializable value — Bankr auto-wraps them into a
+JSON response"* — and its own example is `export default async function
+handler(req: Request)`. Ours differs in one respect: it is **not `async`**. The
+auto-wrap did not happen, and the raw object reached a runtime that required a
+`Response`.
+
+**Documented behaviour and measured behaviour disagree**, and the measured one is
+what ships. Whether the trigger is specifically the missing `async` is tested in
+F0.7d.3 by changing that and nothing else.
