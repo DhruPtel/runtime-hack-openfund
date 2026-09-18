@@ -501,11 +501,11 @@ Written alongside the code they cover, runnable offline.
 **Snapshot:** identical inputs produce an identical hash; mixed blocks rejected;
 stale or paused feeds excluded and labelled; a replayed old HTTP body with a
 fresh fetch timestamp rejected; a held asset excluded from trading remains in the
-book; no observation dated after the pinned block enters the snapshot. *Open
-since invariant 2 gained history:* the staleness and replay rules above are
-written for single observations, and whether they apply to a series' newest
-point or to every point is undecided. Read point by point, they reject every
-series (see `PHASE-0-1.md` 1.11).
+book; no observation dated after the pinned block enters the snapshot. **The
+staleness and replay rules bind a series' newest point only** (decision
+2026-09-18, `tracker/LESSONS.md`). Historical points carry their own timestamps,
+and being old is what makes them history. So a series with a fresh newest point
+and week-old history is accepted, and that case is tested (`PHASE-0-1.md` 1.11).
 
 **Identity:** an unlisted clone with a matching ticker and beacon is refused; a
 correct token on the wrong chain is refused; an address change requires explicit
