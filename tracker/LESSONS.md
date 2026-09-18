@@ -261,3 +261,37 @@ keys; the account simply has no funds and no inference credits, so §11's "~$200
 capital" is aspirational until it is funded. Blocks probe 0.3's realistic $25
 quote, probe 0.5, unit 1.7's cost measurement, and all of Phase 2.
 **Affects:** 0.3, 0.5, 0.6, 1.7, Phase 2, Phase 5; planning/PLAN.md §11.
+
+## 2026-09-17 — Probe 0.3: USDG is 6 decimals, and two documented sources said 18
+`research/agent-os.md` (citing `poolsfun/chains.py:70`) and planning/PLAN-v1.md §4
+both state USDG is 18 decimals; the chain says **6**, and so do the CoinGecko
+discovery list and the `/wallet/swap-quote` response (`research/findings.md`
+F0.3.1). Robinhood stock tokens really are 18, so a single "tokens on 4663 are 18
+decimals" model produces exactly this error — off by 10^12 in whichever direction
+the sizing code multiplied. Nothing in planning/PLAN.md stated the number, so
+there was nothing to correct there; it is pinned in `probes/assets.py` with its
+on-chain provenance and belongs in `config/universe.json` at 1.2. The general
+lesson is that a value copied from a research report into a plan is not evidence,
+and every address-scoped number now gets an on-chain read before first use.
+**Affects:** 1.2, 1.5, 3.3; `config/universe.json`.
+
+## 2026-09-17 — Probe 0.3: a quote is not balance-checked, and impact is signed
+A $25 quote priced fine against a wallet holding no USDG at all, which confirms
+quotes are ungated *and* unchecked against balances — so a successful quote is
+never evidence of ability to execute, the concrete instance of
+planning/PLAN-technical-review.md finding 3. Separately, `priceImpactBps` came
+back negative on four of six quotes (price improvement), so a gate written
+`abs(impact) > limit` would reject a better price; it must compare the signed
+value. The two impact fields were identical in all six responses, leaving
+PLAN-v1's claim that execution gates on `swapImpactBps` while `priceImpactBps` is
+display-only **unresolved** until a size large enough to separate them is
+quotable.
+**Affects:** 1.5, 3.3, 3.4; planning/PLAN.md §8.
+
+## 2026-09-17 — Probe 0.3: three discovery sources need a User-Agent
+`tokens.coingecko.com`, `reference-data-directory.vercel.app` and
+`RPC_4663_MAINNET` each returned 403 to a bare `urllib` request and answered
+normally once a `User-Agent` was set. A 403 from any of them is not an auth
+failure, and unit 1.3's HTTP client must send one by default or it will fail at
+first contact in a way that looks like a credential problem.
+**Affects:** 1.3, 1.4.
