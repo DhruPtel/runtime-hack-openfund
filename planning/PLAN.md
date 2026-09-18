@@ -151,9 +151,15 @@ Egress IP is fixed and added to the execution key's allowlist.
 | `RPC_4663_TESTNET` | probes and drills on 46630 | never the source of a published mark or a booked fill |
 | `SIGNING_KEY` | treasurer process only | ed25519 private key; public key published |
 
-Two separate Bankr accounts. The **execution wallet address is named explicitly
-in config** and its balances are read via RPC. We never assume another account's
-portfolio describes it.
+**One Bankr account, three scoped keys** (§13). Account-level separation does not
+exist, so the boundary is per-key toggles: `BANKR_KEY_READ` and `BANKR_LLM_KEY`
+carry Read Only ON; only `BANKR_KEY_EXEC` has the Wallet API with Read Only OFF.
+**No key the analyst role can load may transact** — enforced by a `can_transact`
+field asserted in tests, not by the prose above, and verified against the live
+surfaces by probe 0.2.
+
+The **execution wallet address is named explicitly in config** and its balances
+are read via RPC. We never assume another account's portfolio describes it.
 
 ---
 
@@ -526,6 +532,14 @@ until unit 1.7 reports real per-cycle inference cost.
 
 Published with the project, not hidden.
 
+- **One Bankr account, not two.** All three Bankr keys are issued from a single
+  account with different per-key toggles, so the separation between the analyst
+  path and spend authority is a toggle, not an account boundary. A compromised
+  analyst path is one console action away from spend authority; the account
+  owner's own credentials are the whole fund's blast radius; and the execution
+  key cannot be revoked without touching the account the analysts depend on.
+  Mitigated, not solved: no analyst-role key may transact, which is asserted in
+  tests and verified against the live surfaces by probe 0.2.
 - No independent audit. Books are internally reconciled against wallet balances
   and settlement evidence, and signed for provenance only.
 - Reorg handling is limited to a confirmation depth. A receipt becoming
