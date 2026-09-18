@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -155,6 +156,26 @@ def load(
     return Config(role=role, credentials=held)
 
 
+def sharing_a_value(environ: Mapping[str, str] | None = None) -> list[list[str]]:
+    """Groups of declared credentials that hold the same value.
+
+    Two credentials with one value is almost always a paste error, and when one
+    of them can transact it collapses the analyst/treasurer boundary entirely.
+    Values are grouped, never returned: the caller learns *which names* collide,
+    not what they are.
+    """
+    env = os.environ if environ is None else environ
+    groups: dict[str, list[str]] = {}
+    for credential in CREDENTIALS:
+        value = env.get(credential.name)
+        if value:
+            groups.setdefault(value, []).append(credential.name)
+    return sorted(
+        (sorted(names) for names in groups.values() if len(names) > 1),
+        key=lambda names: names[0],
+    )
+
+
 def audit(env_file: Path | None = None) -> dict[str, Any]:
     """Report which declared credentials are present, without revealing any value.
 
@@ -164,6 +185,7 @@ def audit(env_file: Path | None = None) -> dict[str, Any]:
     return {
         "present": sorted(c.name for c in CREDENTIALS if os.environ.get(c.name)),
         "absent": sorted(c.name for c in CREDENTIALS if not os.environ.get(c.name)),
+        "sharing_a_value": sharing_a_value(),
         "too_short_to_mask_cleanly": list(redaction.short_credentials()),
         "redacted_value_count": len(redaction.Redactor()),
     }

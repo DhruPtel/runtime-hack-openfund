@@ -228,6 +228,22 @@ def test_missing_required_credential_fails_at_load(monkeypatch, credential_env):
     assert not partial.has("SIGNING_KEY")
 
 
+def test_audit_reports_credentials_sharing_a_value(monkeypatch, credential_env):
+    """A shared value is a paste error, and the report must name it.
+
+    `redacted_value_count` only implies a collision by arithmetic. The names have
+    to be stated, because two credentials with one value is how the analyst
+    process ends up holding the execution key.
+    """
+    assert config.audit()["sharing_a_value"] == []
+
+    monkeypatch.setenv("BANKR_LLM_KEY", FAKE_VALUES["BANKR_KEY_EXEC"])
+    report = config.audit()
+    assert report["sharing_a_value"] == [["BANKR_KEY_EXEC", "BANKR_LLM_KEY"]]
+    for value in FAKE_VALUES.values():
+        assert value not in repr(report)
+
+
 def test_audit_reports_names_only(credential_env):
     report = config.audit()
     rendered = repr(report)
