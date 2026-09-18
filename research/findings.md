@@ -1749,3 +1749,34 @@ What is measured is that $3.000000 went out and $2.825608 arrived as credit.
 `/v1/credits` is wallet-scoped and `/v1/usage` is key-scoped, so the two cannot
 be reconciled against each other. It removes the specific unexplained number, not
 the boundary problem.
+
+### What 0.7b / 0.7c change
+
+| Change | Where |
+|---|---|
+| The 500 is endpoint-specific, not a facilitator fault | 7.2 |
+| Self-payment is not categorically refused; our config is the next suspect | 7.2 |
+| Revenue **is** an on-chain receipt — F0.7.6 corrected, invariant 9 satisfiable | `planning/PLAN.md` §2 inv. 9; 6.x, 7.4 |
+| `PaymentSettled(token, payer, owner, …)` is the revenue evidence, `owner` indexed | 6.x, 7.3, 7.4 |
+| Platform fee measured at 0 bps on a real settlement; contract ceiling 20% | 6.x |
+| A paid round trip is ~4.6 s — cached-record design required | 1.4, 7.x |
+| Settlement is asynchronous to the 200; never book from a response | 4.x, 6.x, 7.4 |
+| `tokenBalances` is empty for every token held; use RPC, never the endpoint | 1.5, 6.x; `planning/PLAN.md` §6 |
+| F0.2.6 stands; F0.6.6's unexplained $0.174 resolves to the purchase side | — |
+
+### Method limitations
+
+- **Our endpoint is still untested.** One third-party payment proves the client,
+  the wallet and the facilitator. Nobody but the owner has ever paid
+  `roundtrip`, and the fund has one wallet, so this probe could not arrange it.
+- **One payment each way.** No retry was made anywhere, so nothing here bounds
+  reliability or variance; the 4,589 ms figure is a single observation against a
+  third-party handler whose warm/cold state we do not control.
+- The self-payment counterexample is one settlement by one unknown wallet, whose
+  account, plan or configuration may differ from ours.
+- The value-threshold hypothesis for `tokenBalances` is untestable on this
+  wallet: nothing it holds is worth more than $0.11.
+- 4663 has no reachable token enumeration (Cloudflare), so its balance check is a
+  pinned four-token set, not a sweep.
+- `x-402-payer` remains unobserved. It reaches the handler after settlement, and
+  no payment to our handler has settled.

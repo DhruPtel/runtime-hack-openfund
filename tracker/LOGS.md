@@ -178,6 +178,29 @@ that `payTo` is a shared Bankr contract rather than the fund's wallet; and that
 returned $0.108346. Verified nothing was spent — USDC identical before and after,
 0 requests and $0 earned on the endpoint.
 
+
+## 0.7b/c — The payment failure, separated; revenue and portfolio probed
+**Date:** 2026-09-18 · **Commit:** 1c22f32
+
+Built `probes/x402_thirdparty.py`, which paid a third-party endpoint once at the
+same $0.001 as our own — deliberately not the marketplace's cheapest, since one
+base unit would have changed the amount as well as the owner — and it **settled**
+(200, 4,589 ms), so the client, wallet and facilitator all work and 0.7's 500 is
+specific to our endpoint; the mechanism stays unresolved, and a settlement found
+on chain where payer and owner are the same address weakens the self-payment
+explanation and points at our hand-written deploy config instead. Reading the
+settlement transaction **corrected our own F0.7.6**: `payTo` is
+`BankrFeeRouterV2`, a verified pass-through splitter, and the seller's share
+moves to the seller's own wallet in the same transaction, so revenue is an
+on-chain receipt and `planning/PLAN.md` invariant 9 is satisfiable as written —
+with `PaymentSettled(token, payer, owner, …)` carrying gross, net and fee, and
+`owner` indexed so every sale is queryable by our address. Built
+`probes/portfolio_check.py`, which shows the portfolio endpoint reporting native
+balances identical to the chain while returning an empty `tokenBalances` for
+every ERC-20 the wallet holds, eliminating staleness as the cause; F0.2.6's "the
+wallet is empty" still stands on the transfer history, though the evidence it was
+originally drawn from never supported it.
+
 ---
 
 ## State at close — 2026-09-18 (second session)
