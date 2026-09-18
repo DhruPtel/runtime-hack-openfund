@@ -81,37 +81,69 @@ sources agreeing that USDG is 6 decimals against two documented sources that say
 18, by all 12 documented response fields being present in all 6 responses, and by
 checking that no declared credential value appears in the findings file.
 
+## 0.4 ▶ — Chainlink equity feeds, coverage, and the multiplier
+**Date:** 2026-09-18 · **Commit:** 5f3ac1b
+
+Built `probes/feed.py` in four steps — enumerate the reference directory in
+full, ask GeckoTerminal for coverage before asking about divergence, read
+`latestRoundData`, `decimals` and `uiMultiplier` for 33 tickers at one pinned
+block, then compare using the 23 tokens whose multiplier is exactly 1.0 as a
+control group for the noise floor. The artifact is `research/findings.md` §0.4 —
+eight findings, captures in the gitignored `probes/out/feed.json` — of which the
+headline reverses the previous session's own observation: 35 of the 57 feeds are
+equity feeds, so `planning/PLAN.md` §11 survives, and GeckoTerminal covers 32 of
+32 tokens because tokenized stocks do have AMM pools, which §13 stated they did
+not. Verified by falsifying the block pin directly rather than assuming it (a
+feed read at block 1 returns nothing), by recomputing every selector from its
+signature, and by the control group, which is what forced the multiplier
+question to be recorded **unresolved** — at 22 bps against a 142 bps noise floor
+the probe cannot see the effect it was built to measure.
+
 ---
 
-## State at close — 2026-09-17
+## State at close — 2026-09-18
 
 **Done.** Units 0.1 (repo skeleton, config loader, credential redaction), 0.2
-(auth headers and key permissions) and 0.3 (quote shape). 32 tests, offline, no
-credentials. Findings for 0.2 and 0.3 are in `research/findings.md`, each marked
-measured / documented / inferred with a pass / fail / unresolved verdict.
+(auth headers and key permissions), 0.3 (quote shape) and 0.4 (Chainlink feeds,
+coverage and the multiplier). 32 tests, offline, no credentials. Findings for
+0.2, 0.3 and 0.4 are in `research/findings.md`, each marked measured /
+documented / inferred with a pass / fail / unresolved verdict.
+
+**At the checkpoint, undecided.** 0.4 is a ▶ checkpoint and its table has been
+shown but not ruled on. Three decisions are open and none has been taken inside
+the probe:
+
+- **Does "depth" return?** It was deleted on 2026-09-17 because the plan said
+  tokenized stocks have no AMM pool to measure. They do — SPY holds $9.16M in one
+  USDG pool (F0.4.3). The false clause in planning/PLAN.md §13 is corrected; the
+  operational definition of tradeable is untouched pending this call.
+- **What does `divergence_max_bps` become?** Still null. A flat threshold cannot
+  work: divergence runs 19.5 bps median on liquid names and 164.7 on illiquid
+  ones, worst case 610 (F0.4.5).
+- **Is a Chainlink feed a membership condition at 1.2?** Only 35 of 187 marked
+  tokens have one (F0.4.8).
+
+**Carried forward as unresolved.** Whether the feed answer already includes
+`uiMultiplier` is **not** measured and 0.4's done-condition is half met
+(F0.4.4). Two documented sources say it is already applied and 1.4 follows them,
+labelled documented. Settling it needs a multiplier large enough to clear a 142
+bps noise floor, or an archive read the one public 4663 endpoint cannot serve.
 
 **Blocked.**
 
-- **0.4 (Chainlink and the multiplier)** wants a funded wallet, so the
-  corroborating comparison runs against prices we could actually trade at, and it
-  first has to settle a question raised while sourcing addresses for 0.3: the
-  Chainlink reference directory for Robinhood mainnet returned 57 feeds and the
-  ones sampled were BTC, ETH, LINK and USDG. No equity feed was seen. The
-  directory was not enumerated in full, so this is an **observation, not a
-  finding** — but if equity feeds are genuinely absent there, 0.4's premise and
-  planning/PLAN.md §11's "Chainlink marks the book" both need revisiting before
-  Phase 1 is designed.
 - **0.5 (execution eligibility)** and **0.10 (idempotency and rate limits)** have
   not been run. Both spend real money with real credentials and need explicit
   per-probe authorization. 0.5's expected verdict is **fail** — the operator is in
   the US and tokenized-stock execution is location-gated — but it is run to
   capture the exact 403, not skipped because the answer is predicted.
 - **Funding.** The wallet holds ~$2 of ETH on Base and nothing on Robinhood
-  Chain, against the ~$200 in planning/PLAN.md §11. The LLM gateway was funded to
-  $3.00 during this session, clearing the 402 that blocked Phase 2.
+  Chain, against the ~$200 in planning/PLAN.md §11. The LLM gateway holds $3.00,
+  clearing the 402 that blocked Phase 2.
 
 **Next.** 0.6 (credits and usage) and 0.8 (issuer allowlist and the beacon check)
-both run today with what is already in `.env`; 0.8 now has a concrete case to
-solve in the three GME tokens. 0.7 (x402 round trip) needs USDC on Base. Unit 1.5
-must re-run probe 0.3 against a funded wallet before any of its numbers count as
-evidence about liquidity.
+both run today with what is already in `.env`; 0.8 now has both a concrete case
+to solve in the three GME tokens and a working discriminator in `uiMultiplier()`
+(F0.4.6). 0.7 (x402 round trip) needs USDC on Base. Unit 1.5 must re-run probe
+0.3 against a funded wallet before any of its numbers count as evidence about
+liquidity, and 0.4's divergence numbers are one block on one day during market
+hours — they do not bound the overnight or weekend tail.
