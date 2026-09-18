@@ -1652,3 +1652,100 @@ account, plan or endpoint configuration may differ from ours in ways this probe
 cannot see. What it does establish is that "the platform forbids self-payment" is
 no longer a sufficient explanation, and that the next thing to try is our own
 configuration rather than a second wallet.
+
+### F0.7b.8 — The portfolio endpoint reports native exactly and omits every token
+
+**Confidence: measured. Verdict: fail.**
+**Method:** `PYTHONPATH=src python3 -m probes.portfolio_check` ·
+**Capture:** `probes/out/portfolio_check.json`
+
+| Chain | native, portfolio vs chain | token entries returned | tokens actually held |
+|---|---|---|---|
+| base | identical to the wei ✓ | **0** | **2** |
+| robinhood | identical to the wei ✓ | 0 | 0 ✓ |
+
+Held on Base and absent from the endpoint:
+
+| Token | On chain | Priced by the explorer? |
+|---|---|---|
+| USDC `0x8335…2913` | **0.107346** | yes (0.999772) |
+| USER `0xbc7d…0db6` | **10.0** | no |
+
+On 4663 the empty list is **correct** — the wallet holds none of USDG, AAPL,
+NVDA or TSLA.
+
+**Of the three explanations, one is eliminated and two cannot be separated.**
+
+- **Staleness — rejected.** The USDC arrived at 05:33:13 and was still missing at
+  18:00, twelve and a half hours later, while the native balance tracked the
+  chain exactly throughout.
+- **Specific tokens — poor fit.** It omits USDC, the most mainstream ERC-20 on
+  Base. It is not skipping an obscure contract; it is returning nothing at all.
+- **A value threshold — consistent, and untestable here.** Every token this
+  wallet holds is worth under $0.11, so there is no holding large enough to sit
+  above a plausible threshold and prove one exists.
+
+**So the honest statement is narrower than "it filters small balances":
+`tokenBalances` returned an empty list for every ERC-20 this wallet has ever
+held, and we cannot say whether a larger holding would appear.** At the fund's
+intended size — $200 capital, $25 trades — a threshold of the usual kind would
+not bite, but that is a hope and not a measurement.
+
+**Consequence.** `planning/PLAN.md` §6 already requires the treasurer to read the
+execution wallet's balances over RPC. Unit 1.5's sizing against "reconciled
+holdings" and Phase 6's reconciliation must do the same, and **no unit may treat
+an empty `tokenBalances` as evidence that a token is not held.** Native balances
+from this endpoint are exact and may be used.
+
+### F0.7b.9 — Re-checking F0.2.6: the finding stands, its evidence does not
+
+**Confidence: measured. Verdict: F0.2.6 stands.**
+
+F0.2.6 recorded *"the fund wallet is empty"* from the endpoint now known to omit
+tokens, so the conclusion had to be re-derived from the chain.
+
+The wallet's **complete** ERC-20 transfer history on Base is five transfers with
+no further pages, and the earliest is **2026-09-18T05:33:13Z**. Probe 0.2 ran on
+**2026-09-17**. No ERC-20 had ever touched the wallet on Base at that point, and
+native balances — which the endpoint reports exactly — were genuinely zero.
+
+**F0.2.6's conclusion was correct. Its evidence was weaker than it appeared:** the
+same endpoint would have reported `tokenBalances: []` whether or not tokens were
+present, so "empty" was never something that reading could establish. It happened
+to be true. No other finding depends on the portfolio endpoint for a *token*
+balance — F0.2.3 (one wallet across three keys) rests on `evmAddress`, which is
+unaffected.
+
+**One gap, stated rather than papered over:** 4663 has no reachable token
+enumeration — its Blockscout sits behind Cloudflare — so the 4663 half of F0.2.6
+rests on a pinned four-token check rather than on history. A token outside that
+set could have been held and missed, then as now.
+
+### F0.7b.10 — The F0.6.6 credit gap is explained by the funding transfer
+
+**Confidence: measured (the transfers). Verdict: the discrepancy resolves; the
+fee is inferred.**
+
+F0.6.6 recorded $0.174392 of unexplained difference between the $3.00 the LOGS
+say funded the gateway and the $2.825608 `/v1/credits` reports, and left it
+**unresolved**, noting it might be a fee or spend by another consumer of the
+wallet. The Base transfer history settles the shape of it:
+
+```
+05:33:13   +3,108,346 USDC   from 0x4f6f…C059   (funding arrives)
+05:33:17   -3,000,000 USDC   to   0x071F…0c31   (credit purchase, four seconds later)
+```
+
+Exactly **$3.000000** left the wallet for a single address, and credits read
+**$2.825608** — a **5.81%** difference. So the gap is on the **purchase** side,
+not the usage side, and F0.6.6's worry that another consumer of the wallet had
+spent it is not supported: `/v1/usage` reporting zero requests was accurate.
+
+**Inferred, not measured:** that the 5.81% is a funding fee or spread. No fee is
+disclosed on any page we read, and we did not observe the credit being minted.
+What is measured is that $3.000000 went out and $2.825608 arrived as credit.
+
+**This does not weaken F0.6.6's structural point**, which stands untouched:
+`/v1/credits` is wallet-scoped and `/v1/usage` is key-scoped, so the two cannot
+be reconciled against each other. It removes the specific unexplained number, not
+the boundary problem.
