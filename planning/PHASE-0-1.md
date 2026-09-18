@@ -980,29 +980,45 @@ red.
 
 ### 1.11 ▶ Skew rejection
 
-**Goal:** prove the snapshot refuses inconsistency.
+**Goal:** prove the snapshot refuses inconsistency, and does not refuse history.
 
-**Build:** tests that construct: observations from two different blocks, an
-offchain body with an old source time and a fresh fetch time, a paused feed, and
-a market-closed feed.
+**Build:** tests written against the staleness decision (freshness binds a
+series' newest point only) and invariant 2:
 
-**Open, not reconciled:** invariant 2 now carries history (decision 2026-09-18).
-A series is made of observations whose source times are old by design, so the
-"old source time, fresh fetch time" rule — and the staleness rule in PLAN §9 —
-would reject every historical point if applied point by point. Whether these
-rules bind a series' newest point, every point, or something else is undecided
-here. It has to be decided before this unit's tests are written.
+1. **Mixed blocks.** Observations read at two different blocks are refused.
+2. **Stale newest point.** A series whose newest observation is older than its
+   feed's heartbeat plus `feed_staleness_margin_seconds` is refused as stale.
+3. **Old history, fresh newest point.** This one is **accepted**. It is the case
+   the drafted rules would have refused, and it proves they no longer reject
+   every series.
+4. **Replayed offchain body.** An offchain response whose newest point's source
+   time is old relative to its fetch time is refused.
+5. **From the future.** An observation dated after the pinned block is refused.
+6. **Paused feed.** It is refused, excluded and labelled.
+7. **Market-closed feed.** A `us_equities_24/5` feed outside market hours
+   (F0.4.1) is labelled; whether it is also refused is the checkpoint's
+   question.
 
-**Artifact:** four named rejections.
+**Artifact:** six named refusals and one named acceptance.
 
-**Done when:** each is refused by name, and the refusal reaches the caller rather
-than being logged and swallowed.
+**Done when:** each refusal is named and reaches the caller rather than being
+logged and swallowed, and the acceptance case passes.
 
 **Checkpoint:** you see the refusals. Judge whether the strictness is right, or
-whether it will block every cycle on a weekend.
+whether it will block every cycle on a weekend. That question is now concrete: a
+24/5 feed may legitimately go longer than its 86,400 s heartbeat while markets
+are shut, and weekend behaviour is unmeasured (F0.4.7). The margin in config is
+still null, and it is the lever.
 
-**Phase 1 exit:** a hashed snapshot from live data; byte-identical replay from
-fixture; bad inputs rejected by name; every address attested.
+**Changed by:** the staleness decision, which closes the gap this unit carried;
+the price-history decision; the staleness config decision; F0.4.1, F0.4.7.
+**Size:** bigger than drafted — seven cases, not four.
+
+**Phase 1 exit:**
+- a hashed snapshot from live data, with history up to its pinned block;
+- byte-identical replay from a fixture;
+- bad inputs rejected by name, and old history accepted;
+- every address attested, the beacon included.
 
 ---
 
