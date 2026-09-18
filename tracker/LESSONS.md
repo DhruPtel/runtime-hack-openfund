@@ -689,3 +689,14 @@ verdict ("transacted: False") came from exactly that. Reconciliation (5.3) has
 to key on `UserOperationEvent` and `Transfer` logs. A quote's `feeBps: 0` did
 not mean the fill was fee-free: 6 bps went unaccounted for (F0.10.4).
 **Affects:** Phase 5 entry, 5.2, 5.3, 4.6, 6.2; `planning/PLAN.md` §6, §13.
+
+## 2026-09-18 — DECISION: freshness applies to a series' newest point only
+*Operator decision at the 0.11 checkpoint*, resolving the gap left open when
+invariant 2 gained history. A price series is mostly old data by definition. The
+freshness rule governs its **most recent observation**; historical points carry
+their own timestamps, and being old is what makes them history. The staleness
+and replay rules in `planning/PHASE-0-1.md` 1.11 and `planning/PLAN.md` §9 were
+written for single readings and, applied point by point, would have rejected
+every series. They now bind the newest point.
+**Affects:** 1.3, 1.6, 1.11; `planning/PLAN.md` §9 (*fold pending*: PLAN.md was
+outside the 0.11 follow-up's paths); `config/thresholds.json`.
