@@ -224,6 +224,31 @@ turns out to be a bare payer address the handler cannot verify, since `X-PAYMENT
 is not forwarded. Three self-payments, all fee-free and netting to zero, so the
 unit cost nothing.
 
+
+## 0.8 — Asset identity
+**Date:** 2026-09-18 · **Commit:** 7581628
+
+Built `probes/identity.py`, which snapshots the issuer registry with its own
+provenance — the endpoint carries no version, no `ETag` and no `Last-Modified`,
+so the snapshot's sha256 and fetch time have to serve as the version invariant 8
+asks for — and then runs five candidate checks against nine candidates, six of
+which the checks are supposed to admit, because a check only ever pointed at
+things it obviously catches proves nothing. The artifact is
+`research/findings.md` §0.8 with the full matrix; the finding that needed the
+whole matrix is that **feed presence admits both GME counterfeits**, since a feed
+exists for the ticker and a forger picks its own ticker, so it carries no
+identity weight at all while remaining required for markability — a separation
+CRM demonstrates, being genuine, registry-listed, beacon-backed and correctly
+unmarkable. Verified beacon resolution on **mainnet** rather than inheriting the
+testnet result, and swept both available populations exhaustively — 194 of 194
+registry assets sit behind the issuer's beacon and 187 of 187 marked
+discovery-list addresses are admitted by both checks, zero disagreements in 381
+addresses — which is recorded as *no evidence separating them* rather than as the
+beacon earning its place. The conclusion is that registry membership keyed by
+`(chain_id, address)` is necessary and sufficient, `uiMultiplier()` and the name
+marker are dropped, and the beacon is worth keeping only as an independent trust
+root that should fail a cycle loudly if it ever disagrees.
+
 ---
 
 ## State at close — 2026-09-18 (second session)
