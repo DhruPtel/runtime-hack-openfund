@@ -80,3 +80,38 @@ captures in the gitignored `probes/out/quote.json`. Verified by three independen
 sources agreeing that USDG is 6 decimals against two documented sources that say
 18, by all 12 documented response fields being present in all 6 responses, and by
 checking that no declared credential value appears in the findings file.
+
+---
+
+## State at close — 2026-09-17
+
+**Done.** Units 0.1 (repo skeleton, config loader, credential redaction), 0.2
+(auth headers and key permissions) and 0.3 (quote shape). 32 tests, offline, no
+credentials. Findings for 0.2 and 0.3 are in `research/findings.md`, each marked
+measured / documented / inferred with a pass / fail / unresolved verdict.
+
+**Blocked.**
+
+- **0.4 (Chainlink and the multiplier)** wants a funded wallet, so the
+  corroborating comparison runs against prices we could actually trade at, and it
+  first has to settle a question raised while sourcing addresses for 0.3: the
+  Chainlink reference directory for Robinhood mainnet returned 57 feeds and the
+  ones sampled were BTC, ETH, LINK and USDG. No equity feed was seen. The
+  directory was not enumerated in full, so this is an **observation, not a
+  finding** — but if equity feeds are genuinely absent there, 0.4's premise and
+  planning/PLAN.md §11's "Chainlink marks the book" both need revisiting before
+  Phase 1 is designed.
+- **0.5 (execution eligibility)** and **0.10 (idempotency and rate limits)** have
+  not been run. Both spend real money with real credentials and need explicit
+  per-probe authorization. 0.5's expected verdict is **fail** — the operator is in
+  the US and tokenized-stock execution is location-gated — but it is run to
+  capture the exact 403, not skipped because the answer is predicted.
+- **Funding.** The wallet holds ~$2 of ETH on Base and nothing on Robinhood
+  Chain, against the ~$200 in planning/PLAN.md §11. The LLM gateway was funded to
+  $3.00 during this session, clearing the 402 that blocked Phase 2.
+
+**Next.** 0.6 (credits and usage) and 0.8 (issuer allowlist and the beacon check)
+both run today with what is already in `.env`; 0.8 now has a concrete case to
+solve in the three GME tokens. 0.7 (x402 round trip) needs USDC on Base. Unit 1.5
+must re-run probe 0.3 against a funded wallet before any of its numbers count as
+evidence about liquidity.
