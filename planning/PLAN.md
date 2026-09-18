@@ -211,6 +211,10 @@ re-evaluate before detailing the next.
   against it. If coverage is absent, the corroborating source becomes a Bankr
   quote at size, recorded as *not independent of the execution venue*, and the
   divergence veto becomes quote-versus-feed rather than cross-source.
+  *Run 2026-09-18 (`research/findings.md` §0.4): 35 of 57 feeds are equity
+  feeds, and GeckoTerminal covers 32 of 32 addressable tokens, so the fallback
+  does not fire and the veto stays cross-source. The multiplier question is
+  **unresolved** — the effect is an order of magnitude below the noise floor.*
 - **0.5** Execution eligibility: attempt a minimal swap with the intended
   execution identity. Record the exact 403 body. Resolves to **pass / fail /
   unresolved**.
@@ -565,7 +569,12 @@ Published with the project, not hidden.
   reconciliation are genuine. Everything upstream of execution — snapshot,
   quotes, sizing, gates, veto, books — is identical in both paths. Probe 0.5
   records the exact 403 rather than assuming it.
-- No independent liquidity measurement for stocks. Tokenized stocks have no AMM
-  pool of their own, so tradeability is defined operationally: a quote at
-  intended size succeeded, quote age within bound, impact known and within limit
-  or null — and null blocks. We do not claim to have measured depth.
+- No independent liquidity measurement for stocks. Tradeability is defined
+  operationally: a quote at intended size succeeded, quote age within bound,
+  impact known and within limit or null — and null blocks. We do not claim to
+  have measured depth. **Correction, 2026-09-18:** this limitation previously
+  read "tokenized stocks have no AMM pool of their own", sourced to
+  `tokenized-stocks.md:42`. That is false — SPY has a `SPY / USDG 0.3%` pool
+  holding $9.16M and AAPL twenty pools (`research/findings.md` F0.4.3). Whether
+  depth returns to the vocabulary is **open at the 0.4 checkpoint**; the
+  operational definition above is unchanged until it is decided.

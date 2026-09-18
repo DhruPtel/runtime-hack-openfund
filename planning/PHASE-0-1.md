@@ -131,6 +131,16 @@ it?
 **Done when:** coverage has a measured answer, and the multiplier question has a
 measured answer rather than an inferred one.
 
+**Run 2026-09-18 — half met.** Coverage is measured and total: 35 of the 57
+directory feeds are equity feeds, and GeckoTerminal prices 32 of 32 addressable
+tokens, so the fallback corroborator does not fire. The multiplier question is
+**not** measured and is recorded unresolved: nine tokens carry a multiplier other
+than 1.0, the largest is 22.1 bps, and the feed-to-corroborator noise floor
+averages 141.9 bps, so neither hypothesis can be rejected (`research/findings.md`
+F0.4.4). The done-condition is **not** rewritten to match what was achieved —
+what would settle it is an asset whose multiplier clears the noise, or an archive
+read across a multiplier change, and neither is available today.
+
 **Risk:** the highest-value unit in Phase 0. If the two sources disagree wildly,
 the marking decision needs revisiting before Phase 1 is designed. Also watch for
 feeds that return a stale `updatedAt` outside market hours; that's expected, and
@@ -363,8 +373,11 @@ independence flag.
 **Done when:** the mark is computed in exactly one function, and the divergence
 field is populated for every asset.
 
-**Risk:** applying `uiMultiplier` twice. Probe 0.4 settles this; the code should
-carry a comment pointing at the finding.
+**Risk:** applying `uiMultiplier` twice. **Probe 0.4 did not settle this**
+(F0.4.4), so the code follows the documented rule — do not apply it again — and
+its comment must point at F0.4.4 and state that the basis is documented and
+corroborated by two sources but **not measured**, rather than implying a probe
+resolved it.
 
 ---
 
