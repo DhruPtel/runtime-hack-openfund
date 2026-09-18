@@ -10,8 +10,9 @@
 
   "max_output_tokens": null,
   "worker_deadline_seconds": 120,
-  "_worker_deadline_note": "Provisional. One analyst call took 58 s at the 0.9 floor (F0.9.1), and 1.7's larger snapshot may take longer. transport_timeout_seconds is still null. Whatever it becomes must exceed the measured call latency and must not exceed this deadline, because a call timed out client-side is still billed (F0.9.3).",
-  "transport_timeout_seconds": null,
+  "_worker_deadline_note": "Provisional. One analyst call took 58 s at the 0.9 floor (F0.9.1), and 1.7's larger snapshot may take longer. It is shorter than transport_timeout_seconds (180); see that note.",
+  "transport_timeout_seconds": 180,
+  "_transport_timeout_note": "Provisional (decision before unit 1.1). It exceeds the 58 s measured for one analyst call (findings F0.9.1), because a client-side timeout is still billed and is a cost with no report (F0.9.3). It is longer than worker_deadline_seconds (120), so inside the 2.4 runner the deadline fires first and this never does. That interaction is recorded in tracker/LESSONS.md and left for 2.4 to resolve. It does not affect 1.7's single calls.",
   "context_budget_tokens": null,
   "_context_budget_note": "Must cover every accepted full report plus the sized plan and the risk output. If the bundle does not fit, the cycle vetoes rather than summarizing (planning/PLAN.md section 2 invariant 3).",
   "_budgets_resolved_by": "units 2.4 and 3.6, informed by unit 1.7"
