@@ -614,3 +614,190 @@ should treat presence of a feed as a membership condition.
   single-token endpoint lists twenty, so the per-asset pool count in the capture
   is a floor and is named as one.
 - Nothing was written, submitted or signed. All reads.
+
+---
+
+## 0.5 — Execution eligibility
+
+**Date:** 2026-09-18 · **Method:** `PYTHONPATH=src python3 -m probes.execute --confirm` ·
+**Captures:** `probes/out/execute.json` (1 quote, 1 execution attempt, 2 portfolio reads)
+
+> **This probe spent money, or tried to.** It is the only unit so far that used
+> `BANKR_KEY_EXEC`. One execution attempt was sent, once, and no retry followed.
+> Wallet `0x93faecde3c88a713e1edddf417c02c326889a3da`, chain `robinhood` (4663),
+> selling 0.0001 ETH (~$0.26) into AAPL
+> (`0xaf3d76f1834a1d425780943c99ea8a608f8a93f9`).
+
+### The refusal, verbatim
+
+```
+HTTP 403 in 115 ms
+content-type: application/json; charset=utf-8
+
+{"message":"Tokenized stocks (AAPL) are not available in your region."}
+```
+
+Untruncated. The response carried exactly one field, `message`, and no other
+headers worth keeping.
+
+### F0.5.1 — Tokenized-stock execution is location-gated, confirmed
+
+**Confidence: measured. Verdict: fail** — which is the expected verdict, and it
+is now measured rather than documented.
+
+`research/bankr-skills.md`, quoting `tokenized-stocks.md:73-79`, documented that
+tokenized-stock trades require location verification and are unavailable in the
+US and UK. The operator is in the US. The probe returns exactly that, and
+**names both the gate and the asset**: *"Tokenized stocks (AAPL) are not
+available in your region."*
+
+**This changes nothing in the plan and confirms a great deal of it.**
+`tracker/LESSONS.md` (2026-09-17) already moved stock legs to paper and rescoped
+Phase 5 on the documented claim. That decision was taken on documentation and is
+now taken on evidence. `planning/PLAN.md` §13's "no live tokenized-stock fills"
+is correct as written.
+
+**The refusal fired at the gate being tested**, which
+`planning/PHASE-0-1.md` 0.5 requires and which four separate precautions
+establish rather than assume:
+
+| Confound | Ruled out by |
+|---|---|
+| Empty balance | 0.000490 ETH held on 4663 against a 0.0001 sell plus a 0.0002 gas reserve, checked before sending |
+| Wrong or dead address | AAPL carries a Chainlink feed (F0.4.1), answers `uiMultiplier()` (F0.4.6) and has 20 pools (F0.4.3) |
+| Price-impact rejection | `swapImpactBps` 13 against `maxPriceImpactBps` 1500 on the quote that was sent |
+| Spend limit | ~$0.26 against documented $500/tx and $500/24h caps |
+
+### F0.5.2 — The refusal is free: pre-broadcast, no gas, no transaction
+
+**Confidence: measured. Verdict: pass.**
+
+The 403 came back in **115 ms** with no `hash` field, and the wallet's native
+balance was identical to the wei before and after — `0.000490162486507929` ETH
+both times. Nothing was signed, nothing was broadcast, nothing was billed.
+
+This matters more than it looks. Bankr's own documentation warns that a swap
+which mines and reverts returns **200 with `success: false`** and a real hash,
+and that gas is charged for it. The location gate sits well upstream of that: it
+is checked before the transaction is built. So a treasurer that repeatedly
+attempts a gated stock leg burns no gas — it wastes wall-clock and rate-limit
+budget, and nothing else.
+
+### F0.5.3 — The cause is identifiable, but only by matching prose
+
+**Confidence: measured for this cause. Verdict: pass, narrowly — and the narrowness is the finding.**
+
+The concern this half of the probe exists to test is whether a 403 can be
+decoded at all, given seven causes behind one status code. For **this** cause the
+answer is yes: the body names the region gate unambiguously and even names the
+offending asset, which is more than the plan expected. It is not the opaque
+refusal `planning/PLAN-technical-review.md` finding 15 warned about, and we do
+not record a problem where there is not one.
+
+**What is genuinely weak is the envelope, not the wording.** Three Bankr surfaces
+return three different error shapes, and the one that matters most here is the
+least structured of them:
+
+| Surface | Status | Shape |
+|---|---|---|
+| LLM gateway | 403 | `{"error":{"message":"…","type":"auth_error"}}` — machine-readable `type` |
+| Wallet API | 401 | `{"error":"Invalid API key","message":"…"}` — two flat strings, no code |
+| **Wallet API `/wallet/swap`** | **403** | **`{"message":"…"}` — one field, prose, no code at all** |
+
+There is **no machine-readable discriminator** on the swap refusal. Not a code,
+not a type, not even the flat `error` field the same API's 401 carries. Unit
+5.6's decoder can only match on English prose, and a reworded message — *"your
+region"* to *"your location"*, say — silently breaks the match. Whatever the
+treasurer does with this, the code must **fail closed on an unrecognised 403**
+and surface the raw body, never assume the one cause it knows how to parse.
+
+**Six of the seven causes remain unmeasured.** One sample tells us the location
+body is clear; it says nothing about what a paused wallet or a read-only key
+returns, or whether those are distinguishable from each other. We do not
+generalise from one.
+
+### F0.5.4 — The seven causes exist, but the list was never written down here
+
+**Confidence: documented. Verdict: pass** (as a correction to our own records).
+
+`planning/PLAN-v1.md` §4 and `planning/PHASE-0-1.md` 0.5 both refer to "seven
+documented causes" and instruct this probe to map against them. **No file in this
+repository enumerates them.** The number was carried forward without the list.
+
+Recovered from `https://docs.bankr.bot/wallet-api/swap/`, read 2026-09-18 — six
+from the Errors table, verbatim:
+
+1. Read-only API key
+2. Wallet paused
+3. Price impact above your wallet's own protection limit
+4. **Failed location check** ← measured, F0.5.1
+5. Fee beneficiary selling its own fee token
+6. A Bankr Terminal spend limit would be exceeded
+
+The seventh is **reconstructed, not quoted**: the same page's Access Control
+section says token-security refusals apply "at both quote and execution", making
+*buy token banned or flagged by the security scan* a 403 cause on this endpoint
+although the Errors table omits it. That is an inference, and it is the one the
+count depends on — six are documented and the seventh is ours.
+
+The list is now pinned in `probes/execute.py` with its provenance and the
+quoted/reconstructed split preserved.
+
+### F0.5.5 — 0.5 does **not** establish that `BANKR_KEY_EXEC` can transact
+
+**Confidence: measured (the gap). Verdict: unresolved.**
+
+The probe proves a stock swap is refused for region. It does **not** prove the
+execution key is write-enabled, because we cannot see the order in which Bankr
+evaluates its checks: a location refusal fired, and a read-only key would have
+produced a different 403 we never saw. Cause 1 and cause 4 were both live
+candidates going in (`probes/out/execute.json`, `causes_before_send`), and only
+one of them was eliminated — by the body's wording, not by the status.
+
+**This leaves Phase 5's live leg unproven.** `tracker/LESSONS.md` (2026-09-17)
+rescoped Phase 5 around an ungated 4663 swap executed by the treasurer, so that
+receipts, reconciliation and the order state machine run against a real chain.
+That path depends on `BANKR_KEY_EXEC` being able to transact, which remains
+exactly as unresolved as F0.2.2 left it — 0.2 read a portfolio with every key and
+deliberately did not test a write.
+
+**What would settle it:** one ungated swap on 4663 with the same key — ETH into
+USDG, which quotes at the same size and is not a tokenized stock, so the location
+gate does not apply. That is a second spend and is **not** authorised by this
+unit, so it was not run. It is the natural first unit of Phase 5 rather than a
+repair to 0.5.
+
+### What 0.5 changes
+
+| Change | Where |
+|---|---|
+| Stock execution gated by region — measured, not documented | `planning/PLAN.md` §13, Phase 5 |
+| A gated stock refusal costs no gas and broadcasts nothing | 4.x treasurer, 5.6 |
+| `/wallet/swap` 403 carries no machine-readable cause; decode fails closed | 5.6, `core/errors.py` |
+| The seven causes are now enumerated, six quoted and one reconstructed | `probes/execute.py` |
+| `BANKR_KEY_EXEC`'s ability to transact is still unproven | Phase 5 entry, 4.12 |
+
+### A note that belongs to 0.3
+
+Reading the swap documentation for this unit resolved an open question from
+F0.3.4. `planning/PLAN-v1.md` §4 claimed execution gates on `swapImpactBps` while
+`priceImpactBps` is display-only, and 0.3 recorded it **unresolved** because the
+two fields never diverged at $5 and $25. The documentation states it directly:
+`swapImpactBps` is *"the number server-side execution gates on"*, and
+`priceImpactBps` is *"for display"*. That makes the claim **documented**, not
+measured — the two fields still have not been observed to differ, and F0.3.4's
+requirement for a size large enough to separate them stands.
+
+### Method limitations
+
+- **One attempt, one cause, one region, one account, one day.** Everything here
+  is evidence about a US-resident operator on this account. It is not evidence
+  about what a verified account sees, and 0.5 passing for someone else would not
+  make it pass for us.
+- Six of the seven 403 causes were never triggered, so nothing here bounds how
+  distinguishable they are from one another.
+- The attempt used native ETH rather than the documented USDG cash leg, because
+  the wallet holds no USDG. A USDG-funded attempt is a different request shape
+  and was not tested.
+- Nothing was broadcast, so this says nothing about receipt handling, revert
+  behaviour, or the `200 success:false` path that unit 4.x must handle.
