@@ -14,7 +14,8 @@ import pytest
 
 from fund.core.types import (
     BPS, MULTIPLE, PERCENT, SECONDS, USD, Amount, AssetId, BlockRef, ChainAddress,
-    Check, FetchStatus, Fixed, Instant, Observation, Price, Series, Source,
+    Asset, AssetKind, Check, Deployment, FeedRef, FetchStatus, Fixed, Instant,
+    Observation, Price, RegistryRecord, Series, Source, TradingCapability,
     content_id, from_canonical, to_canonical,
 )
 
@@ -274,3 +275,115 @@ def test_a_series_that_could_not_be_fetched_says_why_and_has_no_points():
     with pytest.raises(ValueError):
         Series(asset=AAPL, source=FEED, fetch_time=Instant.from_seconds(T0),
                status=FetchStatus.OK)
+
+
+# --- assets: identity and markability ------------------------------------------
+
+CRM = AssetId(CHAIN, "0xd95B44124e475743a7589e68F3D74008A5536D44")
+# The genuine GME and the "GameStop" counterfeit, as probe 0.8 recorded them.
+GME = AssetId(CHAIN, "0x1b0e319c6a659f002271b69db8a7df2f911c153e")
+FAKE_GME = AssetId(CHAIN, "0x7e86381a763f0ecca2bdf27c54eac403ddd48123")
+
+
+def registry_record(asset: AssetId, symbol: str) -> RegistryRecord:
+    # CRM's record from the registry snapshot 0.8 took (probes/out/registry_snapshot.json).
+    return RegistryRecord(
+        registry_id="0x00000000000000000000000000000000022015c295294037bfe416d3e45327b9",
+        symbol=symbol, name="Salesforce • Robinhood Token", isin="US79466L3024",
+        status="ASSET_STATUS_ACTIVE", decimals=18,
+        deployments=(Deployment(contract=ChainAddress(asset.chain_id, asset.address),
+                                network_name="Robinhood Chain"),),
+        current_multiplier=Fixed.parse("1.001148322800714293", MULTIPLE),
+        pending_multiplier=None,  # the registry writes "" for none
+        trading_capabilities=(
+            TradingCapability(session="market", lot="whole", status="TRADING_STATUS_TRADABLE"),
+            TradingCapability(session="market", lot="fractional", status="TRADING_STATUS_UNTRADABLE"),
+        ))
+
+
+def equity_feed(proxy: str, name: str) -> FeedRef:
+    return FeedRef(proxy=ChainAddress(CHAIN, proxy), decimals=8,
+                   heartbeat=Fixed(86_400, 0, SECONDS),
+                   deviation_threshold=Fixed.parse("0.5", PERCENT),
+                   market_hours="us_equities_24/5", name=name)
+
+
+def test_crm_is_genuine_listed_and_correctly_unmarkable():
+    crm = Asset(id=CRM, kind=AssetKind.STOCK, symbol="CRM", decimals=18,
+                identity=Check(True, "in registry snapshot"),
+                markability=Check(False, "no Chainlink feed (F0.4.1)"),
+                beacon=Check(True, "resolves to the issuer beacon"),
+                registry=registry_record(CRM, "CRM"), feed=None)
+    assert crm.identity.passes and not crm.markability.passes
+    roundtrip(crm)
+
+
+def test_a_feed_carries_no_identity_weight():
+    # F0.8.3: feed presence admitted both GME counterfeits. The type can hold a
+    # counterfeit that a ticker join has attached the real GME feed to. Its
+    # identity is still false, so 1.2 can refuse it by name.
+    fake = Asset(id=FAKE_GME, kind=AssetKind.STOCK, symbol="GME", decimals=18,
+                 identity=Check(False, "not in registry"),
+                 markability=Check(True, "a feed exists for the ticker"),
+                 beacon=Check(False, "no beacon slot set"),
+                 feed=equity_feed("0x0e96b7708487f91baac09697593d3e8bf253f2d8",
+                                  "Robinhood GME / USD"))
+    assert fake.markability.passes and not fake.identity.passes
+    roundtrip(fake)
+
+
+def test_a_stock_cannot_claim_identity_without_its_registry_record():
+    with pytest.raises(ValueError):
+        Asset(id=GME, kind=AssetKind.STOCK, symbol="GME", decimals=18,
+              identity=Check(True), markability=Check(False, "no feed"),
+              beacon=Check(True))
+    with pytest.raises(ValueError):  # a record for another address
+        Asset(id=GME, kind=AssetKind.STOCK, symbol="GME", decimals=18,
+              identity=Check(True), markability=Check(False, "no feed"),
+              beacon=Check(True), registry=registry_record(CRM, "CRM"))
+
+
+def test_markable_means_a_feed_is_pinned_and_a_stock_needs_its_beacon_check():
+    with pytest.raises(ValueError):
+        Asset(id=CRM, kind=AssetKind.STOCK, symbol="CRM", decimals=18,
+              identity=Check(True), markability=Check(True), beacon=Check(True),
+              registry=registry_record(CRM, "CRM"))
+    with pytest.raises(TypeError):
+        Asset(id=CRM, kind=AssetKind.STOCK, symbol="CRM", decimals=18,
+              identity=Check(True), markability=Check(False, "no feed"), beacon=None,
+              registry=registry_record(CRM, "CRM"))
+
+
+def test_registry_decimals_must_agree_with_the_asset():
+    with pytest.raises(ValueError):
+        Asset(id=CRM, kind=AssetKind.STOCK, symbol="CRM", decimals=6,
+              identity=Check(True), markability=Check(False, "no feed"),
+              beacon=Check(True), registry=registry_record(CRM, "CRM"))
+
+
+def test_cash_and_gas_are_assets_outside_the_registry():
+    usdg = Asset(id=USDG, kind=AssetKind.CASH, symbol="USDG", decimals=6,
+                 identity=Check(True, "pinned cash leg, on-chain decimals 6 (F0.3.1)"),
+                 markability=Check(True, "Chainlink USDG / USD feed"), beacon=None,
+                 feed=FeedRef(proxy=ChainAddress(CHAIN, "0x" + "11" * 20), decimals=8,
+                              heartbeat=Fixed(86_400, 0, SECONDS),
+                              deviation_threshold=Fixed.parse("0.5", PERCENT),
+                              market_hours=None, name="USDG / USD"))
+    eth = Asset(id=ETH, kind=AssetKind.GAS, symbol="ETH", decimals=18,
+                identity=Check(True, "native"), markability=Check(False, "feed not pinned yet"),
+                beacon=None)
+    roundtrip(usdg)
+    roundtrip(eth)
+    with pytest.raises(ValueError):
+        Asset(id=USDG, kind=AssetKind.GAS, symbol="USDG", decimals=6,
+              identity=Check(True), markability=Check(False, "x"), beacon=None)
+    with pytest.raises(ValueError):
+        Asset(id=USDG, kind=AssetKind.CASH, symbol="USDG", decimals=6,
+              identity=Check(True), markability=Check(False, "x"), beacon=Check(True))
+
+
+def test_the_directory_float_threshold_must_be_converted_not_passed():
+    with pytest.raises(TypeError):
+        FeedRef(proxy=ChainAddress(CHAIN, "0x" + "22" * 20), decimals=8,
+                heartbeat=Fixed(86_400, 0, SECONDS), deviation_threshold=0.5,
+                market_hours=None, name="x")

@@ -605,3 +605,162 @@ class Series:
         if self.newest is None:
             return None
         return as_of.epoch_ms - self.newest.source_time.epoch_ms
+
+
+# --- assets: identity and markability, kept apart ------------------------------
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FeedRef:
+    """A Chainlink feed as the pinned directory describes it (F0.4.1).
+
+    The directory writes `threshold` as a JSON float (0.5). The adapter converts
+    it with `Fixed.parse(str(...))`; this type refuses the float itself.
+    """
+
+    proxy: ChainAddress
+    decimals: int
+    heartbeat: Fixed          # seconds; 86,400 for the equity feeds
+    deviation_threshold: Fixed  # percent
+    market_hours: str | None  # e.g. "us_equities_24/5"
+    name: str
+
+    def __post_init__(self):
+        _is("proxy", self.proxy, ChainAddress)
+        _int("decimals", self.decimals, minimum=0)
+        _is("heartbeat", self.heartbeat, Fixed)
+        _is("deviation_threshold", self.deviation_threshold, Fixed)
+        if self.heartbeat.unit != SECONDS or self.deviation_threshold.unit != PERCENT:
+            raise ValueError("heartbeat is in seconds and deviation in percent")
+        _text("market_hours", self.market_hours, optional=True)
+        _text("name", self.name)
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Deployment:
+    """One entry of a registry record's `deployments`. Not assumed to be the only one."""
+
+    contract: ChainAddress
+    network_name: str
+
+    def __post_init__(self):
+        _is("contract", self.contract, ChainAddress)
+        _text("network_name", self.network_name)
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class TradingCapability:
+    """One cell of the registry's `tradingCapabilities`: session × lot → status."""
+
+    session: str  # market, extended, overnight
+    lot: str      # whole, fractional
+    status: str   # as reported, e.g. TRADING_STATUS_UNTRADABLE
+
+    def __post_init__(self):
+        for name in ("session", "lot", "status"):
+            _text(name, getattr(self, name))
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RegistryRecord:
+    """An issuer registry entry, as given (`api.robinhood.com/rhj/assets`, F0.8.1).
+
+    `status` is kept as the source's text, not an enum of the one value ever
+    seen (`ASSET_STATUS_ACTIVE`). `deployments` is kept as a tuple, not assumed
+    to have length 1. The registry writes an empty `pendingMultiplier` for "none";
+    that is None here, never zero.
+    """
+
+    registry_id: str
+    symbol: str   # display only
+    name: str
+    isin: str
+    status: str
+    decimals: int
+    deployments: tuple[Deployment, ...]
+    current_multiplier: Fixed
+    pending_multiplier: Fixed | None
+    trading_capabilities: tuple[TradingCapability, ...] = ()
+
+    def __post_init__(self):
+        for name in ("registry_id", "symbol", "name", "isin", "status"):
+            _text(name, getattr(self, name))
+        _int("decimals", self.decimals, minimum=0)
+        _tuple_of(self, "deployments", Deployment)
+        if not self.deployments:
+            raise ValueError("a registry record lists at least one deployment")
+        _tuple_of(self, "trading_capabilities", TradingCapability)
+        for name in ("current_multiplier", "pending_multiplier"):
+            value = getattr(self, name)
+            _is(name, value, Fixed, optional=name == "pending_multiplier")
+            if value is not None and value.unit != MULTIPLE:
+                raise ValueError(f"{name} is a multiple")
+
+    def deploys(self, asset: AssetId) -> bool:
+        return any(d.contract.chain_id == asset.chain_id
+                   and d.contract.address == asset.address for d in self.deployments)
+
+
+class AssetKind(enum.Enum):
+    STOCK = "stock"  # identity from the issuer registry
+    CASH = "cash"    # USDG: genuine, not in the registry, pinned by config (F0.8.2)
+    GAS = "gas"      # native ETH
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Asset:
+    """An asset and what we know about it, as three separate verdicts.
+
+    - `identity`: is this the real one? For a stock, that means registry
+      membership on `(chain_id, address)`.
+    - `markability`: can it be marked independently of the venue? That means a
+      pinned Chainlink feed exists.
+    - `beacon`: the independent-root cross-check. It applies to stocks only, and
+      is None — not applicable — for cash and gas.
+
+    They are never folded into one status. Feed presence admitted both GME
+    counterfeits (F0.8.3), and CRM is genuine, registry-listed and correctly
+    unmarkable (F0.8.2). A single status would have to get one of those wrong.
+    """
+
+    id: AssetId
+    kind: AssetKind
+    symbol: str    # display only: never looked up, never a key
+    decimals: int
+    identity: Check
+    markability: Check
+    beacon: Check | None
+    registry: RegistryRecord | None = None
+    feed: FeedRef | None = None
+
+    def __post_init__(self):
+        _is("id", self.id, AssetId)
+        _is("kind", self.kind, AssetKind)
+        _text("symbol", self.symbol)
+        _int("decimals", self.decimals, minimum=0)
+        _is("identity", self.identity, Check)
+        _is("markability", self.markability, Check)
+        _is("registry", self.registry, RegistryRecord, optional=True)
+        _is("feed", self.feed, FeedRef, optional=True)
+        if self.markability.value is True and self.feed is None:
+            raise ValueError("markable means a feed is pinned")
+        if self.feed is not None and self.feed.proxy.chain_id != self.id.chain_id:
+            raise ValueError("a feed marks an asset on its own chain")
+        if self.kind is AssetKind.STOCK:
+            _is("beacon", self.beacon, Check)
+            if self.identity.value is True:
+                if self.registry is None or not self.registry.deploys(self.id):
+                    raise ValueError("a stock's identity is its registry record")
+            if self.registry is not None and self.registry.decimals != self.decimals:
+                raise ValueError("registry decimals disagree with the asset's")
+        else:
+            if self.beacon is not None:
+                raise ValueError("the beacon cross-check applies to stocks only")
+            if self.registry is not None:
+                raise ValueError("cash and gas are not registry assets")
+        if self.kind is AssetKind.GAS and not self.id.is_native:
+            raise ValueError("the gas asset is the chain's native token")
