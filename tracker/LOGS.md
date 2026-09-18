@@ -332,6 +332,25 @@ bind a price series) are marked and not reconciled. **Shown and awaiting the
 operator: nothing at this checkpoint has been decided yet, including the
 live-leg asset.**
 
+
+## Phase 1 replan — units rewritten against the Phase 0 record
+**Date:** 2026-09-18 · **Commit:** 221e747
+
+Recorded the four 0.11 checkpoint decisions in LESSONS:
+- freshness binds a series' newest point;
+- five config values, provisional, with the staleness margin still unset;
+- ETH→USDG is Phase 5's live leg;
+- §11 stays contradicted.
+
+The config values were set in `config/`. Then every Phase 1 unit in
+`planning/PHASE-0-1.md` was rewritten against the record: no unit was added or
+removed, and each names the findings that changed it. The artifact is that
+section, ending in a twelve-item list of what Phase 1 still cannot do. The
+record overruled three drafted or briefed assumptions: 1.5 does not need a
+funded wallet (F0.3.3); 0.8's registry hash cannot be re-verified, so 1.2
+re-fetches raw bytes into `config/registry/`; and a failover RPC with archive
+access is unverified, since the configured endpoint is the public one.
+
 ---
 
 ## State at close — 2026-09-18 (third session, at the 0.11 checkpoint)
