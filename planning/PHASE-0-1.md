@@ -1022,6 +1022,49 @@ the price-history decision; the staleness config decision; F0.4.1, F0.4.7.
 
 ---
 
+## What Phase 1 still cannot do
+
+Stated before the code, so that no unit's done-condition quietly assumes it:
+
+- **Show that a stock could be traded at its quoted price.** Stock execution is
+  location-gated (F0.5.1), and quotes are not balance-checked (F0.3.3). Funding
+  the wallet does not change either; 1.5's quotes are prices, not fills.
+- **Size against real capital.** The wallet holds 0.078742 USDG and 0.000460 ETH
+  on 4663, against a ~$200 target. That does not block 1.5, because quotes price
+  unfunded. It leaves 3.3's sizing against reconciled holdings, and Phase 5's
+  volume, with almost nothing to size.
+- **Measure whether the feed already includes the multiplier** (F0.4.4). No
+  asset's multiplier clears the noise, and there is no archive to read across a
+  change, so 1.4 runs on documentation.
+- **Run the staleness check.** The decision gave the rule, heartbeat plus
+  margin, but not the margin: `feed_staleness_margin_seconds` is null, and null
+  blocks 1.3 and 1.11.
+- **Say what a weekend does to a 24/5 feed.** It is unmeasured (F0.4.7), so
+  1.11's checkpoint judges it without data unless 1.3 measures it.
+- **Run 1.7 safely.** `transport_timeout_seconds` is null, and a timed-out call
+  still bills (F0.9.3). `risk_model`, `max_output_tokens`,
+  `context_budget_tokens` and `cycle_deadline_seconds` are null too; those block
+  Phase 2, not Phase 1.
+- **Read history from the chain beyond recent state, or fail over.** There is
+  one configured endpoint, the public one, and it has no archive on the record.
+  A failover endpoint with archive access is unverified (1.3). The series has
+  to come from what is readable at the pinned block, or from an offchain
+  source, and which of the two is unmeasured until 1.3.
+- **Re-verify the registry version 0.8 recorded.** Its bytes were not kept, so
+  1.2 pins a new snapshot.
+- **Catch a counterfeit that is inside the registry, or one that clones the
+  proxy with its own beacon, except via the registry** (F0.8.5). Neither is
+  testable.
+- **Know Bankr's or the RPC's rate limit.** No limit was reached and no headers
+  were returned (F0.10.5), so 1.3 and 1.5 back off on a bare 429.
+- **Name the execution wallet in config.** `config/mandate.json`'s
+  `execution_wallet` is still null. PLAN §6 requires it, and 1.3's balance reads
+  and 1.10's attestation need it.
+- **Book the 6 bps that left the 0.10 sale unaccounted for** (F0.10.4). It is not
+  a Phase 1 input, but it is the first thing 5.3's reconciliation will meet.
+
+---
+
 ## Re-evaluation gate
 
 At the end of Phase 1, before detailing Phase 2, we answer:
