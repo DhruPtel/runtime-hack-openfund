@@ -313,6 +313,25 @@ rate-limit header, recorded as a lower bound. The artifact is
 `research/findings.md` §0.10, with the in-flight `409` path and the 6 bps missing
 from the sale left **unresolved**.
 
+
+## 0.11 ▶ — Phase 0 exit summary
+**Date:** 2026-09-18 · **Commit:** 70fd168
+
+Consolidated `research/findings.md` into a Phase 0 exit summary at its head. It
+gives one row per probe with its question, method, result, confidence and
+verdict, and marks 0.4 and 0.10 half met rather than rounding them up. It lists
+twelve assumptions that died, the five config values a probe was named to
+resolve and did not (`feed_staleness_max_seconds`, `quote_max_age_seconds`,
+`impact_max_bps`, `worker_deadline_seconds`, `analyst_model`), and the open
+decisions. Before it, the plan docs were brought back into agreement with the
+record: eleven LESSONS entries dating from 09:10 and three from before it were
+folded, and two operator decisions were recorded — the snapshot carries price
+history, and the buyer client is `@x402/fetch` 2.26.0. One contradiction (PLAN
+§11's v1-client reason for selling on Base) and one gap (how staleness rules
+bind a price series) are marked and not reconciled. **Shown and awaiting the
+operator: nothing at this checkpoint has been decided yet, including the
+live-leg asset.**
+
 ---
 
 ## State at close — 2026-09-18 (third session)
