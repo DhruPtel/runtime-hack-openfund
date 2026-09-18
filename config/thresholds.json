@@ -15,9 +15,10 @@
   "feed_staleness_max_seconds": null,
   "_feed_staleness_resolved_by": "probe 0.4",
 
-  "divergence_max_bps": null,
-  "_divergence_note": "If probe 0.4 finds no GeckoTerminal coverage for stock tokens, this becomes quote-versus-feed rather than cross-source, and is not independent of the execution venue.",
-  "_divergence_resolved_by": "probe 0.4",
+  "divergence_max_bps": 100,
+  "corroborator_min_volume_usd_24h": 1000000,
+  "_divergence_note": "Two tiers, both numbers provisional. Chainlink-vs-GeckoTerminal divergence tracks the corroborating pool's liquidity, not the feed's quality (findings F0.4.5): ~20 bps median above $1M of 24h pool volume, up to 610 bps below it. Above corroborator_min_volume_usd_24h the veto fires past divergence_max_bps. Below it the asset is excluded from the universe, not held, rather than vetoed every cycle. The tier does not make a liquid name safe: AMZN diverged 499 bps on $2.19M of volume, which this veto must catch. The check is cross-source and independent of the execution venue, because GeckoTerminal covers 32 of 32 addressable tokens (F0.4.2).",
+  "_divergence_resolved_by": "0.4 checkpoint decision (tracker/LESSONS.md 2026-09-18). Tightening either number is a config change, not a release.",
 
   "max_position_weight": null,
   "turnover_max_bps": null,
