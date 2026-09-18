@@ -2128,3 +2128,75 @@ file describes and what the repository contains.
   is reassuring and is still n=2.
 - `x-402-payer` was observed for one payer on one request. Its shape for a
   contract wallet, or a Solana payer, is unknown.
+
+---
+
+## 0.8 — Asset identity: how the fund knows a token is the real one
+
+**Date:** 2026-09-18 · **Method:** `PYTHONPATH=src python3 -m probes.identity` ·
+**Captures:** `probes/out/identity.json`, `probes/out/registry_snapshot.json`
+
+### F0.8.1 — The issuer registry: what it is, and what it does not give us
+
+**Confidence: measured.**
+
+`GET https://api.robinhood.com/rhj/assets`, documented at
+`https://docs.robinhood.com/chain/stock-tokens/` as the way to query assets.
+
+| Property | Measured |
+|---|---|
+| Authentication | **none required**; an `X-API-Key`, valid or invalid, changes nothing (200 either way — the header is ignored) |
+| Rate limiting | none observed in a burst of 10; no `x-ratelimit-*`, no `Retry-After` |
+| Size / count | 154,149 bytes, **194 assets** |
+| **Version field** | **none** |
+| **`ETag` / `Last-Modified`** | **neither** |
+| Response headers | `content-type: application/json`, `date`, and an empty `grpc-message` |
+
+Every record carries all eleven fields, and the invariants are clean:
+
+```
+status              194/194 ASSET_STATUS_ACTIVE
+deployments/asset   194/194 exactly one
+chainId             194/194 = 4663
+tokenDecimals       194/194 = 18
+isin                194/194 present, 194 distinct
+contractAddress     194 distinct, mixed-case (EIP-55), so compare case-insensitively
+tokenSymbol         194 distinct — unique within the registry
+```
+
+Each record gives `id`, `tokenSymbol`, `tokenName`, `deployments[{contractAddress,
+chainId, networkName}]`, `currentMultiplier`, `pendingMultiplier`, `status`,
+`logoUrl`, `tradingCapabilities`, `tokenDecimals`, `isin`.
+
+**Coverage is complete against the feed set.** All 35 Chainlink equity feeds
+resolve to registry assets. The apparent gap — `RHDELL` — is a naming artefact in
+the *feed directory*, not a missing asset: the directory writes that row's
+`docs.baseAsset` as `RHDELL` and omits it entirely for SGOV and USAR, while the
+registry carries DELL, SGOV and USAR normally. **Never join the two sources on
+ticker.**
+
+**What the registry does not supply, and it matters for invariant 8.**
+`planning/PLAN.md` §2 invariant 8 wants a **versioned** allowlist with recorded
+provenance. The endpoint offers no version, no `ETag` and no `Last-Modified`, so
+there is nothing to pin to and no way to ask "has this changed since?" without
+refetching and diffing.
+
+**So the snapshot has to carry its own version.** Recorded with this one:
+
+```
+url        https://api.robinhood.com/rhj/assets
+fetched_at 2026-09-18T18:24:30.262548+00:00
+bytes      154149
+sha256     442718b5843e448e…
+assets     194
+```
+
+Unit 1.2 must treat **the content hash as the version**, pin a snapshot rather
+than query live, and diff on refresh. A live lookup at cycle time would make the
+universe depend on an unversioned third-party endpoint with no integrity signal.
+
+**Untestable today, and stated rather than assumed:** every asset is
+`ACTIVE` with an empty `pendingMultiplier` and exactly one deployment, so we have
+**no example** of how a delisted asset, a pending corporate action, or a
+multi-chain asset is represented. 1.2 must not assume `status == ACTIVE` is the
+only value, and must not assume `deployments` has length 1.
