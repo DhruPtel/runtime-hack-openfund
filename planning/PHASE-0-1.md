@@ -444,15 +444,43 @@ and is now an underestimate by an amount nobody has measured.
 fetch_time, block), `Asset`, `Snapshot`, `AnalystReport`, `Proposal`, `Plan`,
 `Decision`, `Order`, `JournalEvent`, `Statement`. Every numeric field carries
 units and decimals explicitly. Verification fields are three-valued: true /
-false / null.
+false / null. What the record adds:
+
+- **A series type.** The snapshot carries history up to its pinned block
+  (invariant 2), so an asset holds an ordered series of `Observation`s per
+  source, not one reading. Freshness is a property of the series' newest point
+  only (staleness decision), so that point is addressable directly.
+- **Identity and markability are separate fields on `Asset`, never one
+  verdict.** Identity is registry membership on `(chain_id, address)`;
+  markability is a pinned Chainlink feed; the beacon cross-check is a third,
+  three-valued result (0.8 decisions; F0.8.3 is why they cannot be merged). The
+  registry's own fields ride along as given — ISIN, `status`, `deployments`,
+  current and pending multiplier, decimals. Nothing assumes `status` is always
+  `ACTIVE` or that `deployments` has length 1 (F0.8.1).
+- **No default decimals.** Amounts are raw integer, decimals and asset id: USDG
+  is 6, stock tokens 18, feed answers 8 (F0.3.1, F0.4.7). A "tokens on 4663 are
+  18" default is exactly the error F0.3.1 caught.
+- **`Order` and `JournalEvent` must not assume a swap is a transaction from our
+  wallet.** On 4663 it is a UserOperation inside a bundler's EIP-7702
+  transaction (F0.10.3). Its identity is a UserOperation hash and its outcome is
+  the operation's own `success`. The outer transaction's sender and status, and
+  the wallet's nonce, describe the bundle rather than our swap. Their full
+  shape is Phase 4's to finish; 1.1 must not preclude it.
+- `Statement` cost lines carry `is_estimate` (F0.6.4), and revenue is referenced
+  by a settlement event (F0.7b.6). Both shapes are finished in Phases 6–7.
 
 **Artifact:** one module, no imports from `adapters/`.
 
 **Done when:** the types compile and a round-trip serialization test passes with
-stable numeric encoding.
+stable numeric encoding. The test covers a series, and an asset whose identity is
+true and markability false (CRM's shape, F0.8.2).
 
 **Risk:** getting `Observation` wrong makes every later timestamp argument
 harder. Source time and fetch time are separate fields, always.
+
+**Changed by:** the price-history and staleness decisions; 0.8's identity
+decisions and F0.8.1–F0.8.3; F0.3.1 and F0.4.7 (decimals); F0.10.3
+(UserOperations); F0.6.4, F0.7b.6. **Size:** a little bigger than drafted.
 
 ---
 
