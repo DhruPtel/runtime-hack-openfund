@@ -615,15 +615,20 @@ until unit 1.7 reports real per-cycle inference cost.
 - How many of the ~190 tickers are actually tradeable at our $25 size?
   *Partly answered at the 0.4 checkpoint:* markability caps the universe at 35,
   and the $1M corroborator line left 19 of the 32 measured, on one block on one
-  day (F0.4.5). Tradeability at $25 stays unmeasured until 1.5 quotes from a
-  funded wallet.
-- Which ungated 4663 asset is the right one for the live leg, and what is the
-  smallest round trip that still produces meaningful receipt evidence?
+  day (F0.4.5). Operational tradeability at $25 is measured when 1.5 quotes,
+  and it does not need a funded wallet: quotes are not balance-checked (F0.3.3).
+  Whether a $25 stock order would actually fill cannot be measured at all,
+  because stock execution is gated (F0.5.1).
+- What is the smallest round trip that still produces meaningful receipt
+  evidence? *The asset is decided at the 0.11 checkpoint:* the live leg is
+  ETH→USDG on 4663. 0.10 proved it for one $0.08 sell; the return leg is still
+  unexercised.
 - Do we launch a token, and would a stock-paired launch with quote-only fees make
   the treasury's own income arrive in equity?
 
-*Resolved:* execution eligibility (the operator is US-based; see §13) and cadence
-(daily plus a manual trigger; see §11).
+*Resolved:* execution eligibility (the operator is US-based; see §13), cadence
+(daily plus a manual trigger; see §11), and the live-leg asset (ETH→USDG on
+4663; 0.11 checkpoint).
 
 ---
 
