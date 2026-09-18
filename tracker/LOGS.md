@@ -5,7 +5,7 @@ it top to bottom and watch the system being assembled.
 
 Each entry is a single paragraph of at most three sentences — what was built,
 what the artifact is, how it was verified. Unit numbers are `<phase>.<unit>` and
-match [ROADMAP.md](../ROADMAP.md); units marked ▶ there are playtime checkpoints,
+match [planning/ROADMAP.md](../planning/ROADMAP.md); units marked ▶ there are playtime checkpoints,
 and their entry records what was shown and what was decided.
 
 The honest counterpart to this file is [LESSONS.md](LESSONS.md), which records
@@ -25,20 +25,20 @@ what went wrong and what changed as a result.
 ## 0.0 — Onboarding: plan read, tracker established
 **Date:** 2026-09-17 · **Commit:** bbe824e
 
-Read PLAN.md, REVIEW-RESPONSE.md, ROADMAP.md, PHASE-0-1.md, CODEBASE.md and the
+Read planning/PLAN.md, planning/REVIEW-RESPONSE.md, planning/ROADMAP.md, planning/PHASE-0-1.md, planning/CODEBASE.md and the
 seven discovery reports in `research/`, then created `tracker/` and rewrote
 README.md from a placeholder into a judge-facing overview. Recorded fifteen
 decisions and plan changes in LESSONS.md, the largest being that the operator is
 US-based, so tokenized-stock execution is unavailable and stock legs are paper.
-PLAN.md v2 and REVIEW-RESPONSE.md were absent at the start of the session and
-supplied during it; PLAN-v1.md was superseded and removed.
+planning/PLAN.md v2 and planning/REVIEW-RESPONSE.md were absent at the start of the session and
+supplied during it; planning/PLAN-v1.md was superseded and removed.
 
 ## 0.1 — Repo skeleton and credential redaction
 **Date:** 2026-09-17 · **Commit:** bbe824e
 
-Built the target tree from CODEBASE.md — plan docs at the repository root,
-package at `src/fund/`, a placeholder module for every file the tree names —
-plus the three modules that carry real code: `credentials.py` (the PLAN.md §6
+Built the target tree from planning/CODEBASE.md — package at `src/fund/`, a
+placeholder module for every file the tree names —
+plus the three modules that carry real code: `credentials.py` (the planning/PLAN.md §6
 table as the single source of truth, with a role on every row), `redaction.py`
 (denylist derived from that table; a filter masks message and arguments, a
 formatter masks the formatted record including tracebacks) and `config.py`

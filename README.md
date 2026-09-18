@@ -67,7 +67,7 @@ against a real chain and a real explorer rather than a mock.
 
 Everything upstream of execution — the snapshot, the quotes, the sizing, the
 gates, the veto, the books — is the same code in both paths. The full limitation
-list is [`PLAN.md`](PLAN.md) §13.
+list is [`planning/PLAN.md`](planning/PLAN.md) §13.
 
 ## Architecture
 
@@ -76,7 +76,7 @@ deterministic core cannot import a signing path at all, and the treasurer runs a
 its own process with its own credentials as the sole spend authority.
 
 The full target file tree, the one-way dependency rule, and the boundary rules
-stated as tests are in [`CODEBASE.md`](CODEBASE.md).
+stated as tests are in [`planning/CODEBASE.md`](planning/CODEBASE.md).
 
 ## Running it
 
@@ -104,10 +104,10 @@ make cycle       # live cycle, durable orders, reconciled journal    [unit 4.8]
 |---|---|
 | Build history, unit by unit | [`tracker/LOGS.md`](tracker/LOGS.md) |
 | What went wrong and what changed | [`tracker/LESSONS.md`](tracker/LESSONS.md) |
-| Stated limitations | [`PLAN.md`](PLAN.md) §13 |
-| Units and the 27 checkpoints | [`ROADMAP.md`](ROADMAP.md) |
-| Phase 0 and 1 in detail | [`PHASE-0-1.md`](PHASE-0-1.md) |
-| Target file tree and boundary rules | [`CODEBASE.md`](CODEBASE.md) |
+| Stated limitations | [`planning/PLAN.md`](planning/PLAN.md) §13 |
+| Units and the 27 checkpoints | [`planning/ROADMAP.md`](planning/ROADMAP.md) |
+| Phase 0 and 1 in detail | [`planning/PHASE-0-1.md`](planning/PHASE-0-1.md) |
+| Target file tree and boundary rules | [`planning/CODEBASE.md`](planning/CODEBASE.md) |
 | External technical review of the v1 plan | [`PLAN-technical-review.md`](PLAN-technical-review.md) |
 | Discovery reports behind the plan's factual claims | [`research/`](research/) |
 

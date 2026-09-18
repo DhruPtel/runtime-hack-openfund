@@ -2,7 +2,7 @@
 
 The load-bearing test is ``test_a_new_credential_is_masked_without_touching_the
 _filter``. The others prove the filter works; that one proves the property
-PHASE-0-1.md actually asks for -- that the denylist is *derived* from the
+planning/PHASE-0-1.md actually asks for -- that the denylist is *derived* from the
 credential table, so adding a credential cannot create an unredacted path.
 """
 
@@ -186,7 +186,7 @@ def test_short_values_are_reported_as_over_masking(monkeypatch):
     assert "[REDACTED:BANKR_KEY_READ]" in redaction.Redactor().redact("xy")
 
 
-# --- role scoping (PLAN.md section 2 invariant 1) ---------------------------
+# --- role scoping (planning/PLAN.md section 2 invariant 1) ---------------------------
 
 
 def test_analyst_role_cannot_load_execution_or_signing_secrets(credential_env):
@@ -297,7 +297,7 @@ def test_credential_names_are_unique():
 
 
 def test_only_the_treasurer_may_hold_spend_or_signing_authority():
-    """PLAN.md section 2 invariant 1, asserted against the table itself."""
+    """planning/PLAN.md section 2 invariant 1, asserted against the table itself."""
     for name in ("BANKR_KEY_EXEC", "SIGNING_KEY"):
         assert credentials.by_name(name).used_by == frozenset({Role.TREASURER})
 

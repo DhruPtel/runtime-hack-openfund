@@ -1,7 +1,7 @@
 """The credential table. The single source of truth for every secret.
 
-Mirrors PLAN.md section 6. This module is deliberately the only place in the
-repository where a credential name is written down:
+Mirrors planning/PLAN.md section 6. This module is deliberately the only
+place in the repository where a credential name is written down:
 
   - ``config.py`` loads values from it,
   - ``redaction.py`` derives its denylist from it,
@@ -9,13 +9,13 @@ repository where a credential name is written down:
 
 Adding a row here is therefore sufficient to make a new credential both loadable
 and unloggable. There is no second list to keep in step, which is the property
-PHASE-0-1.md unit 0.1 asks for: adding a credential cannot create an unredacted
-path.
+planning/PHASE-0-1.md unit 0.1 asks for: adding a credential cannot create an
+unredacted path.
 
-Roles exist because PLAN.md section 2 invariant 1 is an authority boundary, not a
-style rule. The analyst role cannot load execution or signing secrets even on a
-single-host development machine, so code that reaches for them fails immediately
-rather than at the point where it would have spent money.
+Roles exist because planning/PLAN.md section 2 invariant 1 is an authority
+boundary, not a style rule. The analyst role cannot load execution or signing
+secrets even on a single-host development machine, so code that reaches for them
+fails immediately rather than at the point where it would have spent money.
 """
 
 from __future__ import annotations
@@ -34,14 +34,14 @@ class Role(str, Enum):
     #: Read-only. Never receives execution or signing secrets.
     ANALYST = "analyst"
 
-    #: The sole spend authority (PLAN.md section 2 invariant 1). Runs as its own
-    #: process with its own credentials from unit 4.12 onward.
+    #: The sole spend authority (planning/PLAN.md section 2 invariant 1). Runs
+    #: as its own process with its own credentials from unit 4.12 onward.
     TREASURER = "treasurer"
 
 
 @dataclass(frozen=True)
 class Credential:
-    """One row of PLAN.md section 6."""
+    """One row of planning/PLAN.md section 6."""
 
     #: Environment variable name. Also the label used in redaction masks.
     name: str
@@ -50,7 +50,7 @@ class Credential:
     #: read the credential through ``config.load()`` at all.
     used_by: frozenset[Role]
 
-    #: What it is for, in the words of PLAN.md section 6.
+    #: What it is for, in the words of planning/PLAN.md section 6.
     purpose: str
 
     #: The access scope the credential is expected to carry on the provider side.
@@ -63,7 +63,7 @@ class Credential:
     secret: bool = True
 
 
-#: The table. Ordered as PLAN.md section 6 orders it.
+#: The table. Ordered as planning/PLAN.md section 6 orders it.
 CREDENTIALS: tuple[Credential, ...] = (
     Credential(
         name="BANKR_KEY_READ",
@@ -89,7 +89,7 @@ CREDENTIALS: tuple[Credential, ...] = (
         purpose=(
             "block-pinned chain reads; the treasurer also reads the named "
             "execution wallet's balances here rather than trusting another "
-            "account's portfolio (PLAN.md section 6)"
+            "account's portfolio (planning/PLAN.md section 6)"
         ),
         scope="request timeout, fail loudly, no archive reads assumed",
         # Not a secret in itself on the public endpoint, but a paid provider URL

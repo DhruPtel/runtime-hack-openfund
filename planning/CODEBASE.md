@@ -49,11 +49,21 @@ before the HTTP call, not after the response.
 ```
 fund/
 ├── README.md                   what this is, how to run it, the limitations
-├── PLAN.md                     the build plan
-├── ROADMAP.md                  units and checkpoints
 ├── pyproject.toml              pinned deps, lockfile committed
 ├── Makefile                    snapshot, cycle, replay, test, selftest, demo
 ├── .env.example                every credential named, no values
+│
+├── planning/                   every planning document. README.md stays at root.
+│   ├── PLAN.md                 the build plan. Authoritative.
+│   ├── ROADMAP.md              units and checkpoints
+│   ├── PHASE-0-1.md            unit-level detail for the first two phases
+│   ├── CODEBASE.md             this file
+│   ├── REVIEW-RESPONSE.md      disposition of every technical-review finding
+│   └── PLAN-v1.md              superseded. Kept for comparison; v2 wins.
+│
+├── tracker/
+│   ├── LOGS.md                 what was built, one entry per unit
+│   └── LESSONS.md              what changed and why. History, not authority.
 │
 ├── config/
 │   ├── universe.json           versioned issuer allowlist: (chain_id, address) → feed, decimals, provenance
@@ -126,6 +136,7 @@ fund/
 │   ├── snapshots/              raw captured source responses + rebuilt snapshots
 │   └── accounting/             the known-answer fixture
 ├── research/                   the seven discovery reports + findings.md
+├── PLAN-technical-review.md    the external review the response answers
 └── tests/
     ├── test_snapshot.py
     ├── test_universe.py

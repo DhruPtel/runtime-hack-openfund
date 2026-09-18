@@ -1,4 +1,4 @@
 # Public page
 
-Not yet built. Produced by unit 7.6 (see ROADMAP.md).
+Not yet built. Produced by unit 7.6 (see planning/ROADMAP.md).
 Reads the same published records the x402 handler serves.

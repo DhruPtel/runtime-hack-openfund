@@ -6,7 +6,7 @@
   "intended_trade_size_usd": 25,
   "_sizing_resolved_by": "LESSONS 2026-09-17, capital and trade size",
 
-  "_tradeability_note": "Tradeable means all three of: a quote at intended size succeeded, quote age within bound, and impact known and within limit or null. Null blocks. There is no depth term; tokenized stocks have no AMM pool of their own. See PLAN.md section 13.",
+  "_tradeability_note": "Tradeable means all three of: a quote at intended size succeeded, quote age within bound, and impact known and within limit or null. Null blocks. There is no depth term; tokenized stocks have no AMM pool of their own. See planning/PLAN.md section 13.",
   "quote_max_age_seconds": null,
   "_quote_max_age_resolved_by": "probe 0.3",
   "impact_max_bps": null,

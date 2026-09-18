@@ -4,7 +4,7 @@
 
   "chain_id": 4663,
   "execution_wallet": null,
-  "_execution_wallet_note": "Named explicitly here, per PLAN.md section 6. Balances are read for this address over RPC. We never assume another account's portfolio describes it.",
+  "_execution_wallet_note": "Named explicitly here, per planning/PLAN.md section 6. Balances are read for this address over RPC. We never assume another account's portfolio describes it.",
 
   "capital_usd": 200,
   "max_trade_usd": 25,

@@ -1,5 +1,5 @@
 # Openfund. Targets appear as the unit that implements them lands.
-# See CODEBASE.md section 7 for what "finished" looks like.
+# See planning/CODEBASE.md section 7 for what "finished" looks like.
 
 .PHONY: help test check-env snapshot selftest cycle replay cycle-demo
 

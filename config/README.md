@@ -1,12 +1,12 @@
 # config/
 
-Every tunable value in the system. CODEBASE.md section 8 lists "a threshold
+Every tunable value in the system. planning/CODEBASE.md section 8 lists "a threshold
 appearing as a literal anywhere outside `config/`" as a sign we got it wrong.
 
 ## The null convention
 
 A value of `null` means **unresolved**, not zero and not "no limit". It is the
-three-valued rule from PLAN.md section 2 invariant 5 applied to configuration:
+three-valued rule from planning/PLAN.md section 2 invariant 5 applied to configuration:
 a required check must be explicitly true, and null blocks execution.
 
 Code that reads a null threshold must refuse to run the check that depends on

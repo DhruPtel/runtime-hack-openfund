@@ -5,11 +5,11 @@ Two rules shape this module.
 **Role scoping.** ``load()`` takes a ``Role`` and returns only the credentials
 that role is permitted to hold. An analyst process asking for ``SIGNING_KEY``
 raises rather than returning it, on a development laptop as much as in
-deployment. This is PLAN.md section 2 invariant 1 expressed where code can trip
-over it; unit 4.12 proves the stronger environment-level version.
+deployment. This is planning/PLAN.md section 2 invariant 1 expressed where code
+can trip over it; unit 4.12 proves the stronger environment-level version.
 
-**No thresholds here.** CODEBASE.md section 8 lists "a threshold appearing as a
-literal anywhere outside config/" as a sign we got it wrong. This module loads
+**No thresholds here.** planning/CODEBASE.md section 8 lists "a threshold
+appearing as a literal anywhere outside config/" as a sign we got it wrong. It
 JSON files and hands back their contents. It does not interpret them, supply
 defaults, or know what any key means.
 
@@ -103,7 +103,7 @@ class Config:
             permitted = ", ".join(sorted(r.value for r in credential.used_by))
             raise CredentialNotPermittedError(
                 f"{name} is not available to the {self.role.value} role "
-                f"(permitted: {permitted}). See PLAN.md section 6."
+                f"(permitted: {permitted}). See planning/PLAN.md section 6."
             )
         if name not in self.credentials:
             raise MissingCredentialError(f"{name} is not set in the environment")

@@ -1,8 +1,8 @@
 """Log redaction whose denylist is derived from the credential table.
 
-PHASE-0-1.md unit 0.1: "a log filter whose denylist is **derived** from the
-credential table rather than hand-written, so adding a credential cannot create
-an unredacted path."
+planning/PHASE-0-1.md unit 0.1: "a log filter whose denylist is **derived**
+from the credential table rather than hand-written, so adding a credential
+cannot create an unredacted path."
 
 The denylist is built by reading every name in ``credentials.CREDENTIALS`` out of
 the environment. Nothing here enumerates credential names itself, so a new row in

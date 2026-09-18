@@ -36,5 +36,5 @@
     "objective": "Read all four full reports and the sized plan. Apply core/gates.py. Fixed gates cannot be overridden by model text.",
     "_note": "Not an analyst. A separate role."
   },
-  "_treasurer_note": "The treasurer is not an agent role. It is the sole writer and holds the only spend authority (PLAN.md section 2 invariant 1)."
+  "_treasurer_note": "The treasurer is not an agent role. It is the sole writer and holds the only spend authority (planning/PLAN.md section 2 invariant 1)."
 }
