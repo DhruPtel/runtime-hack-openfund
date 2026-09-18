@@ -7,7 +7,19 @@ A history of what went wrong, what surprised us, and what changed as a result.
 authoritative plan; every change recorded here has been folded into them —
 checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
-it open rather than reconciling it. An
+it open rather than reconciling it.
+
+**Pending folds, as of the Phase 1 replan (2026-09-18).** That pass could write
+only to `planning/PHASE-0-1.md`, `config/` and `tracker/`. So entries whose
+**Affects** line says *fold pending* have reached PHASE-0-1 but not yet
+`planning/PLAN.md` or `planning/ROADMAP.md`:
+- PLAN §9, where the staleness rules still carry the "open" marker;
+- PLAN §12 and the Phase 5 text, which still describe the live leg as open or as
+  "memecoin/USDG";
+- PLAN §8's and ROADMAP's one-line Phase 1 summaries, including 1.5's
+  funded-wallet sentence.
+
+Until they are folded, PHASE-0-1 is the newer text. An
 entry says what we believed, what reality said, and what we did about it — it is
 the record a judge reads to see whether the plan bent when it should have.
 
