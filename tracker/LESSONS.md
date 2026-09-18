@@ -527,3 +527,79 @@ this key's usage explains (F0.6.6, recorded unresolved). 6.3 must reconcile
 aggregate-to-aggregate within one key and treat the wallet balance as a separate
 account, not as a check on our own arithmetic.
 **Affects:** 6.3, 2.5, 1.7; planning/PLAN.md §2.5.
+
+## 2026-09-18 — DECISION: registry membership is the identity test, pinned and hash-versioned
+*Operator decision at the close of 0.8, on measured evidence.* An asset is
+admissible only if it appears in the issuer registry
+(`api.robinhood.com/rhj/assets`) keyed by **`(chain_id, address)`**. It is
+necessary and sufficient: it admitted every genuine asset and rejected every
+counterfeit tested, and it is the only source that supplies the address-to-asset
+mapping itself along with ISIN, status, decimals and multiplier
+(`research/findings.md` F0.8.1, F0.8.5) — the other checks can opine on an asset
+but cannot name one.
+
+The registry carries **no version, no `ETag` and no `Last-Modified`**, so the
+**sha256 of the snapshot is its version**: 1.2 pins a snapshot and diffs on
+refresh, and a live lookup at cycle time is **forbidden**, because it would put
+the universe on an unversioned third-party endpoint with no integrity signal and
+fail planning/PLAN.md §2 invariant 8.
+
+**The limit, recorded with the decision rather than under it.** Both counterfeits
+tested were crude ERC-20s with no beacon slot; nothing tested a forgery that
+clones the proxy and points at its own beacon, which is what a serious attacker
+would deploy and which **only the registry would catch**. And a counterfeit that
+reached the registry would defeat every check we have. That is the issuer's
+control, not ours, and it is the ceiling on this decision's strength.
+**Affects:** 1.2, 3.4, 6.x; `config/universe.json`; planning/PLAN.md §2 invariant 8.
+
+## 2026-09-18 — DECISION: `uiMultiplier()` and the name marker are retired as identity signals
+*Operator decision at the close of 0.8.* Both are trivially forgeable and neither
+caught anything the registry did not: the testnet probe measured **140 tokens
+carrying the `• Robinhood Token` marker with none genuine** (F0.T.4), and five
+tokens answering `uiMultiplier()` because they run the issuer's own contract
+(F0.T.3). They are deleted from the identity vocabulary rather than kept for
+reassurance, which would cost code and hide which check is load-bearing.
+
+**This supersedes F0.3.6 and F0.4.6, and the way it does matters.** F0.3.6 made
+the name marker the discriminator for the three GME tokens; F0.4.6 offered
+`uiMultiplier()` as the check 0.8 needed. Neither was wrong about mainnet — the
+marker is accurate today across **all 187** marked tokens (F0.8.4), and
+`uiMultiplier()` still separates the genuine GME from both fakes. They are
+retired because *being right today on one chain is not the same as being hard to
+forge*, which is precisely the comfortable position that made F0.3.6 trust a
+string in the first place. The findings stand as the record of what we believed
+and why.
+**Affects:** 1.2, 0.8; supersedes part of F0.3.6 and F0.4.6.
+
+## 2026-09-18 — DECISION: the beacon is a cross-check that fails loudly, not a filter
+*Operator decision at the close of 0.8.* Registry and beacon agreed on **all 381
+addresses swept** — 194 of 194 registry assets and 187 of 187 marked
+discovery-list addresses — so no evidence separates them and the beacon is not
+doing discrimination work (F0.8.4). It is kept for one reason only: its **trust
+root is independent**. The registry rests on TLS to `api.robinhood.com`; the
+beacon rests on the chain and the beacon contract's owner. They fail differently,
+and the beacon is also the only check that speaks to the contract's state *now*,
+where a pinned snapshot is by construction historical.
+
+Because it is insurance and not detection, its failure mode is the whole point: a
+disagreement means **one of the two is compromised**, so it must **fail the cycle
+loudly** rather than log a warning and continue. A cross-check that degrades to a
+warning is not a cross-check.
+**Affects:** 1.2, 3.4; `config/universe.json`.
+
+## 2026-09-18 — DECISION: feed presence is markability, not identity
+*Operator decision at the close of 0.8.* Feed presence **admitted both GME
+counterfeits** (F0.8.3), because a Chainlink feed exists for the *ticker* and a
+forger picks its own ticker — so the check asks whether a feed exists for the
+symbol a contract merely claims, which is satisfied by typing three characters.
+It carries **zero identity weight** and must never appear in an admissibility
+rule.
+
+It remains a membership condition for *holding* an asset, per the 0.4 checkpoint
+decision: no feed, no independent mark, so the asset is not held. **1.2 therefore
+needs two independent rules — registry for identity, feed for markability —
+evaluated separately and never collapsed.** CRM is the case that proves they are
+distinct: genuine, registry-listed, behind the issuer's beacon, and correctly
+**unmarkable**. The general lesson is that a check can look decisive purely
+because it was only ever pointed at things it obviously catches.
+**Affects:** 1.2, 1.4, 3.4; `config/universe.json`, `config/thresholds.json`.
