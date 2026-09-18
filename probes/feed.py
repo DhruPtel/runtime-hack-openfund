@@ -113,8 +113,145 @@ def enumerate_directory() -> dict:
     }
 
 
+# --- step 2: does GeckoTerminal price these tokens at all? -------------------
+
+#: The same discovery list probe 0.3 used, with the same caveat: it is
+#: **unverified**, it lists undeployed assets, and it truncates `name` at 60
+#: characters (`research/agent-os.md`). `config/universe.json` is empty until
+#: unit 0.8, so there is no trustworthy address source yet and this probe says so
+#: rather than implying one.
+COINGECKO_LIST = "https://tokens.coingecko.com/robinhood/all.json"
+
+#: The issuer's name marker. Necessary, not sufficient — it is the only thing
+#: separating the real GME from two impersonators (F0.3.6), and the 60-character
+#: truncation means a longer name loses it.
+NAME_MARKER = "• Robinhood Token"
+
+#: ERC-8056 `uiMultiplier()`, documented at `research/agent-os.md:374` and
+#: recomputed from the signature here rather than copied on faith. It answers on
+#: a genuine Stock Token and reverts otherwise, which makes it the one
+#: discriminator this probe can actually apply to an address.
+SELECTOR_UI_MULTIPLIER = "0xa60bf13d"
+
+GECKO_NETWORK = "robinhood"
+GECKO_MULTI = "https://api.geckoterminal.com/api/v2/networks/{net}/tokens/multi/{addrs}"
+
+#: The documented ceiling for the multi-token endpoint.
+GECKO_BATCH = 30
+
+
+def resolve_assets(equity_feeds: list[dict]) -> dict[str, dict]:
+    """Map each equity feed's ticker to a candidate token address.
+
+    Deliberately conservative, and it reports rather than resolves:
+
+      - only entries carrying the issuer's name marker are considered,
+      - a ticker matching more than one such address is recorded as ambiguous
+        and is not silently resolved to the first one,
+      - a ticker matching none is recorded as unresolved.
+
+    None of this makes an address trustworthy. Unit 0.8 owns that.
+    """
+    listing = _get(COINGECKO_LIST)
+    tokens = listing["tokens"] if isinstance(listing, dict) else listing
+
+    marked: dict[str, list[dict]] = {}
+    for token in tokens:
+        if NAME_MARKER in (token.get("name") or ""):
+            marked.setdefault(token["symbol"].upper(), []).append(token)
+
+    resolved: dict[str, dict] = {}
+    for feed in equity_feeds:
+        ticker = ticker_of(feed)
+        if not ticker:
+            continue
+        matches = marked.get(ticker, [])
+        resolved[ticker] = {
+            "ticker": ticker,
+            "feed_name": feed["name"],
+            "proxy": feed["proxyAddress"],
+            "secondary_proxy": feed.get("secondaryProxyAddress"),
+            "feed_decimals": feed.get("decimals"),
+            "heartbeat": feed.get("heartbeat"),
+            "threshold": feed.get("threshold"),
+            "address": matches[0]["address"].lower() if len(matches) == 1 else None,
+            "token_decimals": matches[0].get("decimals") if len(matches) == 1 else None,
+            "candidates": [m["address"].lower() for m in matches],
+            "status": ("ok" if len(matches) == 1
+                       else "ambiguous" if matches else "no-marked-token"),
+        }
+    return resolved
+
+
+def gecko_coverage(assets: dict[str, dict]) -> dict[str, dict]:
+    """Step 2 — coverage, asked before divergence.
+
+    `planning/PHASE-0-1.md` 0.4 calls this a question rather than an assumption:
+    GeckoTerminal prices come from pools, and the plan records that RH stock
+    tokens have no pool of their own. So the finding is whatever comes back,
+    including nothing.
+    """
+    addressed = {t: a for t, a in assets.items() if a["address"]}
+    order = list(addressed)
+    coverage: dict[str, dict] = {t: {"covered": False, "price_usd": None,
+                                     "pools_listed_floor": 0, "http": None}
+                                 for t in order}
+
+    for start in range(0, len(order), GECKO_BATCH):
+        chunk = order[start:start + GECKO_BATCH]
+        url = GECKO_MULTI.format(
+            net=GECKO_NETWORK,
+            addrs=",".join(addressed[t]["address"] for t in chunk),
+        )
+        try:
+            payload = _get(url)
+        except Exception as error:  # a refusal is the finding, not a crash
+            for ticker in chunk:
+                coverage[ticker]["http"] = f"{type(error).__name__}: {error}"
+            continue
+
+        by_address = {}
+        for entry in payload.get("data", []):
+            attributes = entry.get("attributes", {})
+            # The batch endpoint returns at most one entry in `top_pools`, where
+            # the single-token endpoint lists six for the same address. So this
+            # is a floor on how many pools exist, not a count, and it is named
+            # that way -- a "pool_count" of 1 read as a count would understate
+            # the venue by a factor of six.
+            pools = ((entry.get("relationships") or {})
+                     .get("top_pools", {}).get("data", []))
+            by_address[attributes["address"].lower()] = {
+                "covered": attributes.get("price_usd") is not None,
+                "price_usd": attributes.get("price_usd"),
+                "pools_listed_floor": len(pools),
+                "gecko_decimals": attributes.get("decimals"),
+                "h24_volume_usd": (attributes.get("volume_usd") or {}).get("h24"),
+                "total_reserve_usd": attributes.get("total_reserve_in_usd"),
+                "http": 200,
+            }
+        for ticker in chunk:
+            found = by_address.get(addressed[ticker]["address"])
+            coverage[ticker] = found or {"covered": False, "price_usd": None,
+                                         "pools_listed_floor": 0,
+                                         "http": "absent-from-200"}
+
+    covered = sum(1 for c in coverage.values() if c["covered"])
+    print(f"\nGeckoTerminal '{GECKO_NETWORK}': {covered} of {len(order)} "
+          f"addressed tickers priced")
+    return coverage
+
+
 def main() -> int:
-    result = {"directory": enumerate_directory()}
+    directory = enumerate_directory()
+    assets = resolve_assets(directory["equity"])
+    unresolved = {t: a["status"] for t, a in assets.items() if a["status"] != "ok"}
+    print(f"\naddresses: {len(assets) - len(unresolved)} of {len(assets)} "
+          f"equity tickers resolved to one RH-marked token")
+    if unresolved:
+        print(f"  unresolved: {unresolved}")
+
+    coverage = gecko_coverage(assets)
+    result = {"directory": directory, "assets": assets, "gecko": coverage}
     OUT_DIR.mkdir(exist_ok=True)
     path = OUT_DIR / "feed.json"
     path.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
