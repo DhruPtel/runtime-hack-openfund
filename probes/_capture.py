@@ -43,6 +43,7 @@ class Capture:
     method: str
     url: str
     header_name: str
+    request_body: str = ""
     status: int | None = None
     elapsed_ms: int | None = None
     body: str = ""
@@ -81,16 +82,31 @@ def call(
     header_value: str,
     *,
     method: str = "GET",
+    json_body: Any | None = None,
     timeout: int = TIMEOUT_SECONDS,
 ) -> Capture:
-    """Make one request and capture it. Never raises for an HTTP or network fault."""
+    """Make one request and capture it. Never raises for an HTTP or network fault.
+
+    ``json_body`` is sent as the request body and recorded on the capture: a
+    probe that discovers a request schema by reading validation errors is
+    worthless unless the exact payload that produced each error is kept with it.
+    """
     redactor = redaction.Redactor()
+    if json_body is not None and method == "GET":
+        method = "POST"
     capture = Capture(label=label, method=method, url=redactor.redact(url),
                       header_name=header_name)
 
-    request = urllib.request.Request(url, method=method)
+    data = None
+    if json_body is not None:
+        data = json.dumps(json_body, sort_keys=True).encode("utf-8")
+        capture.request_body = redactor.redact(data.decode("utf-8"))
+
+    request = urllib.request.Request(url, data=data, method=method)
     request.add_header(header_name, header_value)
     request.add_header("Accept", "application/json")
+    if data is not None:
+        request.add_header("Content-Type", "application/json")
 
     started = time.monotonic()
     try:
