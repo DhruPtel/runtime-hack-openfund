@@ -64,3 +64,19 @@ captures in the gitignored `probes/out/keys.json`. Verified by the control
 returning 401 on all three surfaces, which is what makes the 200s evidence of
 authorization rather than of a surface ignoring the header, and by checking that
 no declared credential value appears anywhere in the findings file.
+
+## 0.3 — Quote shape
+**Date:** 2026-09-17 · **Commit:** ebfded4
+
+Built `probes/assets.py`, which pins candidate addresses from the CoinGecko
+discovery list with their provenance and reads `decimals()` on chain for each
+before use, and `probes/quote.py`, which posts `/wallet/swap-quote` for USDG into
+AAPL, NVDA and TSLA at both $5 and $25; the request schema came from the Bankr
+docs because the endpoint answers every malformed body with an identical
+`{"message":"Invalid request body"}`. The artifact is `research/findings.md` §0.3
+— six findings, each bounded by an explicit sizing caveat that this is a shape
+probe against an empty wallet and that unit 1.5 must re-run it once funded — with
+captures in the gitignored `probes/out/quote.json`. Verified by three independent
+sources agreeing that USDG is 6 decimals against two documented sources that say
+18, by all 12 documented response fields being present in all 6 responses, and by
+checking that no declared credential value appears in the findings file.
