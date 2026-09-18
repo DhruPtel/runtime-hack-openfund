@@ -3,12 +3,14 @@
   "_status": "unresolved. Model ids are pinned before any analyst runs (unit 2.4).",
   "_replay_note": "Deterministic replay comes from recorded model outputs, including the risk output. Seeds apply to our own code only and prove nothing about model determinism. See LESSONS 2026-09-17.",
 
-  "analyst_model": null,
+  "analyst_model": "claude-sonnet-5",
+  "_analyst_model_note": "Provisional. It is the model 0.9 measured (findings F0.9.1). The final choice is made at unit 2.4, where the 139x cost spread across the gateway's models (F0.9.5) is tested against output quality.",
   "risk_model": null,
   "_model_resolved_by": "unit 2.4, informed by unit 1.7 and by the 0.9 floor, which priced the same tokens across the catalogue (findings F0.9.5)",
 
   "max_output_tokens": null,
-  "worker_deadline_seconds": null,
+  "worker_deadline_seconds": 120,
+  "_worker_deadline_note": "Provisional. One analyst call took 58 s at the 0.9 floor (F0.9.1), and 1.7's larger snapshot may take longer. transport_timeout_seconds is still null. Whatever it becomes must exceed the measured call latency and must not exceed this deadline, because a call timed out client-side is still billed (F0.9.3).",
   "transport_timeout_seconds": null,
   "context_budget_tokens": null,
   "_context_budget_note": "Must cover every accepted full report plus the sized plan and the risk output. If the bundle does not fit, the cycle vetoes rather than summarizing (planning/PLAN.md section 2 invariant 3).",
