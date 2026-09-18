@@ -603,3 +603,18 @@ distinct: genuine, registry-listed, behind the issuer's beacon, and correctly
 **unmarkable**. The general lesson is that a check can look decisive purely
 because it was only ever pointed at things it obviously catches.
 **Affects:** 1.2, 1.4, 3.4; `config/universe.json`, `config/thresholds.json`.
+
+## 2026-09-18 — F0.7.3 corrected: the v1 client rejects one field, and the Bankr CLI is not an x402 client
+F0.7.3 recorded that no standard published x402 client can pay our endpoint,
+and that the client throws for two reasons: the protocol version and the network
+identifier. Probe 0.7e measured both claims as too broad. `x402-fetch@1.2.0`
+rejects on the network enum alone and passes `x402Version: 2` straight into its
+own header. The v2 client line F0.7.3 never looked at — `@x402/fetch` 2.26.0,
+published by the same maintainers since 2025-12-11 — paid us unmodified
+(`research/findings.md` F0.7e.1, F0.7e.5). The Bankr CLI, whose payments were the
+only ones that had worked, contains no x402 client at all: it sends the URL to
+Bankr's undocumented `/wallet/x402-pay`, and Bankr's server pays from the
+custodial wallet (F0.7e.4). So "the CLI works" was only ever evidence about
+Bankr users. This is the lesson F0.2.1 and F0.6.1 already taught: a negative
+about the packages examined was recorded as a negative about the ecosystem.
+**Affects:** 0.7 checkpoint, 7.2, 7.3, the pitch; supersedes F0.7.3's headline.
