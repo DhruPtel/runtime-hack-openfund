@@ -507,25 +507,27 @@ authentication and lists 194 assets, all on 4663 (F0.8.1).
   - pin it, and diff it on refresh;
   - treat a hash change as a version bump that needs an explicit config change;
   - never look the registry up live at cycle time.
-- **Why raw bytes, and why this unit re-fetches.** Probe 0.8 kept the parsed
-  assets in the gitignored `probes/out/`, not the bytes it hashed. Re-serialising
-  that content gives the same length and a different hash (checked 2026-09-18),
-  so the sha256 F0.8.1 recorded (`442718b5…`) cannot be re-verified from anything
-  kept. 1.2 fetches afresh and pins what it fetches. 0.8's copy can be diffed
-  against at content level only.
+- **Why raw bytes.** Probe 0.8 kept the parsed assets, not the bytes it hashed,
+  so its recorded sha256 (`442718b5…`) could not be re-verified from anything
+  kept. *Built:* 1.2's fresh fetch hashed to exactly that version, so it is now
+  verified against stored bytes, and the registry was byte-identical five hours
+  later (LESSONS 2026-09-18).
 - **Identity: registry membership on `(chain_id, address)`**, compared
   case-insensitively, since the registry uses EIP-55 mixed case (F0.8.1). It was
   necessary and sufficient against every counterfeit tested (F0.8.5).
 - **Markability is a separate rule, never collapsed into identity.** A Chainlink
   equity feed exists for 35 of the 194 (F0.4.1).
-  - Each asset's feed is pinned by its proxy address, never joined on ticker.
-    The directory writes `RHDELL` for DELL and omits the base asset for SGOV and
-    USAR (F0.8.1).
+  - Each asset's feed is pinned by its proxy address, never joined on ticker at
+    cycle time. The directory carries **no token address**, so the address-keyed
+    `feed_map.json` began as a name match. It was proposed from the registry's
+    own records, so a counterfeit can never be proposed a feed, and it was
+    reviewed. 32 were exact; DELL (`RHDELL`), SGOV and USAR (no base asset,
+    F0.8.1) were reviewed by hand (LESSONS 2026-09-18).
   - Feed presence carries zero identity weight: it admitted both GME
     counterfeits (F0.8.3).
   - CRM proves the two rules differ: it is genuine, and unmarkable.
 - **Chainlink's feed directory is pinned the same way** — bytes, sha256 and fetch
-  time. It supplies each feed's proxy address, decimals and heartbeat, and 1.3's
+  time. Unlike the registry, it sends an `ETag` and `Last-Modified`. It supplies each feed's proxy address, decimals and heartbeat, and 1.3's
   staleness rule reads the heartbeat from it (staleness config decision; F0.4.1).
   It returns 403 without a `User-Agent` (probe 0.3).
 - **The beacon is a cross-check with an independent trust root, not a filter.**
@@ -545,6 +547,10 @@ authentication and lists 194 assets, all on 4663 (F0.8.1).
   asset is excluded from the universe (0.4 decision), but volume is measured per
   snapshot (1.4). So that exclusion is applied in 1.6, not frozen into the
   allowlist. This unit supplies the two static rules.
+- **The I/O seam.** The refresh fetch and the beacon read are network I/O, so
+  `core/universe.py` takes their results as arguments. The beacon read is
+  1.3's. The registry and directory fetch has **no unit that owns it yet**; the
+  initial pin used a one-off fetch.
 - Do not assume `status` is always `ACTIVE` or that `deployments` has length 1.
   Neither has been observed otherwise, and neither is guaranteed (F0.8.1).
 
@@ -1067,8 +1073,6 @@ Stated before the code, so that no unit's done-condition quietly assumes it:
   A failover endpoint with archive access is unverified (1.3). The series has
   to come from what is readable at the pinned block, or from an offchain
   source, and which of the two is unmeasured until 1.3.
-- **Re-verify the registry version 0.8 recorded.** Its bytes were not kept, so
-  1.2 pins a new snapshot.
 - **Catch a counterfeit that is inside the registry, or one that clones the
   proxy with its own beacon, except via the registry** (F0.8.5). Neither is
   testable.
