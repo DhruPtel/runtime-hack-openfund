@@ -2572,6 +2572,23 @@ a payment header. That drives a client exactly to the point of signing and no
 further. Each run signs with a key generated for that process, never printed and
 never funded.
 
+### The answer
+
+| Buyer | Can pay our endpoint today? | Confidence |
+|---|---|---|
+| **`@x402/fetch` 2.26.0 + `@x402/evm`**, unmodified — Coinbase's current v2 client | **Yes. Paid once, settled on chain.** | **measured** (F0.7e.5) — with a Bankr-custodied signer (F0.7e.6) |
+| The same client with a key the buyer holds, and no Bankr account | Yes | **inferred** — the server sees only the library's payload and an EOA signature |
+| Bankr CLI / `POST /wallet/x402-pay` | Yes, **for Bankr account holders only** | measured (F0.7b.1, F0.7d.4); mechanism F0.7e.4 |
+| **`x402-fetch` / `x402` 1.2.0**, unmodified — the client **Bankr's own docs recommend** | **No.** Throws before signing. | **measured** (F0.7e.1) |
+| `x402-fetch` 1.2.0 plus an adapter the buyer installs | Reaches signing with a valid signature; the server's answer is **unresolved** | measured to signing (F0.7e.3) |
+| Other v2-line clients (`@x402/axios`, PyPI `x402` 2.23.0) | Probably | **inferred** from the shared core and version line; not tested |
+
+**The claim this supports:** *payable by any x402 v2 client, and by Bankr users.*
+It does **not** support *payable by any x402 client*: the v1 packages cannot pay
+us unmodified, and Bankr's own documentation points buyers at them. The CLI
+working answers only the Bankr-user case. What answers the non-Bankr buyer is
+F0.7e.5, and its last step from measured to inferred is F0.7e.6.
+
 ### F0.7e.1 — The gap, field by field: one client-side blocker, not two
 
 **Confidence: measured. Verdict: fail** for `x402-fetch@1.2.0` unmodified, and a
@@ -2709,3 +2726,130 @@ carried `access-control-expose-headers: PAYMENT-RESPONSE,X-PAYMENT-RESPONSE`.
 That is the exact string `@x402/fetch` 2.x sets on its paid request
 (`dist/esm/index.mjs:60`). It is consistent with Bankr's server-side payer being
 built on the v2 client line, and it proves nothing.
+
+### F0.7e.5 — The standard v2 client paid us, and it settled
+
+**Confidence: measured. Verdict: pass — and it refutes F0.7.3's headline.**
+
+**The v2 client line exists and is published.** `@x402/core`, `@x402/fetch` and
+`@x402/evm` are at **2.26.0**, last published 2026-09-15. `@x402/fetch` first
+appeared as 0.0.1 on **2025-12-11** and has 28 versions since. The maintainers
+are the same two Coinbase accounts that publish `x402` and `x402-fetch`, and the
+repository is the same `x402-foundation/x402`. PyPI's `x402` is at 2.23.0. F0.7.3
+looked at `x402`, `x402-fetch` and `@coinbase/x402` — the right names for v1 and
+the wrong names for v2 — and recorded *"a standard published x402 client cannot
+pay this endpoint"*. That is the same over-reading as F0.2.1 and F0.6.1: a
+negative about the packages examined, generalised into a negative about the
+ecosystem.
+
+**Offline** (`v2.mjs`). The client is unmodified and configured exactly as its
+README's Quick Start shows a buyer (`ExactEvmScheme` on `eip155:8453`). It reads
+the `PAYMENT-REQUIRED` header (`@x402/core chunk-UF6R7D6H.mjs:2156`), selects
+`eip155:8453` natively, and signs. It sends `PAYMENT-SIGNATURE`
+`{x402Version: 2, payload, accepted}`, where `accepted` is our live requirement
+verbatim. There is no top-level `resource`, because our challenge has none:
+Bankr puts `resource` inside `accepts[]`, which is where v1 puts it.
+
+**Paid** (`pay.mjs --confirm`), once:
+
+```
+unpaid GET → 402                              51 ms
+signTypedData via /wallet/sign               841 ms
+paid GET (PAYMENT-SIGNATURE) → 200         6,165 ms   {"ok":true,"probe":"0.7","work":"none"}
+end to end                                 7,062 ms
+paid requests sent                             1
+```
+
+**Verified from the chain, not from the 200:**
+
+```
+PaymentSettled   tx 0xa8c461f23b0693cf05bc6825aec0dc11798f31db3c1e31911e5186a75faf22cc
+                 Base block 51,490,128
+                 payer = owner = 0x93fa…a3da   total 1000   ownerAmount 1000
+                 bankrFee 0   feeBps 0
+AuthorizationUsed (USDC, same tx)
+                 authorizer 0x93fa…a3da
+                 nonce 0xd6855b8c858062277d8a5ee6a335258ec7e9c907e4be72ea61c88cf30f5da272
+                 — the nonce this client signed
+tx sender        0x4a15fc613c713fc52e907a77071ec2d0a392a584 (the facilitator; the payer paid no gas)
+```
+
+The `AuthorizationUsed` nonce ties the settlement to *this* client's
+authorization, not just to some payment by our wallet. The endpoint's own log
+agrees: `2026-09-18T22:13:21.695Z status=200 settled=true durationMs=1521`, with
+a cold `Init Duration` of 496.31 ms and 173.03 ms in the handler, consistent with
+F0.7d.5. USDC was 107,346 before and after, since the payment was self-paid
+(F0.7d.6).
+
+**What a non-Bankr buyer needs, as measured here:** `@x402/fetch` and
+`@x402/evm`, a signer that can do `signTypedData`, and USDC on Base. No ETH,
+because the facilitator paid the gas. No Bankr account. Whether that holds when
+the key is not Bankr's is F0.7e.6.
+
+**0.7's done-condition** — *"confirm a standard client can pay us"* — is met by a
+v2 client, subject to F0.7e.6.
+
+### F0.7e.6 — What this payment does not prove, stated before anyone rounds it up
+
+**Confidence: measured (the gap). Verdict: the non-Bankr buyer is inferred, not measured.**
+
+- **The signer was Bankr's.** The fund has one funded wallet, so the client's
+  `signTypedData` was answered by `POST /wallet/sign` through the logged-in CLI.
+  Everything the server received — header name, envelope, `accepted`,
+  authorization — was built by the published library. The signature is plain
+  ECDSA from an **EOA** (`eth_getCode` on Base returns `0x`) and recovers to it
+  locally. A buyer holding their own key produces a payload of the same shape,
+  and nothing on the path can see where a key is held. **That is an inference,
+  and a strong one, not a measurement.** Settling it takes one payment from a
+  fresh local key holding ≥ $0.001 USDC on Base, which needs a funding transfer
+  this unit was not authorised to make.
+- **It was self-paid again.** Payer and owner are the same address, as in every
+  payment this endpoint has ever received. F0.7d.4 had already shown that
+  self-payment settles; **no third party has ever paid us.**
+- Smart-contract-wallet buyers (ERC-1271 / ERC-6492 signatures) are untested.
+- Only `@x402/fetch` was run. `@x402/axios` shares `@x402/core` and PyPI `x402`
+  2.23.0 is on the v2 version line; both are inferred to work and neither was
+  tried.
+
+### F0.7e.7 — A paid response carries no settlement receipt
+
+**Confidence: measured (one response). Verdict: fail, against the buyer getting in-band proof of payment.**
+
+The paid 200 carried neither `PAYMENT-RESPONSE` nor `X-PAYMENT-RESPONSE`. Its
+headers were `apigw-requestid`, `connection`, `content-length`, `content-type` and
+`date`, nothing else. `@x402/fetch` tolerates the absence silently
+(`processPaymentResult` swallows the missing header). **A buyer using a standard
+client receives the content and no transaction hash.** The only evidence that
+they paid is on chain, which is consistent with settlement arriving after the
+response (F0.7b.4). Our own books were already going to read `PaymentSettled`
+(F0.7b.6), so nothing changes for us. What changes is what a buyer can show for
+their money, and handing them a receipt is 7.3's and 7.4's decision, not this
+probe's.
+
+### What 0.7e changes
+
+| Change | Where |
+|---|---|
+| F0.7.3's headline refuted: a published standard client (v2, `@x402` scope) pays us | 0.7 checkpoint, 7.2, the pitch |
+| The honest claim is "any x402 v2 client, and Bankr users" — not "any x402 client" | README, 8.x |
+| v1 clients fail on the network enum alone; the version passes through | 7.2 |
+| Bankr's docs point buyers at the v1 client that fails; our buyer instructions must name `@x402/fetch` | 7.2, 8.x |
+| A thin v1 adapter reaches signing but is the buyer's to install, and its server acceptance is unresolved | — |
+| The CLI pays via Bankr's undocumented `/wallet/x402-pay`; it is not a client a non-Bankr buyer can adopt | — |
+| No in-band settlement receipt for the buyer | 7.3, 7.4 |
+
+### Method limitations
+
+- **One payment**, self-paid, with a Bankr-custodied signer. The non-Bankr buyer
+  is inferred (F0.7e.6).
+- The offline runs replay the live 402 byte for byte, so they test each client
+  against exactly what the endpoint emitted today. A later change on the platform
+  is not covered.
+- The adapter's server-side acceptance is unmeasured. The facilitator publishes
+  no `/supported`, and the payment was spent on the v2 client.
+- The package survey is npm plus the top-level PyPI release, on one day.
+  "Published" means published there.
+- Timings are single observations, and the paid wire time (6,165 ms) includes
+  the platform's cold start.
+- **Cost:** $0.001 paid and returned in the same transaction, `feeBps` 0, gas paid
+  by the facilitator. **Net spend: $0.00.**
