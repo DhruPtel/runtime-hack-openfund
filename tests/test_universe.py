@@ -447,3 +447,12 @@ def test_core_universe_imports_nothing_from_adapters():
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 assert alias.name.split(".")[0] in sys.stdlib_module_names, alias.name
+
+
+def test_a_pin_that_names_a_file_under_another_hash_is_refused(registry_copy):
+    pins = json.loads((registry_copy / u.PINS_FILE).read_text())
+    pins["inputs"][u.REGISTRY]["file"] = u.filename_for(u.REGISTRY, "0" * 64)
+    (registry_copy / u.PINS_FILE).write_text(json.dumps(pins))
+    with pytest.raises(u.PinMismatch) as refusal:
+        u.load(registry_copy)
+    assert refusal.value.rule == u.RULE_PIN and "pin names file" in str(refusal.value)
