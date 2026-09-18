@@ -216,6 +216,16 @@ attributed to a single request, or only aggregated?
 **Risk:** if usage is only aggregate, per-analyst cost stays an estimate and the
 books must say so.
 
+**Run 2026-09-18.** Both endpoints answer, and the balance reads in 132 ms,
+which confirms `REVIEW-RESPONSE.md` finding 13 (F0.6.1). The risk above came
+true: usage is attributable to (API key × model × day-window) and nothing finer
+(F0.6.4). The run also found two things the unit did not anticipate:
+
+- Credits are **wallet**-scoped and usage is **key**-scoped, so the two cannot
+  be reconciled against each other (F0.6.6).
+- Out-of-range `days` values are silently coerced, so the window must be read
+  back from the response (F0.6.5).
+
 ---
 
 ### 0.7 ▶ x402 round trip

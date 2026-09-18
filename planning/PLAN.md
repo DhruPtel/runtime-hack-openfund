@@ -288,7 +288,10 @@ inputs rejected, not absorbed.
 - **2.4** Runner: bounded width, per-worker deadline, transport timeout, retry
   budget, pre-allocated result slots, per-worker fallback, partial-failure
   disclosure.
-- **2.5** Token accounting per call, reconciled against `/v1/usage`.
+- **2.5** Token accounting per call, reconciled against `/v1/usage` —
+  aggregate to aggregate only. The provider attributes cost to (API key × model
+  × day-window) and nothing finer, with no per-request row and no request id
+  (findings F0.6.4), so the per-call half is our own count.
 - **2.6** ▶ **First real report:** *Show: an analyst running on a real snapshot,
   full output, cost and latency printed.*
 - **2.7** Immutable report store, content-addressed.
@@ -391,7 +394,12 @@ from its receipt, and booked exactly once. Live stock fills are out of scope
   inputs, versioned policy.
 - **6.2** Reconciliation against independent wallet balances and provider
   settlement evidence; unresolved items shown, not absorbed.
-- **6.3** Cost with `is_estimate` and pricing basis, reconciled to `/v1/usage`.
+- **6.3** Cost with `is_estimate` and pricing basis, reconciled to `/v1/usage`
+  in aggregate within one key. Per-analyst lines carry `is_estimate: true`
+  (F0.6.4). `/v1/credits` is wallet-scoped and `/v1/usage` is key-scoped, so
+  they are separate accounts and not a check on each other (F0.6.6). Read
+  `days`/`startDate`/`endDate` back off the response rather than trusting the
+  value sent (F0.6.5).
 - **6.4** Funded contribution: realized P&L allocated once by executed weight,
   with a residual line.
 - **6.5** Call accuracy: hit rate against a stated horizon and benchmark,
