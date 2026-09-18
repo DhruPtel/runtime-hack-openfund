@@ -486,31 +486,80 @@ decisions and F0.8.1–F0.8.3; F0.3.1 and F0.4.7 (decimals); F0.10.3
 
 ### 1.2 Universe allowlist
 
-**Goal:** an asset can only enter the system if we know it's the real one.
+**Goal:** an asset enters the system only if we know it is the real one, and is
+held only if it can be marked independently of the venue.
 
-**Build:** `core/universe.py` plus `config/universe.json`. The allowlist from
-probe 0.8, keyed by `(chain_id, address)`, with issuer source, fetch time, and
-the snapshot's sha256 as its version. The registry has no version of its own
-(F0.8.1), so the rule is: pin a snapshot, diff it on refresh, never look it up
-live. A loader that refuses unknown addresses. Rules from the 0.8 decisions:
+**Build:** `core/universe.py` plus `config/universe.json`, from a pinned snapshot
+of the issuer registry, `GET https://api.robinhood.com/rhj/assets`. It needs no
+authentication and lists 194 assets, all on 4663 (F0.8.1).
 
-- **Two rules, evaluated separately and never collapsed.** Identity is registry
-  membership. Markability is a Chainlink feed (0.4 decision). CRM is the case
-  that proves they differ: genuine, and unmarkable.
-- **The beacon is a cross-check with an independent trust root.** If it
-  disagrees with the registry, the cycle fails loudly. A warning is not enough.
-- `uiMultiplier()` and the name marker carry no identity weight.
-- Never join the registry to the feed directory on ticker (F0.8.1: `RHDELL`).
+- **The snapshot is the raw response bytes, and it lives in `config/registry/`**
+  as `rhj_assets.<sha256>.json`, beside the allowlist derived from it.
+  `universe.json` records the URL, fetch time, byte count and sha256. The
+  registry carries no version, `ETag` or `Last-Modified`, so the sha256 of those
+  bytes **is** the version. The rules, per the 0.8 decision:
+  - pin it, and diff it on refresh;
+  - treat a hash change as a version bump that needs an explicit config change;
+  - never look the registry up live at cycle time.
+- **Why raw bytes, and why this unit re-fetches.** Probe 0.8 kept the parsed
+  assets in the gitignored `probes/out/`, not the bytes it hashed. Re-serialising
+  that content gives the same length and a different hash (checked 2026-09-18),
+  so the sha256 F0.8.1 recorded (`442718b5…`) cannot be re-verified from anything
+  kept. 1.2 fetches afresh and pins what it fetches. 0.8's copy can be diffed
+  against at content level only.
+- **Identity: registry membership on `(chain_id, address)`**, compared
+  case-insensitively, since the registry uses EIP-55 mixed case (F0.8.1). It was
+  necessary and sufficient against every counterfeit tested (F0.8.5).
+- **Markability is a separate rule, never collapsed into identity.** A Chainlink
+  equity feed exists for 35 of the 194 (F0.4.1).
+  - Each asset's feed is pinned by its proxy address, never joined on ticker.
+    The directory writes `RHDELL` for DELL and omits the base asset for SGOV and
+    USAR (F0.8.1).
+  - Feed presence carries zero identity weight: it admitted both GME
+    counterfeits (F0.8.3).
+  - CRM proves the two rules differ: it is genuine, and unmarkable.
+- **Chainlink's feed directory is pinned the same way** — bytes, sha256 and fetch
+  time. It supplies each feed's proxy address, decimals and heartbeat, and 1.3's
+  staleness rule reads the heartbeat from it (staleness config decision; F0.4.1).
+  It returns 403 without a `User-Agent` (probe 0.3).
+- **The beacon is a cross-check with an independent trust root, not a filter.**
+  Each stock's EIP-1967 beacon slot must resolve to the issuer's beacon
+  (`0xe10b…1b00`, F0.8.2). A disagreement with the registry fails the cycle
+  loudly, never as a warning (0.8 decision). Registry and beacon agreed on all
+  381 addresses swept (F0.8.4), so this is insurance, not detection.
+- **Retired:** `uiMultiplier()` and the `• Robinhood Token` name marker carry no
+  identity weight and are not read for identity (0.8 decision; F0.T.4 measured
+  140 forgeries carrying the marker).
+- **The cash leg is not a stock.** USDG is genuine, but it is not in the registry
+  and every check rejects it as a stock (F0.8.2). It is pinned separately by
+  `(chain_id, address)`, with its on-chain decimals (6, F0.3.1) and its own
+  provenance. Native ETH is the gas token and, since the 0.11 decision, the live
+  leg's sell asset.
+- **The corroborator line is not a static property.** Below $1M of 24h volume an
+  asset is excluded from the universe (0.4 decision), but volume is measured per
+  snapshot (1.4). So that exclusion is applied in 1.6, not frozen into the
+  allowlist. This unit supplies the two static rules.
 - Do not assume `status` is always `ACTIVE` or that `deployments` has length 1.
-  Neither has been observed otherwise, and neither is guaranteed.
+  Neither has been observed otherwise, and neither is guaranteed (F0.8.1).
 
-**Artifact:** the versioned allowlist file and a loader.
+**Artifact:** the raw registry and directory snapshots under `config/registry/`,
+the versioned allowlist in `config/universe.json`, and a loader.
 
-**Done when:** an address outside the list cannot enter a snapshot, and a version
-bump requires an explicit config change.
+**Done when:**
+- an address outside the pinned snapshot cannot enter a snapshot;
+- a counterfeit whose ticker has a feed is refused;
+- CRM is admitted as genuine and excluded as unmarkable;
+- a simulated beacon disagreement fails the cycle by name;
+- a version bump requires an explicit config change.
 
-**Risk:** the temptation to resolve by ticker for convenience. Don't; that's how
-the fake GME gets bought.
+**Risk:** the temptation to resolve by ticker for convenience — that is how the
+fake GME gets bought. There is also a ceiling we cannot raise. A proxy-cloning
+forgery would be caught only by the registry, and a counterfeit inside the
+registry would defeat every check we have (F0.8.5 and its limitations).
+
+**Changed by:** 0.8's four decisions and F0.8.1–F0.8.5; the 0.4 membership and
+tier decisions; F0.3.1; F0.T.4. **Size:** bigger than drafted — a second rule, a
+second pinned input, and the cash leg.
 
 ---
 
