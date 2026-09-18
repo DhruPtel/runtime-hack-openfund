@@ -591,8 +591,9 @@ included.
 - **Staleness binds the newest point only** (staleness decision). A newest
   observation is stale when its age exceeds its own feed's documented
   heartbeat, read from the pinned directory (86,400 s for equities), plus
-  `feed_staleness_margin_seconds`. The margin is still null, so the check blocks
-  until it is set. An `updatedAt` 3.6 h old is normal in market hours (F0.4.7).
+  `feed_staleness_margin_seconds` (3,600 s, provisional) — so an equity feed's
+  newest point is stale past 90,000 s. An `updatedAt` 3.6 h old is normal in
+  market hours (F0.4.7).
   Overnight and weekend behaviour is unmeasured.
 - **The price series** (invariant 2). This unit chooses the series and its
   window, under the no-archive rule. Two candidates, neither measured:
@@ -823,11 +824,12 @@ snapshot from 1.6 embedded, run against `analyst_model` (`claude-sonnet-5`,
 provisionally, per the config decision). What 0.9 established about how to
 measure:
 
-- **Timeouts.** `worker_deadline_seconds` is 120. `transport_timeout_seconds` is
-  still null, and it must be set above the measured call latency (58 s at the
-  floor) before this runs. A call timed out client-side is still billed
+- **Timeouts.** `transport_timeout_seconds` is 180, above the measured call
+  latency (58 s at the floor). A call timed out client-side is still billed
   (F0.9.1, F0.9.3): 0.9's first call was cut off by `_capture`'s 20 s default and
-  charged anyway.
+  charged anyway. `worker_deadline_seconds` is 120. That is shorter than the
+  transport timeout, which matters to 2.4's runner, not to this unit's single
+  calls (LESSONS 2026-09-18).
 - **Cost from the response's own `usage` block**, not from a `/v1/usage` delta
   around the call, because the aggregate went backwards (F0.9.2). Reconcile
   against settled windows, reading `days`, `startDate` and `endDate` back
@@ -960,8 +962,8 @@ at one pinned block:
 - **Each feed proxy** exists, reports 8 decimals, and is the feed pinned for its
   asset — matched by address, never by ticker (F0.8.1, F0.4.7).
 - **USDG** exists and has 6 decimals (F0.3.1).
-- **The execution wallet**, once `config/mandate.json` names it (it is still
-  null). On 4663 it carries an EIP-7702 delegation to a Bankr contract, so the
+- **The execution wallet**, named in `config/mandate.json`
+  (`0x93fa…a3da`). On 4663 it carries an EIP-7702 delegation to a Bankr contract, so the
   selftest records the delegate and flags any change rather than expecting an
   EOA. On Base it is an EOA (F0.10.3).
 
@@ -1007,8 +1009,8 @@ logged and swallowed, and the acceptance case passes.
 **Checkpoint:** you see the refusals. Judge whether the strictness is right, or
 whether it will block every cycle on a weekend. That question is now concrete: a
 24/5 feed may legitimately go longer than its 86,400 s heartbeat while markets
-are shut, and weekend behaviour is unmeasured (F0.4.7). The margin in config is
-still null, and it is the lever.
+are shut, and weekend behaviour is unmeasured (F0.4.7). The margin in config,
+3,600 s and provisional, is the lever.
 
 **Changed by:** the staleness decision, which closes the gap this unit carried;
 the price-history decision; the staleness config decision; F0.4.1, F0.4.7.
@@ -1036,15 +1038,12 @@ Stated before the code, so that no unit's done-condition quietly assumes it:
 - **Measure whether the feed already includes the multiplier** (F0.4.4). No
   asset's multiplier clears the noise, and there is no archive to read across a
   change, so 1.4 runs on documentation.
-- **Run the staleness check.** The decision gave the rule, heartbeat plus
-  margin, but not the margin: `feed_staleness_margin_seconds` is null, and null
-  blocks 1.3 and 1.11.
 - **Say what a weekend does to a 24/5 feed.** It is unmeasured (F0.4.7), so
   1.11's checkpoint judges it without data unless 1.3 measures it.
-- **Run 1.7 safely.** `transport_timeout_seconds` is null, and a timed-out call
-  still bills (F0.9.3). `risk_model`, `max_output_tokens`,
-  `context_budget_tokens` and `cycle_deadline_seconds` are null too; those block
-  Phase 2, not Phase 1.
+- **Settle Phase 2's model settings.** `risk_model`, `max_output_tokens`,
+  `context_budget_tokens` and `cycle_deadline_seconds` are still null. They
+  block Phase 2, not Phase 1. The transport timeout (180 s) is longer than the
+  worker deadline (120 s), which 2.4 has to resolve.
 - **Read history from the chain beyond recent state, or fail over.** There is
   one configured endpoint, the public one, and it has no archive on the record.
   A failover endpoint with archive access is unverified (1.3). The series has
@@ -1057,9 +1056,6 @@ Stated before the code, so that no unit's done-condition quietly assumes it:
   testable.
 - **Know Bankr's or the RPC's rate limit.** No limit was reached and no headers
   were returned (F0.10.5), so 1.3 and 1.5 back off on a bare 429.
-- **Name the execution wallet in config.** `config/mandate.json`'s
-  `execution_wallet` is still null. PLAN §6 requires it, and 1.3's balance reads
-  and 1.10's attestation need it.
 - **Book the 6 bps that left the 0.10 sale unaccounted for** (F0.10.4). It is not
   a Phase 1 input, but it is the first thing 5.3's reconciliation will meet.
 

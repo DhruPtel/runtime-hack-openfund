@@ -20,7 +20,7 @@ it. It must never substitute a default. Each null below carries a
 | `universe.json` | issuer allowlist, `(chain_id, address)` to feed and decimals | empty until unit 1.2 |
 | `registry/` | raw bytes of the pinned third-party inputs — the issuer registry and Chainlink's feed directory — each named by its sha256, which is its version | not yet created (unit 1.2) |
 | `analysts.json` | the roster and its scope partition | provisional until checkpoint 2.1 |
-| `thresholds.json` | staleness, divergence, quote age, impact, turnover, cash floor, quorum | divergence, quote age and impact set, provisionally; staleness rule set, margin null; position limits and quorum unresolved |
-| `mandate.json` | bounds, wallet, chain, allowed assets, budget, expiry, revocation | wallet unresolved |
-| `models.json` | pinned model ids, token caps, deadlines | analyst model and worker deadline provisional; the rest unresolved |
+| `thresholds.json` | staleness, divergence, quote age, impact, turnover, cash floor, quorum | divergence, quote age and impact set, provisionally; staleness rule and margin set; position limits and quorum unresolved |
+| `mandate.json` | bounds, wallet, chain, allowed assets, budget, expiry, revocation | wallet named; bounds, budget and approval unresolved (unit 4.1) |
+| `models.json` | pinned model ids, token caps, deadlines | analyst model, worker deadline and transport timeout provisional; the rest unresolved |
 | `cadence.json` | schedule, confirmation depth, retry budgets | schedule set |
