@@ -737,3 +737,12 @@ ungated leg.
 **Affects:** Phase 5, 5.2, 5.4, 5.7; `planning/PHASE-0-1.md` 0.11 and the
 re-evaluation gate; `planning/PLAN.md` §12 and Phase 5 text, `planning/ROADMAP.md`
 Phase 5 (*fold pending*: outside this pass's paths).
+
+## 2026-09-18 — DECISION: §11's x402 rationale stays marked contradicted, and $0.05 stays provisional
+*Operator decision at the 0.11 checkpoint.* `planning/PLAN.md` §11 justifies
+selling on Base with a property of the v1 x402 client, while the decided buyer
+client is v2 (F0.7e.2, F0.7e.5). That stays marked *contradicted, not
+reconciled*. The Base decision is not revisited. The $0.05 price stays
+provisional: F0.9.4 shows it needs 1.3–2.3 sales a day to cover inference at the
+floor, and 1.7 is where it is next confirmed or revised. Neither blocks Phase 1.
+**Affects:** 1.7, 7.2; `planning/PLAN.md` §11 (already marked; no change).
