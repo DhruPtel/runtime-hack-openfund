@@ -150,6 +150,19 @@ it's what the staleness rule in 1.3 is for.
 enough to trust either one, and whether the divergence threshold we chose for a
 veto is realistic.
 
+**Checkpoint held 2026-09-18 — three decisions** (`tracker/LESSONS.md`):
+
+- **Feed presence is a membership condition.** With no feed there is no mark
+  independent of the venue, which leaves 35 assets.
+- **Divergence is tiered by corroborator liquidity.** The veto fires at ~100 bps
+  where the pool does over $1M a day; below that line the asset is excluded from
+  the universe. Both numbers are provisional, in `config/thresholds.json`.
+- **Depth returns as corroborator quality only, never as a tradeability term.**
+  This reverses the 2026-09-17 deletion, which rested on the false no-pool
+  premise.
+
+The multiplier question stays unresolved, and 1.4 follows the documentation.
+
 ---
 
 ### 0.5 Execution eligibility
@@ -372,11 +385,13 @@ capture in 1.9, not from re-reading the chain.
 **Goal:** two independent sources, one of which marks the book.
 
 **Build:** the corroborating adapter probe 0.4 established — `adapters/gecko.py`
-for the `robinhood` slug if GeckoTerminal covers stock tokens, otherwise a sized
-Bankr quote. `core/valuation.py` computes the mark from Chainlink (raw units ×
-feed, multiplier handled per probe 0.4) and records divergence against the
-corroborator as a field on the asset, alongside whether that corroborator is
-independent of the execution venue.
+for the `robinhood` slug. 0.4 measured coverage for 32 of 32 addressable tokens,
+so the sized-Bankr-quote fallback does not fire. `core/valuation.py` computes the
+mark from Chainlink (raw units × feed, multiplier handled per probe 0.4). It
+records three fields on each asset: the divergence against the corroborator,
+whether that corroborator is independent of the execution venue, and the
+corroborating pool's 24h volume. The volume selects the divergence tier in
+`config/thresholds.json` (0.4 checkpoint).
 
 **Artifact:** per-asset mark, corroboration, divergence in basis points, and the
 independence flag.

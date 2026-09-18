@@ -245,8 +245,9 @@ re-evaluate before detailing the next.
   source time separate from fetch time. Explicit request timeouts and fail
   loudly; no failover is claimed and no archive read is assumed.
 - **1.4** Price cross-check: Chainlink as the accounting mark, corroboration from
-  whichever source probe 0.4 established, divergence recorded with its
-  independence stated.
+  GeckoTerminal (probe 0.4: 32 of 32 covered, independent of the venue),
+  divergence recorded with its independence stated and gated by the tiered rule
+  in `config/thresholds.json`.
 - **1.5** Quote adapter (read-only): quotes at the $25 intended size, with quote
   age, fees, and impact as a three-valued field. Impact is **signed** — negative
   is price improvement — so a gate compares `impact > limit`, never
@@ -500,7 +501,18 @@ mandate.
 ## 11. Decisions already made
 
 - **Chainlink marks the book; quotes size the trade.** Divergence past a
-  threshold is a veto condition, not a silent reconciliation.
+  threshold is a veto condition, not a silent reconciliation. The corroborator
+  is GeckoTerminal, which prices all 32 addressable stock tokens and is
+  independent of the execution venue (findings F0.4.2). The threshold is
+  **tiered by the corroborator's liquidity**, because that is what divergence
+  tracks (F0.4.5): ~100 bps where the corroborating pool does over $1M a day,
+  and below that line the asset is excluded from the universe rather than
+  vetoed every cycle. Both numbers are provisional and live in
+  `config/thresholds.json` (0.4 checkpoint).
+- **No Chainlink feed, not held.** An asset without a feed has no mark
+  independent of the venue we trade on, so feed presence is a membership
+  condition. That caps the investable universe at the 35 equity feeds
+  (F0.4.1) out of the issuer's 194 assets (0.4 checkpoint).
 - **Value is computed in exactly one place**, tested against a position with a
   loose remainder.
 - **The paid endpoint prices in USDC on Base**, because the standard client's
@@ -531,6 +543,10 @@ until unit 1.7 reports real per-cycle inference cost.
 ## 12. Open questions
 
 - How many of the ~190 tickers are actually tradeable at our $25 size?
+  *Partly answered at the 0.4 checkpoint:* markability caps the universe at 35,
+  and the $1M corroborator line left 19 of the 32 measured, on one block on one
+  day (F0.4.5). Tradeability at $25 stays unmeasured until 1.5 quotes from a
+  funded wallet.
 - Which ungated 4663 asset is the right one for the live leg, and what is the
   smallest round trip that still produces meaningful receipt evidence?
 - Do we launch a token, and would a stock-paired launch with quote-only fees make
