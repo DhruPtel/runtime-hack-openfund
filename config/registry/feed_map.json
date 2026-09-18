@@ -1,0 +1,306 @@
+{
+  "_about": "Which Chainlink feed marks which asset, keyed by address (unit 1.2). Chainlink's directory carries no token address, so this map is the one place a name met an address: proposed by core/universe.py propose_feed_map() from the registry's own records, and reviewed. The loader reads it by address only and refuses it if `reviewed_against` no longer matches the pinned inputs, so a refresh forces a re-review. Feed presence carries no identity weight: every stock entry here is registry-listed first (0.8 decisions).",
+  "entries": [
+    {
+      "asset": "0x117cc2133c37b721f49de2a7a74833232b3b4c0c",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood SPY / USD",
+      "feed_proxy": "0x319724394d3a0e3669269846abe664cd621f9f6a",
+      "symbol": "SPY"
+    },
+    {
+      "asset": "0x12f190a9f9d7d37a250758b26824b97ce941bf54",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood AMZN / USD",
+      "feed_proxy": "0xd5a1508ced74c084ebf3cbe853e2c968fb2a651c",
+      "symbol": "AMZN"
+    },
+    {
+      "asset": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood GME / USD",
+      "feed_proxy": "0x27c71df6a64fb476468edf256cf72c038bab5b67",
+      "symbol": "GME"
+    },
+    {
+      "asset": "0x284358abc07f9359f19f4b5b4ac91901be2597ba",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood RGTI / USD",
+      "feed_proxy": "0x2a045cf1c49c61c166c036d2f06fa2d2d984f765",
+      "symbol": "RGTI"
+    },
+    {
+      "asset": "0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood GOOGL / USD",
+      "feed_proxy": "0xf6f373a037c30f0e5010d854385ca89185ae638b",
+      "symbol": "GOOGL"
+    },
+    {
+      "asset": "0x322f0929c4625ed5bad873c95208d54e1c003b2d",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood TSLA / USD",
+      "feed_proxy": "0x4a1166a659a55625345e9515b32adecea5547c38",
+      "symbol": "TSLA"
+    },
+    {
+      "asset": "0x3b14c39e89d60d627b42a1a4ca45b5bb45fc12e2",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood RKLB / USD",
+      "feed_proxy": "0x045477bf65aef6f4f2386ad0164579e48381cc74",
+      "symbol": "RKLB"
+    },
+    {
+      "asset": "0x411efb0e7f985935daec3d4c3ebaea0d0ad7d89f",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood SLV / USD",
+      "feed_proxy": "0x209b73908e92ae021826ed79609845451ecba2ce",
+      "symbol": "SLV"
+    },
+    {
+      "asset": "0x47f93d52cbec7c6d2cfc080e154002370a60daea",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood ASML / USD",
+      "feed_proxy": "0xb4106147e8cce40b7d46124090d373a71b70f87d",
+      "symbol": "ASML"
+    },
+    {
+      "asset": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood SPCX / USD",
+      "feed_proxy": "0xb265810950ba6c5c0ff821c9963014a56fd8bffb",
+      "symbol": "SPCX"
+    },
+    {
+      "asset": "0x558378e000d634a36593e338ebacdd6207640efe",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood IONQ / USD",
+      "feed_proxy": "0x22efec4919baf55f360e0edee4abeb26de4971eb",
+      "symbol": "IONQ"
+    },
+    {
+      "asset": "0x58ffe4a942d3885baa22d7520691f611ef09e7aa",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood TSM / USD",
+      "feed_proxy": "0x874cf94aa8ec88fd9560094dd065f2fb3e41fc2f",
+      "symbol": "TSM"
+    },
+    {
+      "asset": "0x5f10a1c971b69e47e059e1dc91901b59b3fb49c3",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood CRWV / USD",
+      "feed_proxy": "0xe1b3aabcafad1c94708dc1367dcff8aa4407487c",
+      "symbol": "CRWV"
+    },
+    {
+      "asset": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "chain_id": 4663,
+      "evidence": "reviewed: the USDG holding's USD feed; not a registry asset",
+      "feed_name": "USDG / USD",
+      "feed_proxy": "0x61b7e5650328764b076a108eff5fa7282a1b9ad2",
+      "symbol": "USDG"
+    },
+    {
+      "asset": "0x6330d8c3178a418788df01a47479c0ce7ccf450b",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood COIN / USD",
+      "feed_proxy": "0xa3a468a452940b7d6b69991207b508c609a98ef2",
+      "symbol": "COIN"
+    },
+    {
+      "asset": "0x7f0abef0c07280f82c6a08ead09ded6bae2c13fc",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood EWY / USD",
+      "feed_proxy": "0xefdf54610b62a7753ec30bdc380847c12d32e1d1",
+      "symbol": "EWY"
+    },
+    {
+      "asset": "0x86923f96303d656e4aa86d9d42d1e57ad2023fdc",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood AMD / USD",
+      "feed_proxy": "0x943a29e7ae51a4798823ca9eed2ed533b2a22c72",
+      "symbol": "AMD"
+    },
+    {
+      "asset": "0x894e1ec2d74ffe5aef8dc8a9e84686accb964f2a",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood PLTR / USD",
+      "feed_proxy": "0x820abedff239034956b7a9d2f0a331f9f075eb4c",
+      "symbol": "PLTR"
+    },
+    {
+      "asset": "0x92fd66527192e3e61d4ddd13322aa222de86f9b5",
+      "chain_id": 4663,
+      "evidence": "reviewed: no exact baseAsset (it is None); the feed name 'Robinhood SGOV-USD' and entity id 'crypto-RHSGOV' name the registry's SGOV (the naming artefact F0.8.1 recorded)",
+      "feed_name": "Robinhood SGOV-USD",
+      "feed_proxy": "0xa0df4ee0fff975306345875e3548fcc519577a11",
+      "symbol": "SGOV"
+    },
+    {
+      "asset": "0x941ae714ec6d8130c7b75d67160ca08f1e7d11dd",
+      "chain_id": 4663,
+      "evidence": "reviewed: no exact baseAsset (it is 'RHDELL'); the feed name 'Robinhood DELL-USD' and entity id 'crypto-RHDELL' name the registry's DELL (the naming artefact F0.8.1 recorded)",
+      "feed_name": "Robinhood DELL-USD",
+      "feed_proxy": "0x1c6c8cadbe02e19129c39ddb92281ce4c0bf206b",
+      "symbol": "DELL"
+    },
+    {
+      "asset": "0x9d9c6684f596f66a64c030b93a886d51fd4d7931",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood NBIS / USD",
+      "feed_proxy": "0xe1d87b116ba0fe898998f1d140339d1fa1e09705",
+      "symbol": "NBIS"
+    },
+    {
+      "asset": "0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood USO / USD",
+      "feed_proxy": "0x75a9c76ef439e2c7c2e5a34ab105ecfe3766431c",
+      "symbol": "USO"
+    },
+    {
+      "asset": "0xad25ac6c84d497db898fa1e8387bf6af3532a1c4",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood BABA / USD",
+      "feed_proxy": "0x62cc8f9b5f56a33c9c8a60c8b92779f523c4e984",
+      "symbol": "BABA"
+    },
+    {
+      "asset": "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood AAPL / USD",
+      "feed_proxy": "0x6b22a786baa607d76728168703a39ea9c99f2cd0",
+      "symbol": "AAPL"
+    },
+    {
+      "asset": "0xb0992820e760d836549ba69bc7598b4af75dee03",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood ORCL / USD",
+      "feed_proxy": "0x0e6a64a2b58a6693a531e6c555f3a5d042eea844",
+      "symbol": "ORCL"
+    },
+    {
+      "asset": "0xb90a19ff0af67f7779aff50a882a9cff42446400",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood SNDK / USD",
+      "feed_proxy": "0xfb133fa4b7b385802b693a293606682df47109a3",
+      "symbol": "SNDK"
+    },
+    {
+      "asset": "0xc0d6457c16cc70d6790dd43521c899c87ce02f35",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood META / USD",
+      "feed_proxy": "0x7c38c00c30bee9378381e7b6135d7283356d71b1",
+      "symbol": "META"
+    },
+    {
+      "asset": "0xc72b96e0e48ecd4dc75e1e45396e26300bc39681",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood INTC / USD",
+      "feed_proxy": "0x3f390c5c24628ac7c489515402235fead71d1913",
+      "symbol": "INTC"
+    },
+    {
+      "asset": "0xcbb95bbf36099d34da091dc6fa6f49efa257cee3",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood CLSK / USD",
+      "feed_proxy": "0x810c12d3a554bc47fd39597fe3b3aac4941f50ef",
+      "symbol": "CLSK"
+    },
+    {
+      "asset": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood NVDA / USD",
+      "feed_proxy": "0x379ec4f7c378f34a1b47e4f3cbebcbac3e8e9f15",
+      "symbol": "NVDA"
+    },
+    {
+      "asset": "0xd5f3879160bc7c32ebb4dc785f8a4f505888de68",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood QQQ / USD",
+      "feed_proxy": "0x80901d846d5d7b030f26b480776ee3b29374c2ae",
+      "symbol": "QQQ"
+    },
+    {
+      "asset": "0xd917b029c761d264c6a312bbbcda868658ef86a6",
+      "chain_id": 4663,
+      "evidence": "reviewed: no exact baseAsset (it is None); the feed name 'Robinhood USAR-USD' and entity id 'crypto-RHUSAR' name the registry's USAR (the naming artefact F0.8.1 recorded)",
+      "feed_name": "Robinhood USAR-USD",
+      "feed_proxy": "0xa994d3684e8400a6c8078226925779fdee682dd9",
+      "symbol": "USAR"
+    },
+    {
+      "asset": "0xdf0992e440dd0be65bd8439b609d6d4366bf1cb5",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood CRCL / USD",
+      "feed_proxy": "0x6652edf64ba3731c4f2d3ce821a0fb1f1f6b482a",
+      "symbol": "CRCL"
+    },
+    {
+      "asset": "0xe93237c50d904957cf27e7b1133b510c669c2e74",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood MSFT / USD",
+      "feed_proxy": "0x45c3c877c15e6ba2ebb19ea114ea508d14c1af2e",
+      "symbol": "MSFT"
+    },
+    {
+      "asset": "0xec262a75e413fafd0df80480274532c79d42da09",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood MSTR / USD",
+      "feed_proxy": "0x396118bdfb181e6240e74d243f266b061c0edc3d",
+      "symbol": "MSTR"
+    },
+    {
+      "asset": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "chain_id": 4663,
+      "evidence": "reviewed: the ETH holding's USD feed; not a registry asset",
+      "feed_name": "ETH / USD",
+      "feed_proxy": "0x78f3556b67e17df817d51ef5a990cdaf09e8d3a9",
+      "symbol": "ETH"
+    },
+    {
+      "asset": "0xff080c8ce2e5feadaca0da81314ae59d232d4afd",
+      "chain_id": 4663,
+      "evidence": "docs.baseAsset equals the registry's tokenSymbol",
+      "feed_name": "Robinhood MU / USD",
+      "feed_proxy": "0x425eefdcf05ed6526c3ce61af99429a228a6d596",
+      "symbol": "MU"
+    }
+  ],
+  "reviewed_against": {
+    "chainlink_directory": "2ae1ea5f432cab06904134759033d7c6434c323171f954120c4933fdde42e85d",
+    "rhj_assets": "442718b5843e448e46a3deceab9f2d92f8719c0a4b1a77942d5d6da8098c8b4b"
+  },
+  "version": 1
+}
