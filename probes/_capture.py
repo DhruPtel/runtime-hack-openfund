@@ -32,6 +32,9 @@ from fund import redaction
 TIMEOUT_SECONDS = 20
 
 #: Enough to see the shape of an error body without pasting a page into findings.
+#: Raise it per call for a probe whose whole subject is the response shape --
+#: a truncated body is not parseable, and "fields=0" then looks like an empty
+#: response rather than a capture limit.
 MAX_BODY_CHARS = 600
 
 
@@ -84,6 +87,7 @@ def call(
     method: str = "GET",
     json_body: Any | None = None,
     timeout: int = TIMEOUT_SECONDS,
+    max_body_chars: int = MAX_BODY_CHARS,
 ) -> Capture:
     """Make one request and capture it. Never raises for an HTTP or network fault.
 
@@ -127,8 +131,8 @@ def call(
     capture.elapsed_ms = int((time.monotonic() - started) * 1000)
 
     body = redactor.redact(raw.strip())
-    if len(body) > MAX_BODY_CHARS:
-        body = body[:MAX_BODY_CHARS]
+    if len(body) > max_body_chars:
+        body = body[:max_body_chars]
         capture.truncated = True
     capture.body = body
     return capture
