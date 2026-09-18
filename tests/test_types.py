@@ -14,7 +14,8 @@ import pytest
 
 from fund.core.types import (
     BPS, MULTIPLE, PERCENT, SECONDS, USD, Amount, AssetId, BlockRef, ChainAddress,
-    Check, Fixed, Instant, Price, Source, content_id, from_canonical, to_canonical,
+    Check, FetchStatus, Fixed, Instant, Observation, Price, Series, Source,
+    content_id, from_canonical, to_canonical,
 )
 
 CHAIN = 4663
@@ -184,3 +185,92 @@ def test_block_and_instant_roundtrip():
     roundtrip(pinned)
     with pytest.raises(ValueError):
         BlockRef(CHAIN, 1, hash="0xABC")
+
+
+# --- observations and series ---------------------------------------------------
+
+FEED = Source("chainlink-feed", "0x0e96b7708487f91baac09697593d3e8bf253f2d8")
+PINNED = BlockRef(CHAIN, 66_353_908, Instant.from_seconds(1_789_744_300))
+T0 = 1_789_744_288  # AAPL feed updatedAt in probes/out/feed.json
+DAY = 86_400
+
+
+def feed_point(seconds: int, answer: int, round_id: int) -> Observation:
+    return Observation(
+        value=Price(answer, 8, AAPL, USD), source=FEED,
+        source_time=Instant.from_seconds(seconds),
+        fetch_time=Instant.from_seconds(T0 + 12), block=PINNED,
+        status=FetchStatus.OK, source_ref=str(round_id))
+
+
+def test_a_feed_reading_keeps_source_time_and_fetch_time_apart():
+    reading = feed_point(T0, 33538474720, 18446744073709552261)
+    assert reading.source_time != reading.fetch_time
+    blob = roundtrip(reading)
+    # The round id exceeds 2**53, so it is carried as text.
+    assert b'"source_ref":"18446744073709552261"' in blob
+
+
+def test_an_unreachable_source_is_not_false_and_not_zero():
+    timed_out = Observation(
+        value=None, source=FEED, source_time=None,
+        fetch_time=Instant.from_seconds(T0), block=PINNED,
+        status=FetchStatus.UNREACHABLE, detail="timeout after 20 s")
+    assert not timed_out.ok and timed_out.value is None
+    roundtrip(timed_out)
+    with pytest.raises(ValueError):
+        Observation(value=Price(0, 8, AAPL, USD), source=FEED, source_time=None,
+                    fetch_time=Instant.from_seconds(T0), block=PINNED,
+                    status=FetchStatus.UNREACHABLE, detail="timeout")
+    with pytest.raises(ValueError):
+        Observation(value=None, source=FEED, source_time=None,
+                    fetch_time=Instant.from_seconds(T0), block=PINNED,
+                    status=FetchStatus.UNREACHABLE)
+    with pytest.raises(TypeError):
+        Observation(value=None, source=FEED, source_time=None,
+                    fetch_time=Instant.from_seconds(T0), block=PINNED,
+                    status=FetchStatus.OK)
+
+
+def test_an_absent_field_is_null_with_a_reason_never_zero():
+    # F0.3.2: all 12 fields appeared, which is not a guarantee.
+    missing = Observation(
+        value=None, source=Source("bankr-quote", "/wallet/swap-quote"),
+        source_time=None, fetch_time=Instant.from_seconds(T0), block=None,
+        status=FetchStatus.ABSENT, detail="swapImpactBps not in response")
+    roundtrip(missing)
+
+
+def test_a_week_of_history_with_a_fresh_newest_point_is_one_series():
+    points = tuple(feed_point(T0 - (7 - d) * DAY, 33_000_000_000 + d, 18446744073709552254 + d)
+                   for d in range(8))
+    history = Series(asset=AAPL, source=FEED, fetch_time=Instant.from_seconds(T0 + 12),
+                     status=FetchStatus.OK, points=points)
+    now = Instant.from_seconds(T0 + 12)
+    assert now.epoch_ms - history.oldest.source_time.epoch_ms == (7 * DAY + 12) * 1000
+    # Only the newest point is aged; a week-old oldest point is history, not staleness.
+    assert history.age_of_newest_ms(now) == 12_000
+    roundtrip(history)
+
+
+def test_a_series_must_run_oldest_first_from_one_source_for_one_asset():
+    a, b = feed_point(T0 - DAY, 1, 1), feed_point(T0, 2, 2)
+    with pytest.raises(ValueError):
+        Series(asset=AAPL, source=FEED, fetch_time=Instant.from_seconds(T0),
+               status=FetchStatus.OK, points=(b, a))
+    with pytest.raises(ValueError):
+        Series(asset=USDG, source=FEED, fetch_time=Instant.from_seconds(T0),
+               status=FetchStatus.OK, points=(a, b))
+    with pytest.raises(ValueError):
+        Series(asset=AAPL, source=Source("geckoterminal", "/ohlcv"),
+               fetch_time=Instant.from_seconds(T0), status=FetchStatus.OK, points=(a, b))
+
+
+def test_a_series_that_could_not_be_fetched_says_why_and_has_no_points():
+    failed = Series(asset=AAPL, source=FEED, fetch_time=Instant.from_seconds(T0),
+                    status=FetchStatus.UNREACHABLE, detail="rpc timeout")
+    assert failed.newest is None and failed.age_of_newest_ms(Instant(0)) is None
+    roundtrip(failed)
+    with pytest.raises(ValueError):
+        Series(asset=AAPL, source=FEED, fetch_time=Instant.from_seconds(T0),
+               status=FetchStatus.OK)

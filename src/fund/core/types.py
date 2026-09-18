@@ -475,3 +475,133 @@ class Check:
     @classmethod
     def undetermined(cls, reason: str) -> Check:
         return cls(None, reason)
+
+
+# --- observations and series ---------------------------------------------------
+
+class FetchStatus(enum.Enum):
+    """What happened when a source was asked. Distinct from what it said.
+
+    An unreachable source is not a source that said "false" or "zero". Folding
+    them together is how a dead RPC turns into a price of zero.
+    """
+
+    OK = "ok"
+    ABSENT = "absent"            # the source answered; this field was not in it (F0.3.2)
+    UNREACHABLE = "unreachable"  # no answer: timeout, DNS, connection reset
+    REFUSED = "refused"          # an answer that is an error: 4xx or 5xx, with its body
+
+
+#: What an Observation may carry. Extended below, once Quote is defined.
+_VALUE_TYPES: tuple[type, ...] = (Fixed, Amount, Price, AssetId, ChainAddress)
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Observation:
+    """One datum with its provenance: value, source, source time, fetch time, block.
+
+    `source_time` is when the datum was true, as the source states it — a feed's
+    `updatedAt`, a candle's open. `fetch_time` is when this code saw it, from
+    this code's own clock. They are separate always. The replay rules compare
+    them, and a quote carries no source time at all, so its age is ours to
+    measure (1.5).
+
+    `block` is the block the read was made at, for a chain read, and None for an
+    offchain source. `source_ref` is the source's own id for the datum — a
+    Chainlink round id, a `quoteId`, a registry id — kept as text because round
+    ids exceed 2**53.
+    """
+
+    value: Any
+    source: Source
+    source_time: Instant | None
+    fetch_time: Instant
+    block: BlockRef | None
+    status: FetchStatus
+    detail: str | None = None
+    source_ref: str | None = None
+
+    def __post_init__(self):
+        _is("source", self.source, Source)
+        _is("source_time", self.source_time, Instant, optional=True)
+        _is("fetch_time", self.fetch_time, Instant)
+        _is("block", self.block, BlockRef, optional=True)
+        _is("status", self.status, FetchStatus)
+        _text("source_ref", self.source_ref, optional=True)
+        if self.status is FetchStatus.OK:
+            _is("value", self.value, _VALUE_TYPES)
+            _text("detail", self.detail, optional=True)
+        else:
+            if self.value is not None:
+                raise ValueError(f"a {self.status.value} observation carries no value")
+            _text("detail (say why there is no value)", self.detail)
+
+    @property
+    def ok(self) -> bool:
+        return self.status is FetchStatus.OK
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Series:
+    """An asset's history from one source, oldest first, up to a pinned block.
+
+    Freshness binds the **newest point only** (decision 2026-09-18). A series
+    is mostly old data by definition, and each historical point carries its own
+    timestamp. So this type accepts a week-old oldest point beside a fresh
+    newest one, and exposes the newest point's age for the staleness rule in
+    1.3 to judge. The rule itself lives in 1.3, not here.
+    """
+
+    asset: AssetId
+    source: Source
+    fetch_time: Instant
+    status: FetchStatus
+    points: tuple[Observation, ...] = ()
+    detail: str | None = None
+
+    def __post_init__(self):
+        _is("asset", self.asset, AssetId)
+        _is("source", self.source, Source)
+        _is("fetch_time", self.fetch_time, Instant)
+        _is("status", self.status, FetchStatus)
+        _tuple_of(self, "points", Observation)
+        if self.status is not FetchStatus.OK:
+            if self.points:
+                raise ValueError("a series that was not fetched has no points")
+            _text("detail (say why there is no series)", self.detail)
+            return
+        if not self.points:
+            raise ValueError("a fetched series has at least one point")
+        kind = type(self.points[0].value)
+        previous = None
+        for point in self.points:
+            if not point.ok:
+                raise ValueError("every point in a series is an OK observation")
+            if point.source != self.source:
+                raise ValueError("every point comes from the series' source")
+            if point.source_time is None:
+                raise ValueError("history needs each point's own timestamp")
+            if type(point.value) is not kind:
+                raise TypeError("a series holds one kind of value")
+            if isinstance(point.value, Price) and point.value.base != self.asset:
+                raise ValueError("a price point must be for the series' asset")
+            if previous is not None and point.source_time < previous:
+                raise ValueError("points run oldest first")
+            previous = point.source_time
+
+    @property
+    def oldest(self) -> Observation | None:
+        return self.points[0] if self.points else None
+
+    @property
+    def newest(self) -> Observation | None:
+        return self.points[-1] if self.points else None
+
+    def age_of_newest_ms(self, as_of: Instant) -> int | None:
+        """How old the newest point is at `as_of`. The only age that is judged."""
+        _is("as_of", as_of, Instant)
+        if self.newest is None:
+            return None
+        return as_of.epoch_ms - self.newest.source_time.epoch_ms
