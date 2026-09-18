@@ -764,28 +764,50 @@ drafted, and smaller in one respect: it no longer waits on funding.
 
 ### 1.6 ▶ Snapshot builder
 
-**Goal:** the frozen object.
+**Goal:** the frozen object: one per cycle, containing history up to a pinned
+block (invariant 2).
 
-**Build:** `core/snapshot.py`. Merge observations (already fetched; no network in
-`core/`), including each asset's price series up to the pinned block, apply the
-tradeability filter, assign each asset a status, canonicalize, hash.
+**Build:** `core/snapshot.py`. It merges observations that are already fetched
+(no network in `core/`): each asset's feed reading and price series, its
+corroboration, its quote, and the wallet's holdings. Nothing dated after the
+pinned block may enter. Then it applies, in order:
 
-**Tradeable** means all three of: a quote at the intended size succeeded; quote
-age is within bound; and impact is either known and within limit, **or null — and
-null blocks**. There is no depth term in tradeability. Tokenized stocks do have
-AMM pools (F0.4.3 — SPY holds $9.16M in one USDG pool), but execution is RFQ
-against USDG rather than against those pools, so pool depth says nothing about
-our fill. Depth is used for one thing only: grading the GeckoTerminal
-corroborator in 1.4 (0.4 checkpoint decision).
+1. **Identity and markability** (1.2), with the beacon cross-check failing the
+   cycle loudly on disagreement.
+2. **The corroborator line** (1.4, `config/thresholds.json`): below $1M of 24h
+   volume, the asset is excluded from the universe.
+3. **The divergence veto** above that line, past 100 bps.
+4. **Tradeability**, defined operationally: a quote at the intended size
+   succeeded; its age is within 60 s; and its impact is known and at most 50 bps
+   signed, **or null — and null blocks**. There is no depth term. Pools exist
+   (F0.4.3), but execution is RFQ against USDG, so depth grades only the
+   corroborator (0.4 decision).
 
-**Artifact:** a real snapshot JSON on disk plus its hash.
+Each asset gets a status with a named reason, and each holding gets a holding
+status (1.8). The inputs' provenance goes at the top: the block, the registry and
+directory sha256s, and the config version. Then canonicalize and hash.
 
-**Done when:** identical inputs produce an identical hash and any field change
-produces a different one.
+**Artifact:** a real snapshot JSON on disk, plus its hash.
 
-**Checkpoint:** you read a real snapshot. Judge whether an analyst could say
-anything intelligent from it. If not, we add data sources before writing a single
-analyst, because the report is the product.
+**Done when:** identical inputs produce an identical hash, any field change
+produces a different one, and an observation dated after the pinned block is
+refused.
+
+**Checkpoint:** you read a real snapshot and judge whether an analyst could say
+anything intelligent from it. The prior evidence is F0.9.6: given a single
+reading per asset, a trend analyst correctly returned `NO_CALL` on all six. The
+history this snapshot carries is the decided response to that. If it is still
+not enough, we add data sources before writing a single analyst, because the
+report is the product.
+
+**Risk:** size. The snapshot is loaded as bytes into every prompt (invariant 2).
+With ~19–35 assets and a series each, it will be far larger than the only
+measured prompt, which was 1,793 tokens for six single readings (F0.9.1,
+F0.9.4). Its token count sets 1.7's cost and 2.4's context budget.
+
+**Changed by:** the price-history and staleness decisions; the 0.4 tier and depth
+decisions; 0.8's decisions; the quote-age and impact config decisions; F0.9.4,
+F0.9.6. **Size:** the same shape as drafted, with more content.
 
 ---
 
