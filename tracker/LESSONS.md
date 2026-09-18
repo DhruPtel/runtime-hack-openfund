@@ -674,3 +674,18 @@ fund's own custodial wallet, not by a locally held key, and it was self-paid
 buyer holding their own key should look identical to it. That remains an
 inference until a fresh key pays us, which is planned for Phase 7 (7.5).
 **Affects:** 7.2, 7.5, 7.8, 8.6, the pitch; `planning/PLAN.md` §11, §13.
+
+## 2026-09-18 — Probe 0.10: the execution key can transact, but not as a transaction from our wallet
+0.10's one ungated swap settles F0.5.5: `BANKR_KEY_EXEC` can transact, and a
+repeat with the same `idempotencyKey` returned the original result without
+broadcasting again (`research/findings.md` F0.10.1–F0.10.2). It also broke an
+assumption the plan never wrote down. We expected an ordinary transaction from
+the fund's wallet. What went on chain was an EIP-7702 transaction from a
+bundler, carrying an authorization our wallet signed, running the swap as a
+gas-sponsored ERC-4337 UserOperation. The wallet is now delegated to a Bankr
+contract on 4663 (F0.10.3). So `tx.from`, the outer receipt's status and the
+wallet's nonce describe the bundle, not our swap, and the probe's own first
+verdict ("transacted: False") came from exactly that. Reconciliation (5.3) has
+to key on `UserOperationEvent` and `Transfer` logs. A quote's `feeBps: 0` did
+not mean the fill was fee-free: 6 bps went unaccounted for (F0.10.4).
+**Affects:** Phase 5 entry, 5.2, 5.3, 4.6, 6.2; `planning/PLAN.md` §6, §13.
