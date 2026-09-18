@@ -566,6 +566,17 @@ class Series:
     timestamp. So this type accepts a week-old oldest point beside a fresh
     newest one, and exposes the newest point's age for the staleness rule in
     1.3 to judge. The rule itself lives in 1.3, not here.
+
+    **A short series is visible as short.** When a window was asked for
+    (`window_start`), `coverage` says whether the points reach back to it:
+    - True: the oldest point is at or before `window_start`;
+    - False: the history does not reach it, and the reason says why — the feed
+      is younger, a round cap was hit, or a scale break was found;
+    - None: a read failed partway, so it is undetermined.
+
+    Construction refuses a coverage claim the points cannot back. Every point
+    must also come from one block, or from none (offchain); a mixed-block series
+    is an error, not a warning.
     """
 
     asset: AssetId
@@ -574,6 +585,8 @@ class Series:
     status: FetchStatus
     points: tuple[Observation, ...] = ()
     detail: str | None = None
+    window_start: Instant | None = None
+    coverage: Check | None = None
 
     def __post_init__(self):
         _is("asset", self.asset, AssetId)
@@ -604,6 +617,17 @@ class Series:
             if previous is not None and point.source_time < previous:
                 raise ValueError("points run oldest first")
             previous = point.source_time
+        if len({point.block for point in self.points}) > 1:
+            raise ValueError("block-pin: a series' points come from one block")
+        _is("window_start", self.window_start, Instant, optional=True)
+        _is("coverage", self.coverage, Check, optional=True)
+        if self.window_start is not None and self.coverage is None:
+            raise ValueError("a series asked for a window says whether it covers it")
+        if self.coverage is not None and self.coverage.value is True:
+            if self.window_start is None:
+                raise ValueError("coverage is judged against a requested window")
+            if self.points[0].source_time > self.window_start:
+                raise ValueError("coverage claimed, but the oldest point is after the window start")
 
     @property
     def oldest(self) -> Observation | None:

@@ -751,3 +751,43 @@ def test_corroborator_volume_must_be_usd():
                       corroborator_volume=volume(Amount(1, 18, TSLA)), divergence=None,
                       quote=None, universe_status=UniverseStatus.NOT_TRADEABLE,
                       universe_reason="no quote")
+
+
+
+# --- a short series is visible as short (unit 1.3) --------------------------------
+
+def week_series(window_days: int, coverage):
+    points = tuple(feed_point(T0 - (7 - d) * DAY, 33_000_000_000 + d, 18446744073709552254 + d)
+                   for d in range(8))
+    return Series(asset=AAPL, source=FEED, fetch_time=Instant.from_seconds(T0 + 12),
+                  status=FetchStatus.OK, points=points,
+                  window_start=Instant.from_seconds(T0 - window_days * DAY), coverage=coverage)
+
+
+def test_a_series_that_reaches_its_window_may_say_so():
+    roundtrip(week_series(7, Check(True, "oldest point at the window start")))
+
+
+def test_a_series_cannot_claim_a_window_its_points_do_not_reach():
+    # Asked for 30 days, holding 7: it must not read as success.
+    with pytest.raises(ValueError):
+        week_series(30, Check(True))
+    short = week_series(30, Check(False, "round cap reached 23 days short"))
+    assert not short.coverage.passes
+    roundtrip(short)
+
+
+def test_a_series_asked_for_a_window_must_state_coverage():
+    with pytest.raises(ValueError):
+        week_series(7, None)
+
+
+def test_a_series_from_two_blocks_is_refused():
+    other_block = BlockRef(CHAIN, PINNED.number + 1, Instant.from_seconds(1_789_744_301))
+    a = feed_point(T0 - DAY, 1, 1)
+    b = Observation(value=Price(2, 8, AAPL, USD), source=FEED, source_time=Instant.from_seconds(T0),
+                    fetch_time=Instant.from_seconds(T0 + 12), block=other_block,
+                    status=FetchStatus.OK)
+    with pytest.raises(ValueError, match="block-pin"):
+        Series(asset=AAPL, source=FEED, fetch_time=Instant.from_seconds(T0),
+               status=FetchStatus.OK, points=(a, b))
