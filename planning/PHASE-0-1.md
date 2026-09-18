@@ -644,26 +644,56 @@ decision; probe 0.3's User-Agent note; F0.4.1, F0.4.7; F0.7b.8; F0.10.3–F0.10.
 
 **Goal:** two independent sources, one of which marks the book.
 
-**Build:** the corroborating adapter probe 0.4 established — `adapters/gecko.py`
-for the `robinhood` slug. 0.4 measured coverage for 32 of 32 addressable tokens,
-so the sized-Bankr-quote fallback does not fire. `core/valuation.py` computes the
-mark from Chainlink (raw units × feed, multiplier handled per probe 0.4). It
-records three fields on each asset: the divergence against the corroborator,
-whether that corroborator is independent of the execution venue, and the
-corroborating pool's 24h volume. The volume selects the divergence tier in
-`config/thresholds.json` (0.4 checkpoint).
+**Build:** `adapters/gecko.py`, for GeckoTerminal's `robinhood` network. It prices
+32 of 32 addressable stock tokens off real pools and is independent of the
+execution venue (F0.4.2–F0.4.3), so the sized-Bankr-quote fallback does not fire.
+`core/valuation.py` computes the mark in exactly one function:
 
-**Artifact:** per-asset mark, corroboration, divergence in basis points, and the
-independence flag.
+- **Mark = raw units × the Chainlink answer**, with the feed matched to the asset
+  by the proxy address pinned in 1.2, never by ticker (F0.8.1). **The multiplier
+  is not applied again.** That rule is documented by two sources and
+  corroborated, but **not measured**: 0.4 could not see a 22 bps effect under a
+  142 bps noise floor (F0.4.4). The comment in `core/valuation.py` must say
+  exactly that and point at F0.4.4.
+- **The Bankr quote is never the corroborator.** Its price is the venue's own
+  (F0.3.5). The venue also applies the multiplier itself, so comparing against it
+  would answer the multiplier question circularly (F0.4.4).
+- **Recorded per asset:** the divergence in bps against GeckoTerminal, the
+  independence flag, and the 24h volume that selects the tier in
+  `config/thresholds.json`. Above $1M the veto fires past 100 bps. Below it the
+  asset is excluded from the universe (0.4 decision), and that exclusion is
+  applied in 1.6. Depth, in its one remaining role, is this: a measure of the
+  corroborator's quality, never of tradeability (0.4 depth decision).
+- **Use the volume the tier was set on.** The $1M line was decided on F0.4.5's
+  numbers, which are GeckoTerminal's token-level `volume_usd.h24` from its batch
+  tokens endpoint (`probes/feed.py`), not one pool's volume. Measuring
+  differently changes what $1M means. The batch endpoint also lists only one of
+  a token's pools (F0.4 limitations).
+- **The tier does not make a liquid name safe.** AMZN diverged 499 bps on $2.19M
+  of volume, while feed and quote agreed to 20 bps (F0.4.5). The veto has to
+  fire there.
+- **Cash and gas are marked too.** The wallet holds USDG and ETH on 4663, and
+  Chainlink publishes ETH and USDG feeds there alongside the equity ones
+  (F0.4.1). Both are valued by those feeds. USDG is not assumed to be $1; the
+  venue priced it at 1.0022 (F0.3.5).
 
-**Done when:** the mark is computed in exactly one function, and the divergence
-field is populated for every asset.
+**Artifact:** for each asset, the mark, the corroboration, the divergence in bps,
+the independence flag, and the 24h volume and tier; for each non-stock holding,
+its mark.
 
-**Risk:** applying `uiMultiplier` twice. **Probe 0.4 did not settle this**
-(F0.4.4), so the code follows the documented rule — do not apply it again — and
-its comment must point at F0.4.4 and state that the basis is documented and
-corroborated by two sources but **not measured**, rather than implying a probe
-resolved it.
+**Done when:** the mark is computed in exactly one function, for stocks and cash
+alike; divergence and volume are populated for every markable asset; and the
+tier comes from config.
+
+**Risk:** applying `uiMultiplier` twice (F0.4.4). The tail is the other risk.
+Every divergence number is one block during US market hours; overnight and at
+weekends, when 24/5 feeds and 24/7 pools drift furthest apart, nothing bounds it
+(F0.4 limitations).
+
+**Changed by:** F0.4.1–F0.4.5, F0.3.5, F0.8.1; the 0.4 tier and depth decisions.
+Three findings tables cite "1.4" for the x402 cached-record design (§0.7, §0.7b,
+§0.7d). That design concerns 7.x and changes nothing here. **Size:** a little
+bigger than drafted, because of the cash and gas marks.
 
 ---
 
