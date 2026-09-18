@@ -406,3 +406,45 @@ This partly answers planning/PLAN.md §12's "how many of the ~190 tickers are
 actually tradeable at our $25 size" — markability removes most of them first, and
 a four-analyst roster now divides 35 assets rather than 190.
 **Affects:** 1.2, 2.1, 3.1; planning/PLAN.md §12; `config/universe.json`.
+
+## 2026-09-18 — The "seven causes" were carried in the plan without the list
+planning/PLAN-v1.md §4 and planning/PHASE-0-1.md 0.5 both instruct probe 0.5 to
+map a refusal "against the seven documented causes", and no file in this
+repository enumerates them — the count survived three plan revisions while its
+content did not, so the probe was told to check against a list that had to be
+re-fetched from the vendor before it could run. Recovered from
+`https://docs.bankr.bot/wallet-api/swap/`: six are quoted from the Errors table,
+and the seventh is **reconstructed** from the Access Control section, which
+extends token-security refusals to execution although the table omits them
+(`research/findings.md` F0.5.4). The list is now pinned in `probes/execute.py`
+with the quoted/reconstructed split preserved, and the general lesson is that a
+count is not a citation: a number in a plan that no file can expand is a
+dependency we have not actually recorded.
+**Affects:** 0.5, 5.6; `probes/execute.py`.
+
+## 2026-09-18 — The swap 403 carries no machine-readable cause, so the decoder fails closed
+The refusal body is `{"message":"Tokenized stocks (AAPL) are not available in
+your region."}` — clear to a human, and clearer than expected, but a single prose
+field with no code, no type, and not even the flat `error` key the same Wallet
+API returns on a 401, while the LLM gateway on the same platform returns a typed
+`auth_error` (`research/findings.md` F0.5.3). Unit 5.6's decoder can therefore
+only match English, and a reworded message breaks the match silently, so it must
+**fail closed on any unrecognised 403** and surface the raw body rather than
+assume the one cause it can parse. Six of the seven causes were never triggered,
+so nothing measured says whether they are distinguishable from each other, and
+the decoder must not be written as though they are.
+**Affects:** 5.6, 4.x treasurer error surfacing; `core/errors.py`.
+
+## 2026-09-18 — 0.5 confirms the stock gate but leaves Phase 5's live leg unproven
+The location refusal fired, which means the read-only-key cause was never
+reached: Bankr's check ordering is not observable from one response, so
+`BANKR_KEY_EXEC`'s ability to **transact** is exactly as unresolved as probe 0.2
+left it (`research/findings.md` F0.5.5, F0.2.2). Phase 5 was rescoped on
+2026-09-17 around an ungated 4663 swap through the treasurer, so that receipts,
+reconciliation and the order state machine run against a real chain — and that
+path rests on a capability no probe has yet demonstrated. Settling it needs one
+ungated swap with the same key, ETH into USDG at the same size, which is a
+second spend that unit 0.5 does not authorise; it belongs at the head of Phase 5
+rather than bolted onto 0.5, and Phase 5 should not be treated as de-risked
+until it passes.
+**Affects:** Phase 5 entry, 4.12; planning/PLAN.md §13.
