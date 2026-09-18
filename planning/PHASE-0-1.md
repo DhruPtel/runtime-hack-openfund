@@ -714,8 +714,15 @@ USDG→stock at the **$25 intended size**, never a token size.
 
 - **Sizing.** $25 nominal is about 24.94 USDG, because the venue priced USDG at
   1.0022 (F0.3.5); the adapter owns that conversion. The request `amount` is
-  human-readable, and the response carries both raw `amount` and
-  `formattedAmount` (F0.3.2).
+  human-readable.
+- **The response mixes formats** (probe 0.3's six responses, re-read while
+  building 1.1; LESSONS 2026-09-18):
+  - `from.amount` echoes the human request;
+  - `to.amount` is raw;
+  - `to.formattedAmount` is lossy, a digit short, so it is never read;
+  - `minBuyAmount` is human text;
+  - the two USD prices are JSON floats, converted exactly from their shortest
+    text with `Price.parse`.
 - **Decimals are per asset and read on chain:** USDG is 6, stock tokens 18
   (F0.3.1).
 - **Fields.** All 12 documented fields appeared in all 6 responses (F0.3.2). That
