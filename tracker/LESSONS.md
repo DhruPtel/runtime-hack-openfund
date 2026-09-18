@@ -305,3 +305,16 @@ normally once a `User-Agent` was set. A 403 from any of them is not an auth
 failure, and unit 1.3's HTTP client must send one by default or it will fail at
 first contact in a way that looks like a credential problem.
 **Affects:** 1.3, 1.4.
+
+## 2026-09-17 — Probe 0.3: three tokens answer to GME on 4663
+The discovery list carries `GameStop • Robinhood Token` (`0x1b0e…`), `GameStop`
+(`0x7e86…`) and `Greatest Meme Ever` (`0xef67…`), all on 4663, all 18 decimals,
+and all answering `decimals()` on chain indistinguishably (`research/findings.md`
+F0.3.6). The only thing separating the issuer's token from the other two is the
+`• Robinhood Token` name marker — and `research/agent-os.md` records that the
+same list truncates `name` at 60 characters, chopping that marker off longer
+entries, so the one distinguishing feature is not reliably present. Probe 0.8
+cannot lean on the discovery list, the name, or a decimals read; it needs the
+issuer's own deployment list plus the beacon check, and 1.2's loader must refuse
+any address not on the resulting versioned allowlist.
+**Affects:** 0.8, 1.2; `config/universe.json`.
