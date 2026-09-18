@@ -1,4 +1,477 @@
-"""Observation, Asset, Snapshot, AnalystReport, Proposal, Plan, Decision, Order, JournalEvent, Statement.
+"""The contracts every other module imports, defined once. Unit 1.1.
 
-Not yet built. Produced by unit 1.1 (see planning/ROADMAP.md).
+Each rule below is enforced at construction, not merely documented, because a
+type that only *describes* a rule lets the violation through the first time
+someone is in a hurry (planning/CODEBASE.md §1 and §4):
+
+- **Every number carries its units.** A quantity is a raw integer, its decimals,
+  and what it measures. No float is accepted anywhere, and none is ever
+  encoded. There is no default for decimals: USDG is 6 and stock tokens are 18,
+  and a documented source said USDG was 18 (findings F0.3.1).
+- **Source time and fetch time are separate fields, always.**
+- **Verification is three-valued.** `Check.value` is True, False or None, and
+  None means undetermined, which is not False. Only True passes.
+- **Assets are keyed by `(chain_id, address)`.** A ticker is display text and
+  never resolves anything.
+- **Canonical JSON is the only serialisation**: sorted keys, no whitespace, no
+  floats. Integers that can exceed 2**53 — raw token amounts, Chainlink round
+  ids — are encoded as decimal strings, because the records are read by
+  JavaScript clients, and a JSON number above 2**53 loses precision there.
+
+Threshold comparisons are **not** defined here. `core/gates.py` is the only
+module that may define one (CODEBASE §3). This module supplies exact ordering on
+like-for-like quantities, and nothing more.
+
+`core/` imports nothing from `adapters/`: this module is stdlib only.
 """
+
+from __future__ import annotations
+
+import enum
+import hashlib
+import json
+import re
+import typing
+from dataclasses import dataclass, field, fields, is_dataclass
+from typing import Any
+
+# --- canonical encoding --------------------------------------------------------
+
+#: Field metadata marking an int that is encoded as a decimal string.
+AS_STR = {"as_str": True}
+
+#: The largest integer JSON can carry without loss in a JavaScript reader.
+MAX_SAFE_JSON_INT = 2**53 - 1
+
+_REGISTRY: dict[str, type] = {}
+
+
+def canonical(cls):
+    """Register a dataclass for canonical encoding under its class name."""
+    if cls.__name__ in _REGISTRY:
+        raise TypeError(f"duplicate canonical type {cls.__name__}")
+    _REGISTRY[cls.__name__] = cls
+    return cls
+
+
+def _encode(obj: Any) -> Any:
+    if obj is None or isinstance(obj, (bool, str)):
+        return obj
+    if isinstance(obj, float):
+        raise TypeError("a float is never encoded; use Fixed, Amount or Price")
+    if type(obj) is int:
+        if abs(obj) > MAX_SAFE_JSON_INT:
+            raise ValueError(f"{obj} exceeds 2**53; it must be an AS_STR field")
+        return obj
+    if isinstance(obj, enum.Enum):
+        return obj.value
+    if isinstance(obj, (tuple, list)):
+        return [_encode(item) for item in obj]
+    if is_dataclass(obj) and _REGISTRY.get(type(obj).__name__) is type(obj):
+        out: dict[str, Any] = {"_type": type(obj).__name__}
+        for f in fields(obj):
+            value = getattr(obj, f.name)
+            if f.metadata.get("as_str") and value is not None:
+                out[f.name] = str(value)
+            else:
+                out[f.name] = _encode(value)
+        return out
+    raise TypeError(f"cannot encode {type(obj).__name__}")
+
+
+def to_canonical(obj: Any) -> bytes:
+    """The one byte representation of a value. Same value, same bytes."""
+    return json.dumps(_encode(obj), sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+def content_id(obj: Any) -> str:
+    """sha256 of the canonical bytes: the id every derived artifact cites."""
+    return hashlib.sha256(to_canonical(obj)).hexdigest()
+
+
+_INT_STR = re.compile(r"^-?(0|[1-9][0-9]*)$")
+
+
+def _enum_fields(cls: type) -> dict[str, type]:
+    """Fields whose declared type is an Enum (optionally `| None`)."""
+    found = {}
+    for name, hint in typing.get_type_hints(cls).items():
+        options = typing.get_args(hint) or (hint,)
+        for option in options:
+            if isinstance(option, type) and issubclass(option, enum.Enum):
+                found[name] = option
+    return found
+
+
+def _decode(data: Any) -> Any:
+    if isinstance(data, list):
+        return tuple(_decode(item) for item in data)
+    if isinstance(data, float):
+        raise TypeError("a float is never decoded")
+    if not isinstance(data, dict):
+        return data
+    name = data.get("_type")
+    cls = _REGISTRY.get(name)
+    if cls is None:
+        raise ValueError(f"unknown canonical type {name!r}")
+    declared = {f.name: f for f in fields(cls)}
+    extra = set(data) - set(declared) - {"_type"}
+    if extra:
+        raise ValueError(f"{name}: unexpected fields {sorted(extra)}")
+    enums = _enum_fields(cls)
+    kwargs = {}
+    for fname, f in declared.items():
+        if fname not in data:
+            raise ValueError(f"{name}: missing field {fname}")
+        raw = data[fname]
+        if f.metadata.get("as_str") and raw is not None:
+            if not isinstance(raw, str) or not _INT_STR.match(raw):
+                raise ValueError(f"{name}.{fname}: not a canonical integer string")
+            kwargs[fname] = int(raw)
+        elif fname in enums and raw is not None:
+            kwargs[fname] = enums[fname](raw)
+        else:
+            kwargs[fname] = _decode(raw)
+    return cls(**kwargs)
+
+
+def from_canonical(blob: bytes) -> Any:
+    """Inverse of `to_canonical`. Every constructor invariant runs again."""
+    return _decode(json.loads(blob.decode("utf-8")))
+
+
+# --- small validators ----------------------------------------------------------
+
+_ADDRESS = re.compile(r"^0x[0-9a-fA-F]{40}$")
+_HASH32 = re.compile(r"^0x[0-9a-f]{64}$")
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _int(name: str, value: Any, *, minimum: int | None = None) -> None:
+    # `type(...) is int` rejects bool and float, which isinstance would not.
+    if type(value) is not int:
+        raise TypeError(f"{name} must be an int, got {type(value).__name__}")
+    if minimum is not None and value < minimum:
+        raise ValueError(f"{name} must be >= {minimum}, got {value}")
+
+
+def _text(name: str, value: Any, *, optional: bool = False) -> None:
+    if value is None and optional:
+        return
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} must be non-empty text")
+
+
+def _is(name: str, value: Any, kinds: type | tuple, *, optional: bool = False) -> None:
+    if value is None and optional:
+        return
+    if not isinstance(value, kinds):
+        raise TypeError(f"{name} must be {kinds}, got {type(value).__name__}")
+
+
+def _tuple_of(obj: Any, name: str, kinds: type | tuple) -> None:
+    value = getattr(obj, name)
+    if isinstance(value, list):
+        value = tuple(value)
+        object.__setattr__(obj, name, value)
+    if not isinstance(value, tuple):
+        raise TypeError(f"{name} must be a tuple")
+    for item in value:
+        _is(f"{name}[]", item, kinds)
+
+
+# --- time ----------------------------------------------------------------------
+
+@canonical
+@dataclass(frozen=True, slots=True, order=True)
+class Instant:
+    """A UTC instant in integer milliseconds since the epoch. The unit is the name."""
+
+    epoch_ms: int
+
+    def __post_init__(self):
+        _int("epoch_ms", self.epoch_ms, minimum=0)
+
+    @classmethod
+    def from_seconds(cls, seconds: int) -> Instant:
+        _int("seconds", seconds, minimum=0)
+        return cls(seconds * 1000)
+
+
+# --- addresses and identity ----------------------------------------------------
+
+def _address(obj: Any) -> None:
+    _int("chain_id", obj.chain_id, minimum=1)
+    if not isinstance(obj.address, str) or not _ADDRESS.match(obj.address):
+        raise ValueError(f"not an EVM address: {obj.address!r}")
+    # The registry and the chain write EIP-55 mixed case (F0.8.1); identity
+    # compares case-insensitively, so the key is normalised once, here.
+    object.__setattr__(obj, "address", obj.address.lower())
+
+
+@canonical
+@dataclass(frozen=True, slots=True, order=True)
+class ChainAddress:
+    """Any EVM account or contract on a named chain: a wallet, a feed, a bundler."""
+
+    chain_id: int
+    address: str
+
+    def __post_init__(self):
+        _address(self)
+
+
+#: The native-gas sentinel Bankr's swap API uses for ETH (docs.bankr.bot
+#: wallet-api/swap). Native ETH has no contract address; keying it by this
+#: sentinel keeps every asset keyed by `(chain_id, address)`.
+NATIVE_SENTINEL = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
+
+@canonical
+@dataclass(frozen=True, slots=True, order=True)
+class AssetId:
+    """What an asset *is*: `(chain_id, address)`. Never a ticker."""
+
+    chain_id: int
+    address: str
+
+    def __post_init__(self):
+        _address(self)
+
+    @classmethod
+    def native(cls, chain_id: int) -> AssetId:
+        return cls(chain_id, NATIVE_SENTINEL)
+
+    @property
+    def is_native(self) -> bool:
+        return self.address == NATIVE_SENTINEL
+
+
+# --- quantities ----------------------------------------------------------------
+
+USD = "USD"
+BPS = "bps"
+SECONDS = "s"
+PERCENT = "%"
+MULTIPLE = "x"
+
+_DECIMAL_TEXT = re.compile(r"^-?[0-9]+(\.[0-9]+)?$")
+_MAX_DECIMALS = 36
+
+
+def _parse_decimal(text: str) -> tuple[int, int]:
+    """Exact: '1.0022' -> (10022, 4). No float is ever involved."""
+    if not isinstance(text, str) or not _DECIMAL_TEXT.match(text):
+        raise ValueError(f"not a plain decimal: {text!r}")
+    whole, _, frac = text.partition(".")
+    return int(whole + frac), len(frac)
+
+
+def _aligned(a_raw: int, a_dec: int, b_raw: int, b_dec: int) -> tuple[int, int]:
+    scale = max(a_dec, b_dec)
+    return a_raw * 10 ** (scale - a_dec), b_raw * 10 ** (scale - b_dec)
+
+
+class _Ordered:
+    """Exact ordering between like quantities. Unlike ones refuse to compare."""
+
+    __slots__ = ()
+
+    def _pair(self, other) -> tuple[int, int]:
+        raise NotImplementedError
+
+    def __lt__(self, other):
+        a, b = self._pair(other)
+        return a < b
+
+    def __le__(self, other):
+        a, b = self._pair(other)
+        return a <= b
+
+    def __gt__(self, other):
+        a, b = self._pair(other)
+        return a > b
+
+    def __ge__(self, other):
+        a, b = self._pair(other)
+        return a >= b
+
+    def same_value(self, other) -> bool:
+        """Numeric equality across representations (1 vs 1.0). `==` is structural."""
+        a, b = self._pair(other)
+        return a == b
+
+
+@canonical
+@dataclass(frozen=True, slots=True)
+class Fixed(_Ordered):
+    """A signed fixed-point quantity: `raw / 10**decimals`, measured in `unit`.
+
+    Signed on purpose. Price impact comes back negative when it is price
+    improvement — four of six quotes in probe 0.3 (F0.3.4) — and divergence has
+    a direction. A type that assumed a positive value would reject the fund's
+    best fills.
+    """
+
+    raw: int = field(metadata=AS_STR)
+    decimals: int
+    unit: str
+
+    def __post_init__(self):
+        _int("raw", self.raw)
+        _int("decimals", self.decimals, minimum=0)
+        if self.decimals > _MAX_DECIMALS:
+            raise ValueError("decimals out of range")
+        _text("unit", self.unit)
+
+    @classmethod
+    def parse(cls, text: str, unit: str) -> Fixed:
+        raw, decimals = _parse_decimal(text)
+        return cls(raw, decimals, unit)
+
+    def _pair(self, other):
+        if not isinstance(other, Fixed):
+            raise TypeError(f"cannot compare Fixed with {type(other).__name__}")
+        if other.unit != self.unit:
+            raise TypeError(f"cannot compare {self.unit} with {other.unit}")
+        return _aligned(self.raw, self.decimals, other.raw, other.decimals)
+
+
+@canonical
+@dataclass(frozen=True, slots=True)
+class Amount(_Ordered):
+    """A token quantity: `(raw, decimals, asset)`, the one amount shape (CODEBASE §4).
+
+    Signed, so a balance delta can be expressed. `decimals` has no default: it is
+    read on chain per asset — USDG 6, stock tokens 18 (F0.3.1).
+    """
+
+    raw: int = field(metadata=AS_STR)
+    decimals: int
+    asset: AssetId
+
+    def __post_init__(self):
+        _int("raw", self.raw)
+        _int("decimals", self.decimals, minimum=0)
+        if self.decimals > _MAX_DECIMALS:
+            raise ValueError("decimals out of range")
+        _is("asset", self.asset, AssetId)
+
+    @classmethod
+    def from_units(cls, text: str, decimals: int, asset: AssetId) -> Amount:
+        """Exact conversion of a human amount ('0.00003') to raw units."""
+        raw, places = _parse_decimal(text)
+        _int("decimals", decimals, minimum=0)
+        if places > decimals:
+            raise ValueError(f"{text!r} has more than {decimals} decimal places")
+        return cls(raw * 10 ** (decimals - places), decimals, asset)
+
+    def _pair(self, other):
+        if not isinstance(other, Amount):
+            raise TypeError(f"cannot compare Amount with {type(other).__name__}")
+        if other.asset != self.asset:
+            raise TypeError("cannot compare amounts of different assets")
+        if other.decimals != self.decimals:
+            raise TypeError("one asset with two decimal counts is a bug upstream")
+        return self.raw, other.raw
+
+
+@canonical
+@dataclass(frozen=True, slots=True)
+class Price(_Ordered):
+    """The price of one whole `base` token in `quote_unit`: `raw / 10**decimals`.
+
+    A Chainlink answer is `Price(answer, 8, asset, "USD")` (F0.4.7).
+    """
+
+    raw: int = field(metadata=AS_STR)
+    decimals: int
+    base: AssetId
+    quote_unit: str
+
+    def __post_init__(self):
+        _int("raw", self.raw)
+        _int("decimals", self.decimals, minimum=0)
+        if self.decimals > _MAX_DECIMALS:
+            raise ValueError("decimals out of range")
+        _is("base", self.base, AssetId)
+        _text("quote_unit", self.quote_unit)
+
+    def _pair(self, other):
+        if not isinstance(other, Price):
+            raise TypeError(f"cannot compare Price with {type(other).__name__}")
+        if (other.base, other.quote_unit) != (self.base, self.quote_unit):
+            raise TypeError("cannot compare prices of different pairs")
+        return _aligned(self.raw, self.decimals, other.raw, other.decimals)
+
+
+# --- provenance ----------------------------------------------------------------
+
+@canonical
+@dataclass(frozen=True, slots=True)
+class BlockRef:
+    """A block on a named chain. `timestamp` is the block's own time, when read."""
+
+    chain_id: int
+    number: int
+    timestamp: Instant | None = None
+    hash: str | None = None
+
+    def __post_init__(self):
+        _int("chain_id", self.chain_id, minimum=1)
+        _int("number", self.number, minimum=0)
+        _is("timestamp", self.timestamp, Instant, optional=True)
+        if self.hash is not None and not _HASH32.match(self.hash):
+            raise ValueError("block hash must be 0x + 64 lowercase hex")
+
+
+@canonical
+@dataclass(frozen=True, slots=True)
+class Source:
+    """Where a datum came from: a system and a locator within it.
+
+    A locator is an address or a path, never a URL: the RPC URL is a declared
+    credential, so a scheme is refused outright rather than hoped to be redacted.
+    """
+
+    system: str
+    locator: str
+
+    def __post_init__(self):
+        _text("system", self.system)
+        _text("locator", self.locator)
+        if "://" in self.locator:
+            raise ValueError("a Source locator is a path or address, never a URL")
+
+
+# --- three-valued verification -------------------------------------------------
+
+@canonical
+@dataclass(frozen=True, slots=True)
+class Check:
+    """A verification result: True, False, or None — and None is not False.
+
+    None means undetermined — the source was unreachable, or the check could not
+    run — and it must say why. Only True passes; a required check that is None
+    blocks (PLAN §2 invariant 5).
+    """
+
+    value: bool | None
+    reason: str | None = None
+
+    def __post_init__(self):
+        if self.value is not None and type(self.value) is not bool:
+            raise TypeError("Check.value must be True, False or None")
+        if self.value is None:
+            _text("reason (an undetermined check must say why)", self.reason)
+        else:
+            _text("reason", self.reason, optional=True)
+
+    @property
+    def passes(self) -> bool:
+        return self.value is True
+
+    @classmethod
+    def undetermined(cls, reason: str) -> Check:
+        return cls(None, reason)
