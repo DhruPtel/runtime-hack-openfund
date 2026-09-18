@@ -656,3 +656,79 @@ def test_paper_and_pending_orders_carry_no_chain_evidence():
     with pytest.raises(ValueError):
         swap_order(state=OrderState.UNKNOWN)  # unknown must say why
     roundtrip(swap_order(state=OrderState.UNKNOWN, reason="409: original still in flight"))
+
+
+# --- the whole contract ----------------------------------------------------------
+
+def test_core_types_imports_only_the_standard_library():
+    # CODEBASE §1: core/ imports nothing from adapters/. Checked from the source,
+    # so a stray import fails here and not in a deployed process.
+    import ast
+    import pathlib
+    import sys
+    import fund.core.types as module
+    tree = ast.parse(pathlib.Path(module.__file__).read_text())
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported |= {alias.name.split(".")[0] for alias in node.names}
+        elif isinstance(node, ast.ImportFrom):
+            imported.add((node.module or "").split(".")[0])
+    assert imported <= set(sys.stdlib_module_names), imported - set(sys.stdlib_module_names)
+
+
+def test_the_five_measured_cases_live_together_in_one_hashed_snapshot():
+    """The measured cases, together:
+
+    - a holding with no feed;
+    - a quote with negative impact;
+    - a week of history whose newest point is fresh;
+    - a source that was unreachable rather than false.
+
+    All four sit in one snapshot and survive the canonical round trip. The
+    fifth, the order executed via a bundler, is not snapshot data and is
+    round-tripped alongside it.
+    """
+    week = Series(asset=TSLA, source=FEED, fetch_time=Instant.from_seconds(T0 + 12),
+                  status=FetchStatus.OK,
+                  points=tuple(Observation(
+                      value=Price(36_900_000_000 + d, 8, TSLA, USD), source=FEED,
+                      source_time=Instant.from_seconds(T0 - (7 - d) * DAY),
+                      fetch_time=Instant.from_seconds(T0 + 12), block=PINNED,
+                      status=FetchStatus.OK) for d in range(8)))
+    unreachable = Observation(value=None, source=Source("geckoterminal", "/tokens/multi"),
+                              source_time=None, fetch_time=Instant.from_seconds(T0),
+                              block=None, status=FetchStatus.UNREACHABLE,
+                              detail="timeout after 20 s")
+    base = tsla_entry(-15)
+    tsla = SnapshotEntry(asset=base.asset, feed_reading=None, series=(week,),
+                         corroboration=unreachable, corroborator_volume=None,
+                         divergence=None, quote=base.quote,
+                         universe_status=UniverseStatus.NOT_TRADEABLE,
+                         universe_reason="corroborator unreachable: divergence unknown")
+    crm_held = Holding(asset=CRM, balance=balance_of(CRM, 10**17, 18),
+                       universe_status=UniverseStatus.UNMARKABLE,
+                       universe_reason="no Chainlink feed", mark=None, value=None,
+                       value_reason="no mark independent of the venue")
+    whole = Snapshot(pinned_block=PINNED, inputs=(REGISTRY_INPUT,), config_version="1",
+                     entries=(tsla, crm_entry()), holdings=(crm_held,))
+    blob = roundtrip(whole)
+    # Entries are in canonical order (by address), so look them up by identity.
+    by_asset = {entry.asset.id: entry for entry in whole.entries}
+    assert [e.asset.id for e in whole.entries] == sorted(by_asset)
+    assert by_asset[TSLA].quote.value.swap_impact == Fixed(-15, 0, BPS)
+    assert by_asset[TSLA].series[0].age_of_newest_ms(Instant.from_seconds(T0 + 12)) == 12_000
+    assert not by_asset[TSLA].corroboration.ok
+    assert all(not isinstance(v, float) for v in _leaves(json.loads(blob)))
+    roundtrip(swap_order(execution=swap_execution()))
+
+
+def _leaves(node):
+    if isinstance(node, dict):
+        for value in node.values():
+            yield from _leaves(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _leaves(value)
+    else:
+        yield node
