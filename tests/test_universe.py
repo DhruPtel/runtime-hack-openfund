@@ -160,3 +160,47 @@ def test_a_pin_pointing_at_tampered_bytes_is_refused_on_read(tmp_path):
     with pytest.raises(u.PinMismatch) as refusal:
         u.read_pinned(u.REGISTRY, tmp_path)
     assert refusal.value.rule == u.RULE_PIN
+
+
+# --- the feed-map proposal ---------------------------------------------------------
+
+def directory_bytes(*feeds: dict) -> bytes:
+    return json.dumps(list(feeds)).encode()
+
+
+def equity_feed(base, name, proxy, asset_class="Equity"):
+    docs = {"marketHours": "us_equities_24/5", "baseAssetEntityId": f"crypto-{base or 'X'}"}
+    if base is not None:
+        docs["baseAsset"] = base
+    if asset_class:
+        docs["assetClass"] = asset_class
+    return {"proxyAddress": proxy, "decimals": 8, "heartbeat": 86400, "threshold": 0.5,
+            "name": name, "docs": docs}
+
+
+def test_a_proposal_matches_a_registry_asset_to_its_feed():
+    records = u.parse_registry(registry_bytes(registry_asset("AAA", A)))
+    props, unresolved = u.propose_feed_map(
+        records, directory_bytes(equity_feed("AAA", "Robinhood AAA / USD", "0x" + "11" * 20)))
+    assert [p.asset for p in props] == [AssetId(CHAIN, A)] and unresolved == []
+
+
+def test_a_counterfeit_can_never_be_proposed_a_feed():
+    # F0.8.3: feed presence admitted both GME counterfeits, because a forger
+    # picks its own ticker. The proposal iterates registry records only, so a
+    # token that is not listed gets nothing, even with the exact ticker.
+    records = u.parse_registry(registry_bytes(registry_asset("GME", A)))
+    props, _ = u.propose_feed_map(
+        records, directory_bytes(equity_feed("GME", "Robinhood GME / USD", "0x" + "11" * 20)))
+    assert {p.asset for p in props} == {AssetId(CHAIN, A)}
+    assert AssetId(CHAIN, B) not in {p.asset for p in props}  # the counterfeit's address
+
+
+def test_an_unmatched_equity_feed_is_reported_not_dropped_or_guessed():
+    records = u.parse_registry(registry_bytes(registry_asset("DELL", A), registry_asset("SGOV", B)))
+    props, unresolved = u.propose_feed_map(records, directory_bytes(
+        equity_feed("RHDELL", "Robinhood DELL-USD", "0x" + "11" * 20),
+        # SGOV's entry has neither baseAsset nor assetClass: only market hours.
+        equity_feed(None, "Robinhood SGOV-USD", "0x" + "22" * 20, asset_class=None)))
+    assert props == []
+    assert {x["feed_name"] for x in unresolved} == {"Robinhood DELL-USD", "Robinhood SGOV-USD"}

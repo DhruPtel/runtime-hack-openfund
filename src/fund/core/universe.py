@@ -308,3 +308,53 @@ def accept(plan: RefreshPlan, registry_dir: Path = DEFAULT_DIR, *,
     pins = read_pins(registry_dir)
     pins["inputs"][plan.pin.name] = _pin_to_json(plan.pin)
     (registry_dir / PINS_FILE).write_text(json.dumps(pins, indent=2, sort_keys=True) + "\n")
+
+
+# --- the feed map: the one place a name ever meets an address ------------------
+
+FEED_MAP_FILE = "feed_map.json"
+
+
+@dataclass(frozen=True)
+class FeedProposal:
+    asset: AssetId
+    feed_proxy: ChainAddress
+    feed_name: str
+    evidence: str
+
+
+def propose_feed_map(records: Mapping[AssetId, RegistryRecord], directory_raw: bytes,
+                     chain_id: int = 4663) -> tuple[list[FeedProposal], list[dict]]:
+    """A *proposal* for a human to review, never called at cycle time.
+
+    Chainlink's directory carries no token address; a feed names its asset only
+    by ticker. So the address-keyed feed map has to originate from a name match,
+    and this is where that happens, once, under review. It is safe from F0.8.3's
+    failure for one reason: it iterates the **registry's** records. The symbol it
+    matches is the issuer's, for an address the issuer lists, never a symbol a
+    token claims for itself. A counterfeit can never be proposed a feed.
+
+    Only exact `docs.baseAsset` matches are proposed. Every other equity feed —
+    `RHDELL`, and SGOV and USAR, which have no base asset (F0.8.1) — is returned
+    unresolved rather than guessed at.
+    """
+    feeds = json.loads(directory_raw)
+    # SGOV's and USAR's entries carry no assetClass at all, only us_equities
+    # market hours. Filtering on assetClass alone drops them silently, so either
+    # signal counts, which gives the 35 F0.4.1 counted.
+    equity = [f for f in feeds
+              if (f.get("docs") or {}).get("assetClass") == "Equity"
+              or str((f.get("docs") or {}).get("marketHours", "")).startswith("us_equities")]
+    by_symbol = {r.symbol: key for key, r in records.items() if key.chain_id == chain_id}
+    proposals, unresolved = [], []
+    for feed in equity:
+        base = (feed.get("docs") or {}).get("baseAsset")
+        if base in by_symbol:
+            proposals.append(FeedProposal(
+                asset=by_symbol[base], feed_proxy=ChainAddress(chain_id, feed["proxyAddress"]),
+                feed_name=feed["name"], evidence="docs.baseAsset equals the registry's tokenSymbol"))
+        else:
+            unresolved.append({"feed_name": feed["name"], "proxy": feed["proxyAddress"].lower(),
+                               "baseAsset": base,
+                               "baseAssetEntityId": (feed.get("docs") or {}).get("baseAssetEntityId")})
+    return sorted(proposals, key=lambda p: p.asset), unresolved
