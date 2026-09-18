@@ -721,7 +721,7 @@ named to resolve and had not (`research/findings.md`, Phase 0 exit summary):
 **Affects:** 1.3, 1.5, 1.6, 1.7, 1.11, 2.4; `config/thresholds.json`,
 `config/models.json`.
 
-## 2026-09-18 — DECISION: Phase 5's live leg is ETH↔USDG on 4663
+## 2026-09-18 — DECISION: Phase 5's live leg is ETH→USDG on 4663
 *Operator decision at the 0.11 checkpoint*, answering the question
 `planning/PHASE-0-1.md` 0.11 and `planning/PLAN.md` §12 left open. The live leg
 is **ETH→USDG on 4663**. It is proven ungated and working: 0.10's one sell
