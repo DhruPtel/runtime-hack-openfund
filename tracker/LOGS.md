@@ -381,40 +381,35 @@ raw and lossy amount formats, a refinement of F0.3.2 recorded for 1.5.
 
 ---
 
-## State at close — 2026-09-18 (Phase 0 closed, Phase 1 replanned)
+## State at close — 2026-09-18 (1.1 done)
 
-**Done.** All of Phase 0, with its checkpoint held (0.11). Phase 1 is replanned
-unit by unit against the record in `planning/PHASE-0-1.md`, and **not started**:
-no `src/` code beyond 0.1, 32 tests, offline.
+**Done.** All of Phase 0, the Phase 1 replan, and **unit 1.1 (types)**:
+`src/fund/core/types.py` with 54 tests, 86 in the suite, offline. Every config
+value Phase 1 needs is set, provisionally:
+- staleness is each feed's heartbeat plus a 3,600 s margin;
+- quote age 60 s;
+- impact 50 bps, compared signed;
+- worker deadline 120 s;
+- transport timeout 180 s;
+- `claude-sonnet-5` as the provisional analyst model;
+- the execution wallet named.
 
-**Decided at 0.11.**
-- Freshness binds a series' newest point only.
-- Five config values, provisional:
-  - feed staleness is each feed's heartbeat plus a margin;
-  - quote age 60 s;
-  - impact 50 bps, compared signed;
-  - worker deadline 120 s;
-  - `claude-sonnet-5` as the provisional analyst model.
-- ETH→USDG on 4663 is Phase 5's live leg.
-- PLAN §11 stays marked contradicted, and $0.05 stays provisional.
+The pending folds into PLAN.md and ROADMAP.md are made, and `.env.example` is
+corrected. The LESSONS preamble records the claim as re-checked.
 
-These sit alongside the earlier 0.4 and 0.8 decisions and today's price-history
-and buyer-client decisions.
+**Open.**
+- **For 2.4, not blocking Phase 1:** the 180 s transport timeout is longer than
+  the 120 s worker deadline, so in the runner it could never fire.
+- **Unmeasured until 1.3:** the price series itself, and the weekend behaviour
+  of 24/5 feeds.
+- **Types not yet defined:** `AnalystReport`, `Proposal`, `Plan`, `Decision`,
+  `JournalEvent` and `Statement` wait for 2.1–6.1.
+- **The quote response's mixed formats** are 1.5's to handle.
 
-**Open before or during Phase 1** (the full list is at the end of Phase 1 in
-PHASE-0-1):
-- **Unset values:** `feed_staleness_margin_seconds`, which blocks the staleness
-  check; `transport_timeout_seconds`, which blocks 1.7; and `mandate.json`'s
-  `execution_wallet`, which 1.3 and 1.10 need.
-- **Unmeasured:** the price series itself (1.3 chooses and measures it), and
-  weekend behaviour of 24/5 feeds (1.11's checkpoint).
-- **Pending folds** into PLAN.md and ROADMAP.md, listed in the LESSONS preamble.
-
-**Funding.**
+**Funding.** Unchanged since 0.10.
 - Base: 0.000241 ETH, 0.107346 USDC, 10 USER.
-- Robinhood Chain: 0.000460 ETH and 0.078742 USDG; the wallet is EIP-7702-
-  delegated there.
+- Robinhood Chain: 0.000460 ETH and 0.078742 USDG; the wallet is 7702-delegated
+  there.
 - LLM gateway: $2.799976 as last measured.
-- Funding blocks 3.3's sizing and Phase 5's volume, not 1.5 (F0.3.3).
 
-**Next.** Unit 1.1, when the operator says go.
+**Next.** Unit 1.2 (universe), when the operator says go.
