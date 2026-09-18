@@ -84,16 +84,26 @@ CREDENTIALS: tuple[Credential, ...] = (
         scope="gateway only, header X-API-Key",
     ),
     Credential(
-        name="RPC_4663",
+        name="RPC_4663_MAINNET",
         used_by=frozenset({Role.ANALYST, Role.TREASURER}),
         purpose=(
-            "block-pinned chain reads; the treasurer also reads the named "
-            "execution wallet's balances here rather than trusting another "
-            "account's portfolio (planning/PLAN.md section 6)"
+            "block-pinned chain reads on 4663 mainnet; the treasurer also reads "
+            "the named execution wallet's balances here rather than trusting "
+            "another account's portfolio (planning/PLAN.md section 6)"
         ),
         scope="request timeout, fail loudly, no archive reads assumed",
         # Not a secret in itself on the public endpoint, but a paid provider URL
         # carries an inline key. Masked either way; see LESSONS 2026-09-17.
+        secret=False,
+    ),
+    Credential(
+        name="RPC_4663_TESTNET",
+        used_by=frozenset({Role.ANALYST, Role.TREASURER}),
+        purpose=(
+            "chain 46630, for probes and drills that should not touch mainnet "
+            "state. Never the source of a published mark or a booked fill."
+        ),
+        scope="request timeout, fail loudly, no archive reads assumed",
         secret=False,
     ),
     Credential(

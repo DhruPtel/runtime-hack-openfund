@@ -22,7 +22,8 @@ FAKE_VALUES = {
     "BANKR_KEY_READ": "bk_read_9f4c1ae2d7b84c0391ee6a5d2f8b07c4",
     "BANKR_KEY_EXEC": "bk_exec_51b7e0c3a94d42f8b60c7d1e9a3f5b28",
     "BANKR_LLM_KEY": "bk_llm_e3a7d92f60b14c85af23c7d0b6e918f4",
-    "RPC_4663": "https://rpc.example.invalid/v1/6d2f9b4e7a0c15d83fb2e694c7a01d5b",
+    "RPC_4663_MAINNET": "https://rpc.example.invalid/v1/6d2f9b4e7a0c15d83fb2e694c7a01d5b",
+    "RPC_4663_TESTNET": "https://rpc-test.example.invalid/v1/a1c8f503e29b7d641f0e3b82c95d7604",
     "SIGNING_KEY": "ed25519_7c4b19e0a6d385f2b47c0e91d6a2f835",
 }
 
@@ -144,11 +145,11 @@ def test_masked_when_embedded_in_a_larger_payload(credential_env):
     """A secret inside a serialized body is still a literal occurrence."""
     body = (
         '{"headers": {"X-API-Key": "%s"}, "url": "%s"}'
-        % (FAKE_VALUES["BANKR_LLM_KEY"], FAKE_VALUES["RPC_4663"])
+        % (FAKE_VALUES["BANKR_LLM_KEY"], FAKE_VALUES["RPC_4663_MAINNET"])
     )
     redacted = redaction.Redactor().redact(body)
     assert FAKE_VALUES["BANKR_LLM_KEY"] not in redacted
-    assert FAKE_VALUES["RPC_4663"] not in redacted
+    assert FAKE_VALUES["RPC_4663_MAINNET"] not in redacted
 
 
 def test_longer_values_are_masked_before_shorter_prefixes():

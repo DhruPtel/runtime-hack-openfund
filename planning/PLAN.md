@@ -147,7 +147,8 @@ Egress IP is fixed and added to the execution key's allowlist.
 | `BANKR_KEY_READ` | analyst + snapshot process | read-only, Agent API off |
 | `BANKR_KEY_EXEC` | treasurer process only | read-write, IP allowlist, low platform caps |
 | `BANKR_LLM_KEY` | analyst + risk inference | gateway only, header `X-API-Key` |
-| `RPC_4663` | chain reads | timeout + failover, block-pinned |
+| `RPC_4663_MAINNET` | chain reads | timeout, fail loudly, block-pinned; no archive assumed |
+| `RPC_4663_TESTNET` | probes and drills on 46630 | never the source of a published mark or a booked fill |
 | `SIGNING_KEY` | treasurer process only | ed25519 private key; public key published |
 
 Two separate Bankr accounts. The **execution wallet address is named explicitly

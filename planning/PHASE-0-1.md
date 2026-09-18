@@ -100,8 +100,8 @@ GeckoTerminal prices come from pools, and Robinhood's tokenized stocks have no
 pool of their own, so coverage is a question and not an assumption.
 
 *Step 2 — divergence,* only if step 1 found coverage. Read `latestRoundData` for
-five stock feeds at one pinned block over `RPC_4663`, recording answer, decimals,
-`updatedAt` and round id. Compare against GeckoTerminal, compute divergence, then
+five stock feeds at one pinned block over `RPC_4663_MAINNET`, recording answer,
+decimals, `updatedAt` and round id. Compare against GeckoTerminal, compute divergence, then
 read `uiMultiplier()` on each token and check whether applying it changes
 agreement.
 
