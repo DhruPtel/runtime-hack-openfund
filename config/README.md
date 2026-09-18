@@ -21,5 +21,5 @@ it. It must never substitute a default. Each null below carries a
 | `analysts.json` | the roster and its scope partition | provisional until checkpoint 2.1 |
 | `thresholds.json` | staleness, divergence, quote age, impact, turnover, cash floor, quorum | mostly unresolved |
 | `mandate.json` | bounds, wallet, chain, allowed assets, budget, expiry, revocation | wallet unresolved |
-| `models.json` | pinned model ids, token caps, deadlines | unresolved until 0.9 |
+| `models.json` | pinned model ids, token caps, deadlines | unresolved until unit 1.7 |
 | `cadence.json` | schedule, confirmation depth, retry budgets | schedule set |

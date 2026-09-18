@@ -1,7 +1,7 @@
 {
   "version": 1,
   "_status": "provisional. Confirmed or revised at checkpoint 2.1.",
-  "_design_note": "Scopes are partitioned deterministically here rather than decomposed by a lead model at runtime: the universe is known in advance, so the partition is disjoint by construction, not by instruction. Two of the four are universe-wide by nature, so 'disjoint' means disjoint in question, not always in asset set. Checkpoint 2.1 settles that.",
+  "_design_note": "Scopes are partitioned deterministically here rather than decomposed by a lead model at runtime: the universe is known in advance, so the partition is disjoint by construction, not by instruction. Disjoint means disjoint in QUESTION, not necessarily in asset set: two analysts may both look at every asset provided they ask different things of it. The failure mode to design against is two analysts asking the same question of overlapping assets. Checkpoint 2.1 settles the split.",
 
   "analysts": [
     {

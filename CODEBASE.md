@@ -58,9 +58,10 @@ fund/
 ├── config/
 │   ├── universe.json           versioned issuer allowlist: (chain_id, address) → feed, decimals, provenance
 │   ├── mandate.json            bounds, wallet, chain, allowed assets, budget, expiry
-│   ├── thresholds.json         staleness, divergence, depth, turnover, cash floor, quorum
-│   ├── models.json             pinned model ids, token caps, deadlines, seeds
-│   └── cadence.json            schedule, confirmation depth, retry budgets
+│   ├── thresholds.json         staleness, divergence, quote age, impact, turnover, cash floor, quorum
+│   ├── models.json             pinned model ids, token caps, deadlines, context budget
+│   ├── cadence.json            schedule, confirmation depth, retry budgets
+│   └── analysts.json           the roster and its scope partition
 │
 ├── src/fund/
 │   │
@@ -150,7 +151,7 @@ thirty seconds to understand the safety model.
 | Analysts cannot spend | no module under `agents/` or `core/` imports `bankr_exec` or `sign` |
 | One signer | `sign.py` is imported only by `treasurer/` |
 | One gate definition | `gates.py` is the only module defining a threshold comparison |
-| Deployed isolation | from the analyst process environment, execution credentials are unreadable and a raw HTTP swap fails |
+| Deployed isolation | from the analyst process environment, execution credentials are unreadable and a raw HTTP swap fails (unit 4.12) |
 | No credential in logs | every declared credential value is masked in captured log output |
 
 The deployed-isolation test is the one that matters most. An import graph proves

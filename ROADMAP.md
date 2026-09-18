@@ -16,27 +16,35 @@ checkpoint isn't a demo, it's a decision point where the plan can bend.
 
 Find out what's actually true before building on assumptions.
 
+Run order: **0.8 before 0.3** — we must know an address is real before quoting
+against it.
+
 | Unit | Goal |
 |---|---|
 | 0.1 | Repo skeleton, config loader, secret redaction derived from the credential table |
-| 0.2 | Which auth header each Bankr surface accepts; which key toggles are on |
-| 0.3 | A real quote response for a stock on 4663, field by field |
-| 0.4 ▶ | Chainlink feed read at a pinned block, cross-checked against GeckoTerminal |
-| 0.5 | Execution eligibility: can this identity actually trade? pass / fail / unresolved |
+| 0.2 | Which auth header each Bankr surface accepts; gateway on, Agent API off on both Bankr keys |
+| 0.8 | Issuer allowlist source; beacon check against a good token and the fake GME |
+| 0.3 | A real quote response for a stock on 4663 at the $25 intended size, field by field |
+| 0.4 ▶ | Chainlink feed at a pinned block; GeckoTerminal coverage first, divergence second |
+| 0.5 | Execution eligibility: the exact 403, recorded. Expected verdict: fail |
 | 0.6 | Credits and usage endpoints: can we reconcile cost, not just estimate it |
 | 0.7 ▶ | A trivial x402 handler deployed, paid, and timed |
-| 0.8 | Issuer allowlist source; beacon check against a good token and the fake GME |
-| 0.9 | Token cost and latency of one realistic analyst call |
+| 0.9 | *Relocated to unit 1.7* — the cost probe needs a real snapshot |
 | 0.10 | Idempotency behaviour and rate-limit response shape |
 | 0.11 ▶ | `findings.md`: every probe marked measured / documented / inferred |
 
 **▶ 0.4 — the price question**
-*You see:* a table of five stocks with the Chainlink price, the GeckoTerminal
-price, the divergence, the feed's decimals and its last-update time.
+*You see:* first, whether GeckoTerminal covers RH stock tokens at all — measured,
+per asset. Then, if it does, a table of five stocks with the Chainlink price, the
+GeckoTerminal price, the divergence, the feed's decimals and its last-update
+time. If it does not, the same table against a Bankr quote at size, labelled *not
+independent of the execution venue*.
 *Judge:* do the two sources agree within a few basis points? If not, is the gap
-explained by `uiMultiplier` being applied twice?
+explained by `uiMultiplier` being applied twice? And if the corroborator is a
+quote, is a quote-versus-feed check worth anything?
 *Could change:* which source marks the book, what the divergence veto threshold
-is, and whether we need a third source.
+is, whether the veto is cross-source or quote-versus-feed, and whether we need a
+third source.
 
 **▶ 0.7 — the x402 question**
 *You see:* an unpaid call returning 402, a paid call returning data, both timed,
@@ -47,10 +55,11 @@ work from a standard client?
 the purchase binds to a decision id.
 
 **▶ 0.11 — the go/no-go**
-*You see:* one page, every probe with its answer and confidence level.
+*You see:* one page, every probe with a recorded verdict — including fail and
+unresolved — and its confidence level.
 *Judge:* which assumptions in the plan just died.
-*Could change:* whether Phase 5 exists, the whole cost model, or the asset
-universe.
+*Could change:* the whole cost model, the asset universe, or which leg carries
+the live chain activity in Phase 5.
 
 ---
 
@@ -62,31 +71,32 @@ Turn a permissionless chain into one trustworthy, frozen object.
 |---|---|
 | 1.1 | Types module: the contracts everything else imports |
 | 1.2 | Versioned issuer allowlist keyed by (chain, address) with provenance |
-| 1.3 | Chain adapter: block-pinned reads, staleness and pause rules, source vs fetch time |
-| 1.4 | Price cross-check: Chainlink marks, GeckoTerminal corroborates |
-| 1.5 | Quote adapter: sized quotes with age |
+| 1.3 | Chain adapter: block-pinned reads, staleness and pause rules, source vs fetch time, timeouts and fail loudly |
+| 1.4 | Price cross-check: Chainlink marks, corroboration from whatever 0.4 established |
+| 1.5 | Quote adapter: quotes at the $25 intended size, with age, fees and three-valued impact |
 | 1.6 ▶ | Snapshot builder: merge, filter, hash |
-| 1.7 | Held-but-untradeable assets stay in the book with a status |
-| 1.8 ▶ | Fixtures and offline replay |
-| 1.9 | Selftest attesting every address against chain |
-| 1.10 ▶ | Skew rejection |
+| 1.7 | Analyst cost and latency against the real snapshot (relocated from 0.9) |
+| 1.8 | Held-but-untradeable assets stay in the book with a status |
+| 1.9 ▶ | Fixtures and offline replay |
+| 1.10 | Selftest attesting every address against chain |
+| 1.11 ▶ | Skew rejection |
 
 **▶ 1.6 — the data**
-*You see:* a real snapshot JSON: every asset with price, source, quote, depth,
-status (tradeable / thin / excluded), and every timestamp.
+*You see:* a real snapshot JSON: every asset with price, source, quote at size,
+quote age, impact (or null), status (tradeable / excluded), and every timestamp.
 *Judge:* is this enough for an analyst to say something intelligent? What's
 missing that a real analyst would want?
 *Could change:* the whole adapter list. If the answer is "an analyst can't say
 anything useful from this," we add fundamentals, history or news before writing
 a single analyst.
 
-**▶ 1.8 — reproducibility**
+**▶ 1.9 — reproducibility**
 *You see:* the same command run twice, once live and once offline from a fixture,
 producing identical hashes.
 *Judge:* can the demo run with the network unplugged?
 *Could change:* how much of the demo is live versus replayed.
 
-**▶ 1.10 — the refusal**
+**▶ 1.11 — the refusal**
 *You see:* a deliberately corrupted snapshot (two blocks mixed) being rejected by
 name.
 *Judge:* does it fail loudly rather than quietly averaging?
@@ -102,7 +112,7 @@ The reports are the product. Design them before writing the code that makes them
 |---|---|
 | 2.1 ▶ | Report format designed by hand, before any code |
 | 2.2 | Output schema, hard validation, `NO_CALL`, address-scoped claims |
-| 2.3 | Brief format: mandate, scope boundaries, snapshot bytes, effort scaling |
+| 2.3 | Brief format: mandate, scope boundaries, snapshot bytes, effort scaling. Scopes are disjoint in QUESTION, not necessarily in asset set — two analysts may both look at every asset provided they ask different things of it; the failure mode is two analysts asking the same question of overlapping assets |
 | 2.4 | Runner: bounded width, deadlines, retries, fallback, partial-failure flag |
 | 2.5 | Per-call token accounting, reconciled to provider usage |
 | 2.6 ▶ | First real report from a real snapshot |
@@ -185,6 +195,7 @@ Make the money path correct before it touches money.
 | 4.9 | Startup reconciliation and single-owner lock |
 | 4.10 ▶ | Crash drill |
 | 4.11 ▶ | Known-answer accounting fixture |
+| 4.12 | Treasurer as its own process with its own credentials; deployed-isolation test |
 
 **▶ 4.8 — the whole machine**
 *You see:* one command producing snapshot → reports → weights → plan → verdict →
@@ -208,28 +219,42 @@ consistent one?
 
 ---
 
-## Phase 5 — live execution · only if probe 0.5 passed
+## Phase 5 — live chain activity · opens once 4.12 passes
+
+Stock execution is location-gated and unavailable, so stock legs stay paper. The
+money path is proven against a real chain using an **ungated leg** — memecoin and
+USDG swaps on 4663 need no location verification — through the same treasurer,
+the same order state machine and the same journal.
 
 | Unit | Goal |
 |---|---|
-| 5.1 | Live executor behind the same interface |
-| 5.2 | Small buy and sell round trip |
+| 5.1 | Live executor behind the same interface the paper executor satisfies |
+| 5.2 | Small real buy and sell round trip on the ungated leg |
 | 5.3 | Receipt reconciliation, confirmation depth, mined-revert handling |
-| 5.4 ▶ | A real trade on the explorer |
-| 5.5 | Access expiry: pause, preserve, expose remediation |
-| 5.6 ▶ | A real 403, decoded |
+| 5.4 ▶ | A real transaction on the explorer |
+| 5.5 | Access expiry and gate behaviour: pause, preserve, expose remediation |
+| 5.6 ▶ | A real 403 from the gated stock path, decoded |
 | 5.7 ▶ | A live scheduled cycle |
+
+**Exit:** a real transaction on 4663 executed through the treasurer, reconciled
+from its receipt, and booked exactly once.
 
 **▶ 5.4 / 5.7 — proof it's real**
 *You see:* a transaction hash on the Robinhood Chain explorer, the same order in
-the ledger with its receipt, and later a full scheduled cycle doing it unattended.
-*Judge:* is this the moment that makes the submission credible?
-*Could change:* trade size, cadence, and how much capital we put behind it.
+the ledger with its receipt, and later a full scheduled cycle doing it unattended
+with the paper stock legs visible alongside.
+*Judge:* is this the moment that makes the submission credible, given the traded
+asset is not a stock?
+*Could change:* trade size, cadence, which asset carries the live leg, and how
+much of the demo leans on it.
 
 **▶ 5.6 — the error**
-*You see:* the exact 403 body and which of the seven causes it maps to.
-*Judge:* would you be able to debug this at 2am on demo day?
-*Could change:* error surfacing across the whole system.
+*You see:* the exact 403 body and which of the documented causes it maps to. This
+is the expected result for the stock path, not a failure.
+*Judge:* would you be able to debug this at 2am on demo day? Does the page
+explain the paper/live split honestly to someone who did not read the plan?
+*Could change:* error surfacing across the whole system, and how the split is
+presented.
 
 ---
 

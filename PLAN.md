@@ -49,11 +49,15 @@ Each is structural where possible, and tested where not.
    false. A required check must be explicitly true.
 6. **`NO_CALL` is valid**, and the aggregator is a total function that handles
    all-abstain without liquidating anything.
-7. **Assets are pinned by `(chain_id, address)`** from a versioned,
+7. **Deterministic replay comes from recorded model outputs**, including the
+   risk output. Seeds apply to our own code only and prove nothing about model
+   determinism. Fresh inference against a recorded snapshot is a separate
+   experiment, labelled as one, never presented as a replay.
+8. **Assets are pinned by `(chain_id, address)`** from a versioned,
    issuer-derived allowlist with recorded provenance.
-8. **Nothing is booked from an HTTP status.** A fill is evidenced by a receipt;
+9. **Nothing is booked from an HTTP status.** A fill is evidenced by a receipt;
    revenue is evidenced by settlement.
-9. **Everything published is immutable and addressed by content id.**
+10. **Everything published is immutable and addressed by content id.**
 
 ---
 
@@ -185,13 +189,21 @@ re-evaluate before detailing the next.
 
 - **0.1** Repo skeleton, config loader, `.env`, secret redaction derived from the
   credential table.
-- **0.2** Key permissions: Agent API and gateway toggles; which auth header each
-  surface accepts.
+- **0.2** Key permissions: confirm the LLM Gateway toggle is **on** for
+  `BANKR_LLM_KEY` and the Agent API is **off** for both Bankr keys (nothing in
+  the system calls `/agent/prompt`); record which auth header each surface
+  accepts.
 - **0.3** Quote probe: `/wallet/swap-quote`, chain `robinhood`, USDG → one stock
-  address. Record the full response and which fields actually appear.
+  address, at the $25 intended size. Record the full response and which fields
+  actually appear. *Runs after 0.8: the address must be established before we
+  quote against it.*
 - **0.4** ▶ **Chain probe:** read a Chainlink feed on 4663 at a pinned block.
   Confirm decimals, staleness fields, and whether the price already includes
-  `uiMultiplier` by comparing against GeckoTerminal for the same asset.
+  `uiMultiplier`. **Coverage first, divergence second:** establish whether
+  GeckoTerminal returns a price for RH stock tokens at all before comparing
+  against it. If coverage is absent, the corroborating source becomes a Bankr
+  quote at size, recorded as *not independent of the execution venue*, and the
+  divergence veto becomes quote-versus-feed rather than cross-source.
 - **0.5** Execution eligibility: attempt a minimal swap with the intended
   execution identity. Record the exact 403 body. Resolves to **pass / fail /
   unresolved**.
@@ -200,15 +212,17 @@ re-evaluate before detailing the next.
   call, capture `x-402-payer`, confirm USDC-on-Base is payable by a standard
   client.
 - **0.8** Identity probe: issuer allowlist source, plus the beacon check against
-  a good token and the fake GME.
-- **0.9** LLM cost probe: one realistic analyst prompt; record tokens and
-  latency; multiply into a cycle budget and a per-request price.
+  a good token and the fake GME. *Runs before 0.3.*
+- **0.9** *Relocated to unit 1.7.* The analyst-cost probe needs the real snapshot
+  from 1.6, whose bytes dominate the token count being measured. The number is
+  not reused.
 - **0.10** Idempotency and rate-limit behaviour: same key twice; deliberately
   exceed a cheap limit and record headers.
 - **0.11** ▶ **`research/findings.md`:** every probe recorded as measured,
   documented or inferred, with pass/fail/unresolved and redacted bodies.
 
-**Exit:** every probe resolved. 0.5 decides whether Phase 5 exists.
+**Exit:** every probe has a recorded verdict, including fail and unresolved.
+0.5 is expected to return **fail** — see §13.
 
 ### Phase 1 — adapters and snapshot
 
@@ -217,19 +231,28 @@ re-evaluate before detailing the next.
 - **1.2** Universe: versioned issuer allowlist keyed by `(chain_id, address)`,
   provenance recorded, beacon check as secondary.
 - **1.3** Chain adapter: block-pinned reads, feed staleness and pause rules,
-  source time separate from fetch time.
-- **1.4** Price cross-check: Chainlink as the accounting mark, GeckoTerminal as
-  corroboration, divergence recorded.
-- **1.5** Quote adapter (read-only): sized quotes with quote age.
+  source time separate from fetch time. Explicit request timeouts and fail
+  loudly; no failover is claimed and no archive read is assumed.
+- **1.4** Price cross-check: Chainlink as the accounting mark, corroboration from
+  whichever source probe 0.4 established, divergence recorded with its
+  independence stated.
+- **1.5** Quote adapter (read-only): quotes at the $25 intended size, with quote
+  age, fees, and impact as a three-valued field.
 - **1.6** ▶ **Snapshot builder:** merge, filter, hash. *Show: a real snapshot
   JSON, with per-asset tradeable/thin/excluded status and every timestamp
   visible.*
-- **1.7** Held-but-untradeable handling: an asset out of the buy universe remains
+- **1.7** Analyst cost probe (relocated from 0.9): one realistic analyst prompt
+  against the real snapshot from 1.6; record input and output tokens, latency and
+  cost, then multiply into a cycle budget at four analysts plus risk, a daily
+  cost, and a per-request endpoint price.
+- **1.8** Held-but-untradeable handling: an asset out of the buy universe remains
   a holding with explicit valuation and execution status.
-- **1.8** ▶ **Fixture generation and offline replay:** *Show: the same command
-  producing a byte-identical snapshot from a fixture, network off.*
-- **1.9** Adapter selftest attesting every address in the table against chain.
-- **1.10** ▶ **Two-block skew test:** *Show: a deliberately inconsistent snapshot
+- **1.9** ▶ **Fixture generation and offline replay:** *Show: the same command
+  producing a byte-identical snapshot from a fixture, network off.* Fixtures are
+  the only mechanism for historical reproducibility, because no archive RPC is
+  assumed.
+- **1.10** Adapter selftest attesting every address in the table against chain.
+- **1.11** ▶ **Two-block skew test:** *Show: a deliberately inconsistent snapshot
   rejected with a named reason.*
 
 **Exit:** hashed snapshot from live data; identical replay from fixture; bad
@@ -242,7 +265,11 @@ inputs rejected, not absorbed.
   hand-written model report, before any code, for you to approve.*
 - **2.2** Output schema, hard validation, `NO_CALL`, address-scoped assertions.
 - **2.3** Brief format: mandate, explicit scope boundaries, snapshot bytes,
-  output schema, effort scaling.
+  output schema, effort scaling. Scopes come from `config/analysts.json` and are
+  **disjoint in question, not necessarily in asset set** — two analysts may both
+  look at every asset provided they ask different things of it. The failure mode
+  to design against is two analysts asking the same question of overlapping
+  assets.
 - **2.4** Runner: bounded width, per-worker deadline, transport timeout, retry
   budget, pre-allocated result slots, per-worker fallback, partial-failure
   disclosure.
@@ -253,8 +280,8 @@ inputs rejected, not absorbed.
 - **2.8** ▶ **Failure drill:** *Show: one worker returning malformed JSON, one
   hanging, one abstaining, with the cycle completing and disclosing it.*
 
-**Exit:** N analysts produce N valid reports from one snapshot id; failures are
-visible and non-fatal; you have approved the report format.
+**Exit:** all four analysts produce valid reports from one snapshot id; failures
+are visible and non-fatal; you have approved the report format.
 
 ### Phase 3 — aggregation, planning, risk
 
@@ -273,8 +300,8 @@ visible and non-fatal; you have approved the report format.
 - **3.6** Context budget enforcement: veto if the full bundle does not fit.
 - **3.7** Decision record: content hashes of snapshot, reports, config, proposal,
   plan, verdict. Ed25519 signature. `signed=false` never authorizes.
-- **3.8** ▶ **A veto happening:** *Show: a cycle where divergence or depth trips a
-  gate, the named reason, and execution refused.*
+- **3.8** ▶ **A veto happening:** *Show: a cycle where divergence, quote age or an
+  unknown impact trips a gate, the named reason, and execution refused.*
 - **3.9** ▶ **Byte-stable replay:** *Show: the same decision record reproduced
   from recorded model outputs.*
 
@@ -302,22 +329,40 @@ visible and non-fatal; you have approved the report format.
   partial sale, an external transfer, a reverted transaction's gas, a settled and
   an unsettled payment, a credit purchase and consumption, all reconciling.*
 
-**Exit:** a complete paper cycle, a survived crash drill, a reconciling fixture.
+- **4.12** Treasurer as its own process with its own credentials, reading
+  approved intents from SQLite, plus the deployed-isolation test: from the
+  analyst process environment, execution and signing credentials are unreadable
+  and a raw HTTP swap fails. An import-graph test alone is not a pass.
 
-### Phase 5 — live execution *(opens only if probe 0.5 passed)*
+**Exit:** a complete paper cycle, a survived crash drill, a reconciling fixture,
+and the isolation test green. No real submission happens before 4.12 passes.
 
-- **5.1** Live executor behind the same interface.
-- **5.2** Small buy **and** sell round trip with production-shaped permissions.
+### Phase 5 — live chain activity
+
+Tokenized-stock execution is location-gated and unavailable to this operator, so
+stock legs are paper. This phase proves the money path against a real chain using
+an **ungated leg** — memecoin/USDG swaps on 4663 need no location verification —
+so receipts, reconciliation, confirmation depth and explorer evidence are genuine
+rather than mocked. Opens once 4.12 passes; it is not gated on probe 0.5.
+
+- **5.1** Live executor behind the same interface the paper executor satisfies.
+- **5.2** Small real buy **and** sell round trip on the ungated leg, with
+  production-shaped permissions.
 - **5.3** Receipt reconciliation, confirmation depth, `200 success:false`.
-- **5.4** ▶ **A real trade:** *Show: the transaction on the explorer, and the same
-  order in the ledger with its receipt.*
-- **5.5** Access-expiry behaviour: pause new attempts, preserve holdings, expose
-  remediation state.
-- **5.6** ▶ **A real 403:** *Show: the exact body and which cause it maps to.*
+- **5.4** ▶ **A real transaction:** *Show: the transaction on the Robinhood Chain
+  explorer, and the same order in the ledger with its receipt, booked once.*
+- **5.5** Access-expiry and gate behaviour: pause new attempts, preserve
+  holdings, expose remediation state.
+- **5.6** ▶ **A real 403:** *Show: the exact body from the gated stock path and
+  which of the documented causes it maps to.* This is the expected result for
+  stock execution, not an error case.
 - **5.7** ▶ **Live cycle:** *Show: a scheduled cycle executing a small real
-  rebalance and booking it.*
+  transaction on the ungated leg and booking it, with the paper stock legs
+  visible alongside.*
 
-**Exit:** both directions executed live and booked once.
+**Exit:** a real transaction on 4663 executed through the treasurer, reconciled
+from its receipt, and booked exactly once. Live stock fills are out of scope
+(§13).
 
 ### Phase 6 — books and attribution
 
@@ -444,16 +489,35 @@ mandate.
 - **No-rebalance preserves holdings.** It never means liquidate.
 - **Published, reconciled books.** Not "audited."
 
+### Locked operating parameters
+
+Values live in `config/`, which is authoritative. Repeated here so the shape of
+the fund is readable without opening a JSON file.
+
+| Parameter | Value | Config |
+|---|---|---|
+| Capital under management | ~$200 | `thresholds.json`, `mandate.json` |
+| Nominal per-trade size for quoting | $25 | `thresholds.json`, `mandate.json` |
+| Cadence | daily, plus a manual trigger on the identical code path | `cadence.json` |
+| Roster | 4 analysts, 1 risk agent, 1 treasurer | `analysts.json` |
+| Paid endpoint price | $0.05 per decision record, USDC on Base | set at unit 7.2 |
+
+Both platform caps ($500/24h, $500/tx) sit well above our sizing, so they are a
+backstop rather than a binding constraint. The endpoint price is provisional
+until unit 1.7 reports real per-cycle inference cost.
+
 ---
 
 ## 12. Open questions
 
-- Is an eligible execution operator available? This decides whether Phase 5
-  exists.
-- How many of the ~190 tickers are actually tradeable at our size?
+- How many of the ~190 tickers are actually tradeable at our $25 size?
+- Which ungated 4663 asset is the right one for the live leg, and what is the
+  smallest round trip that still produces meaningful receipt evidence?
 - Do we launch a token, and would a stock-paired launch with quote-only fees make
   the treasury's own income arrive in equity?
-- Cadence: frequent enough to look alive, cheap enough to sustain.
+
+*Resolved:* execution eligibility (the operator is US-based; see §13) and cadence
+(daily plus a manual trigger; see §11).
 
 ---
 
@@ -475,3 +539,15 @@ Published with the project, not hidden.
 - Call accuracy is hypothetical by construction and never enters fund profit.
 - Reporting entity is the execution wallet plus one Base receiving address. No
   wider consolidation.
+- **No live tokenized-stock fills.** Robinhood gates tokenized-stock execution
+  behind location verification and the operator is in the US, so stock legs are
+  paper: sized and priced from real live quotes, through the same executor
+  interface, but never submitted. Real on-chain activity comes from an ungated
+  leg on the same chain, through the same treasurer, so receipts and
+  reconciliation are genuine. Everything upstream of execution — snapshot,
+  quotes, sizing, gates, veto, books — is identical in both paths. Probe 0.5
+  records the exact 403 rather than assuming it.
+- No independent liquidity measurement for stocks. Tokenized stocks have no AMM
+  pool of their own, so tradeability is defined operationally: a quote at
+  intended size succeeded, quote age within bound, impact known and within limit
+  or null — and null blocks. We do not claim to have measured depth.

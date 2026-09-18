@@ -91,10 +91,10 @@ The rest arrives with the unit that builds it; `make help` names which. The
 intended surface when finished:
 
 ```bash
-make replay      # rebuild a snapshot from fixtures; hash matches   [unit 1.8]
+make replay      # rebuild a snapshot from fixtures; hash matches   [unit 1.9]
 make cycle-demo  # a full cycle from fixtures                       [unit 4.8]
 make snapshot    # live, block-pinned, hashed                       [unit 1.6]
-make selftest    # every configured address attested against chain  [unit 1.9]
+make selftest    # every configured address attested against chain  [unit 1.10]
 make cycle       # live cycle, durable orders, reconciled journal    [unit 4.8]
 ```
 

@@ -10,7 +10,10 @@ Conventions:
   **documented**, or **inferred**, with redacted request and response bodies and
   a timestamp.
 - A probe that cannot reach a verdict is **unresolved**. Unresolved is a valid
-  outcome and is never rounded up to pass.
+  outcome and is never rounded up to pass. A recorded **fail** is a completed
+  probe, not a blocked one.
+- Run order is **0.8 before 0.3**: an address must be established as real before
+  we quote against it.
 
 ---
 
@@ -29,10 +32,10 @@ the wallet and on eligibility.
 **Goal:** a repo we can work in, where a credential cannot accidentally be
 logged.
 
-**Build:** directory skeleton per `PLAN.md` §7 (empty modules are fine), a config
+**Build:** directory skeleton per `CODEBASE.md` §2 (empty modules are fine), a config
 loader reading `.env`, and a log filter whose denylist is **derived** from the
-credential table rather than hand-written, so adding a credential cannot create
-an unredacted path.
+credential table in `PLAN.md` §6 rather than hand-written, so adding a credential
+cannot create an unredacted path.
 
 **Artifact:** `config/`, `.env.example`, a redaction unit test.
 
@@ -54,11 +57,13 @@ with `Authorization: Bearer`.
 
 **Artifact:** a table in findings: surface × header × result.
 
-**Done when:** every surface has a confirmed working header, and the Agent API
-and LLM Gateway toggles are confirmed on for the right keys.
+**Done when:** every surface has a confirmed working header; the LLM Gateway
+toggle is confirmed **on** for `BANKR_LLM_KEY`; and the Agent API is confirmed
+**off** for both Bankr keys. Nothing in the system calls `/agent/prompt`, so an
+Agent API that answers is a surface to disable, not a capability to keep.
 
-**Risk:** the CLI-minted key has Agent API off by default. Fix in the web console
-before assuming a failure is a bug.
+**Risk:** the CLI-minted key has Agent API off by default, which is what we want.
+Do not "fix" it in the web console.
 
 ---
 
@@ -68,8 +73,9 @@ before assuming a failure is a bug.
 one.
 
 **Build:** `probes/quote.py`. `POST /wallet/swap-quote`, `fromChain: "robinhood"`,
-USDG → one stock contract address, small size. Then repeat at a larger size and
-for a second stock.
+USDG → one stock contract address **taken from the 0.8 allowlist**, at the $25
+intended size. Then repeat at a larger size and for a second stock. A small quote
+passing tells us nothing about a real position, so $25 is the figure that matters.
 
 **Artifact:** full redacted responses in findings, plus a list of which fields
 were actually present versus documented-but-absent.
@@ -86,17 +92,30 @@ several tickers before concluding anything.
 
 **Goal:** settle how the accounting mark is computed.
 
-**Build:** `probes/feed.py`. Read `latestRoundData` for five stock feeds at one
-pinned block over `RPC_4663`. Record answer, decimals, `updatedAt`, and round id.
-Fetch the same five from GeckoTerminal using the `robinhood` network slug.
-Compute divergence. Then read `uiMultiplier()` on each token and check whether
-applying it changes agreement.
+**Build:** `probes/feed.py`, in two steps.
 
-**Artifact:** the comparison table, plus a written conclusion: is the feed price
-already multiplier-adjusted?
+*Step 1 — coverage.* Does GeckoTerminal return a price for RH stock tokens at
+all, using the `robinhood` network slug? Record the answer per asset, measured.
+GeckoTerminal prices come from pools, and Robinhood's tokenized stocks have no
+pool of their own, so coverage is a question and not an assumption.
 
-**Done when:** the table exists and the multiplier question has a measured
-answer, not an inferred one.
+*Step 2 — divergence,* only if step 1 found coverage. Read `latestRoundData` for
+five stock feeds at one pinned block over `RPC_4663`, recording answer, decimals,
+`updatedAt` and round id. Compare against GeckoTerminal, compute divergence, then
+read `uiMultiplier()` on each token and check whether applying it changes
+agreement.
+
+*If coverage is absent,* the corroborating source becomes a **Bankr quote at the
+$25 size**, recorded explicitly as **not independent of the execution venue**, and
+the divergence veto changes shape from cross-source to quote-versus-feed. That is
+a weaker check and the finding must say so.
+
+**Artifact:** the coverage result, the comparison table, and a written
+conclusion: is the feed price already multiplier-adjusted, and what corroborates
+it?
+
+**Done when:** coverage has a measured answer, and the multiplier question has a
+measured answer rather than an inferred one.
 
 **Risk:** the highest-value unit in Phase 0. If the two sources disagree wildly,
 the marking decision needs revisiting before Phase 1 is designed. Also watch for
@@ -123,9 +142,14 @@ mapping attempt against the seven documented causes.
 **Done when:** the result is recorded as **pass**, **fail**, or **unresolved**,
 with the evidence.
 
-**Risk:** a quote succeeding proves nothing about execution. A pass here must be
-an actual fill, not an absence of error. If this is fail or unresolved, say so
-immediately; the plan branches on it.
+**Expected outcome: fail.** The operator is in the US and tokenized-stock
+execution is location-gated, so this probe exists to capture the exact 403 body
+and confirm the gate empirically, not to discover whether we can trade. A
+predicted answer is still a probe we run: recording the real error is what lets
+unit 5.6 decode it and what keeps PLAN.md §13 honest.
+
+**Risk:** a quote succeeding proves nothing about execution. A pass here would
+have to be an actual fill, not an absence of error.
 
 ---
 
@@ -187,22 +211,11 @@ a pass here become the authority.
 
 ---
 
-### 0.9 Analyst cost
+### 0.9 — relocated to unit 1.7
 
-**Goal:** a real number for the cycle budget and the endpoint price.
-
-**Build:** `probes/llm_cost.py`. Take one realistic analyst prompt (the hand
-format from 2.1 can be sketched roughly here) with a real snapshot embedded. Run
-it against the intended model. Record input tokens, output tokens, latency, and
-cost.
-
-**Artifact:** one measured call, multiplied out: cost per analyst, per cycle at N
-analysts, per day at the intended cadence.
-
-**Done when:** the numbers exist and are in findings.
-
-**Risk:** the prompt here is a rough draft, so treat the number as a floor. Risk
-inference and retries are additional.
+The analyst cost probe needs a real snapshot, and snapshot bytes dominate the
+token count it is trying to measure. It moves to Phase 1, immediately after the
+snapshot builder, as **unit 1.7**. The 0.9 number is not reused.
 
 ---
 
@@ -239,11 +252,11 @@ plan change it forces.
 **Done when:** no probe is missing and no result is stated with more confidence
 than it earned.
 
-**Checkpoint:** you read the page. Judge which assumptions died, and decide
-whether Phase 5 is in or out.
+**Checkpoint:** you read the page. Judge which assumptions died, and decide which
+ungated 4663 asset carries the live leg in Phase 5.
 
-**Phase 0 exit:** every probe resolved; findings written; the Phase 5 branch
-decided.
+**Phase 0 exit:** every probe has a recorded verdict, including fail and
+unresolved; findings written.
 
 ---
 
@@ -302,9 +315,10 @@ the fake GME gets bought.
 
 **Build:** `adapters/chain_4663.py`. Pin one block per snapshot and read
 everything at it. Multicall where possible. Per-feed rules: max age, market
-session awareness, paused-oracle detection. Explicit request timeouts and RPC
-failover that advances on hang as well as rejection. Return `Observation`s, never
-bare numbers.
+session awareness, paused-oracle detection. Explicit request timeouts on every
+call, and **fail loudly** — exactly one public 4663 endpoint is documented and it
+carries no archive data, so no failover is claimed and no archive read is assumed
+anywhere in the system. Return `Observation`s, never bare numbers.
 
 **Artifact:** a module that, given a block, returns prices and balances with full
 provenance.
@@ -313,7 +327,8 @@ provenance.
 and a stale feed returns a labelled observation rather than a silent number.
 
 **Risk:** public RPC with no timeout is the exact failure `aero-stock-lp` has. Set
-timeouts first, not later.
+timeouts first, not later. Historical reproducibility comes from the fixture
+capture in 1.9, not from re-reading the chain.
 
 ---
 
@@ -321,11 +336,15 @@ timeouts first, not later.
 
 **Goal:** two independent sources, one of which marks the book.
 
-**Build:** `adapters/gecko.py` for the `robinhood` slug. `core/valuation.py`
-computing the mark from Chainlink (raw units × feed, multiplier handled per probe
-0.4) and recording divergence against GeckoTerminal as a field on the asset.
+**Build:** the corroborating adapter probe 0.4 established — `adapters/gecko.py`
+for the `robinhood` slug if GeckoTerminal covers stock tokens, otherwise a sized
+Bankr quote. `core/valuation.py` computes the mark from Chainlink (raw units ×
+feed, multiplier handled per probe 0.4) and records divergence against the
+corroborator as a field on the asset, alongside whether that corroborator is
+independent of the execution venue.
 
-**Artifact:** per-asset mark, corroboration, divergence in basis points.
+**Artifact:** per-asset mark, corroboration, divergence in basis points, and the
+independence flag.
 
 **Done when:** the mark is computed in exactly one function, and the divergence
 field is populated for every asset.
@@ -340,16 +359,18 @@ carry a comment pointing at the finding.
 **Goal:** know what we could actually trade, at size.
 
 **Build:** `adapters/bankr_quote.py`, read-only key only, no signing import.
-Request quotes at the intended size, not a token size. Record quote age, fees,
-and the impact fields when present. Handle absent fields as null, not zero.
+Request quotes at the **$25 intended size**, never a token size. Record quote
+age, fees, and the impact fields when present. Handle absent fields as null, not
+zero.
 
 **Artifact:** sized quotes attached to each asset.
 
 **Done when:** a quote at intended size succeeds or fails explicitly, and a
 missing impact figure is null rather than assumed safe.
 
-**Risk:** a small quote passing tells you nothing about a real position. Size the
-probe to the real intended order.
+**Risk:** a small quote passing tells you nothing about a real position. $25 is
+the number in `config/thresholds.json`; the probe uses it, not a convenient
+smaller one.
 
 ---
 
@@ -358,8 +379,14 @@ probe to the real intended order.
 **Goal:** the frozen object.
 
 **Build:** `core/snapshot.py`. Merge observations (already fetched; no network in
-`core/`), apply the tradeability filter (depth or quote success, staleness,
-verification status), assign each asset a status, canonicalize, hash.
+`core/`), apply the tradeability filter, assign each asset a status, canonicalize,
+hash.
+
+**Tradeable** means all three of: a quote at the intended size succeeded; quote
+age is within bound; and impact is either known and within limit, **or null — and
+null blocks**. There is no depth term. Tokenized stocks have no AMM pool of their
+own, so there is no depth number to read, and a filter gating on one would exclude
+every RFQ-tradeable stock.
 
 **Artifact:** a real snapshot JSON on disk plus its hash.
 
@@ -372,7 +399,30 @@ analyst, because the report is the product.
 
 ---
 
-### 1.7 Held-but-untradeable
+### 1.7 Analyst cost
+
+*Relocated from probe 0.9, because snapshot bytes dominate the token count being
+measured and no snapshot exists until 1.6.*
+
+**Goal:** a real number for the cycle budget and the endpoint price.
+
+**Build:** `probes/llm_cost.py`. Take one realistic analyst prompt with the real
+snapshot from 1.6 embedded, and run it against the intended model. Record input
+tokens, output tokens, latency and cost.
+
+**Artifact:** one measured call, multiplied out: cost per analyst, cost per cycle
+at **four analysts plus one risk call**, cost per day at daily cadence, and the
+implied floor under the $0.05 endpoint price.
+
+**Done when:** the numbers exist and are in findings, and the $0.05 price is
+either confirmed or revised against them.
+
+**Risk:** the prompt is still a draft until checkpoint 2.1, so treat the number as
+a floor. Retries and the risk context bundle are additional.
+
+---
+
+### 1.8 Held-but-untradeable
 
 **Goal:** an asset leaving the buy universe must not leave the book.
 
@@ -389,7 +439,7 @@ survives with a labelled status.
 
 ---
 
-### 1.8 ▶ Fixtures and replay
+### 1.9 ▶ Fixtures and replay
 
 **Goal:** the demo never depends on the network.
 
@@ -406,7 +456,7 @@ from fixtures versus live.
 
 ---
 
-### 1.9 Address selftest
+### 1.10 Address selftest
 
 **Goal:** the address table is attested, not trusted.
 
@@ -421,7 +471,7 @@ red.
 
 ---
 
-### 1.10 ▶ Skew rejection
+### 1.11 ▶ Skew rejection
 
 **Goal:** prove the snapshot refuses inconsistency.
 
@@ -448,6 +498,7 @@ At the end of Phase 1, before detailing Phase 2, we answer:
 
 1. Is the snapshot rich enough for an analyst to be worth paying for?
 2. Did any probe finding change the marking, veto, or universe decisions?
-3. Is Phase 5 in or out, and does that change what the demo is?
+3. Which ungated 4663 asset carries the live leg in Phase 5, and does the
+   paper/live split change what the demo is?
 4. What did Phases 0 and 1 actually cost in time, and what does that imply for
    the remaining seven?

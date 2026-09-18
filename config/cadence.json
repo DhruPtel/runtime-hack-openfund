@@ -8,7 +8,7 @@
   "_confirmation_depth_resolved_by": "unit 5.3",
 
   "cycle_deadline_seconds": null,
-  "_cycle_deadline_resolved_by": "unit 2.4, informed by probe 0.9",
+  "_cycle_deadline_resolved_by": "unit 2.4, informed by unit 1.7",
 
   "retry_budget_per_worker": null,
   "_retry_budget_resolved_by": "unit 2.4"

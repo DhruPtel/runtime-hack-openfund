@@ -5,12 +5,12 @@
 
   "analyst_model": null,
   "risk_model": null,
-  "_model_resolved_by": "probe 0.9",
+  "_model_resolved_by": "unit 1.7",
 
   "max_output_tokens": null,
   "worker_deadline_seconds": null,
   "transport_timeout_seconds": null,
   "context_budget_tokens": null,
   "_context_budget_note": "Must cover every accepted full report plus the sized plan and the risk output. If the bundle does not fit, the cycle vetoes rather than summarizing (PLAN.md section 2 invariant 3).",
-  "_budgets_resolved_by": "units 2.4 and 3.6"
+  "_budgets_resolved_by": "units 2.4 and 3.6, informed by unit 1.7"
 }
