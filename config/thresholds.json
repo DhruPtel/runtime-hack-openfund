@@ -7,13 +7,16 @@
   "_sizing_resolved_by": "LESSONS 2026-09-17, capital and trade size",
 
   "_tradeability_note": "Tradeable means all three of: a quote at intended size succeeded, quote age within bound, and impact known and within limit or null. Null blocks. There is no depth term: tokenized stocks do have AMM pools (findings F0.4.3), but execution is RFQ against USDG, so pool depth grades the price corroborator and never tradeability. See planning/PLAN.md section 13.",
-  "quote_max_age_seconds": null,
-  "_quote_max_age_resolved_by": "probe 0.3",
-  "impact_max_bps": null,
-  "_impact_max_resolved_by": "probe 0.3",
+  "quote_max_age_seconds": 60,
+  "_quote_max_age_resolved_by": "0.11 checkpoint decision (tracker/LESSONS.md 2026-09-18); provisional",
+  "impact_max_bps": 50,
+  "_impact_note": "Compared signed: the gate is impact > limit, never abs(impact) > limit, because negative impact is price improvement (findings F0.3.4). The field that gates is swapImpactBps (documented; the two impact fields have never differed in a measurement). Loose on purpose: measured impact ran -15 to +2 bps on stock quotes and 13 bps at most (F0.3.4, F0.5.1).",
+  "_impact_max_resolved_by": "0.11 checkpoint decision (tracker/LESSONS.md 2026-09-18); provisional",
 
-  "feed_staleness_max_seconds": null,
-  "_feed_staleness_resolved_by": "probe 0.4",
+  "feed_staleness_rule": "per_feed_heartbeat_plus_margin",
+  "feed_staleness_margin_seconds": null,
+  "_feed_staleness_note": "Replaces the single feed_staleness_max_seconds. Staleness is not a constant: a feed's newest observation is stale when its age exceeds that feed's own documented heartbeat plus feed_staleness_margin_seconds. Equity feeds document 86,400 s (findings F0.4.1); read each feed's heartbeat from the pinned feed data, never assume it. An updatedAt 3.6 h old is normal in market hours (F0.4.7), and overnight and weekend behaviour is unmeasured. Applies to the newest point of a series only; historical points are old by definition (decision 2026-09-18).",
+  "_feed_staleness_resolved_by": "rule: 0.11 checkpoint decision (tracker/LESSONS.md 2026-09-18). The margin was not given in that decision and stays null, which blocks the check until it is set.",
 
   "divergence_max_bps": 100,
   "corroborator_min_volume_usd_24h": 1000000,
