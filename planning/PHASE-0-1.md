@@ -565,32 +565,78 @@ second pinned input, and the cash leg.
 
 ### 1.3 Chain adapter
 
-**Goal:** reads that are internally consistent and honest about age.
+**Goal:** reads that are internally consistent and honest about age, history
+included.
 
-**Build:** `adapters/chain_4663.py`. Pin one block per snapshot and read
-everything at it. Multicall where possible. Per-feed rules: max age, market
-session awareness, paused-oracle detection. Explicit request timeouts on every
-call, and **fail loudly** — exactly one public 4663 endpoint is documented and it
-carries no archive data, so no failover is claimed and no archive read is assumed
-anywhere in the system. Return `Observation`s, never bare numbers. Read a
-**price series** ending at the pinned block, per invariant 2 (decision
-2026-09-18, F0.9.6). Which series and what window are this unit's choice. The
-no-archive rule above applies to it: the series has to come from state readable
-at the pinned block, or from an offchain source that carries its own source
-times. The HTTP
-client sends a `User-Agent` by default: the 4663 RPC, the CoinGecko list and the
-Chainlink directory all return 403 without one, and that 403 is not an auth
-failure (probe 0.3).
+**Build:** `adapters/chain_4663.py`. Return `Observation`s, never bare numbers.
 
-**Artifact:** a module that, given a block, returns prices and balances with full
-provenance.
+- **One pinned block per snapshot, and everything read at it**, multicall where
+  possible. The endpoint honours the block parameter: F0.4.7 falsified that
+  directly.
+- **The endpoint, as configured and as recorded.** `RPC_4663_MAINNET` is the
+  public `robinhood.com` RPC (checked 2026-09-18). The record says it is the only
+  documented endpoint and carries no archive data (`research/agent-os.md` §8;
+  LESSONS 2026-09-17). So: explicit timeouts on every call, fail loudly, no
+  failover claimed, no archive read assumed. 0.10 read balances one block back
+  (F0.10.4); that is recent state, not archive, and nothing relies on it.
+  **Unverified:** the operator's note of a failover endpoint (Alchemy) with
+  archive access. It is neither configured nor measured, so it is not built on.
+  If one is added, measure it first; this unit, 1.9 and PLAN §13 change with it.
+- **A `User-Agent` on every request.** The 4663 RPC, the CoinGecko list and the
+  Chainlink directory all return 403 without one, and that 403 is not an auth
+  failure (probe 0.3).
+- **Feeds:** `latestRoundData`, `decimals` (8 on every equity feed, F0.4.7),
+  paused-oracle detection, and market-session awareness — the equity feeds are
+  `us_equities_24/5` (F0.4.1).
+- **Staleness binds the newest point only** (staleness decision). A newest
+  observation is stale when its age exceeds its own feed's documented
+  heartbeat, read from the pinned directory (86,400 s for equities), plus
+  `feed_staleness_margin_seconds`. The margin is still null, so the check blocks
+  until it is set. An `updatedAt` 3.6 h old is normal in market hours (F0.4.7).
+  Overnight and weekend behaviour is unmeasured.
+- **The price series** (invariant 2). This unit chooses the series and its
+  window, under the no-archive rule. Two candidates, neither measured:
+  - a feed's stored rounds, read at the pinned block via `getRoundData`;
+  - GeckoTerminal's OHLCV, which is offchain, carries its own source times, and
+    would sit beside 1.4's adapter.
 
-**Done when:** two consecutive calls at the same block return identical values,
-and a stale feed returns a labelled observation rather than a silent number.
+  Choosing needs a small read-only measurement inside this unit: how many past
+  rounds a feed keeps readable, or what the OHLCV endpoint returns for these
+  tokens. Historical points are not staleness-checked; they are history.
+- **Balances over RPC only.** `/wallet/portfolio` returned an empty
+  `tokenBalances` for every ERC-20 the wallet has held (F0.7b.8). Its native
+  balances were exact, but the adapter reads the chain.
+- **The execution wallet is not an EOA on 4663.** Since 0.10 it carries an
+  EIP-7702 delegation to a Bankr contract (code `0xef0100…`, F0.10.3). Balance
+  reads are unaffected. Nothing may test "is an EOA" on it.
+- **Beacon slots** (`eth_getStorageAt` at the pinned block), for 1.2's
+  cross-check.
+- **Rate limits.** The public RPC is documented as rate-limited
+  (`research/agent-os.md`), and the 46630 endpoint returned 429 under batching
+  (Testnet limitations). The mainnet limit is unmeasured, so treat 429 as the
+  only signal and back off. Bankr's API showed no rate-limit headers at all
+  (F0.10.5).
 
-**Risk:** public RPC with no timeout is the exact failure `aero-stock-lp` has. Set
-timeouts first, not later. Historical reproducibility comes from the fixture
-capture in 1.9, not from re-reading the chain.
+**Artifact:** a module that, given a block, returns prices, a price series per
+asset, balances and beacon slots, each with full provenance.
+
+**Done when:**
+- two consecutive calls at the same block return identical values, series
+  included;
+- a stale newest point returns a labelled observation rather than a silent
+  number;
+- a series whose historical points are old but whose newest point is fresh is
+  accepted.
+
+**Risk:** a public RPC with no timeout is the exact failure `aero-stock-lp` has,
+so set timeouts first. The weekend is the other risk: a 24/5 feed may
+legitimately go longer than its heartbeat while markets are shut. That is
+unmeasured and is 1.11's checkpoint question. Historical reproducibility comes
+from 1.9's fixtures, not from re-reading the chain.
+
+**Changed by:** the price-history and staleness decisions; the staleness config
+decision; probe 0.3's User-Agent note; F0.4.1, F0.4.7; F0.7b.8; F0.10.3–F0.10.5.
+**Size:** bigger than drafted — the series, and the measurement to choose it.
 
 ---
 
