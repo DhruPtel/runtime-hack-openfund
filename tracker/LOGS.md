@@ -99,51 +99,74 @@ signature, and by the control group, which is what forced the multiplier
 question to be recorded **unresolved** — at 22 bps against a 142 bps noise floor
 the probe cannot see the effect it was built to measure.
 
+## 0.5 — Execution eligibility
+**Date:** 2026-09-18 · **Commit:** a4fe453
+
+Built `probes/execute.py`, the only probe that spends: it refuses to send
+without `--confirm`, refuses to send at all if the 4663 native balance is below
+the sell amount plus a gas reserve, and narrows the seven documented 403 causes
+to three *before* spending — a free quote rules out the banned-token and
+price-impact causes, the $0.26 size rules out the spend limit, and the
+fee-beneficiary cause is structural. One attempt was sent once, selling 0.0001
+ETH into AAPL from `0x93fa…a3da` on chain 4663, and returned **403** in 115 ms:
+`{"message":"Tokenized stocks (AAPL) are not available in your region."}` — the
+expected verdict, now measured rather than documented, with the body naming both
+the gate and the asset. The artifact is `research/findings.md` §0.5, five
+findings with the refusal verbatim; verified by the wallet's native balance
+being identical to the wei before and after and no `hash` in the response, so
+the gate fires pre-broadcast and costs no gas, and by four separate confounds —
+balance, address, price impact and spend limit — each being excluded by evidence
+rather than assumed.
+
 ---
 
-## State at close — 2026-09-18
+## State at close — 2026-09-18 (second session)
 
-**Done.** Units 0.1 (repo skeleton, config loader, credential redaction), 0.2
-(auth headers and key permissions), 0.3 (quote shape) and 0.4 (Chainlink feeds,
-coverage and the multiplier). 32 tests, offline, no credentials. Findings for
-0.2, 0.3 and 0.4 are in `research/findings.md`, each marked measured /
+**Done.** Units 0.1, 0.2, 0.3, 0.4 (Chainlink feeds, coverage and the
+multiplier) and 0.5 (execution eligibility). 32 tests, offline, no credentials.
+Findings for 0.2–0.5 are in `research/findings.md`, each marked measured /
 documented / inferred with a pass / fail / unresolved verdict.
 
-**At the checkpoint, undecided.** 0.4 is a ▶ checkpoint and its table has been
-shown but not ruled on. Three decisions are open and none has been taken inside
-the probe:
+**0.5 is settled: stock execution is refused for region.** 403, pre-broadcast,
+no gas, body naming both gate and asset. planning/PLAN.md §13 and the
+2026-09-17 decision to make stock legs paper are both confirmed on evidence
+rather than documentation. Nothing in the plan changes.
 
-- **Does "depth" return?** It was deleted on 2026-09-17 because the plan said
-  tokenized stocks have no AMM pool to measure. They do — SPY holds $9.16M in one
-  USDG pool (F0.4.3). The false clause in planning/PLAN.md §13 is corrected; the
-  operational definition of tradeable is untouched pending this call.
+**0.4 is still at its checkpoint, undecided.** Three decisions remain open and
+none has been taken:
+
+- **Does "depth" return?** Deleted on 2026-09-17 because the plan said tokenized
+  stocks have no AMM pool to measure. They do — SPY holds $9.16M in one USDG
+  pool (F0.4.3). The false clause in §13 is corrected; the operational
+  definition of tradeable is untouched pending this call.
 - **What does `divergence_max_bps` become?** Still null. A flat threshold cannot
-  work: divergence runs 19.5 bps median on liquid names and 164.7 on illiquid
-  ones, worst case 610 (F0.4.5).
+  work: 19.5 bps median on liquid names, 164.7 on illiquid, worst case 610
+  (F0.4.5).
 - **Is a Chainlink feed a membership condition at 1.2?** Only 35 of 187 marked
   tokens have one (F0.4.8).
 
-**Carried forward as unresolved.** Whether the feed answer already includes
-`uiMultiplier` is **not** measured and 0.4's done-condition is half met
-(F0.4.4). Two documented sources say it is already applied and 1.4 follows them,
-labelled documented. Settling it needs a multiplier large enough to clear a 142
-bps noise floor, or an archive read the one public 4663 endpoint cannot serve.
+**Carried forward as unresolved.**
 
-**Blocked.**
+- Whether the feed already includes `uiMultiplier` is **not** measured (F0.4.4);
+  the effect is 22 bps against a 142 bps noise floor. 1.4 follows the two
+  documented sources and must label them documented.
+- Whether `BANKR_KEY_EXEC` can **transact** is still unproven (F0.5.5). The
+  location gate fired first, so the read-only-key cause was never reached.
+  **Phase 5's live leg rests on this and should not be treated as de-risked.**
+  One ungated ETH→USDG swap with the same key settles it; it is a second spend,
+  was not authorised by 0.5, and belongs at the head of Phase 5.
 
-- **0.5 (execution eligibility)** and **0.10 (idempotency and rate limits)** have
-  not been run. Both spend real money with real credentials and need explicit
-  per-probe authorization. 0.5's expected verdict is **fail** — the operator is in
-  the US and tokenized-stock execution is location-gated — but it is run to
-  capture the exact 403, not skipped because the answer is predicted.
-- **Funding.** The wallet holds ~$2 of ETH on Base and nothing on Robinhood
-  Chain, against the ~$200 in planning/PLAN.md §11. The LLM gateway holds $3.00,
-  clearing the 402 that blocked Phase 2.
+**Blocked.** 0.10 (idempotency and rate limits) has not been run and needs
+explicit per-probe authorization. 0.7 (x402 round trip) needs USDC on Base.
 
-**Next.** 0.6 (credits and usage) and 0.8 (issuer allowlist and the beacon check)
-both run today with what is already in `.env`; 0.8 now has both a concrete case
-to solve in the three GME tokens and a working discriminator in `uiMultiplier()`
-(F0.4.6). 0.7 (x402 round trip) needs USDC on Base. Unit 1.5 must re-run probe
-0.3 against a funded wallet before any of its numbers count as evidence about
-liquidity, and 0.4's divergence numbers are one block on one day during market
-hours — they do not bound the overnight or weekend tail.
+**Funding.** $0.63 of ETH on Base and $1.28 on Robinhood Chain — funded since
+0.2, which is what made 0.5 runnable. No USDG or other tokens on any chain,
+against the ~$200 in planning/PLAN.md §11. The LLM gateway holds $3.00.
+
+**Next.** 0.6 (credits and usage) and 0.8 (issuer allowlist and the beacon
+check) both run today with what is already in `.env`; 0.8 has a concrete case in
+the three GME tokens and a working discriminator in `uiMultiplier()` (F0.4.6).
+Unit 1.5 must re-run probe 0.3 against a wallet funded with USDG before any of
+its numbers count as evidence about liquidity, and 0.4's divergence numbers are
+one block on one day during market hours — they do not bound the overnight or
+weekend tail.
