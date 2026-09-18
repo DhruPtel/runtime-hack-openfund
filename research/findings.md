@@ -2028,3 +2028,103 @@ This is an artefact of the fund owning both sides, and it will not arise once a
 separate buyer agent pays. It is worth recording anyway, because the demo's buyer
 agent is not built yet and any reconciliation written before it exists would be
 tested against exactly this net-zero case.
+
+### F0.7d.7 — `x-402-payer` exists, and this is its real shape
+
+**Confidence: measured. Verdict: pass** — and it settles an inference that has
+been open since the discovery reports.
+
+`research/x402-cli-example.md` Q2 found no server code anywhere and marked the
+header *"[INFERRED as plausible but unverifiable from these sources]"*. F0.7.5
+left it unmeasured because no payment to our handler had ever settled. With the
+endpoint working, a handler that echoes its request headers answers it.
+
+**The full header set a paid handler receives** (12, via four independent access
+methods that all agree):
+
+```
+accept                          */*
+access-control-expose-headers   PAYMENT-RESPONSE,X-PAYMENT-RESPONSE
+content-length                  0
+host                            x402.bankr.bot
+user-agent                      Bun/1.3.14
+x-402-payer                     0x93faecde3c88a713e1edddf417c02c326889a3da
+x-amzn-trace-id                 Root=1-6aad8052-4c4cb2245d6d44f9357b4941
+x-forwarded-for                 44.232.70.184
+x-forwarded-port                443
+x-forwarded-proto               https
+x-original-method               GET
+x-original-path                 /0x93fa…a3da/roundtrip
+```
+
+**`x-402-payer` is a lowercase `0x`-prefixed 42-character EVM address** — the
+payer's wallet, and nothing else. No scheme, no amount, no nonce, no signature.
+
+**The header the handler does *not* get is the important one.**
+`req.headers.get("x-payment")` returns **null**: the raw `X-PAYMENT` payload,
+which carries the signed EIP-3009 authorization, is consumed by the platform and
+not passed through. So the handler **cannot independently verify** that a payment
+occurred or that the address is genuine — `x-402-payer` is a **platform
+assertion**, trusted exactly as far as Bankr is trusted.
+
+**For unit 7.3 this means two sources of buyer identity, not one, and they differ
+in kind:**
+
+| Source | Available | Trust |
+|---|---|---|
+| `x-402-payer` header | inside the request, immediately | platform-asserted; not verifiable by us |
+| `PaymentSettled.payer` (F0.7b.6) | after settlement, on chain | cryptographically settled |
+
+Binding a purchase to a buyer is 7.3's design and not this probe's. What is
+recorded here is that the fast source is not the authoritative one, and the
+authoritative one arrives late (F0.7b.4).
+
+**A false negative we nearly recorded.** The first attempt at this returned *zero
+headers* and would have supported "the header does not exist". It was our own
+fault — a regex in the probe matched the CLI's schema line instead of the
+response body — not a fact about the platform. It was caught by re-testing with
+four access methods plus a description of the `Request` object, on the grounds
+that zero headers on a real HTTP request is implausible enough to suspect the
+instrument first. **Absence measured through one accessor is not absence.**
+
+Also measured incidentally: the handler runtime is **Bun 1.3.14** behind an AWS
+load balancer, consistent with the Lambda-style `REPORT` lines in F0.7d.5.
+
+### F0.7d.8 — Cost of this unit: nothing
+
+**Confidence: measured.**
+
+Three payments of $0.001 were made — one to prove the fix, two to settle the
+header question. USDC before the first and after the last: **107,346 base units,
+unchanged**. Every payment was self-paid, so the money left and returned in the
+same transaction (F0.7d.6), `feeBps` was 0 on all of them, and gas was paid by
+the facilitator. **Net spend: $0.00.**
+
+The endpoint is left deployed at version 5, restored to the no-work handler that
+the timings in F0.7d.5 were taken against, so what is deployed matches what this
+file describes and what the repository contains.
+
+### What 0.7d changes
+
+| Change | Where |
+|---|---|
+| 0.7's 500 was our handler's return shape; config and self-payment are exonerated | 7.2 |
+| Return a `Response`; the quick-start's "plain objects are auto-wrapped" is wrong here | 7.2 |
+| Cold start ~513 ms; ~1.5 s platform-side for a no-work handler; ~4.6 s end to end | 1.4, 7.x |
+| `GET /x402/endpoints/logs/{service}` exists and is undocumented — the only view of handler errors | 7.x, 8.x |
+| `x-402-payer` is a bare payer address, platform-asserted, not verifiable by the handler | 7.3 |
+| `X-PAYMENT` is not forwarded to handlers | 7.3 |
+| First `PaymentSettled` with the fund as `owner` — revenue evidence exists in practice | 6.x, 7.4 |
+
+### Method limitations
+
+- **Three changes were made to the handler at once** for the fix (`async`, the
+  return type, `Response.json`). The runtime error names the return value, but
+  which alone would have sufficed is untested; each variant costs a paid call.
+- All three payments were self-paid. **No third party has ever paid this
+  endpoint**, so nothing here tests a real buyer's path, and the net-zero
+  balance in F0.7d.6 is an artefact of that.
+- Timings are single observations. The two cold starts agree within 7 ms, which
+  is reassuring and is still n=2.
+- `x-402-payer` was observed for one payer on one request. Its shape for a
+  contract wallet, or a Solana payer, is unknown.
