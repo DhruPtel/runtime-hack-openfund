@@ -828,3 +828,25 @@ example, chain events carry a UserOperation hash (F0.10.3), and cost lines carry
 `is_estimate` (F0.6.4); `core/types.py` supplies the leaf types those facts need.
 **Affects:** 1.1, 2.1–2.2, 3.1, 3.3, 3.7, 4.6, 6.1; `planning/PHASE-0-1.md` 1.1,
 `planning/PLAN.md` §8, `planning/CODEBASE.md` §2.
+
+## 2026-09-18 — The quote response mixes raw and human amounts, and one of them is lossy
+F0.3.2 recorded that the quote *response* carries a raw `amount` and a
+`formattedAmount`. Building 1.1's `Quote` type from probe 0.3's six recorded
+responses (`probes/out/quote.json`) showed that this is true of one side only.
+
+The response's formats, field by field:
+
+| Field | What it carries | Example (TSLA, $25) |
+|---|---|---|
+| `from.amount` | the human request echoed back | `"25"` |
+| `to.amount` | raw units | `"67948238487403141"` |
+| `to.formattedAmount` | a **lossy**, float-style rendering | `"0.06794823848740314"`, one digit short |
+| `minBuyAmount` | human decimal text | — |
+| `sellTokenPriceUsd`, `buyTokenPriceUsd` | JSON floats | — |
+
+So 1.5 reads `to.amount` for the bought quantity and never `formattedAmount`. It
+converts `from.amount` and `minBuyAmount` from decimal text at each asset's own
+decimals, and turns the two prices into exact decimals from their shortest text.
+The general lesson is the one F0.3.1 taught about decimals: a field's
+*documented* shape is not its measured shape until someone reads the bytes.
+**Affects:** 1.5; refines F0.3.2.
