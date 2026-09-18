@@ -29,7 +29,7 @@
       "assets": null
     }
   ],
-  "_assets_resolved_by": "unit 1.2 populates config/universe.json from the registry probe 0.8 found; the partition is assigned in unit 2.3",
+  "_assets_resolved_by": "the allowlist in config/registry/ (unit 1.2); the partition is assigned in unit 2.3",
 
   "risk_agent": {
     "id": "risk",

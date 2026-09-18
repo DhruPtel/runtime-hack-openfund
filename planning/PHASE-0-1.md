@@ -493,13 +493,15 @@ decisions and F0.8.1–F0.8.3; F0.3.1 and F0.4.7 (decimals); F0.10.3
 **Goal:** an asset enters the system only if we know it is the real one, and is
 held only if it can be marked independently of the venue.
 
-**Build:** `core/universe.py` plus `config/universe.json`, from a pinned snapshot
+**Build:** `core/universe.py` plus `config/registry/`, from a pinned snapshot
 of the issuer registry, `GET https://api.robinhood.com/rhj/assets`. It needs no
 authentication and lists 194 assets, all on 4663 (F0.8.1).
 
 - **The snapshot is the raw response bytes, and it lives in `config/registry/`**
-  as `rhj_assets.<sha256>.json`, beside the allowlist derived from it.
-  `universe.json` records the URL, fetch time, byte count and sha256. The
+  as `rhj_assets.<sha256>.json`. `config/registry/pins.json` records the URL,
+  fetch time, byte count and sha256; `feed_map.json` holds the reviewed
+  address-to-feed map. Together they are the allowlist, and
+  `config/universe.json`, never built, is retired. The
   registry carries no version, `ETag` or `Last-Modified`, so the sha256 of those
   bytes **is** the version. The rules, per the 0.8 decision:
   - pin it, and diff it on refresh;
@@ -546,8 +548,9 @@ authentication and lists 194 assets, all on 4663 (F0.8.1).
 - Do not assume `status` is always `ACTIVE` or that `deployments` has length 1.
   Neither has been observed otherwise, and neither is guaranteed (F0.8.1).
 
-**Artifact:** the raw registry and directory snapshots under `config/registry/`,
-the versioned allowlist in `config/universe.json`, and a loader.
+**Artifact:** under `config/registry/`, the raw registry and directory
+snapshots, `pins.json` and `feed_map.json`, which together are the versioned
+allowlist; and a loader.
 
 **Done when:**
 - an address outside the pinned snapshot cannot enter a snapshot;

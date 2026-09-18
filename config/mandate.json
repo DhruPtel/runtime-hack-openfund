@@ -11,7 +11,7 @@
   "cumulative_budget_usd": null,
 
   "allowed_assets": [],
-  "_allowed_assets_resolved_by": "probe 0.8, then config/universe.json",
+  "_allowed_assets_resolved_by": "unit 4.1, drawn from the allowlist in config/registry/ (pins.json, feed_map.json)",
 
   "approved_by": null,
   "approved_at": null,

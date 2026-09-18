@@ -67,7 +67,8 @@ fund/
 │   └── LESSONS.md              what changed and why. History, not authority.
 │
 ├── config/
-│   ├── universe.json           versioned issuer allowlist: (chain_id, address) → feed, decimals, provenance
+│   ├── registry/               the allowlist: pinned raw registry and feed directory (named by sha256),
+│   │                           pins.json (versions, issuer beacon, cash leg, gas), feed_map.json
 │   ├── mandate.json            bounds, wallet, chain, allowed assets, budget, expiry
 │   ├── thresholds.json         staleness, divergence, quote age, impact, turnover, cash floor, quorum
 │   ├── models.json             pinned model ids, token caps, deadlines, context budget
