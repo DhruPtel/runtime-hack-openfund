@@ -384,6 +384,14 @@ than it earned.
 **Checkpoint:** you read the page. Judge which assumptions died, and decide which
 ungated 4663 asset carries the live leg in Phase 5.
 
+**Written 2026-09-18; awaiting the operator.** The page is the "Phase 0 exit
+summary" at the head of `research/findings.md`. Every probe has a verdict, 0.4
+and 0.10 are half met, and twelve assumptions are listed as dead. Five config
+values that a probe was named to resolve are still null. The live-leg asset has
+not been decided: the evidence so far is one sponsored ETH-to-USDG sell
+(F0.10.3). The only open item that blocks Phase 1 code is the gap in how the
+staleness rules apply to a price series (1.11).
+
 **Phase 0 exit:** every probe has a recorded verdict, including fail and
 unresolved; findings written.
 
