@@ -172,6 +172,17 @@ and confirm the gate empirically, not to discover whether we can trade. A
 predicted answer is still a probe we run: recording the real error is what lets
 unit 5.6 decode it and what keeps PLAN.md §13 honest.
 
+**Run 2026-09-18 — fail, as expected.** One attempt selling 0.0001 ETH into
+AAPL returned 403 in 115 ms, `{"message":"Tokenized stocks (AAPL) are not
+available in your region."}`, before anything was broadcast and at no gas cost
+(F0.5.1–F0.5.2). Three things follow. First, the seven causes were never listed
+in this repository; they are now pinned in `probes/execute.py`, six quoted from
+Bankr's Errors table and the seventh reconstructed (F0.5.4). Second, the body is
+prose with no machine-readable cause, so 5.6's decoder fails closed on any 403 it
+does not recognise (F0.5.3). Third, the location gate fired first, so this does
+**not** show that `BANKR_KEY_EXEC` can transact (F0.5.5), and Phase 5's live leg
+is not de-risked until an ungated swap with that key settles.
+
 **Risk:** a quote succeeding proves nothing about execution. A pass here would
 have to be an actual fill, not an absence of error.
 

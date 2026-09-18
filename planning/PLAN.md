@@ -357,7 +357,10 @@ Tokenized-stock execution is location-gated and unavailable to this operator, so
 stock legs are paper. This phase proves the money path against a real chain using
 an **ungated leg** — memecoin/USDG swaps on 4663 need no location verification —
 so receipts, reconciliation, confirmation depth and explorer evidence are genuine
-rather than mocked. Opens once 4.12 passes; it is not gated on probe 0.5.
+rather than mocked. Opens once 4.12 passes; it is not gated on probe 0.5. It
+does rest on `BANKR_KEY_EXEC` being able to transact, which 0.5 did not show —
+the location gate fired first (findings F0.5.5) — so the live leg is not
+de-risked until an ungated swap with that key has settled.
 
 - **5.1** Live executor behind the same interface the paper executor satisfies.
 - **5.2** Small real buy **and** sell round trip on the ungated leg, with
@@ -369,7 +372,10 @@ rather than mocked. Opens once 4.12 passes; it is not gated on probe 0.5.
   holdings, expose remediation state.
 - **5.6** ▶ **A real 403:** *Show: the exact body from the gated stock path and
   which of the documented causes it maps to.* This is the expected result for
-  stock execution, not an error case.
+  stock execution, not an error case. The body carries no machine-readable
+  cause (F0.5.3), so the decoder matches prose and **fails closed** on any 403
+  it does not recognise, surfacing the raw body. The seven causes are listed in
+  `probes/execute.py` — six quoted, one reconstructed (F0.5.4).
 - **5.7** ▶ **Live cycle:** *Show: a scheduled cycle executing a small real
   transaction on the ungated leg and booking it, with the paper stock legs
   visible alongside.*
