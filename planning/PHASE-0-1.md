@@ -86,11 +86,19 @@ passing tells us nothing about a real position, so $25 is the figure that matter
 **Artifact:** full redacted responses in findings, plus a list of which fields
 were actually present versus documented-but-absent.
 
-**Done when:** we can state which fields we may rely on. Documented guarantees
-only three: `from`, `to`, `minBuyAmount`.
+**Done when:** we can state which fields we may rely on.
+
+Measured (F0.3.2): all 12 documented fields were present in all 6 responses,
+none absent and none undocumented. That does not make nine of them guarantees —
+six responses at one moment is not a contract — so 1.5 still treats an absent
+field as `null`, never as zero. Note `amount` is **human-readable** in the
+request while the response carries both raw `amount` and `formattedAmount`; the
+adapter owns that conversion.
 
 **Risk:** a stock with no quote returns an error that looks like a bug. Try
-several tickers before concluding anything.
+several tickers before concluding anything. A quote is also not balance-checked
+(F0.3.3): a size the wallet cannot cover still prices, so a successful quote is
+never evidence of executability.
 
 ---
 

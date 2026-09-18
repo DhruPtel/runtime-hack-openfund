@@ -244,7 +244,10 @@ re-evaluate before detailing the next.
   whichever source probe 0.4 established, divergence recorded with its
   independence stated.
 - **1.5** Quote adapter (read-only): quotes at the $25 intended size, with quote
-  age, fees, and impact as a three-valued field.
+  age, fees, and impact as a three-valued field. Impact is **signed** — negative
+  is price improvement — so a gate compares `impact > limit`, never
+  `abs(impact) > limit`. Re-runs probe 0.3 against a funded wallet, which is when
+  its numbers first mean anything about liquidity.
 - **1.6** ▶ **Snapshot builder:** merge, filter, hash. *Show: a real snapshot
   JSON, with per-asset tradeable/thin/excluded status and every timestamp
   visible.*
