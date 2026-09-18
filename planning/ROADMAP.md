@@ -70,25 +70,26 @@ Turn a permissionless chain into one trustworthy, frozen object.
 | Unit | Goal |
 |---|---|
 | 1.1 | Types module: the contracts everything else imports |
-| 1.2 | Versioned issuer allowlist keyed by (chain, address) with provenance |
-| 1.3 | Chain adapter: block-pinned reads, staleness and pause rules, source vs fetch time, timeouts and fail loudly |
-| 1.4 | Price cross-check: Chainlink marks, corroboration from whatever 0.4 established |
-| 1.5 | Quote adapter: quotes at the $25 intended size, with age, fees and three-valued impact |
+| 1.2 | Issuer registry pinned by sha256 as the identity rule; a Chainlink feed as a separate markability rule; beacon cross-check fails loudly |
+| 1.3 | Chain adapter: block-pinned reads, a price series up to the pinned block, staleness on the newest point, source vs fetch time, timeouts and fail loudly |
+| 1.4 | Price cross-check: Chainlink marks, GeckoTerminal corroborates, divergence tiered by the corroborator's volume |
+| 1.5 | Quote adapter: quotes at the $25 intended size, with age, fees and signed, three-valued impact — prices, not fills |
 | 1.6 ▶ | Snapshot builder: merge, filter, hash |
 | 1.7 | Analyst cost and latency against the real snapshot (relocated from 0.9) |
-| 1.8 | Held-but-untradeable assets stay in the book with a status |
+| 1.8 | Held-but-untradeable assets stay in the book with a status, four ways out; cash and gas are holdings too |
 | 1.9 ▶ | Fixtures and offline replay |
 | 1.10 | Selftest attesting every address against chain |
 | 1.11 ▶ | Skew rejection |
 
 **▶ 1.6 — the data**
-*You see:* a real snapshot JSON: every asset with price, source, quote at size,
-quote age, impact (or null), status (tradeable / excluded), and every timestamp.
+*You see:* a real snapshot JSON: every asset with price, its price history up to
+the pinned block, source, quote at size, quote age, impact (or null), a status
+with a named reason, and every timestamp.
 *Judge:* is this enough for an analyst to say something intelligent? What's
 missing that a real analyst would want?
 *Could change:* the whole adapter list. If the answer is "an analyst can't say
-anything useful from this," we add fundamentals, history or news before writing
-a single analyst.
+anything useful from this," we add fundamentals or news before writing a single
+analyst. History is already in, decided on F0.9.6's evidence.
 
 **▶ 1.9 — reproducibility**
 *You see:* the same command run twice, once live and once offline from a fixture,
@@ -97,8 +98,9 @@ producing identical hashes.
 *Could change:* how much of the demo is live versus replayed.
 
 **▶ 1.11 — the refusal**
-*You see:* a deliberately corrupted snapshot (two blocks mixed) being rejected by
-name.
+*You see:* deliberately corrupted snapshots — two blocks mixed, a stale newest
+point, an observation from after the pinned block — rejected by name. Beside
+them, a series with a week of old history and a fresh newest point, accepted.
 *Judge:* does it fail loudly rather than quietly averaging?
 *Could change:* how strict the freshness rules are before they become annoying.
 
@@ -222,9 +224,10 @@ consistent one?
 ## Phase 5 — live chain activity · opens once 4.12 passes
 
 Stock execution is location-gated and unavailable, so stock legs stay paper. The
-money path is proven against a real chain using an **ungated leg** — memecoin and
-USDG swaps on 4663 need no location verification — through the same treasurer,
-the same order state machine and the same journal.
+money path is proven against a real chain using an **ungated leg** — ETH→USDG on
+4663, decided at the 0.11 checkpoint and proven once by 0.10, which needs no
+location verification — through the same treasurer, the same order state
+machine and the same journal.
 
 | Unit | Goal |
 |---|---|
