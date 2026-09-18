@@ -699,24 +699,66 @@ bigger than drafted, because of the cash and gas marks.
 
 ### 1.5 Quote adapter
 
-**Goal:** know what we could actually trade, at size.
+**Goal:** the venue's price at our intended size, labelled as a price and as
+nothing more. A quote is not evidence that we could trade (F0.3.3), and for
+stocks we cannot (F0.5.1).
 
-**Build:** `adapters/bankr_quote.py`, read-only key only, no signing import.
-Request quotes at the **$25 intended size**, never a token size. Record quote
-age, fees, and the impact fields when present. Handle absent fields as null, not
-zero. Decimals are per asset and read on chain, never assumed: USDG is **6**,
-while two documented sources said 18 (F0.3.1); stock tokens are 18; feeds are 8
-(F0.4.7). The request `amount` is human-readable, and the adapter owns the
-conversion to raw units (F0.3.2).
+**Build:** `adapters/bankr_quote.py`, with `BANKR_KEY_READ` and no signing import.
+Read keys may quote (documented), and probe 0.3 quoted with this one. Quotes are
+USDG→stock at the **$25 intended size**, never a token size.
 
-**Artifact:** sized quotes attached to each asset.
+- **Sizing.** $25 nominal is about 24.94 USDG, because the venue priced USDG at
+  1.0022 (F0.3.5); the adapter owns that conversion. The request `amount` is
+  human-readable, and the response carries both raw `amount` and
+  `formattedAmount` (F0.3.2).
+- **Decimals are per asset and read on chain:** USDG is 6, stock tokens 18
+  (F0.3.1).
+- **Fields.** All 12 documented fields appeared in all 6 responses (F0.3.2). That
+  is not a guarantee: an absent field is null, never zero, and a null impact
+  blocks.
+- **Impact is signed** and gated as `impact > impact_max_bps` (50), never
+  `abs(impact)`, because negative impact is price improvement (F0.3.4). The field
+  that gates is `swapImpactBps` (documented). The two impact fields have never
+  differed in a measurement (F0.3.4).
+- **Age.** `quote_max_age_seconds` is 60. A stale or unknown `quoteId` "falls
+  back silently" (documented), so a quote's age comes from our own clock, not
+  from reusing its id.
+- **Errors.** A malformed body gets an identical `{"message":"Invalid request
+  body"}` whatever is wrong (probe 0.3), so the adapter validates its own
+  request. Amounts below a venue minimum are refused as "too small to swap"
+  (§0.10). A 429 carries no rate-limit headers (F0.10.5).
 
-**Done when:** a quote at intended size succeeds or fails explicitly, and a
-missing impact figure is null rather than assumed safe.
+**Artifact:** sized quotes attached to each asset, with age, fees and signed
+impact.
 
-**Risk:** a small quote passing tells you nothing about a real position. $25 is
-the number in `config/thresholds.json`; the probe uses it, not a convenient
-smaller one.
+**Done when:** a $25 quote succeeds or fails explicitly for every asset, a
+missing impact is null and blocks, and a negative impact passes the gate.
+
+**What funding does and does not change.** The draft had this unit re-run probe
+0.3 "against a funded wallet, which is when its numbers first mean anything
+about liquidity". The record does not support that, for two reasons:
+
+- **Quotes are not balance-checked.** A $25 quote priced normally against a
+  wallet holding no USDG (F0.3.3), so a funded wallet sends the same request
+  and, as far as anything measured shows, gets the same answer.
+- **No stock quote can be tested against a fill**, because stock execution is
+  gated for this operator (F0.5.1).
+
+So funding does not turn these numbers into evidence about liquidity, and nothing
+in Phase 1 can. What the unfunded wallet does block is 3.3's sizing against
+reconciled holdings, and Phase 5's volume.
+
+The same reasoning applies to the impact fields. F0.3.4 said separating them
+"needs a funded wallet". F0.3.3 suggests a larger quote prices unfunded, so this
+unit can test that with a read-only quote above $25. That is inferred, and
+untested.
+
+**Risk:** reading a successful quote as tradeability on its own. It is one of
+three conditions (1.6), and never proof of a fill.
+
+**Changed by:** F0.3.1–F0.3.5, F0.5.1, the documented gating field (the note
+under F0.5), F0.10.5, and the quote-age and impact config decisions. **Size:** as
+drafted, and smaller in one respect: it no longer waits on funding.
 
 ---
 
