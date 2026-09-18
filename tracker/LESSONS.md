@@ -318,3 +318,66 @@ cannot lean on the discovery list, the name, or a decimals read; it needs the
 issuer's own deployment list plus the beacon check, and 1.2's loader must refuse
 any address not on the resulting versioned allowlist.
 **Affects:** 0.8, 1.2; `config/universe.json`.
+
+## 2026-09-18 — Chainlink equity feeds do exist; the 0.3 observation was a sampling artifact
+The 0.3 session fetched the Robinhood mainnet reference directory, saw 57 feeds,
+sampled BTC, ETH, LINK and USDG, found no equity feed, and recorded that as an
+*observation, not a finding* because the other 53 were never enumerated — the
+caution was right, and the observation was wrong. Enumerated in full: **35 of the
+57 are equity feeds**, named `Robinhood <TICKER> / USD` with
+`docs.assetClass: "Equity"`, a naming a crypto-ticker sample cannot hit
+(`research/findings.md` F0.4.1). planning/PLAN.md §11's "Chainlink marks the
+book" survives, §2's invariants keep a mark independent of the execution venue,
+and 1.4's design is unchanged in shape. The general lesson is that a negative
+from a sample is not a negative about the population, and the repo's habit of
+labelling it as such is what made this recoverable in one step.
+**Affects:** 0.4, 1.4, planning/PLAN.md §11. No plan change; a blocker cleared.
+
+## 2026-09-18 — Tokenized stocks do have AMM pools, and GeckoTerminal covers all of them
+planning/PLAN.md §13 states as fact that "tokenized stocks have no AMM pool of
+their own", sourced to `bankr/references/tokenized-stocks.md:42` via
+`research/bankr-skills.md`; on chain, SPY has a `SPY / USDG 0.3%` pool holding
+$9.16M and AAPL twenty pools, and GeckoTerminal prices **32 of 32** addressable
+stock tokens off them (`research/findings.md` F0.4.2–F0.4.3). The contingency in
+the 2026-09-17 coverage entry therefore does not fire: the corroborator stays
+GeckoTerminal, it *is* independent of the execution venue, and the divergence
+veto stays cross-source instead of degrading to quote-versus-feed. The false
+clause is corrected in §13, but the consequence is left open — the 2026-09-17
+entry deleted "depth" because the plan said there was nothing to measure, and
+whether depth returns is a decision for the 0.4 checkpoint, not a repair to make
+inside the probe that found this.
+**Affects:** planning/PLAN.md §13, 1.4, 3.4, 3.8; `config/thresholds.json`
+(unchanged pending the checkpoint).
+
+## 2026-09-18 — Probe 0.4 cannot settle the multiplier; 1.4 proceeds on documentation
+0.4's done-condition required a **measured** answer to whether the Chainlink
+answer already incorporates `uiMultiplier()`, and it is not met: nine of 33
+tokens carry a multiplier other than 1.0, the largest is ORCL at 22.1 bps, and
+the noise floor between feed and corroborator — measured on the 23 tokens whose
+multiplier is exactly 1.0, where both hypotheses coincide — averages 141.9 bps
+(`research/findings.md` F0.4.4). The effect is an order of magnitude below the
+measurement error, so the question is recorded **unresolved** rather than
+resolved in favour of the two documented sources that agree it is already
+applied; the Bankr quote cannot break the tie because
+`tokenized-stocks.md:67` has the venue applying the multiplier itself, which
+makes that comparison circular as well as venue-dependent. 1.4 must follow the
+documented rule — do not apply it twice — and `core/valuation.py`'s comment must
+point at F0.4.4 and say the basis is documented and corroborated but not
+measured, rather than implying a probe settled it.
+**Affects:** 0.4 done-condition, 1.4; `core/valuation.py`.
+
+## 2026-09-18 — A flat divergence threshold cannot work; it tracks the corroborator's liquidity
+`config/thresholds.json` carries `divergence_max_bps: null` for probe 0.4 to
+resolve, on the assumption that one number would do. Measured at one block,
+divergence between feed and pool is 19.5 bps median for the 19 assets with over
+$1M of 24h volume and 164.7 bps for the 13 below it, worst cases EWY 610 bps on
+$3.5k of volume and CLSK 507 bps on $0.01 — the *pool* is wrong, not the feed
+(`research/findings.md` F0.4.5). A threshold at 50 bps vetoes eleven of 32 assets
+on a quiet day; one above 610 bps to accommodate EWY will not catch a genuinely
+broken mark, and AMZN diverging 499 bps on $2.19M of volume shows liquidity alone
+does not separate them. The threshold must be conditioned on corroborator
+liquidity, or illiquid names excluded at 1.2 so the veto only runs where the
+corroborator is worth comparing against — recommended, **not decided**, because
+it changes 3.4's gate shape.
+**Affects:** 3.4, 1.2; `config/thresholds.json` (still null pending the
+checkpoint).
