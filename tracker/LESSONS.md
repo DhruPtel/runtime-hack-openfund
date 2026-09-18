@@ -700,3 +700,23 @@ written for single readings and, applied point by point, would have rejected
 every series. They now bind the newest point.
 **Affects:** 1.3, 1.6, 1.11; `planning/PLAN.md` §9 (*fold pending*: PLAN.md was
 outside the 0.11 follow-up's paths); `config/thresholds.json`.
+
+## 2026-09-18 — DECISION: five config values set, all provisional
+*Operator decision at the 0.11 checkpoint*, on the five values a probe had been
+named to resolve and had not (`research/findings.md`, Phase 0 exit summary):
+
+- **Feed staleness is not a constant.** Each feed's own documented heartbeat
+  (86,400 s for the equity feeds, F0.4.1), plus a margin. This is what F0.4.7
+  recommended over one global number, since an `updatedAt` 3.6 hours old is
+  normal in market hours. The decision did not give the margin. It stays
+  `null`, and the check blocks until it is set.
+- **`quote_max_age_seconds`: 60.**
+- **`impact_max_bps`: 50**, compared signed. It is loose on purpose: measured
+  impact ran −15 to +2 bps on stock quotes (F0.3.4) and 13 bps at most (F0.5.1).
+- **`worker_deadline_seconds`: 120**, against 58 s measured for one analyst call
+  (F0.9.1).
+- **`analyst_model`: `claude-sonnet-5`, provisionally**, because that is what 0.9
+  measured. The final choice stays at 2.4, where the 139× cost spread across
+  models (F0.9.5) gets tested against output quality.
+**Affects:** 1.3, 1.5, 1.6, 1.7, 1.11, 2.4; `config/thresholds.json`,
+`config/models.json`.
