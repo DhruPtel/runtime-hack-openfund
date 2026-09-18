@@ -384,13 +384,22 @@ than it earned.
 **Checkpoint:** you read the page. Judge which assumptions died, and decide which
 ungated 4663 asset carries the live leg in Phase 5.
 
-**Written 2026-09-18; awaiting the operator.** The page is the "Phase 0 exit
-summary" at the head of `research/findings.md`. Every probe has a verdict, 0.4
-and 0.10 are half met, and twelve assumptions are listed as dead. Five config
-values that a probe was named to resolve are still null. The live-leg asset has
-not been decided: the evidence so far is one sponsored ETH-to-USDG sell
-(F0.10.3). The only open item that blocks Phase 1 code is the gap in how the
-staleness rules apply to a price series (1.11).
+**Held 2026-09-18.** The page is the "Phase 0 exit summary" at the head of
+`research/findings.md`. Every probe has a verdict, 0.4 and 0.10 are half met,
+and twelve assumptions are listed as dead. Four decisions came out of it
+(`tracker/LESSONS.md`):
+
+- **Freshness binds a series' newest point only.** This closes the 1.11 gap.
+- **Config values.** Feed staleness is each feed's heartbeat plus a margin,
+  and the margin is not yet given. Quote age is 60 s. Impact is 50 bps,
+  compared signed. The worker deadline is 120 s. The analyst model is
+  `claude-sonnet-5`, provisionally. All are provisional and in `config/`.
+- **The live leg is ETH→USDG on 4663.** It was proven for one sell (F0.10.1–
+  F0.10.3); the return leg is still unexercised.
+- **§11's x402 rationale stays marked contradicted, and $0.05 stays
+  provisional.** Neither blocks Phase 1.
+
+**Phase 0 is closed.**
 
 **Phase 0 exit:** every probe has a recorded verdict, including fail and
 unresolved; findings written.
