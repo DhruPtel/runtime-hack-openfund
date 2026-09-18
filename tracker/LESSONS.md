@@ -790,3 +790,24 @@ the x402 cached-record design, which is a 7.x concern.
 **Affects:** 1.1–1.11, Phase 1 exit, the re-evaluation gate; `config/README.md`;
 `planning/PLAN.md` §8's Phase 1 summaries and `planning/ROADMAP.md`'s Phase 1
 table (*fold pending*: outside this pass's paths).
+
+## 2026-09-18 — DECISION: the three remaining config values
+*Operator decision before unit 1.1.* These are the three values the Phase 1
+replan left null:
+- **`feed_staleness_margin_seconds`: 3600.** One hour on top of each feed's own
+  heartbeat, which is 86,400 s for the equity feeds (F0.4.1). Provisional.
+- **`transport_timeout_seconds`: 180.** It must exceed the 58 s a single analyst
+  call took (F0.9.1), because a client-side timeout is still billed and so is a
+  cost with no report (F0.9.3).
+- **`execution_wallet`: `0x93faecde3c88a713e1edddf417c02c326889a3da`.** It is the
+  one wallet all three Bankr keys resolve to (F0.2.3), and since 0.10 it is
+  EIP-7702-delegated on 4663 (F0.10.3).
+
+**An interaction, recorded and not resolved.** The 180 s transport timeout is
+longer than the 120 s `worker_deadline_seconds` decided at 0.11. Inside the 2.4
+runner, the deadline would therefore always fire first, and the transport
+timeout never would. Either one moves, or the two are defined to mean different
+things. That is 2.4's decision, and it does not affect 1.7, which makes single
+calls with no runner.
+**Affects:** 1.3, 1.7, 1.10, 1.11, 2.4; `config/thresholds.json`,
+`config/models.json`, `config/mandate.json`.
