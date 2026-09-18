@@ -194,3 +194,23 @@ stock fills are out of scope and stated in planning/PLAN.md §13. Unit 5.6 still
 the 403 is now the expected result for the stock path rather than an error case.
 **Affects:** Phase 5 name, units 5.1–5.7 and its exit; planning/PLAN.md §13; 8.4 and 8.6,
 which must state the paper/live split without burying it.
+
+## 2026-09-17 — All three Bankr keys come from one account
+`make check-env` reported four credentials present but only three distinct
+masked values: `BANKR_KEY_EXEC` and `BANKR_LLM_KEY` were the same string, which
+would have put the fund's spend credential in every analyst process and made
+planning/PLAN.md §2 invariant 1 decorative. The decision is three scoped keys
+from **one** Bankr account rather than two separate accounts, so account-level
+separation does not exist and the whole boundary now rests on per-key toggles:
+`BANKR_KEY_READ` and `BANKR_LLM_KEY` carry Read Only ON, only `BANKR_KEY_EXEC`
+has the Wallet API with Read Only OFF, and no key the analyst role can load may
+transact. What this weakens: a compromised analyst path is one console action or
+one mistaken toggle away from spend authority, whereas separate accounts would
+have made that a second credential the attacker does not have; the blast radius
+of the account owner's own credentials is now the whole fund; and revoking the
+execution key cannot be done without touching the account the analysts depend
+on. The rule is enforced by a `can_transact` field asserted in tests rather than
+by prose, and probe 0.2 verifies the toggles against the live surfaces rather
+than trusting the console.
+**Affects:** 0.2, 4.12 (the isolation test now proves a per-key rather than a
+per-account boundary), planning/PLAN.md §6 and §13.
