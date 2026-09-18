@@ -204,3 +204,246 @@ def test_an_unmatched_equity_feed_is_reported_not_dropped_or_guessed():
         equity_feed(None, "Robinhood SGOV-USD", "0x" + "22" * 20, asset_class=None)))
     assert props == []
     assert {x["feed_name"] for x in unresolved} == {"Robinhood DELL-USD", "Robinhood SGOV-USD"}
+
+
+# --- the proof, on the pinned universe in config/registry/ -------------------------
+
+import shutil
+
+from fund.core.types import (
+    USD, Amount, ChainAddress, Check, FetchStatus, Fixed, Holding, Observation, Price,
+    Source, UniverseStatus,
+)
+
+# As probe 0.8 recorded them (probes/out/identity.json).
+GME = AssetId(CHAIN, "0x1b0e319c6a659f002271b69db8a7df2f911c153e")
+FAKE_GAMESTOP = AssetId(CHAIN, "0x7e86381a763f0ecca2bdf27c54eac403ddd48123")
+FAKE_GREATEST_MEME_EVER = AssetId(CHAIN, "0xef67e3064bef1a27e81925ec7132f23e533bd5f6")
+CRM = AssetId(CHAIN, "0xd95b44124e475743a7589e68f3d74008a5536d44")
+USDG = AssetId(CHAIN, "0x5fc5360d0400a0fd4f2af552add042d716f1d168")
+ISSUER_BEACON = ChainAddress(CHAIN, "0xe10b6f6b275de231345c20d14ab812db62151b00")
+RPC = Source("rpc-4663", "public")
+
+
+@pytest.fixture(scope="module")
+def pinned():
+    return u.load()
+
+
+def slot_read(value=None, status=FetchStatus.OK, detail=None) -> Observation:
+    return Observation(value=value, source=RPC, source_time=None, fetch_time=Instant(1),
+                       block=None, status=status, detail=detail)
+
+
+def test_the_pinned_universe_loads_and_is_the_version_0_8_recorded(pinned):
+    assert pinned.registry.sha256 == "442718b5843e448e46a3deceab9f2d92f8719c0a4b1a77942d5d6da8098c8b4b"
+    assert len(pinned.records) == 194
+    assert len(pinned.feeds) == 37  # 35 equity feeds + USDG / USD + ETH / USD
+
+
+# identity ------------------------------------------------------------------------
+
+def test_the_real_gme_is_admitted(pinned):
+    gme = pinned.stock(GME, beacon=Check(True))
+    assert gme.identity.passes and gme.markability.passes
+    admission = pinned.admission(gme)
+    assert admission.decision.passes and admission.rule is None
+
+
+@pytest.mark.parametrize("fake", [FAKE_GAMESTOP, FAKE_GREATEST_MEME_EVER],
+                         ids=["GameStop", "Greatest Meme Ever"])
+def test_each_gme_counterfeit_is_refused_at_identity(pinned, fake):
+    with pytest.raises(u.Refused) as refusal:
+        pinned.stock(fake, beacon=Check(True))
+    assert refusal.value.rule == u.RULE_IDENTITY
+    assert refusal.value.asset == fake
+    assert "not in rhj_assets 442718b5843e" in str(refusal.value)
+
+
+# markability, apart from identity -----------------------------------------------
+
+def test_crm_is_genuine_and_correctly_unmarkable(pinned):
+    crm = pinned.stock(CRM, beacon=Check(True))
+    assert crm.identity.passes and pinned.standing(CRM).passes
+    assert not crm.markability.passes and crm.feed is None
+    admission = pinned.admission(crm)
+    assert admission.rule == u.RULE_MARKABILITY and admission.decision.value is False
+
+
+def test_markability_admits_every_mapped_feed_and_only_by_address(pinned):
+    assert pinned.markability(GME).passes
+    # A counterfeit whose ticker has a feed is still unmarkable: the map is keyed
+    # by address, and it can only hold registry-listed assets.
+    assert not pinned.markability(FAKE_GAMESTOP).passes
+
+
+def test_cash_and_gas_are_admitted_on_their_own_pins(pinned):
+    for asset in (pinned.cash(), pinned.gas()):
+        assert pinned.admission(asset).decision.passes, asset.symbol
+    assert pinned.cash().decimals == 6 and pinned.identity(USDG).value is False  # not a stock
+
+
+# the beacon ------------------------------------------------------------------------
+
+def test_a_matching_beacon_passes(pinned):
+    checks = pinned.cross_check_beacons({GME: slot_read(ISSUER_BEACON)})
+    assert checks[GME].passes
+
+
+def test_a_constructed_beacon_disagreement_stops_the_cycle(pinned):
+    elsewhere = ChainAddress(CHAIN, "0x" + "de" * 20)
+    with pytest.raises(u.BeaconDisagreement) as refusal:
+        pinned.cross_check_beacons({GME: slot_read(ISSUER_BEACON), CRM: slot_read(elsewhere)})
+    assert refusal.value.rule == u.RULE_BEACON
+    assert refusal.value.disagreements == ((CRM, elsewhere),)
+
+
+def test_an_unset_slot_on_a_listed_asset_is_a_disagreement(pinned):
+    zero = u.beacon_from_slot(CHAIN, "0x" + "0" * 64)
+    with pytest.raises(u.BeaconDisagreement):
+        pinned.cross_check_beacons({GME: slot_read(zero)})
+
+
+def test_an_unread_slot_is_undetermined_not_a_disagreement(pinned):
+    checks = pinned.cross_check_beacons(
+        {GME: slot_read(status=FetchStatus.UNREACHABLE, detail="rpc timeout")})
+    assert checks[GME].value is None
+    admission = pinned.admission(pinned.stock(GME, beacon=checks[GME]))
+    assert admission.rule == u.RULE_BEACON and admission.decision.value is None  # blocks
+
+
+def test_a_counterfeit_is_never_beacon_compared_it_is_refused_at_identity(pinned):
+    with pytest.raises(u.Refused) as refusal:
+        pinned.cross_check_beacons({FAKE_GAMESTOP: slot_read(ISSUER_BEACON)})
+    assert refusal.value.rule == u.RULE_IDENTITY
+
+
+def test_the_slot_word_decodes_to_the_issuer_beacon():
+    word = "0x000000000000000000000000e10b6f6b275de231345c20d14ab812db62151b00"
+    assert u.beacon_from_slot(CHAIN, word) == ISSUER_BEACON
+
+
+# the pin, on the real bytes ----------------------------------------------------------
+
+@pytest.fixture
+def registry_copy(tmp_path):
+    target = tmp_path / "registry"
+    shutil.copytree(u.DEFAULT_DIR, target)
+    return target
+
+
+def test_a_pinned_file_whose_bytes_no_longer_hash_to_the_pin_is_refused(registry_copy):
+    pin, raw = u.read_pinned(u.REGISTRY, registry_copy)
+    assert b"Salesforce" in raw
+    (registry_copy / u.filename_for(u.REGISTRY, pin.sha256)).write_bytes(
+        raw.replace(b"Salesforce", b"Salesforcf", 1))  # still valid JSON
+    with pytest.raises(u.PinMismatch) as refusal:
+        u.load(registry_copy)
+    assert refusal.value.rule == u.RULE_PIN
+
+
+def test_a_feed_map_reviewed_against_other_versions_is_refused(registry_copy):
+    doc = json.loads((registry_copy / u.FEED_MAP_FILE).read_text())
+    doc["reviewed_against"][u.REGISTRY] = "0" * 64
+    (registry_copy / u.FEED_MAP_FILE).write_text(json.dumps(doc))
+    with pytest.raises(u.FeedMapStale) as refusal:
+        u.load(registry_copy)
+    assert refusal.value.rule == u.RULE_FEED_MAP
+
+
+def test_the_feed_map_cannot_give_a_counterfeit_a_feed(registry_copy):
+    doc = json.loads((registry_copy / u.FEED_MAP_FILE).read_text())
+    gme_entry = next(e for e in doc["entries"] if e["asset"] == GME.address)
+    doc["entries"].remove(gme_entry)
+    doc["entries"].append({**gme_entry, "asset": FAKE_GAMESTOP.address})
+    (registry_copy / u.FEED_MAP_FILE).write_text(json.dumps(doc))
+    with pytest.raises(u.UniverseError) as refusal:
+        u.load(registry_copy)
+    assert refusal.value.rule == u.RULE_FEED_MAP
+    # Three map failures share this rule; this one must be the identity guard,
+    # not staleness or a double mapping.
+    assert not isinstance(refusal.value, u.FeedMapStale)
+    assert "names neither a registry asset" in str(refusal.value)
+    assert FAKE_GAMESTOP.address in str(refusal.value)
+
+
+# a status that is not ACTIVE: refused for buying, never dropped -----------------------
+
+def repin_with(registry_dir, raw: bytes):
+    """Pin new registry bytes through the real refresh path, then re-review the map."""
+    _, current = u.read_pinned(u.REGISTRY, registry_dir)
+    plan = u.plan_refresh(u.REGISTRY, "api.robinhood.com/rhj/assets", raw, Instant(2), current)
+    u.store(plan, registry_dir)
+    u.accept(plan, registry_dir)
+    doc = json.loads((registry_dir / u.FEED_MAP_FILE).read_text())
+    doc["reviewed_against"][u.REGISTRY] = plan.pin.sha256
+    (registry_dir / u.FEED_MAP_FILE).write_text(json.dumps(doc))
+    return plan
+
+
+def test_a_delisted_status_refuses_buying_at_standing_and_keeps_the_holding(registry_copy):
+    _, raw = u.read_pinned(u.REGISTRY, registry_copy)
+    payload = json.loads(raw)
+    for item in payload["assets"]:
+        if item["tokenSymbol"] == "GME":
+            item["status"] = "ASSET_STATUS_DELISTED"  # constructed: never observed (F0.8.1)
+    plan = repin_with(registry_copy, json.dumps(payload).encode())
+    assert any(k == GME and field == "status" for k, field, *_ in plan.changed)
+
+    universe = u.load(registry_copy)
+    gme = universe.stock(GME, beacon=Check(True))
+    assert gme.identity.passes and gme.markability.passes  # still the genuine asset
+    admission = universe.admission(gme)
+    assert admission.rule == u.RULE_STANDING and admission.decision.value is False
+
+    # The holding does not vanish: it keeps its full description and its mark.
+    held = universe.held_asset(GME, decimals=18)
+    assert held.registry is not None and held.feed is not None
+    mark = Observation(value=Price(2_500_000_000, 8, GME, USD), source=RPC,
+                       source_time=Instant(1), fetch_time=Instant(1), block=None,
+                       status=FetchStatus.OK)
+    balance = Observation(value=Amount(10**18, 18, GME), source=RPC, source_time=None,
+                          fetch_time=Instant(1), block=None, status=FetchStatus.OK)
+    Holding(asset=GME, balance=balance, universe_status=UniverseStatus.IDENTITY_IN_DOUBT,
+            universe_reason="registry status ASSET_STATUS_DELISTED, not ACTIVE",
+            mark=mark, value=Fixed(25, 0, USD), value_reason=None)
+
+
+def test_an_asset_dropped_from_the_registry_stays_describable_while_held(registry_copy):
+    _, raw = u.read_pinned(u.REGISTRY, registry_copy)
+    payload = json.loads(raw)
+    payload["assets"] = [a for a in payload["assets"] if a["tokenSymbol"] != "CRM"]
+    _, current = u.read_pinned(u.REGISTRY, registry_copy)
+    plan = u.plan_refresh(u.REGISTRY, "api.robinhood.com/rhj/assets",
+                          json.dumps(payload).encode(), Instant(2), current)
+    u.store(plan, registry_copy)
+    with pytest.raises(u.HeldAssetRemoved):
+        u.accept(plan, registry_copy, held=[CRM])
+    u.accept(plan, registry_copy, held=[CRM], acknowledge_removed_held=True)
+    doc = json.loads((registry_copy / u.FEED_MAP_FILE).read_text())
+    doc["reviewed_against"][u.REGISTRY] = plan.pin.sha256
+    (registry_copy / u.FEED_MAP_FILE).write_text(json.dumps(doc))
+
+    universe = u.load(registry_copy)
+    with pytest.raises(u.Refused):
+        universe.stock(CRM, beacon=Check(True))  # no longer admissible to buy
+    held = universe.held_asset(CRM, decimals=18)  # and still in the book
+    assert held.identity.value is False and "not in rhj_assets" in held.identity.reason
+
+
+# the boundary ------------------------------------------------------------------------
+
+def test_core_universe_imports_nothing_from_adapters():
+    import ast
+    import pathlib
+    import sys
+    tree = ast.parse(pathlib.Path(u.__file__).read_text())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            if node.level:  # relative: only .types, within core
+                assert node.module == "types", node.module
+            else:
+                assert node.module.split(".")[0] in sys.stdlib_module_names, node.module
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                assert alias.name.split(".")[0] in sys.stdlib_module_names, alias.name

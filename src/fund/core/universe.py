@@ -44,8 +44,8 @@ from types import MappingProxyType
 from typing import Any, Iterable, Mapping
 
 from .types import (
-    MULTIPLE, PERCENT, SECONDS, AssetId, ChainAddress, Deployment, FeedRef, Fixed,
-    Instant, PinnedInput, RegistryRecord, TradingCapability,
+    MULTIPLE, PERCENT, SECONDS, Asset, AssetId, AssetKind, ChainAddress, Check, Deployment,
+    FeedRef, Fixed, Instant, Observation, PinnedInput, RegistryRecord, TradingCapability,
 )
 
 # --- rules and refusals --------------------------------------------------------
@@ -358,3 +358,237 @@ def propose_feed_map(records: Mapping[AssetId, RegistryRecord], directory_raw: b
                                "baseAsset": base,
                                "baseAssetEntityId": (feed.get("docs") or {}).get("baseAssetEntityId")})
     return sorted(proposals, key=lambda p: p.asset), unresolved
+
+
+# --- the beacon: an independent root that must fail loudly ---------------------
+
+#: EIP-1967's beacon slot: keccak256("eip1967.proxy.beacon") - 1.
+BEACON_SLOT = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50"
+
+
+def beacon_from_slot(chain_id: int, word: str) -> ChainAddress:
+    """The address a 32-byte slot word holds. An unset slot is the zero address."""
+    if not isinstance(word, str) or not re.fullmatch(r"0x[0-9a-fA-F]{64}", word):
+        raise ValueError("a storage slot word is 0x + 64 hex")
+    return ChainAddress(chain_id, "0x" + word[-40:])
+
+
+class BeaconDisagreement(UniverseError):
+    """Registry and beacon disagree: one of them is compromised. The cycle stops.
+
+    This is raised, never returned as a False check, so that no caller can log
+    it and carry on. A cross-check that degrades to a warning is not a
+    cross-check (0.8 decision).
+    """
+
+    def __init__(self, disagreements: Iterable[tuple[AssetId, ChainAddress]], expected: ChainAddress):
+        self.disagreements = tuple(disagreements)
+        self.expected = expected
+        listed = "; ".join(f"{a.address} resolves to {b.address}" for a, b in self.disagreements)
+        super().__init__(RULE_BEACON, f"registry-listed assets whose beacon is not the "
+                         f"issuer's {expected.address}: {listed}")
+
+
+# --- the universe ---------------------------------------------------------------
+
+@dataclass(frozen=True)
+class Admission:
+    """Whether the fund may buy an asset. `rule` names the rule that refused or
+    left it undetermined, and is None when every rule passed."""
+
+    decision: Check
+    rule: str | None
+
+
+@dataclass(frozen=True)
+class Universe:
+    """The pinned universe. Each rule is a separate method returning a three-valued Check."""
+
+    registry: PinnedInput
+    directory: PinnedInput
+    records: Mapping[AssetId, RegistryRecord]
+    feeds: Mapping[AssetId, FeedRef]
+    issuer_beacon: ChainAddress
+    cash_leg: AssetId
+    cash_decimals: int
+    gas_asset: AssetId
+    gas_decimals: int
+
+    @property
+    def _tag(self) -> str:
+        return f"{REGISTRY} {self.registry.sha256[:12]}…"
+
+    # the rules, each on its own --------------------------------------------
+
+    def identity(self, asset: AssetId) -> Check:
+        if asset in self.records:
+            return Check(True, f"listed in {self._tag}")
+        return Check(False, f"not in {self._tag}")
+
+    def standing(self, asset: AssetId) -> Check:
+        record = self.records.get(asset)
+        if record is None:
+            return Check(False, f"not in {self._tag}")
+        if record.status == ACTIVE:
+            return Check(True, ACTIVE)
+        return Check(False, f"registry status {record.status}, not {ACTIVE} — a status "
+                            "never observed before (F0.8.1)")
+
+    def markability(self, asset: AssetId) -> Check:
+        feed = self.feeds.get(asset)
+        if feed is None:
+            return Check(False, "no Chainlink feed pinned for this address")
+        return Check(True, f"{feed.name} at {feed.proxy.address}")
+
+    def cross_check_beacons(self, reads: Mapping[AssetId, Observation]) -> dict[AssetId, Check]:
+        """Compare each listed asset's beacon slot with the issuer's beacon.
+
+        - An address the registry does not list is refused at identity, and never
+          compared: the beacon opines, it does not admit.
+        - A read that failed is undetermined, and says why. It blocks, but it is
+          not a disagreement: an RPC timeout is not evidence of compromise.
+        - A slot that was read and differs, zero included, is a disagreement.
+          Every disagreement is collected, then raised together.
+        """
+        checks: dict[AssetId, Check] = {}
+        disagreements = []
+        for asset, seen in reads.items():
+            self.require_listed(asset)
+            if not seen.ok:
+                checks[asset] = Check.undetermined(
+                    f"beacon slot not read: {seen.status.value}: {seen.detail}")
+            elif not isinstance(seen.value, ChainAddress):
+                raise TypeError("a beacon read is a ChainAddress")
+            elif seen.value == self.issuer_beacon:
+                checks[asset] = Check(True, f"resolves to the issuer beacon {self.issuer_beacon.address}")
+            else:
+                disagreements.append((asset, seen.value))
+        if disagreements:
+            raise BeaconDisagreement(disagreements, self.issuer_beacon)
+        return checks
+
+    # assets ---------------------------------------------------------------------
+
+    def require_listed(self, asset: AssetId) -> RegistryRecord:
+        record = self.records.get(asset)
+        if record is None:
+            raise Refused(RULE_IDENTITY, asset, f"not in {self._tag}")
+        return record
+
+    def stock(self, asset: AssetId, beacon: Check) -> Asset:
+        """A registry-listed stock, with its three verdicts. Unlisted addresses are refused."""
+        record = self.require_listed(asset)
+        return Asset(id=asset, kind=AssetKind.STOCK, symbol=record.symbol,
+                     decimals=record.decimals, identity=self.identity(asset),
+                     markability=self.markability(asset), beacon=beacon,
+                     registry=record, feed=self.feeds.get(asset))
+
+    def cash(self) -> Asset:
+        return Asset(id=self.cash_leg, kind=AssetKind.CASH, symbol="USDG",
+                     decimals=self.cash_decimals,
+                     identity=Check(True, "pinned cash leg (config/registry/pins.json)"),
+                     markability=self.markability(self.cash_leg), beacon=None,
+                     feed=self.feeds.get(self.cash_leg))
+
+    def gas(self) -> Asset:
+        return Asset(id=self.gas_asset, kind=AssetKind.GAS, symbol="ETH",
+                     decimals=self.gas_decimals, identity=Check(True, "the chain's native token"),
+                     markability=self.markability(self.gas_asset), beacon=None,
+                     feed=self.feeds.get(self.gas_asset))
+
+    def held_asset(self, asset: AssetId, decimals: int,
+                   beacon: Check = Check(None, "beacon not read for this description")) -> Asset:
+        """Describe something the wallet holds. This never refuses: a holding
+        must not vanish.
+
+        - A listed asset keeps its full description, whatever its status: a
+          non-ACTIVE asset is refused for buying (`standing`), but it keeps its
+          identity, its registry record and its mark.
+        - An address the registry no longer lists — or never listed — is
+          described with identity False and no feed, so it stays in the book,
+          flagged. `decimals` is the chain's, since the registry no longer
+          supplies it.
+        """
+        if asset == self.cash_leg:
+            return self.cash()
+        if asset == self.gas_asset:
+            return self.gas()
+        if asset in self.records:
+            return self.stock(asset, beacon)
+        return Asset(id=asset, kind=AssetKind.STOCK, symbol="unlisted", decimals=decimals,
+                     identity=self.identity(asset),
+                     markability=Check(False, "unlisted: no feed may mark it"),
+                     beacon=Check(None, "not cross-checked: identity is false"))
+
+    def admission(self, asset: Asset) -> Admission:
+        """May the fund buy it? The rules run in a fixed order; the first failure is named.
+
+        The order: identity, standing, beacon, markability. Cash and gas have no
+        registry standing and no beacon. A None anywhere yields an undetermined
+        admission rather than a refusal, because null blocks and is not false.
+        """
+        rules = [(RULE_IDENTITY, asset.identity)]
+        if asset.kind is AssetKind.STOCK:
+            rules += [(RULE_STANDING, self.standing(asset.id)), (RULE_BEACON, asset.beacon)]
+        rules.append((RULE_MARKABILITY, asset.markability))
+        for rule, check in rules:
+            if not check.passes:
+                return Admission(Check(check.value, f"[{rule}] {check.reason}"), rule)
+        return Admission(Check(True, "identity, standing, beacon and markability all pass"
+                               if asset.kind is AssetKind.STOCK
+                               else "pinned identity and markability pass"), None)
+
+
+# --- loading the pinned universe ------------------------------------------------
+
+def _load_feed_map(registry_dir: Path, registry: PinnedInput, directory: PinnedInput,
+                   records: Mapping[AssetId, RegistryRecord],
+                   feeds: Mapping[ChainAddress, FeedRef],
+                   non_registry: set[AssetId]) -> dict[AssetId, FeedRef]:
+    doc = json.loads((registry_dir / FEED_MAP_FILE).read_bytes())
+    expected = {REGISTRY: registry.sha256, DIRECTORY: directory.sha256}
+    if doc.get("reviewed_against") != expected:
+        raise FeedMapStale(f"feed map was reviewed against {doc.get('reviewed_against')}, "
+                           f"but the pins are {expected}: re-review it before loading")
+    mapped: dict[AssetId, FeedRef] = {}
+    used: set[ChainAddress] = set()
+    for entry in doc["entries"]:
+        asset = AssetId(entry["chain_id"], entry["asset"])
+        proxy = ChainAddress(entry["chain_id"], entry["feed_proxy"])
+        if asset not in records and asset not in non_registry:
+            # A feed may only attach to an asset whose identity is already
+            # settled. This is where a counterfeit would try to get in.
+            raise UniverseError(RULE_FEED_MAP, f"entry for {asset.address} names neither a "
+                                "registry asset nor the pinned cash leg or gas")
+        feed = feeds.get(proxy)
+        if feed is None:
+            raise UniverseError(RULE_FEED_MAP, f"feed {proxy.address} is not in the pinned directory")
+        if feed.name != entry["feed_name"]:
+            raise UniverseError(RULE_FEED_MAP, f"{proxy.address} is {feed.name!r} in the "
+                                f"directory, {entry['feed_name']!r} in the map")
+        if asset in mapped or proxy in used:
+            raise UniverseError(RULE_FEED_MAP, f"{asset.address} or {proxy.address} mapped twice")
+        mapped[asset] = feed
+        used.add(proxy)
+    return mapped
+
+
+def load(registry_dir: Path = DEFAULT_DIR) -> Universe:
+    """The pinned universe, read from disk. Every input is verified against its
+    pin before it is parsed. Nothing is fetched."""
+    pins = read_pins(registry_dir)
+    registry, registry_raw = read_pinned(REGISTRY, registry_dir)
+    directory, directory_raw = read_pinned(DIRECTORY, registry_dir)
+    beacon = pins["issuer_beacon"]
+    chain_id = beacon["chain_id"]
+    records = parse_registry(registry_raw)
+    cash = pins["cash_leg"]
+    cash_leg = AssetId(cash["chain_id"], cash["address"])
+    gas_asset = AssetId.native(pins["gas"]["chain_id"])
+    feeds = _load_feed_map(registry_dir, registry, directory, records,
+                           parse_directory(directory_raw, chain_id), {cash_leg, gas_asset})
+    return Universe(registry=registry, directory=directory,
+                    records=MappingProxyType(records), feeds=MappingProxyType(feeds),
+                    issuer_beacon=ChainAddress(chain_id, beacon["address"]),
+                    cash_leg=cash_leg, cash_decimals=cash["decimals"],
+                    gas_asset=gas_asset, gas_decimals=pins["gas"]["decimals"])
