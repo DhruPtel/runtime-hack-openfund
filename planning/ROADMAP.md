@@ -306,7 +306,8 @@ residual reconciling.
 
 **▶ 7.5 — the business model working**
 *You see:* a client paying, receiving the record, and the payment landing in the
-books.
+books. The client is `@x402/fetch` with a fresh, locally held key and no Bankr
+account — the first payment from anyone but ourselves.
 *Judge:* is the x402 revenue line real, and does it reconcile from settlement
 evidence rather than from a handler log?
 *Could change:* price, tiering, what the free preview includes.

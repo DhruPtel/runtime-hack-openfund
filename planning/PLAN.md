@@ -451,7 +451,9 @@ rounding.
 - **7.4** Revenue booked from settlement evidence, ingested separately from
   handler logs.
 - **7.5** ▶ **A real purchase:** *Show: a client paying and receiving the record,
-  and the payment appearing in the books.*
+  and the payment appearing in the books.* The buyer uses `@x402/fetch` with a
+  **freshly generated, locally held key** and no Bankr account. That is the first
+  third-party payment, and it closes the inference recorded in §13.
 - **7.6** Public page reading the same published records.
 - **7.7** ▶ **The page:** *Show: basket, weights, latest decision with reasoning,
   veto history, statements.*
@@ -559,6 +561,19 @@ mandate.
 - **The paid endpoint prices in USDC on Base**, because the standard client's
   network enum excludes 4663. The fund trades on 4663; the research sells on
   Base.
+  **Open — contradicted, not reconciled (2026-09-18).** The reason given is a
+  property of the v1 client: `x402` 1.2.0 has a closed `NetworkSchema`. The
+  buyer client decided below, `@x402/fetch` 2.26.0, has no closed network enum;
+  it addresses chains as `eip155:<id>` (findings F0.7e.2, F0.7e.5). So the
+  stated reason does not hold for the client we name. Whether an endpoint priced
+  on 4663 would be payable — by Bankr x402 Cloud, through its facilitator, in
+  USDG — is unmeasured. The decision to sell on Base has not been revisited; only
+  its justification has gone.
+- **The buyer client is `@x402/fetch` 2.26.0** with `@x402/evm`, measured paying
+  our endpoint unmodified (F0.7e.5). Buyer instructions name it explicitly,
+  because Bankr's own docs point buyers at `x402-fetch` 1.2.0, which cannot pay
+  us (F0.7e.1, F0.7e.4). **The claim is "payable by any x402 v2 client, and by
+  Bankr users"** — never "payable by any x402 client".
 - **No-rebalance preserves holdings.** It never means liquidate.
 - **Published, reconciled books.** Not "audited."
 
@@ -624,6 +639,12 @@ Published with the project, not hidden.
 - Call accuracy is hypothetical by construction and never enters fund profit.
 - Reporting entity is the execution wallet plus one Base receiving address. No
   wider consolidation.
+- **A third-party buyer is inferred, not measured.** Every payment our endpoint
+  has received was self-paid. The one made through a standard client was signed
+  by Bankr's signing service for the fund's custodial wallet, not by a locally
+  held key (findings F0.7e.6). A buyer holding their own key should look
+  identical to the server, and stays an inference until one pays us at 7.5. The
+  published v1 x402 clients cannot pay us unmodified.
 - **No live tokenized-stock fills.** Robinhood gates tokenized-stock execution
   behind location verification and the operator is in the US, so stock legs are
   paper: sized and priced from real live quotes, through the same executor
