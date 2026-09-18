@@ -287,6 +287,17 @@ risk gate must treat quote success as an input to sizing, never as a
 tradeability verdict on its own.
 **Affects:** 1.5, 3.3, 3.4.
 
+## 2026-09-17 — Probe 0.3: price impact is signed, and a magnitude gate is wrong
+`priceImpactBps` came back **negative** on four of six quotes — AAPL 0, NVDA −2,
+TSLA −12 and −15 — because negative impact is price improvement, not a problem
+(`research/findings.md` F0.3.4). A gate written `abs(impact) > limit` would
+therefore refuse the best fills the fund gets; it must compare the signed value,
+`impact > limit`. The two impact fields were identical in all six responses, so
+planning/PLAN-v1.md §4's claim that execution gates on `swapImpactBps` while
+`priceImpactBps` is display-only remains **unresolved** until a size large enough
+to separate them is quotable, which needs a funded wallet.
+**Affects:** `core/gates.py` (3.4), 1.5.
+
 ## 2026-09-17 — Probe 0.3: three discovery sources need a User-Agent
 `tokens.coingecko.com`, `reference-data-directory.vercel.app` and
 `RPC_4663_MAINNET` each returned 403 to a bare `urllib` request and answered
