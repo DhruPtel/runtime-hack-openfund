@@ -14,9 +14,9 @@ import pytest
 
 from fund.core.types import (
     BPS, MULTIPLE, PERCENT, SECONDS, USD, Amount, AssetId, BlockRef, ChainAddress,
-    Asset, AssetKind, Check, Deployment, FeedRef, FetchStatus, Fixed, Instant,
+    Asset, AssetKind, Check, Deployment, FeedRef, FetchStatus, Fixed, Holding, Instant,
     Observation, Price, Quote, RegistryRecord, Series, Source, TradingCapability,
-    content_id, from_canonical, to_canonical,
+    UniverseStatus, content_id, from_canonical, to_canonical,
 )
 
 CHAIN = 4663
@@ -450,3 +450,58 @@ def test_quote_fields_carry_their_units():
               price_impact=Fixed(-15, 0, PERCENT), swap_impact=None, max_price_impact=None,
               fee=None, fee_waived=None, slippage=None, sell_price=None, buy_price=None,
               quote_id=None)
+
+
+# --- holdings ------------------------------------------------------------------
+
+RPC = Source("rpc-4663", "public")
+
+
+def balance_of(asset: AssetId, raw: int, decimals: int) -> Observation:
+    return Observation(value=Amount(raw, decimals, asset), source=RPC, source_time=None,
+                       fetch_time=Instant.from_seconds(T0), block=PINNED,
+                       status=FetchStatus.OK)
+
+
+def test_a_holding_with_no_feed_stays_in_the_book_unvalued_and_says_why():
+    held = Holding(asset=CRM, balance=balance_of(CRM, 10**17, 18),
+                   universe_status=UniverseStatus.UNMARKABLE,
+                   universe_reason="no Chainlink feed (F0.4.1)",
+                   mark=None, value=None,
+                   value_reason="no mark independent of the venue")
+    assert held.value is None
+    roundtrip(held)
+
+
+def test_an_unvalued_holding_must_say_why_and_a_value_needs_a_read_mark():
+    with pytest.raises(ValueError):
+        Holding(asset=CRM, balance=balance_of(CRM, 1, 18),
+                universe_status=UniverseStatus.UNMARKABLE, universe_reason="no feed",
+                mark=None, value=None, value_reason=None)
+    with pytest.raises(ValueError):  # a value with no mark is a number from nowhere
+        Holding(asset=CRM, balance=balance_of(CRM, 1, 18),
+                universe_status=UniverseStatus.UNMARKABLE, universe_reason="no feed",
+                mark=None, value=Fixed(0, 0, USD), value_reason=None)
+
+
+def test_the_cash_leg_is_held_and_valued_from_its_own_feed():
+    # Since 0.10 the wallet holds 0.078742 USDG on 4663.
+    mark = Observation(value=Price(100_020_000, 8, USDG, USD),
+                       source=Source("chainlink-feed", "0x" + "11" * 20),
+                       source_time=Instant.from_seconds(T0 - 60),
+                       fetch_time=Instant.from_seconds(T0), block=PINNED,
+                       status=FetchStatus.OK)
+    cash = Holding(asset=USDG, balance=balance_of(USDG, 78_742, 6),
+                   universe_status=UniverseStatus.NOT_A_STOCK, universe_reason="cash leg",
+                   mark=mark, value=Fixed(78_757, 6, USD), value_reason=None)
+    roundtrip(cash)
+
+
+def test_an_unreadable_balance_is_kept_not_dropped():
+    lost = Observation(value=None, source=RPC, source_time=None,
+                       fetch_time=Instant.from_seconds(T0), block=PINNED,
+                       status=FetchStatus.UNREACHABLE, detail="rpc timeout")
+    held = Holding(asset=AAPL, balance=lost, universe_status=UniverseStatus.TRADEABLE,
+                   universe_reason=None, mark=None, value=None,
+                   value_reason="balance unreadable this snapshot")
+    roundtrip(held)

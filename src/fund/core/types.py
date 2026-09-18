@@ -832,3 +832,61 @@ class Quote:
 
 
 _VALUE_TYPES = _VALUE_TYPES + (Quote,)
+
+
+# --- holdings ------------------------------------------------------------------
+
+class UniverseStatus(enum.Enum):
+    """Can we buy it? The four ways out of the buy universe are kept distinct
+    (1.8), because each means something different for valuation."""
+
+    TRADEABLE = "tradeable"
+    NOT_TRADEABLE = "not_tradeable"                      # this snapshot: quote, age or impact
+    BELOW_CORROBORATOR_LINE = "below_corroborator_line"  # still marked by Chainlink
+    UNMARKABLE = "unmarkable"                            # no feed: no independent mark
+    IDENTITY_IN_DOUBT = "identity_in_doubt"              # registry or beacon
+    NOT_A_STOCK = "not_a_stock"                          # cash leg, gas
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Holding:
+    """Something the wallet holds, kept in the book whatever its universe status.
+
+    The balance is read over RPC (F0.7b.8), so it is an Observation and can be
+    unreachable. The value is either derived from a mark or absent with a
+    reason. It is never silently zero, and never the venue's own quote: a
+    holding with no feed has no independent mark (0.4 decision, F0.4.4).
+    """
+
+    asset: AssetId
+    balance: Observation
+    universe_status: UniverseStatus
+    universe_reason: str | None
+    mark: Observation | None
+    value: Fixed | None
+    value_reason: str | None
+
+    def __post_init__(self):
+        _is("asset", self.asset, AssetId)
+        _is("balance", self.balance, Observation)
+        _is("universe_status", self.universe_status, UniverseStatus)
+        _is("mark", self.mark, Observation, optional=True)
+        _is("value", self.value, Fixed, optional=True)
+        if self.balance.ok and (not isinstance(self.balance.value, Amount)
+                                or self.balance.value.asset != self.asset):
+            raise ValueError("a balance is an amount of the held asset")
+        if self.universe_status is not UniverseStatus.TRADEABLE:
+            _text("universe_reason (say why it is out)", self.universe_reason)
+        if self.mark is not None and self.mark.ok and (
+                not isinstance(self.mark.value, Price) or self.mark.value.base != self.asset):
+            raise ValueError("a mark is a price of the held asset")
+        if self.value is None:
+            _text("value_reason (an unvalued holding says why)", self.value_reason)
+            return
+        if self.value.unit != USD:
+            raise ValueError("value is in USD")
+        if self.mark is None or not self.mark.ok:
+            raise ValueError("a value needs a mark that was read")
+        if not self.balance.ok:
+            raise ValueError("a value needs a balance that was read")
