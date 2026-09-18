@@ -381,3 +381,28 @@ corroborator is worth comparing against — recommended, **not decided**, becaus
 it changes 3.4's gate shape.
 **Affects:** 3.4, 1.2; `config/thresholds.json` (still null pending the
 checkpoint).
+
+## 2026-09-18 — `uiMultiplier()` answering is the impersonator test 0.8 was missing
+The 2026-09-17 GME entry concluded that probe 0.8 "cannot lean on the discovery
+list, the name, or a decimals read", leaving it with only the issuer's deployment
+list and the beacon check. A fourth test works: the ERC-8056 `uiMultiplier()`
+selector `0xa60bf13d` answered on all 32 addressable RH stock tokens and
+**reverted** on both GME impersonators and on USDG (`research/findings.md`
+F0.4.6), which is the check `research/agent-os.md:374` predicted and the first
+one that is positive evidence rather than an absence. It is necessary and not
+sufficient — nothing stops a counterfeit implementing a function that returns a
+number — so it joins the beacon check as a second consistency flag a forgery must
+also defeat, and the issuer's deployment list stays the authority.
+**Affects:** 0.8, 1.2; `config/universe.json`.
+
+## 2026-09-18 — Chainlink covers 19% of the tokens, which caps the universe at ~35
+The discovery list carries 187 tokens bearing the `• Robinhood Token` marker and
+Chainlink publishes 35 equity feeds, so 81% of the apparent universe has no feed
+(`research/findings.md` F0.4.8). Under planning/PLAN.md §11 an asset with no feed
+cannot be marked and therefore cannot be held, which makes feed presence a
+membership condition at 1.2 rather than a property discovered later, and shrinks
+the investable set from ~190 names to ~35 before tradeability is asked at all.
+This partly answers planning/PLAN.md §12's "how many of the ~190 tickers are
+actually tradeable at our $25 size" — markability removes most of them first, and
+a four-analyst roster now divides 35 assets rather than 190.
+**Affects:** 1.2, 2.1, 3.1; planning/PLAN.md §12; `config/universe.json`.
