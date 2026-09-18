@@ -1544,3 +1544,111 @@ that failed to settle afterwards.
 payer's wallet** to the shared router, on chain, in a single USDC transfer. So
 the *spend* side is observable on chain from our own wallet. The revenue side is
 F0.7b.5.
+
+### F0.7b.5 — Revenue *is* an on-chain receipt. This corrects F0.7.6.
+
+**Confidence: measured. Verdict: pass — and it reverses an inference of ours.**
+
+F0.7.6 observed that `payTo` is a shared contract used by every endpoint and drew
+the conclusion that *"payment does not go to the fund's wallet… revenue cannot be
+evidenced by a USDC inflow to our own wallet."* **The observation was right and
+the conclusion was wrong.** The settlement transaction contains **two** USDC
+transfers, atomically:
+
+```
+tx 0x4a44835a9fea6d71af6cd90182e536ddb359f337d994657dd2c5972e1afa6604
+  0x93fa…a3da (payer)  ->  0x8aee…01a0 (router)   1000
+  0x8aee…01a0 (router) ->  0x79bb…9884 (seller)   1000
+```
+
+`0x8AEE…01a0` is **`BankrFeeRouterV2`**, verified on Base, solc 0.8.25. It is a
+pass-through splitter, not a custodial collector: `settleAndSplit`,
+`settleUptoAndSplit`, `splitAfterPermit2`, with `MAX_FEE_BPS = 2000` and a
+separate `bankrFeeWallet` (`0xf606…163e`). The seller's share moves to the
+seller's own wallet in the same transaction.
+
+**So `planning/PLAN.md` §2 invariant 9 — "revenue is evidenced by settlement" — is
+satisfiable exactly as written**, and no rewording is needed on this account. We
+do not redesign it here; we record that the evidence exists.
+
+### F0.7b.6 — The settlement evidence available to us, in full
+
+**Confidence: measured.**
+
+The router emits one event per settlement, and it is better evidence than a bare
+transfer because three of its fields are indexed:
+
+```solidity
+event PaymentSettled(
+    address indexed token,
+    address indexed payer,
+    address indexed owner,
+    uint256 totalAmount,
+    uint256 ownerAmount,
+    uint256 bankrFee,
+    uint16  feeBps
+)
+```
+
+topic0 `0xfdc355c44a725f89b3989010cdad404cf378ba8db57896a4b7a623cdd66d30d9`.
+As emitted for our payment: token USDC, payer `0x93fa…a3da`, owner
+`0x79bb…9884`, `totalAmount` 1000, `ownerAmount` 1000, `bankrFee` **0**,
+`feeBps` **0**.
+
+Both queries were run and both work:
+
+| Filter | Meaning | Result today |
+|---|---|---|
+| `topics[3] == our wallet` | every sale we make | **0 events** — nobody has bought from us |
+| `topics[2] == our wallet` | every x402 purchase we make | **1 event** — the payment above |
+
+**What this makes obtainable, without trusting any HTTP status or any provider
+ledger:** every sale, its buyer, its gross, its net and the fee taken, addressed
+by our own wallet, from a public log. Three independent corroborations of one
+sale are available — the `PaymentSettled` event, the USDC `Transfer` into our
+wallet in the same transaction, and Bankr's own `bankr x402 revenue` figures.
+
+**The fee is measured, not merely documented.** `feeBps: 0` and `bankrFee: 0` on
+a real settlement is the free tier (first 1,000 settled requests per month)
+observed rather than read off a pricing page. The contract's own ceiling is
+`MAX_FEE_BPS = 2000` — 20%, well above the documented 5% Pro rate, so the
+contract permits more than the published price list promises. Worth knowing; not
+alarming on its own, since the rate applied is in the event.
+
+**Buyer identity does not depend on the `x-402-payer` header.** `payer` is an
+indexed field on the settlement event, so a purchase can be bound to a buyer
+address from the chain even if the header proves unavailable or unreliable. That
+is evidence for unit 7.3 to use; designing the binding is 7.3's job, not this
+probe's.
+
+### F0.7b.7 — Self-payment works for someone else, which weakens F0.7b.2's first hypothesis
+
+**Confidence: measured (one counterexample). Verdict: unresolved, and shifted.**
+
+While querying settlements platform-wide over a 400-block window, two events
+appeared. One of them is:
+
+```
+blk 51482249  payer=0xf4a46667d75fa9663ab7a297af20d3623aaa8b52
+              owner=0xf4a46667d75fa9663ab7a297af20d3623aaa8b52
+              total=10000  ownerAmount=10000  fee=0  feeBps=0
+```
+
+**Payer and owner are the same address, and it settled.** Another wallet
+successfully paid its own endpoint, for $0.01, minutes before our attempt.
+
+This is a direct counterexample to F0.7b.2's first hypothesis — that the platform
+refuses to let a wallet pay an endpoint it owns. It does not refuse categorically.
+
+**Weight therefore shifts to the second hypothesis:** something specific to our
+endpoint, most plausibly that it was deployed from a hand-written
+`bankr.x402.json` rather than the interactive `bankr x402 configure` wizard, so a
+field that wizard sets may be missing or wrong. Handler execution failure remains
+possible for the same reason.
+
+**Still unresolved, and deliberately so.** One counterexample from one unknown
+wallet does not establish that self-payment is *always* permitted — that wallet's
+account, plan or endpoint configuration may differ from ours in ways this probe
+cannot see. What it does establish is that "the platform forbids self-payment" is
+no longer a sufficient explanation, and that the next thing to try is our own
+configuration rather than a second wallet.
