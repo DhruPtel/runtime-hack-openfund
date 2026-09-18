@@ -14,7 +14,9 @@ import pytest
 
 from fund.core.types import (
     BPS, MULTIPLE, PERCENT, SECONDS, USD, Amount, AssetId, BlockRef, ChainAddress,
-    Asset, AssetKind, Check, Deployment, FeedRef, FetchStatus, Fixed, Holding, Instant,
+    Asset, AssetKind, Check, Deployment, Execution, ExecutionMode, FeedRef, FetchStatus,
+    Fixed, Holding, Instant, Order, OrderState, TokenTransfer, TransactionRef,
+    UserOperationRef,
     Observation, PinnedInput, Price, Quote, RegistryRecord, Series, Snapshot,
     SnapshotEntry, Source, TradingCapability,
     UniverseStatus, content_id, from_canonical, to_canonical,
@@ -573,3 +575,84 @@ def test_a_snapshot_refuses_duplicates_and_needs_its_block_time():
     with pytest.raises(ValueError):
         Snapshot(pinned_block=BlockRef(CHAIN, 1), inputs=(), config_version="1",
                  entries=(), holdings=())
+
+
+# --- orders: the swap probe 0.10 made, as the chain recorded it ------------------
+
+SWAP_BLOCK = BlockRef(CHAIN, 66_586_209, None,
+                      "0xdf97c54f3353ee139a9f355cb6859f3456a16e3300b1be3577b4fc9e5b126a8c")
+BUNDLER = ChainAddress(CHAIN, "0x8e3435ad7c1183bc0e34f9ec34ea3423182e1c67")
+ENTRY_POINT = ChainAddress(CHAIN, "0x0000000071727de22e5e9d8baf0edac6f37da032")
+ROUTER_LEG = ChainAddress(CHAIN, "0xb92fe925dc43a0ecde6c8b1a2709c170ec4fff4f")
+
+
+def swap_execution(success: bool = True, sender: ChainAddress = WALLET) -> Execution:
+    return Execution(
+        transaction=TransactionRef(
+            tx_hash="0xb9e412815dc9bce933100bf23ece1e2b24fedcbcb91a4fa90c49ad36e64ae2a5",
+            block=SWAP_BLOCK, tx_type=4, submitted_by=BUNDLER, outer_status=1),
+        user_operation=UserOperationRef(
+            entry_point=ENTRY_POINT,
+            user_op_hash="0x3de3e3cd1a2ac72335d39e190526ffe39f912df1a94fe679da994d4cdd42a710",
+            sender=sender, paymaster=None,
+            nonce_key="0xb5a5e1cf69828cc450420d8c325eae3cd5ea8504d799", nonce_seq=0,
+            success=Check(success), actual_gas_cost=Amount(0, 18, ETH)),
+        transfers=(TokenTransfer(token=USDG, sender=ROUTER_LEG, recipient=WALLET,
+                                 amount=Amount(78_742, 6, USDG), log_index=21),))
+
+
+def swap_order(state=OrderState.CONFIRMED, execution=None, reason=None) -> Order:
+    return Order(order_id="0.10-swap", idempotency_key="da8dd080-1e78-4357-bca6-2502d8ad9724",
+                 mode=ExecutionMode.LIVE, wallet=WALLET,
+                 sell=Amount.from_units("0.00003", 18, ETH), buy_asset=USDG,
+                 min_buy=Amount.from_units("0.074804", 6, USDG), state=state,
+                 state_reason=reason, execution=execution)
+
+
+def test_an_order_that_executed_via_a_bundler_is_confirmed_by_the_operation():
+    order = swap_order(execution=swap_execution())
+    # The outer transaction was not sent by our wallet, and that is fine.
+    assert order.execution.transaction.submitted_by != WALLET
+    assert order.execution.user_operation.sender == WALLET
+    roundtrip(order)
+
+
+def test_there_is_no_field_for_the_sender_shortcut_or_the_wallet_nonce():
+    from dataclasses import fields as fields_of
+    names = {f.name for cls in (Order, Execution, TransactionRef) for f in fields_of(cls)}
+    assert not {"from", "from_address", "nonce", "sender_is_wallet"} & names
+
+
+def test_a_reverted_operation_inside_a_mined_bundle_is_not_confirmed():
+    # Outer status 1 says the bundle mined; the operation's own success decides.
+    with pytest.raises(ValueError):
+        swap_order(execution=swap_execution(success=False))
+    failed = swap_order(state=OrderState.FAILED, execution=swap_execution(success=False),
+                        reason="UserOperationEvent.success false")
+    roundtrip(failed)
+
+
+def test_an_operation_for_another_wallet_does_not_confirm_ours():
+    stranger = ChainAddress(CHAIN, "0x" + "44" * 20)
+    with pytest.raises(ValueError):
+        swap_order(execution=swap_execution(sender=stranger))
+
+
+def test_confirmed_needs_the_bought_asset_to_reach_the_wallet():
+    no_transfer = Execution(transaction=swap_execution().transaction,
+                            user_operation=swap_execution().user_operation, transfers=())
+    with pytest.raises(ValueError):
+        swap_order(execution=no_transfer)
+
+
+def test_paper_and_pending_orders_carry_no_chain_evidence():
+    paper = Order(order_id="paper-1", idempotency_key="k-1", mode=ExecutionMode.PAPER,
+                  wallet=WALLET, sell=Amount.from_units("25", 6, USDG), buy_asset=TSLA,
+                  min_buy=Amount.from_units("0.064550826563032984", 18, TSLA),
+                  state=OrderState.CONFIRMED)
+    roundtrip(paper)
+    with pytest.raises(ValueError):
+        swap_order(state=OrderState.SUBMITTED, execution=swap_execution())
+    with pytest.raises(ValueError):
+        swap_order(state=OrderState.UNKNOWN)  # unknown must say why
+    roundtrip(swap_order(state=OrderState.UNKNOWN, reason="409: original still in flight"))

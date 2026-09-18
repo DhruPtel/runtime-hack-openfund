@@ -998,3 +998,196 @@ class Snapshot:
     @property
     def snapshot_id(self) -> str:
         return content_id(self)
+
+
+# --- orders and the evidence that one executed ---------------------------------
+
+class OrderState(enum.Enum):
+    """The durable states of PLAN §4, each written before the action it describes."""
+
+    PREPARED = "prepared"
+    SUBMITTED = "submitted"
+    UNKNOWN = "unknown"      # timeout, dropped connection, or 409 in flight
+    CONFIRMED = "confirmed"
+    FAILED = "failed"
+
+
+class ExecutionMode(enum.Enum):
+    PAPER = "paper"  # stock legs: priced from live quotes, never submitted (PLAN §13)
+    LIVE = "live"    # the ungated leg: ETH→USDG on 4663 (0.11 decision)
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class TokenTransfer:
+    """An ERC-20 `Transfer` log. With the UserOperation event, this is what
+    reconciliation reads (F0.10.3)."""
+
+    token: AssetId
+    sender: ChainAddress
+    recipient: ChainAddress
+    amount: Amount
+    log_index: int
+
+    def __post_init__(self):
+        _is("token", self.token, AssetId)
+        _is("sender", self.sender, ChainAddress)
+        _is("recipient", self.recipient, ChainAddress)
+        _is("amount", self.amount, Amount)
+        _int("log_index", self.log_index, minimum=0)
+        if self.amount.asset != self.token:
+            raise ValueError("a transfer moves its own token")
+        if self.amount.raw < 0:
+            raise ValueError("a transfer amount is non-negative")
+        if not (self.sender.chain_id == self.recipient.chain_id == self.token.chain_id):
+            raise ValueError("a transfer happens on one chain")
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class TransactionRef:
+    """The outer transaction a swap arrived in.
+
+    On 4663 it is an EIP-7702 transaction (type 4) that a **bundler** sends to
+    the ERC-4337 EntryPoint (F0.10.3). `submitted_by` is that bundler. It is
+    recorded, and never used to decide whose swap this was. `outer_status` says
+    the bundle mined, not that our swap succeeded. There is deliberately no
+    nonce field: the wallet's nonce also moves for 7702 authorizations, and does
+    not count swaps.
+    """
+
+    tx_hash: str
+    block: BlockRef
+    tx_type: int
+    submitted_by: ChainAddress
+    outer_status: int | None
+
+    def __post_init__(self):
+        if not isinstance(self.tx_hash, str) or not _HASH32.match(self.tx_hash):
+            raise ValueError("tx_hash is 0x + 64 lowercase hex")
+        _is("block", self.block, BlockRef)
+        _int("tx_type", self.tx_type, minimum=0)
+        _is("submitted_by", self.submitted_by, ChainAddress)
+        if self.submitted_by.chain_id != self.block.chain_id:
+            raise ValueError("the submitter is on the transaction's chain")
+        if self.outer_status not in (0, 1, None) or type(self.outer_status) is bool:
+            raise ValueError("outer_status is 0, 1 or None")
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class UserOperationRef:
+    """The ERC-4337 `UserOperationEvent` for a swap: whose it was, and whether it worked.
+
+    `sender` is the attribution field. `success` is the swap's own outcome;
+    a reverted swap can sit inside a transaction whose outer status is 1.
+    `actual_gas_cost` was 0 on the one swap measured, because the bundler
+    sponsored it (F0.10.3). The nonce here is the EntryPoint's per-key sequence,
+    not the wallet's.
+    """
+
+    entry_point: ChainAddress
+    user_op_hash: str
+    sender: ChainAddress
+    paymaster: ChainAddress | None
+    nonce_key: str
+    nonce_seq: int = field(metadata=AS_STR)
+    success: Check
+    actual_gas_cost: Amount
+
+    def __post_init__(self):
+        _is("entry_point", self.entry_point, ChainAddress)
+        if not isinstance(self.user_op_hash, str) or not _HASH32.match(self.user_op_hash):
+            raise ValueError("user_op_hash is 0x + 64 lowercase hex")
+        _is("sender", self.sender, ChainAddress)
+        _is("paymaster", self.paymaster, ChainAddress, optional=True)
+        if not isinstance(self.nonce_key, str) or not re.match(r"^0x[0-9a-f]+$", self.nonce_key):
+            raise ValueError("nonce_key is lowercase hex")
+        _int("nonce_seq", self.nonce_seq, minimum=0)
+        _is("success", self.success, Check)
+        _is("actual_gas_cost", self.actual_gas_cost, Amount)
+        if not self.actual_gas_cost.asset.is_native:
+            raise ValueError("gas is paid in the native token")
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Execution:
+    """Chain evidence that an order executed. Reconciliation reads the
+    UserOperation and the transfers, never `submitted_by` or a nonce."""
+
+    transaction: TransactionRef
+    user_operation: UserOperationRef | None
+    transfers: tuple[TokenTransfer, ...]
+
+    def __post_init__(self):
+        _is("transaction", self.transaction, TransactionRef)
+        _is("user_operation", self.user_operation, UserOperationRef, optional=True)
+        _tuple_of(self, "transfers", TokenTransfer)
+        chain = self.transaction.block.chain_id
+        if self.user_operation is not None and self.user_operation.sender.chain_id != chain:
+            raise ValueError("the operation is on the transaction's chain")
+        if any(t.token.chain_id != chain for t in self.transfers):
+            raise ValueError("every transfer is on the transaction's chain")
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Order:
+    """One order through PLAN §4's state machine.
+
+    It does not assume a swap is a transaction sent from our wallet. A
+    confirmed live order is attributed by the UserOperation's `sender` and the
+    bought asset's `Transfer` into `wallet` — the evidence F0.10.3 showed is
+    actually there. The HTTP response is never the evidence (PLAN §2
+    invariant 9).
+    """
+
+    order_id: str
+    idempotency_key: str
+    mode: ExecutionMode
+    wallet: ChainAddress
+    sell: Amount
+    buy_asset: AssetId
+    min_buy: Amount
+    state: OrderState
+    state_reason: str | None = None
+    execution: Execution | None = None
+
+    def __post_init__(self):
+        _text("order_id", self.order_id)
+        _text("idempotency_key", self.idempotency_key)
+        _is("mode", self.mode, ExecutionMode)
+        _is("wallet", self.wallet, ChainAddress)
+        _is("sell", self.sell, Amount)
+        _is("buy_asset", self.buy_asset, AssetId)
+        _is("min_buy", self.min_buy, Amount)
+        _is("state", self.state, OrderState)
+        _is("execution", self.execution, Execution, optional=True)
+        if self.sell.raw <= 0:
+            raise ValueError("an order sells a positive amount")
+        if self.sell.asset == self.buy_asset or self.min_buy.asset != self.buy_asset:
+            raise ValueError("an order sells one asset for another, min_buy in the bought one")
+        if self.wallet.chain_id != self.sell.asset.chain_id:
+            raise ValueError("the wallet is on the order's chain")
+        if self.state in (OrderState.UNKNOWN, OrderState.FAILED):
+            _text("state_reason", self.state_reason)
+        if self.execution is not None and self.state in (OrderState.PREPARED,
+                                                         OrderState.SUBMITTED):
+            raise ValueError("no execution evidence exists before an outcome")
+        if self.mode is ExecutionMode.PAPER:
+            if self.execution is not None:
+                raise ValueError("a paper order has no chain evidence")
+            return
+        if self.state is OrderState.CONFIRMED:
+            if self.execution is None:
+                raise ValueError("a confirmed live order carries its chain evidence")
+            op = self.execution.user_operation
+            if op is not None:
+                if op.sender != self.wallet:
+                    raise ValueError("the operation was not sent for this wallet")
+                if not op.success.passes:
+                    raise ValueError("a confirmed order's operation succeeded")
+            if not any(t.token == self.buy_asset and t.recipient == self.wallet
+                       for t in self.execution.transfers):
+                raise ValueError("confirmed means the bought asset reached the wallet")
