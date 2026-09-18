@@ -344,6 +344,22 @@ present.
 
 **Artifact:** both behaviours recorded verbatim.
 
+**Run 2026-09-18 — half met.** Idempotency half, measured with one 0.00003 ETH
+(~$0.08) sell into USDG on 4663:
+
+- **Same-key replay is safe once the original has completed.** The repeat
+  returned the original result in 178 ms, and the chain shows one fill
+  (F0.10.1).
+- **The in-flight `409` path is still documented only.**
+- **The execution key can transact** (F0.10.2).
+- **The swap is not a transaction from our wallet.** It is a sponsored
+  UserOperation inside an EIP-7702 transaction, and the wallet is now delegated
+  on 4663 (F0.10.3).
+
+Rate-limit half: **unresolved**. No 429 and no rate-limit header of any kind
+appeared within 150 requests in 4.1 s. So the backoff signal is only the
+documented bare 429 (F0.10.5).
+
 **Done when:** we know whether same-key replay is safe, and what backoff signal
 we get.
 

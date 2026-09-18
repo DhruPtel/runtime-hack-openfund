@@ -164,7 +164,9 @@ field asserted in tests, not by the prose above, and verified against the live
 surfaces by probe 0.2.
 
 The **execution wallet address is named explicitly in config** and its balances
-are read via RPC. We never assume another account's portfolio describes it.
+are read via RPC. We never assume another account's portfolio describes it. Since
+its first swap, the wallet is **EIP-7702-delegated to a Bankr contract on 4663**;
+it is still a plain EOA on Base (F0.10.3).
 
 ---
 
@@ -244,6 +246,11 @@ re-evaluate before detailing the next.
   still owns the number, and 0.9's figures are only ever quoted as floors.
 - **0.10** Idempotency and rate-limit behaviour: same key twice; deliberately
   exceed a cheap limit and record headers.
+  *Run 2026-09-18 (`research/findings.md` §0.10):* a same-key repeat returned
+  the original result without broadcasting. The execution key can transact.
+  The swap is a sponsored ERC-4337 UserOperation inside an EIP-7702
+  transaction. 6 bps of the sale is unaccounted for. No rate limit appeared
+  within 150 requests in 4.1 s — a lower bound.
 - **0.11** ▶ **`research/findings.md`:** every probe recorded as measured,
   documented or inferred, with pass/fail/unresolved and redacted bodies.
 
@@ -387,14 +394,21 @@ stock legs are paper. This phase proves the money path against a real chain usin
 an **ungated leg** — memecoin/USDG swaps on 4663 need no location verification —
 so receipts, reconciliation, confirmation depth and explorer evidence are genuine
 rather than mocked. Opens once 4.12 passes; it is not gated on probe 0.5. It
-does rest on `BANKR_KEY_EXEC` being able to transact, which 0.5 did not show —
-the location gate fired first (findings F0.5.5) — so the live leg is not
-de-risked until an ungated swap with that key has settled.
+does rest on `BANKR_KEY_EXEC` being able to transact. 0.5 could not show that,
+because the location gate fired first (findings F0.5.5). 0.10 has now shown it,
+with one $0.08 ETH-to-USDG sell on 4663 (F0.10.2). The buy-and-sell round trip
+5.2 requires is still untested.
 
 - **5.1** Live executor behind the same interface the paper executor satisfies.
 - **5.2** Small real buy **and** sell round trip on the ungated leg, with
   production-shaped permissions.
 - **5.3** Receipt reconciliation, confirmation depth, `200 success:false`.
+  Bankr sends a swap as a gas-sponsored ERC-4337 UserOperation inside an
+  EIP-7702 transaction from a bundler (F0.10.3). So reconcile on
+  `UserOperationEvent` (`sender`, `success`) and on `Transfer` logs to or from
+  the wallet, never on `tx.from`, the outer receipt's status or the wallet's
+  nonce. Reconcile fill amounts from balances: `feeBps: 0` left 6 bps
+  unaccounted for (F0.10.4).
 - **5.4** ▶ **A real transaction:** *Show: the transaction on the Robinhood Chain
   explorer, and the same order in the ledger with its receipt, booked once.*
 - **5.5** Access-expiry and gate behaviour: pause new attempts, preserve
@@ -625,6 +639,12 @@ Published with the project, not hidden.
   key cannot be revoked without touching the account the analysts depend on.
   Mitigated, not solved: no analyst-role key may transact, which is asserted in
   tests and verified against the live surfaces by probe 0.2.
+- **The execution wallet runs Bankr's code on 4663.** Its first swap signed an
+  EIP-7702 authorization that delegates the wallet to a Bankr contract
+  (`0xd6ce…5b28`), and swaps now run as UserOperations through that code
+  (F0.10.3). Custody was already Bankr's, so the trust boundary barely moves,
+  but it is now enforced in code as well as by key custody. We have not read
+  what the delegate permits.
 - No independent audit. Books are internally reconciled against wallet balances
   and settlement evidence, and signed for provenance only.
 - Reorg handling is limited to a confirmation depth. A receipt becoming
