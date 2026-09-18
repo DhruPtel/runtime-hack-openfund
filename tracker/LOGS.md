@@ -295,6 +295,24 @@ narrows the honest claim to "payable by any x402 v2 client and by Bankr users" �
 with the non-Bankr buyer inferred rather than measured, because the signer was
 the fund's Bankr-custodied EOA, and a net spend of $0.00.
 
+
+## 0.10 — Idempotency and rate limits
+**Date:** 2026-09-18 · **Commit:** fa272d0
+
+Built `probes/idempotency.py`, which made the wallet's first transaction on 4663.
+It sold 0.00003 ETH (~$0.08) into USDG with `BANKR_KEY_EXEC`, then sent the
+identical body with the same `idempotencyKey`. The repeat returned the original
+result in 178 ms and the chain shows one fill, which also settles F0.5.5: the
+execution key can transact. Built `probes/idempotency_evidence.py` after the
+probe's own verdict came back "transacted: False". The swap had arrived as a
+gas-sponsored ERC-4337 UserOperation inside an EIP-7702 transaction from a
+bundler, which delegated the fund's wallet to a Bankr contract on 4663, so
+`tx.from` and the nonce the probe trusted described the bundle and not our swap.
+Built `probes/ratelimit.py`, whose 150 reads in 4.1 s drew no 429 and no
+rate-limit header, recorded as a lower bound. The artifact is
+`research/findings.md` §0.10, with the in-flight `409` path and the 6 bps missing
+from the sale left **unresolved**.
+
 ---
 
 ## State at close — 2026-09-18 (third session)
