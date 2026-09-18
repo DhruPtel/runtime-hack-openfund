@@ -1425,3 +1425,122 @@ none of it was exercised.
 - `x402Version: 2` was measured against the **published** npm packages only.
 - The endpoint is left deployed and active at $0.001 so the attempt can be
   repeated once the cause is decided.
+
+---
+
+## 0.7b — The payment failure, separated
+
+**Date:** 2026-09-18 · **Method:** `PYTHONPATH=src python3 -m probes.x402_thirdparty --confirm` ·
+**Captures:** `probes/out/x402_thirdparty.json` (1 payment, 2 unpaid challenges)
+
+### F0.7b.1 — A third-party payment succeeds. The 500 is specific to our endpoint.
+
+**Confidence: measured. Verdict: pass** (for the client, the wallet and the
+facilitator).
+
+One payment, no retry, no fallback endpoint. The target was `hello`
+(`0x79bb…9884`) at **$0.001** — deliberately not the marketplace's cheapest
+($0.000001), because paying one base unit would have changed the owner *and* the
+amount against 0.7 and left a failure indistinguishable from a dust rejection.
+Price, network, asset, platform and handler triviality all match our own
+endpoint. Exactly one variable differs: who owns it.
+
+| | ours (0.7) | third party (0.7b) |
+|---|---|---|
+| `x402Version` / `network` | 2 / `eip155:8453` | 2 / `eip155:8453` |
+| amount / asset / `payTo` | 1000 / USDC / `0x8AEE…01a0` | 1000 / USDC / `0x8AEE…01a0` |
+| payer wallet | `0x93fa…a3da` | `0x93fa…a3da` |
+| **result** | **500, nothing settled** | **200, settled** |
+
+```
+Paid $0.0010 USDC on eip155:8453
+Status 200
+{"message":"Hello, World! Powered by Bankr x402 Cloud.",
+ "timestamp":"2026-09-18T18:00:05.196Z"}
+```
+
+**So the client works, the wallet can pay, and the facilitator settles.** A
+transient facilitator fault is no longer a good explanation for 0.7's 500.
+
+**What this does not prove, and it is the trap worth naming.** It proves *we can
+pay*. **Our own endpoint is still untested** — nobody other than its owner has
+ever paid it, and the fund has one wallet, so this probe could not arrange that.
+
+### F0.7b.2 — The mechanism behind the 500 is still unresolved
+
+**Confidence: measured that it is endpoint-specific. Verdict: unresolved** (on why).
+
+Two hypotheses survive, and this probe cannot separate them:
+
+1. **Self-payment refused** — the platform declines to let a wallet pay an
+   endpoint it owns. Fits every observation.
+2. **Something specific to our endpoint's payment setup** — it was deployed by a
+   hand-written `bankr.x402.json` rather than the interactive scaffold, so a
+   field the wizard would have set may be missing or wrong.
+
+A third — **our handler failing to execute** — fits less well but is not
+excluded. Bankr documents *settle-after-response*: "payments are only collected
+if your endpoint returns successfully", and only a handler status below 400
+counts. A handler that threw would therefore also produce a 500 with nothing
+settled and 0 requests counted. Against it: the CLI's wording was *"x402 payment
+failed"*, naming the payment step rather than the handler. **That is a client's
+prose error string and F0.5.3 is the standing warning about reading those as
+structured causes**, so it lowers the probability rather than eliminating it.
+
+**What would separate them:** a payment to our endpoint from a wallet that does
+not own it. That needs a second wallet, which the fund does not have, and it is
+the same experiment the demo's buyer agent will perform anyway.
+
+### F0.7b.3 — A paid round trip is ~4.6 s, and that supports the cached-record design
+
+**Confidence: measured, with a caveat on "cold".**
+
+| | ms |
+|---|---|
+| unpaid 402 (ours) | 107–280 |
+| unpaid 402 (third party) | 163–316 |
+| CLI baseline, unauthenticated read | 453 |
+| **paid call, end to end** | **4,589** |
+
+Roughly **4.1 s** of that is the payment round trip once CLI startup is removed —
+reported alongside rather than subtracted, per 0.7's method note.
+
+**This is not cleanly a cold start.** `hello` is a public endpoint that other
+callers use, so its container may have been warm; we control neither its
+traffic nor its state. The honest reading is that **~4.6 s is what a paid call
+costs against a trivial third-party handler**, and a genuine cold start is at
+least that.
+
+**It still settles the design question 0.7 could not.** Against a documented 30
+second handler ceiling, ~4 s of platform overhead on a handler that does
+*nothing* leaves little room, and `research/x402-cli-example.md` Q1's
+architectural argument — Bankr itself returns a job handle rather than working
+inside the handler — now has a measurement consistent with it. **Serving a
+cached record is required, not merely prudent.**
+
+### F0.7b.4 — Settlement is asynchronous to the HTTP response
+
+**Confidence: measured. Verdict: pass, and it matters for the books.**
+
+The probe read USDC before and after the paid call and saw **no change** —
+108,346 base units both times, even though the CLI reported `Paid $0.0010 USDC`
+and returned a 200 with the response body. Re-reading moments later:
+
+```
+USDC now: 107,346  (delta -1,000 = exactly $0.001)
+USDC Transfer, Base block 51,482,531:
+  0x93fa…a3da  ->  0x8aee…01a0   1000  (0.001000 USDC)
+  tx 0x4a44835a9fea6d71af…
+```
+
+**The buyer receives its answer before the money moves.** A 200 is therefore not
+evidence of settlement, which is `planning/PLAN.md` §2 invariant 9 stated from
+the other side — *"nothing is booked from an HTTP status"* — and this is the
+concrete instance. Any accounting that booked x402 spend or revenue at
+response-time would book it before it happened, and would be wrong for any call
+that failed to settle afterwards.
+
+**One more thing the transfer shows:** the payment goes **directly from the
+payer's wallet** to the shared router, on chain, in a single USDC transfer. So
+the *spend* side is observable on chain from our own wallet. The revenue side is
+F0.7b.5.
