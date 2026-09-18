@@ -951,14 +951,30 @@ series.
 
 **Goal:** the address table is attested, not trusted.
 
-**Build:** a `--live` selftest that checks every address in config against chain:
-it exists, has expected decimals, matches its expected feed, and passes the
-beacon consistency check.
+**Build:** a `--live` selftest that checks every address in config against chain,
+at one pinned block:
+
+- **Each stock token** exists, has 18 decimals, and is in the pinned registry
+  snapshot by `(chain_id, address)`. Its EIP-1967 beacon slot resolves to the
+  issuer's beacon, and a mismatch fails loudly (0.8 decision).
+- **Each feed proxy** exists, reports 8 decimals, and is the feed pinned for its
+  asset — matched by address, never by ticker (F0.8.1, F0.4.7).
+- **USDG** exists and has 6 decimals (F0.3.1).
+- **The execution wallet**, once `config/mandate.json` names it (it is still
+  null). On 4663 it carries an EIP-7702 delegation to a Bankr contract, so the
+  selftest records the delegate and flags any change rather than expecting an
+  EOA. On Base it is an EOA (F0.10.3).
+
+`uiMultiplier()` and the name marker are not attested, because they carry no
+identity weight (0.8 decision).
 
 **Artifact:** a pass/fail report per address.
 
 **Done when:** it runs green, and flipping one address to a wrong value turns it
 red.
+
+**Changed by:** F0.3.1, F0.4.7, F0.8.1–F0.8.2, 0.8's decisions, and F0.10.3.
+**Size:** about as drafted.
 
 ---
 
