@@ -5,7 +5,7 @@
 
   "analyst_model": null,
   "risk_model": null,
-  "_model_resolved_by": "unit 1.7",
+  "_model_resolved_by": "unit 2.4, informed by unit 1.7 and by the 0.9 floor, which priced the same tokens across the catalogue (findings F0.9.5)",
 
   "max_output_tokens": null,
   "worker_deadline_seconds": null,

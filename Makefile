@@ -10,8 +10,8 @@ help:
 	@echo ""
 	@echo "Not yet built (the unit that lands each is named):"
 	@echo "  make snapshot    live block-pinned hashed snapshot        [unit 1.6]"
-	@echo "  make replay      rebuild a snapshot from fixtures         [unit 1.8]"
-	@echo "  make selftest    attest every address against chain       [unit 1.9]"
+	@echo "  make replay      rebuild a snapshot from fixtures         [unit 1.9]"
+	@echo "  make selftest    attest every address against chain       [unit 1.10]"
 	@echo "  make cycle-demo  a full cycle from fixtures               [unit 4.8]"
 	@echo "  make cycle       a live cycle, durable orders, journal     [unit 4.8]"
 
