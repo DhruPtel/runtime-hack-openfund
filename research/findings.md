@@ -1217,3 +1217,211 @@ by $0.17 before the fund has made a single inference call.
 - Read-only GETs only. No inference call was made, so nothing here demonstrates
   how quickly usage appears after a request, or whether it appears at all before
   a request settles.
+
+---
+
+## 0.7 — x402 round trip
+
+**Date:** 2026-09-18 · **Method:** `PYTHONPATH=src python3 -m probes.x402_roundtrip --confirm` ·
+**Captures:** `probes/out/x402.json` · **Handler:** `probes/x402/roundtrip/index.ts`
+
+**Headline: the paid call failed, so two of the three timings do not exist.** The
+endpoint deployed, the 402 is captured in full, and payment was attempted once
+and refused by the platform. No retry was made and no parameter was adjusted.
+Nothing was spent.
+
+### F0.7.1 — `/wallet/portfolio` under-reports token balances
+
+**Confidence: measured. Verdict: fail.**
+
+Found before the probe proper, while checking whether 0.7 was fundable.
+`GET /wallet/portfolio` returned `tokenBalances: []` for `base`. `balanceOf` on
+USDC (`0x8335…2913`) at the same moment returned **108,346 base units =
+$0.108346**.
+
+The endpoint did not report a zero balance — it reported **no token entry at
+all**, which is indistinguishable from "this wallet holds no tokens". Had the
+probe trusted it, 0.7 would have been recorded as blocked on funding when the
+funds were there.
+
+**This is the measurement behind `planning/PLAN.md` §6.** That section already
+requires the treasurer to read the execution wallet's balances over RPC rather
+than trusting an authenticated portfolio endpoint, and F0.2.3 called that
+requirement "more important, not less". It is no longer a precaution: the
+portfolio endpoint is **wrong** about this wallet today. Unit 1.5's sizing and
+Phase 6's reconciliation must read balances over RPC, and F0.2.6's "the fund
+wallet is empty" should be re-read with this in mind — it measured the same
+endpoint that is now known to omit tokens.
+
+### F0.7.2 — The 402 challenge, verbatim
+
+**Confidence: measured. Verdict: pass.** Unpaid GET, no authentication, free.
+
+```json
+{
+  "x402Version": 2,
+  "error": "Payment Required",
+  "facilitator": "https://api.bankr.bot/facilitator",
+  "accepts": [
+    {
+      "scheme": "exact",
+      "network": "eip155:8453",
+      "asset": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "amount": "1000",
+      "maxAmountRequired": "1000",
+      "payTo": "0x8AEE621035D93Deb3C0C1177fac252dC2dd501a0",
+      "resource": "https://x402.bankr.bot/0x93faecde3c88a713e1edddf417c02c326889a3da/roundtrip",
+      "description": "Phase 0 probe: static response, no work. Measures x402 platform round-trip overhead only.",
+      "maxTimeoutSeconds": 60,
+      "mimeType": "",
+      "extra": { "name": "USD Coin", "version": "2" }
+    }
+  ]
+}
+```
+
+`maxTimeoutSeconds: 60` is the payment authorization's validity window, **not** a
+handler runtime budget — `research/x402-cli-example.md` Q1 is explicit about that
+distinction and it holds here.
+
+### F0.7.3 — A standard published x402 client cannot pay this endpoint
+
+**Confidence: measured. Verdict: fail** — and it is the most consequential
+finding in this unit.
+
+The challenge advertises `x402Version: 2` and `network: "eip155:8453"`. Against
+the published client libraries:
+
+| Package | Latest on npm | Speaks protocol v2? | Knows `eip155:*`? |
+|---|---|---|---|
+| `x402` | **1.2.0** | no — `x402Versions = [1]` | no — `eip155` appears **once** in the whole package |
+| `x402-fetch` | 1.2.0 (depends `x402@^1.2.0`) | no | **zero** occurrences of `eip155` |
+| `@coinbase/x402` | 2.1.0 | 3,746-byte wrapper, no protocol code | zero |
+
+`NetworkSchema` in `x402@1.2.0` is still the closed zod enum the research
+described — 17 bare names: `abstract, abstract-testnet, base-sepolia, base,
+avalanche-fuji, avalanche, iotex, solana-devnet, solana, sei, sei-testnet,
+polygon, polygon-amoy, peaq, story, educhain, skale-base-sepolia`. **`base` is in
+it. `eip155:8453` is not.** Every `accepts` entry is parsed through that schema,
+so a standard client throws before selection or signing — for two independent
+reasons, the version and the network identifier format.
+
+**This does not overturn the decision to price in USDC on Base; it shows the
+decision was necessary and is not sufficient.**
+`research/x402-cli-example.md` §7 correctly established that a USDG-on-4663
+endpoint is unpayable because the chain is absent from a closed enum. Pricing in
+USDC on Base removed that blocker. What this probe measures is that **the blocker
+moved** — from the *chain* to the *protocol version and identifier format* — and
+the fund's endpoint is still not payable by the published ecosystem.
+
+**Not our misconfiguration.** A live third-party endpoint
+(`0x79bb…9884/crypto-price`, $0.002) returns a structurally identical challenge:
+same `x402Version: 2`, same `eip155:8453`, same asset, same facilitator, same
+`payTo`, same `maxTimeoutSeconds`. Only the amount differs. This is how the
+platform speaks to everyone.
+
+**What is unresolved:** whether an unpublished or pre-release v2-aware client
+exists, and whether Bankr intends `x402Version: 2` to be reachable by non-Bankr
+callers at all. Bankr's own CLI clearly implements it. We measured the published
+packages, not the whole world.
+
+### F0.7.4 — The paid call failed. Two of the three timings do not exist.
+
+**Confidence: measured. Verdict: fail.**
+
+| Call | Result |
+|---|---|
+| unpaid (402) | **280 ms**, then 156 ms and 107 ms on later observations |
+| CLI baseline (`bankr x402 schema`, unauthenticated read) | 423 ms |
+| **paid, cold** | **failed after 2,849 ms** — `API error (400): x402 payment failed (status 500)` |
+| **paid, warm** | **not attempted** — the probe stopped |
+
+The probe stopped on the failure by design rather than adjusting the price or the
+asset and trying again, so there is no warm number and **the unit's central
+timing question is unanswered**. We cannot state the end-to-end latency of a paid
+call, and the cached-record design is therefore still supported by
+`research/x402-cli-example.md` Q1's architectural argument alone — Bankr itself
+returns a job handle rather than doing the work inside the handler — and **not**
+by a measurement of our own.
+
+**Nothing was spent.** USDC read over RPC before and after: **108,346 base units
+both times, delta 0.** `bankr x402 list` and `bankr x402 revenue roundtrip` both
+report **0 requests, $0.000000 earned**, consistent with a payment that never
+settled and with the documented rule that 402 responses are free and do not
+count.
+
+**The cause is not diagnosed, and one 500 does not separate transient from
+structural.** What the evidence rules out: it is not a malformed challenge
+(F0.7.3 shows ours matches a working endpoint's), not an empty balance
+($0.108 against a $0.001 price), not the price cap (`--max-payment $0.01`), and
+not a handler error (the handler never ran — the payment gate sits in front of
+it, and 0 requests were counted). What remains, untested: a transient
+facilitator fault, or a platform refusal to let a wallet pay an endpoint it owns
+— **the payer and the endpoint owner are the same wallet here, because the fund
+has only one**. Distinguishing those needs either a second attempt later or a
+call to a third-party endpoint from this wallet. Both spend money, neither is
+authorised by this unit, and guessing between them would be manufacturing a
+finding.
+
+### F0.7.5 — The payer header was not observed
+
+**Confidence: unresolved.**
+
+`x-402-payer` reaches the **handler**, after settlement. No payment settled, so
+the handler never ran and the header's real shape is **unmeasured**. Unit 7.3
+binds a purchase to a decision id using it, and that binding still rests on
+`research/x402-cli-example.md` Q2, which found no server code anywhere and marked
+the header's existence *"[INFERRED as plausible but unverifiable from these
+sources]"*.
+
+**That inference is not promoted here.** Observing it needs a handler that echoes
+the header and one settled payment — deliberately not bundled into this probe,
+because a handler that reads request state is no longer a handler that does no
+work, and the timing measurement was the reason it exists.
+
+### F0.7.6 — Every Bankr endpoint collects to one shared address
+
+**Confidence: measured. Verdict: pass, as a constraint on the books.**
+
+`payTo` is `0x8AEE621035D93Deb3C0C1177fac252dC2dd501a0` — **a contract**, 6,978
+bytes of code on Base, and **the same address the third-party endpoint
+advertises**. Payment does not go to the fund's wallet. It goes to a shared Bankr
+router which credits the endpoint owner internally, surfaced through
+`bankr x402 revenue`.
+
+**Consequence for `planning/PLAN.md` §2 invariant 9** — *"revenue is evidenced by
+settlement"*. Settlement lands at an address we do not control, so revenue cannot
+be evidenced by a USDC inflow to our own wallet. It can only be read from Bankr's
+accounting until a payout moves funds to us. This is the same shape as F0.6.6:
+the provider's books and ours have different boundaries, and Phase 6 must treat
+the x402 revenue line as a claim reconciled against a payout, not as an observed
+on-chain receipt.
+
+**Fee treatment (documented, not measured):** 0% platform fee for the first 1,000
+settled requests per month, 5% after. Only settled requests with a handler status
+below 400 count; 402 responses are free and excluded. Nothing settled here, so
+none of it was exercised.
+
+### What 0.7 changes
+
+| Change | Where |
+|---|---|
+| `/wallet/portfolio` omits token balances; read over RPC | 1.5, Phase 6; `planning/PLAN.md` §6 |
+| Published x402 clients cannot parse our challenge (v2 + `eip155:*`) | 7.2, the revenue line, `planning/PLAN.md` §11 |
+| Revenue settles to a shared Bankr address, not our wallet | 6.x, 7.4; invariant 9 |
+| Paid-call latency remains unmeasured; cached-record design rests on architecture | 1.4, 7.x |
+| `x-402-payer` shape still inferred, not measured | 7.3 |
+
+### Method limitations
+
+- **One payment attempt, one endpoint, one wallet, one minute.** A single 500
+  bounds nothing about reliability, and the probe deliberately did not retry.
+- The payer and payee are the same wallet, which is not how a real purchase
+  works and is a plausible contributor to the failure. The fund has one wallet,
+  so this probe could not avoid it.
+- Timings for the paid path include Bankr CLI startup; the 423 ms unauthenticated
+  baseline is reported alongside rather than subtracted, because an adjusted
+  number presented as a measurement is worse than two honest ones.
+- `x402Version: 2` was measured against the **published** npm packages only.
+- The endpoint is left deployed and active at $0.001 so the attempt can be
+  repeated once the cause is decided.

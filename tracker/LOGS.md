@@ -157,6 +157,27 @@ estimate. Verified that the probe cost nothing by reading `balanceUsd` before an
 after all thirteen calls — 2.825608 both times, delta 0.0 — and by confirming no
 declared credential value appears in the findings file.
 
+
+## 0.7 ▶ — x402 round trip
+**Date:** 2026-09-18 · **Commit:** uncommitted
+
+Checked first that no endpoint already existed on this wallet (`stockwatch` is
+gone), then deployed `probes/x402/roundtrip/index.ts` — a handler that returns a
+frozen literal and does no work, so the timings measure the platform rather than
+our code — at $0.001 USDC on Base, and ran `probes/x402_roundtrip.py`, which
+prints the endpoint, price, wallet and RPC-read balance before it is allowed to
+pay. The artifact is `research/findings.md` §0.7, six findings with the full 402
+challenge verbatim; **the paid call failed** — `x402 payment failed (status 500)`
+after 2,849 ms — so the probe stopped without retrying or adjusting the price,
+and the cold and warm timings do not exist. What it did establish is that the
+challenge advertises `x402Version: 2` and `network: "eip155:8453"` while the
+latest published `x402` is 1.2.0 with `x402Versions = [1]` and a closed network
+enum containing `base` but not `eip155:8453`, so no standard client can pay us;
+that `payTo` is a shared Bankr contract rather than the fund's wallet; and that
+`/wallet/portfolio` reported `tokenBalances: []` for Base while USDC `balanceOf`
+returned $0.108346. Verified nothing was spent — USDC identical before and after,
+0 requests and $0 earned on the endpoint.
+
 ---
 
 ## State at close — 2026-09-18 (second session)

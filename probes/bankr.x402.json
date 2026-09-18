@@ -1,0 +1,40 @@
+{
+  "network": "base",
+  "currency": "USDC",
+  "services": {
+    "roundtrip": {
+      "description": "Phase 0 probe: static response, no work. Measures x402 platform round-trip overhead only.",
+      "price": "0.001",
+      "methods": [
+        "GET"
+      ],
+      "category": "data",
+      "tags": [
+        "probe"
+      ],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {}
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "description": "always true"
+            },
+            "probe": {
+              "type": "string",
+              "description": "unit number"
+            },
+            "work": {
+              "type": "string",
+              "description": "always \"none\""
+            }
+          }
+        }
+      }
+    }
+  }
+}
