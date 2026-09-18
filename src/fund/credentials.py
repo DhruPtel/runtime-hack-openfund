@@ -16,6 +16,15 @@ Roles exist because planning/PLAN.md section 2 invariant 1 is an authority
 boundary, not a style rule. The analyst role cannot load execution or signing
 secrets even on a single-host development machine, so code that reaches for them
 fails immediately rather than at the point where it would have spent money.
+
+The three Bankr keys are issued from **one account** (see planning/PLAN.md
+section 13), so account-level separation does not exist and the boundary rests
+entirely on per-key toggles. The rule that keeps invariant 1 true is therefore:
+**no key held by the analyst role may be able to transact.** `BANKR_KEY_READ`
+and `BANKR_LLM_KEY` carry Read Only ON; only `BANKR_KEY_EXEC` has the Wallet
+API with Read Only OFF, and only the treasurer role may load it. Probe 0.2
+verifies these toggles against the live surfaces rather than trusting the
+console.
 """
 
 from __future__ import annotations
@@ -62,6 +71,13 @@ class Credential:
     #: because the value may embed one (a provider RPC URL with an inline key).
     secret: bool = True
 
+    #: True if this credential can move funds. Since all three Bankr keys come
+    #: from one account, per-key toggles are the only thing separating spend
+    #: authority from read access, so the distinction is recorded here and
+    #: asserted in tests rather than left to the prose in ``scope``. A
+    #: transacting credential may only ever belong to the treasurer role.
+    can_transact: bool = False
+
 
 #: The table. Ordered as planning/PLAN.md section 6 orders it.
 CREDENTIALS: tuple[Credential, ...] = (
@@ -69,19 +85,26 @@ CREDENTIALS: tuple[Credential, ...] = (
         name="BANKR_KEY_READ",
         used_by=frozenset({Role.ANALYST}),
         purpose="quotes and market data for the snapshot and analyst path",
-        scope="read-only, Agent API off",
+        scope="Read Only ON, Agent API off. Cannot transact.",
     ),
     Credential(
         name="BANKR_KEY_EXEC",
         used_by=frozenset({Role.TREASURER}),
         purpose="the treasurer's swaps",
-        scope="read-write, IP allowlist, low platform caps, Agent API off",
+        scope=(
+            "Wallet API ON, Read Only OFF, Agent API off, IP allowlist, low "
+            "platform caps. The only key in the system that can transact."
+        ),
+        can_transact=True,
     ),
     Credential(
         name="BANKR_LLM_KEY",
         used_by=frozenset({Role.ANALYST}),
         purpose="analyst and risk inference via the LLM gateway",
-        scope="gateway only, header X-API-Key",
+        scope=(
+            "LLM Gateway only, Read Only ON, Agent API off, header X-API-Key. "
+            "Cannot transact: it is held by the analyst process."
+        ),
     ),
     Credential(
         name="RPC_4663_MAINNET",
@@ -131,3 +154,8 @@ def names() -> tuple[str, ...]:
 def for_role(role: Role) -> tuple[Credential, ...]:
     """The credentials a given process identity is permitted to load."""
     return tuple(c for c in CREDENTIALS if role in c.used_by)
+
+
+def transacting() -> tuple[Credential, ...]:
+    """Every credential that can move funds. Should only ever be treasurer-held."""
+    return tuple(c for c in CREDENTIALS if c.can_transact)

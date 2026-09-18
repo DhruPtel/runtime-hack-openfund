@@ -303,6 +303,30 @@ def test_only_the_treasurer_may_hold_spend_or_signing_authority():
         assert credentials.by_name(name).used_by == frozenset({Role.TREASURER})
 
 
+def test_no_analyst_credential_can_transact():
+    """The rule that keeps invariant 1 true when all keys share one account.
+
+    Account-level separation does not exist, so the boundary is per-key toggles.
+    A transacting credential reachable by the analyst role would make the role
+    scoping decorative and unit 4.12's isolation test unpassable.
+    """
+    for credential in credentials.CREDENTIALS:
+        if credential.can_transact:
+            assert credential.used_by == frozenset({Role.TREASURER}), (
+                f"{credential.name} can transact but is reachable by "
+                f"{sorted(r.value for r in credential.used_by)}"
+            )
+    for credential in credentials.for_role(Role.ANALYST):
+        assert not credential.can_transact, (
+            f"{credential.name} is held by the analyst role and can transact"
+        )
+
+
+def test_exactly_one_credential_can_transact():
+    """One spend authority. A second transacting key is a plan change, not a config tweak."""
+    assert [c.name for c in credentials.transacting()] == ["BANKR_KEY_EXEC"]
+
+
 def test_role_scoping_survives_a_credential_being_reassigned(monkeypatch):
     """A row moved to the analyst role changes what the analyst can load.
 
