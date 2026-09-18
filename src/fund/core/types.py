@@ -890,3 +890,111 @@ class Holding:
             raise ValueError("a value needs a mark that was read")
         if not self.balance.ok:
             raise ValueError("a value needs a balance that was read")
+
+
+# --- the snapshot --------------------------------------------------------------
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PinnedInput:
+    """A third-party input pinned by content hash: the registry, the feed directory.
+
+    Neither source carries a version, so the sha256 of the raw bytes is the
+    version (0.8 decision, F0.8.1).
+    """
+
+    name: str
+    locator: str
+    sha256: str
+    byte_count: int
+    fetch_time: Instant
+
+    def __post_init__(self):
+        _text("name", self.name)
+        _text("locator", self.locator)
+        if "://" in self.locator:
+            raise ValueError("a locator is a host and path, never a URL")
+        if not isinstance(self.sha256, str) or not _SHA256.match(self.sha256):
+            raise ValueError("sha256 is 64 lowercase hex characters")
+        _int("byte_count", self.byte_count, minimum=0)
+        _is("fetch_time", self.fetch_time, Instant)
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SnapshotEntry:
+    """One asset as the snapshot sees it: what was read, and what it adds up to."""
+
+    asset: Asset
+    feed_reading: Observation | None
+    series: tuple[Series, ...]
+    corroboration: Observation | None
+    corroborator_volume: Observation | None
+    divergence: Fixed | None
+    quote: Observation | None
+    universe_status: UniverseStatus
+    universe_reason: str | None
+
+    def __post_init__(self):
+        _is("asset", self.asset, Asset)
+        asset = self.asset.id
+        for name in ("feed_reading", "corroboration", "corroborator_volume", "quote"):
+            _is(name, getattr(self, name), Observation, optional=True)
+        _tuple_of(self, "series", Series)
+        for history in self.series:
+            if history.asset != asset:
+                raise ValueError("a series belongs to its entry's asset")
+        for name in ("feed_reading", "corroboration"):
+            seen = getattr(self, name)
+            if seen is not None and seen.ok and (
+                    not isinstance(seen.value, Price) or seen.value.base != asset):
+                raise ValueError(f"{name} is a price of the entry's asset")
+        if self.quote is not None and self.quote.ok and (
+                not isinstance(self.quote.value, Quote) or self.quote.value.buy.asset != asset):
+            raise ValueError("the quote buys the entry's asset")
+        _is("divergence", self.divergence, Fixed, optional=True)
+        if self.divergence is not None and self.divergence.unit != BPS:
+            raise ValueError("divergence is in basis points")
+        _is("universe_status", self.universe_status, UniverseStatus)
+        if self.universe_status is not UniverseStatus.TRADEABLE:
+            _text("universe_reason (say why it is out)", self.universe_reason)
+
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Snapshot:
+    """One frozen snapshot per cycle, containing history up to a pinned block.
+
+    Entries, holdings and inputs are put in canonical order on construction, so
+    identical inputs hash identically whatever order the builder produced them
+    in. `snapshot_id` is the sha256 of the canonical bytes. The *policy* checks —
+    mixed blocks, a stale newest point, anything after the pinned block — are
+    1.6's and 1.11's. This type holds what they judge.
+    """
+
+    pinned_block: BlockRef
+    inputs: tuple[PinnedInput, ...]
+    config_version: str
+    entries: tuple[SnapshotEntry, ...]
+    holdings: tuple[Holding, ...]
+
+    def __post_init__(self):
+        _is("pinned_block", self.pinned_block, BlockRef)
+        if self.pinned_block.timestamp is None:
+            raise ValueError("the pinned block's own time is what 'after' is judged against")
+        _text("config_version", self.config_version)
+        _tuple_of(self, "inputs", PinnedInput)
+        _tuple_of(self, "entries", SnapshotEntry)
+        _tuple_of(self, "holdings", Holding)
+        object.__setattr__(self, "inputs", tuple(sorted(self.inputs, key=lambda i: i.name)))
+        object.__setattr__(self, "entries", tuple(sorted(self.entries, key=lambda e: e.asset.id)))
+        object.__setattr__(self, "holdings", tuple(sorted(self.holdings, key=lambda h: h.asset)))
+        for label, keys in (("input", [i.name for i in self.inputs]),
+                            ("entry", [e.asset.id for e in self.entries]),
+                            ("holding", [h.asset for h in self.holdings])):
+            if len(keys) != len(set(keys)):
+                raise ValueError(f"duplicate {label}")
+
+    @property
+    def snapshot_id(self) -> str:
+        return content_id(self)

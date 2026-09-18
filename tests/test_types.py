@@ -15,7 +15,8 @@ import pytest
 from fund.core.types import (
     BPS, MULTIPLE, PERCENT, SECONDS, USD, Amount, AssetId, BlockRef, ChainAddress,
     Asset, AssetKind, Check, Deployment, FeedRef, FetchStatus, Fixed, Holding, Instant,
-    Observation, Price, Quote, RegistryRecord, Series, Source, TradingCapability,
+    Observation, PinnedInput, Price, Quote, RegistryRecord, Series, Snapshot,
+    SnapshotEntry, Source, TradingCapability,
     UniverseStatus, content_id, from_canonical, to_canonical,
 )
 
@@ -505,3 +506,70 @@ def test_an_unreadable_balance_is_kept_not_dropped():
                    universe_reason=None, mark=None, value=None,
                    value_reason="balance unreadable this snapshot")
     roundtrip(held)
+
+
+# --- the snapshot --------------------------------------------------------------
+
+def crm_entry() -> SnapshotEntry:
+    crm = Asset(id=CRM, kind=AssetKind.STOCK, symbol="CRM", decimals=18,
+                identity=Check(True), markability=Check(False, "no feed"),
+                beacon=Check(True), registry=registry_record(CRM, "CRM"))
+    return SnapshotEntry(asset=crm, feed_reading=None, series=(), corroboration=None,
+                         corroborator_volume=None, divergence=None, quote=None,
+                         universe_status=UniverseStatus.UNMARKABLE,
+                         universe_reason="no Chainlink feed")
+
+
+def tsla_entry(impact_bps: int = -15) -> SnapshotEntry:
+    tsla = Asset(id=TSLA, kind=AssetKind.STOCK, symbol="TSLA", decimals=18,
+                 identity=Check(True),
+                 markability=Check(True),
+                 beacon=Check.undetermined("beacon slot read timed out"),
+                 registry=RegistryRecord(  # a stand-in record; TSLA's was not re-read here
+                     registry_id="0x" + "0" * 63 + "1", symbol="TSLA", name="Tesla",
+                     isin="US88160R1014", status="ASSET_STATUS_ACTIVE", decimals=18,
+                     deployments=(Deployment(contract=ChainAddress(CHAIN, TSLA.address),
+                                             network_name="Robinhood Chain"),),
+                     current_multiplier=Fixed(1, 0, MULTIPLE), pending_multiplier=None),
+                 feed=equity_feed("0x" + "33" * 20, "Robinhood TSLA / USD"))
+    quote = Observation(value=tsla_quote(impact_bps), source=QUOTES, source_time=None,
+                        fetch_time=Instant.from_seconds(T0), block=None,
+                        status=FetchStatus.OK)
+    return SnapshotEntry(asset=tsla, feed_reading=None, series=(), corroboration=None,
+                         corroborator_volume=None, divergence=Fixed(-47, 1, BPS),
+                         quote=quote, universe_status=UniverseStatus.NOT_TRADEABLE,
+                         universe_reason="beacon undetermined: blocks")
+
+
+# 0.8's recorded registry hash, used as a stand-in value: its bytes were not kept,
+# so 1.2 will pin a fresh one (LESSONS 2026-09-18).
+REGISTRY_INPUT = PinnedInput(name="rhj-registry", locator="api.robinhood.com/rhj/assets",
+                             sha256="442718b5843e448e46a3deceab9f2d92f8719c0a4b1a77942d5d6da8098c8b4b",
+                             byte_count=154_149, fetch_time=Instant.from_seconds(T0))
+
+
+def snapshot(entries) -> Snapshot:
+    return Snapshot(pinned_block=PINNED, inputs=(REGISTRY_INPUT,), config_version="1",
+                    entries=entries, holdings=())
+
+
+def test_a_snapshot_roundtrips_byte_for_byte():
+    roundtrip(snapshot((crm_entry(), tsla_entry())))
+
+
+def test_identical_inputs_give_one_hash_whatever_the_order():
+    a = snapshot((crm_entry(), tsla_entry()))
+    b = snapshot((tsla_entry(), crm_entry()))
+    assert a.snapshot_id == b.snapshot_id
+
+
+def test_any_field_change_changes_the_hash():
+    assert snapshot((tsla_entry(-15),)).snapshot_id != snapshot((tsla_entry(-14),)).snapshot_id
+
+
+def test_a_snapshot_refuses_duplicates_and_needs_its_block_time():
+    with pytest.raises(ValueError):
+        snapshot((crm_entry(), crm_entry()))
+    with pytest.raises(ValueError):
+        Snapshot(pinned_block=BlockRef(CHAIN, 1), inputs=(), config_version="1",
+                 entries=(), holdings=())
