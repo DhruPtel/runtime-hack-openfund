@@ -1070,8 +1070,10 @@ Stated before the code, so that no unit's done-condition quietly assumes it:
 At the end of Phase 1, before detailing Phase 2, we answer:
 
 1. Is the snapshot rich enough for an analyst to be worth paying for?
-2. Did any probe finding change the marking, veto, or universe decisions?
-3. Which ungated 4663 asset carries the live leg in Phase 5, and does the
-   paper/live split change what the demo is?
+2. Did anything Phase 1 measured change the marking, veto, or universe
+   decisions, the way Phase 0's findings did (0.4 and 0.8 checkpoints)?
+3. Does the paper/live split change what the demo is? The live-leg asset
+   itself was decided at 0.11: ETH→USDG on 4663, proven for one sell, with the
+   return leg still unexercised.
 4. What did Phases 0 and 1 actually cost in time, and what does that imply for
    the remaining seven?
