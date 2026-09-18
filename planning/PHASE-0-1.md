@@ -813,32 +813,51 @@ F0.9.6. **Size:** the same shape as drafted, with more content.
 
 ### 1.7 Analyst cost
 
-*Relocated from probe 0.9, because snapshot bytes dominate the token count being
-measured and no snapshot exists until 1.6.*
+*Relocated from probe 0.9, which then also ran early as a floor on six
+hand-assembled assets (LESSONS 2026-09-18). This unit still owns the number.*
 
 **Goal:** a real number for the cycle budget and the endpoint price.
 
-**Build:** `probes/llm_cost.py`. Take one realistic analyst prompt with the real
-snapshot from 1.6 embedded, and run it against the intended model. Record input
-tokens, output tokens, latency and cost.
+**Build:** reuse `probes/llm_cost.py`, which exists from 0.9, with the real
+snapshot from 1.6 embedded, run against `analyst_model` (`claude-sonnet-5`,
+provisionally, per the config decision). What 0.9 established about how to
+measure:
 
-**Artifact:** one measured call, multiplied out: cost per analyst, cost per cycle
-at **four analysts plus one risk call**, cost per day at daily cadence, and the
-implied floor under the $0.05 endpoint price.
+- **Timeouts.** `worker_deadline_seconds` is 120. `transport_timeout_seconds` is
+  still null, and it must be set above the measured call latency (58 s at the
+  floor) before this runs. A call timed out client-side is still billed
+  (F0.9.1, F0.9.3): 0.9's first call was cut off by `_capture`'s 20 s default and
+  charged anyway.
+- **Cost from the response's own `usage` block**, not from a `/v1/usage` delta
+  around the call, because the aggregate went backwards (F0.9.2). Reconcile
+  against settled windows, reading `days`, `startDate` and `endDate` back
+  (F0.6.5).
+- **At least two identical calls.** Output varied 14% between two calls at
+  temperature 0 (F0.9.3), so cost per call is a distribution, not a constant.
+- **Price the same tokens across the catalogue.** The model pin is a 139× lever
+  (F0.9.5), and 2.4 needs that comparison to choose.
+- **Price the risk call separately.** It reads four reports and the sized plan,
+  and 0.9 priced it as if it were an analyst call (F0.9 limitations). Until
+  Phase 2 produces real reports, its input size is an estimate and must be
+  labelled one.
 
-**Done when:** the numbers exist and are in findings, and the $0.05 price is
-either confirmed or revised against them.
+**Artifact:** measured calls, multiplied out into:
+- cost per analyst call;
+- cost per cycle, at four analysts plus one risk call;
+- cost per day, at daily cadence, and per 30 days;
+- the implied floor under the $0.05 price.
 
-**Risk:** the prompt is still a draft until checkpoint 2.1, so treat the number as
-a floor. Retries and the risk context bundle are additional. The snapshot now
-carries a price series per asset, so its bytes will exceed 0.9's 35-asset
-extrapolation, which assumed one reading per asset (F0.9.4).
+**Done when:** the numbers exist and are in findings, and the operator has
+confirmed or revised the $0.05 price against them. The price stays provisional
+until then (0.11 decision).
 
-**What 0.9 already showed.** Set the client timeout from the measured 58 s, not
-from `_capture`'s 20 s default, because a timed-out call is still billed. Read
-cost from the response's own `usage` block, and never from a `/v1/usage` delta
-taken around the call. Price the same token counts across the catalogue as
-well, since the model pin is the largest cost lever (F0.9.1–F0.9.5).
+**Risk:** the prompt is still a draft until checkpoint 2.1, so the number is a
+floor, and retries and the risk bundle come on top. Latency, not cost, was the
+binding number at 0.9 (F0.9.1).
+
+**Changed by:** F0.9.1–F0.9.6, F0.6.4–F0.6.5, the model and deadline config
+decisions, and the 0.11 price decision. **Size:** as drafted; 0.9 has already
+built and debugged the method.
 
 ---
 
