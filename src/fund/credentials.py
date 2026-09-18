@@ -102,8 +102,10 @@ CREDENTIALS: tuple[Credential, ...] = (
         used_by=frozenset({Role.ANALYST}),
         purpose="analyst and risk inference via the LLM gateway",
         scope=(
-            "LLM Gateway only, Read Only ON, Agent API off, header X-API-Key. "
-            "Cannot transact: it is held by the analyst process."
+            "Read Only ON, LLM Gateway ON. Not gateway-only: measured in probe "
+            "0.2 reading the Wallet API. Scoping is by capability toggle, not "
+            "by surface. Either auth header works; we send X-API-Key. Cannot "
+            "transact: it is held by the analyst process."
         ),
     ),
     Credential(
