@@ -83,3 +83,80 @@ def test_directory_parse_converts_the_float_threshold_exactly():
     feed = next(iter(u.parse_directory(raw, CHAIN).values()))
     assert (feed.deviation_threshold.raw, feed.deviation_threshold.decimals) == (5, 1)
     assert feed.heartbeat.raw == 86_400 and feed.market_hours == "us_equities_24/5"
+
+
+# --- refresh: fetch-agnostic, and deliberate ---------------------------------------
+
+A = "0x" + "aa" * 20
+B = "0x" + "bb" * 20
+C = "0x" + "cc" * 20
+
+
+def seed_dir(tmp_path, raw: bytes):
+    """A registry dir pinned to `raw`, as a real one would be."""
+    plan = u.plan_refresh(u.REGISTRY, "example.invalid/assets", raw, Instant(1), current=None)
+    (tmp_path / u.PINS_FILE).write_text(json.dumps({"version": 1, "inputs": {}}))
+    u.store(plan, tmp_path)
+    u.accept(plan, tmp_path)
+    return plan
+
+
+def test_a_refresh_diffs_additions_removals_and_status_changes(tmp_path):
+    old = registry_bytes(registry_asset("AAA", A), registry_asset("BBB", B))
+    new = registry_bytes(registry_asset("AAA", A, status="ASSET_STATUS_HALTED"),
+                         registry_asset("CCC", C))
+    plan = u.plan_refresh(u.REGISTRY, "example.invalid/assets", new, Instant(2), current=old)
+    assert plan.added == (AssetId(CHAIN, C),)
+    assert plan.removed == (AssetId(CHAIN, B),)
+    assert (AssetId(CHAIN, A), "status", repr(u.ACTIVE), repr("ASSET_STATUS_HALTED")) in plan.changed
+
+
+def test_the_same_bytes_refresh_to_no_change(tmp_path):
+    raw = registry_bytes(registry_asset("AAA", A))
+    plan = u.plan_refresh(u.REGISTRY, "example.invalid/assets", raw, Instant(2), current=raw)
+    assert plan.unchanged
+
+
+def test_store_writes_under_the_hash_and_accept_bumps_the_pin(tmp_path):
+    raw = registry_bytes(registry_asset("AAA", A))
+    plan = seed_dir(tmp_path, raw)
+    assert (tmp_path / plan.filename).read_bytes() == raw
+    pin, stored = u.read_pinned(u.REGISTRY, tmp_path)
+    assert pin.sha256 == u.sha256_hex(raw) and stored == raw
+
+
+def test_planning_and_storing_never_move_the_pin(tmp_path):
+    first = registry_bytes(registry_asset("AAA", A))
+    seed_dir(tmp_path, first)
+    second = registry_bytes(registry_asset("AAA", A), registry_asset("BBB", B))
+    plan = u.plan_refresh(u.REGISTRY, "example.invalid/assets", second, Instant(3), current=first)
+    u.store(plan, tmp_path)
+    pin, _ = u.read_pinned(u.REGISTRY, tmp_path)
+    assert pin.sha256 == u.sha256_hex(first)  # only accept() moves it
+
+
+def test_accept_refuses_to_drop_a_held_asset_unless_acknowledged(tmp_path):
+    first = registry_bytes(registry_asset("AAA", A), registry_asset("BBB", B))
+    seed_dir(tmp_path, first)
+    second = registry_bytes(registry_asset("AAA", A))
+    plan = u.plan_refresh(u.REGISTRY, "example.invalid/assets", second, Instant(3), current=first)
+    u.store(plan, tmp_path)
+    with pytest.raises(u.HeldAssetRemoved) as refusal:
+        u.accept(plan, tmp_path, held=[AssetId(CHAIN, B)])
+    assert refusal.value.rule == u.RULE_REFRESH
+    u.accept(plan, tmp_path, held=[AssetId(CHAIN, A)])  # a held asset that stays: fine
+
+
+def test_a_malformed_fetch_is_refused_before_anything_is_stored(tmp_path):
+    with pytest.raises(Exception):
+        u.plan_refresh(u.REGISTRY, "example.invalid/assets", b"<html>busy</html>", Instant(1), None)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_a_pin_pointing_at_tampered_bytes_is_refused_on_read(tmp_path):
+    raw = registry_bytes(registry_asset("AAA", A))
+    plan = seed_dir(tmp_path, raw)
+    (tmp_path / plan.filename).write_bytes(raw.replace(b"AAA", b"AAB"))
+    with pytest.raises(u.PinMismatch) as refusal:
+        u.read_pinned(u.REGISTRY, tmp_path)
+    assert refusal.value.rule == u.RULE_PIN

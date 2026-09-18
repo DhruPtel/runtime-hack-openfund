@@ -188,3 +188,123 @@ def parse_directory(raw: bytes, chain_id: int) -> dict[ChainAddress, FeedRef]:
             market_hours=(item.get("docs") or {}).get("marketHours") or None,
             name=item["name"])
     return feeds
+
+
+# --- the pin file, and refresh as a deliberate act -----------------------------
+
+PINS_FILE = "pins.json"
+
+#: `config/registry/`, found from this file rather than the working directory.
+DEFAULT_DIR = Path(__file__).resolve().parents[3] / "config" / "registry"
+
+RULE_REFRESH = "refresh"
+
+
+class HeldAssetRemoved(UniverseError):
+    def __init__(self, assets: Iterable[AssetId]):
+        listed = ", ".join(f"{a.chain_id}:{a.address}" for a in assets)
+        super().__init__(RULE_REFRESH, "accepting this refresh would drop held assets "
+                         f"from the registry: {listed}. The holdings stay in the book "
+                         "either way; accept only with acknowledge_removed_held=True.")
+        self.assets = tuple(assets)
+
+
+def read_pins(registry_dir: Path = DEFAULT_DIR) -> dict[str, Any]:
+    return json.loads((registry_dir / PINS_FILE).read_bytes())
+
+
+def read_pinned(name: str, registry_dir: Path = DEFAULT_DIR) -> tuple[PinnedInput, bytes]:
+    """The pinned bytes for one input, verified against the pin before they are returned."""
+    entry = read_pins(registry_dir)["inputs"][name]
+    pin = _pin_from_json(name, entry)
+    if entry["file"] != filename_for(name, pin.sha256):
+        raise PinMismatch(f"{name}: pin names file {entry['file']}, "
+                          f"expected {filename_for(name, pin.sha256)}")
+    raw = (registry_dir / entry["file"]).read_bytes()
+    verify(raw, pin)
+    return pin, raw
+
+
+def _diff(old: Mapping, new: Mapping) -> tuple[tuple, tuple, tuple]:
+    added = tuple(sorted(k for k in new if k not in old))
+    removed = tuple(sorted(k for k in old if k not in new))
+    changed = []
+    for key in sorted(k for k in new if k in old):
+        before, after = old[key], new[key]
+        for field_name in type(before).__dataclass_fields__:
+            a, b = getattr(before, field_name), getattr(after, field_name)
+            if a != b:
+                changed.append((key, field_name, repr(a), repr(b)))
+    return added, removed, tuple(changed)
+
+
+@dataclass(frozen=True)
+class RefreshPlan:
+    """A candidate new version of one pinned input, with its diff against the current pin.
+
+    Producing a plan changes nothing. `store` writes the bytes, and `accept` bumps
+    the pin; both are explicit calls, and the loader never makes either.
+    """
+
+    pin: PinnedInput
+    raw: bytes
+    added: tuple
+    removed: tuple
+    changed: tuple
+
+    @property
+    def filename(self) -> str:
+        return filename_for(self.pin.name, self.pin.sha256)
+
+    @property
+    def unchanged(self) -> bool:
+        return not (self.added or self.removed or self.changed)
+
+
+def plan_refresh(name: str, locator: str, raw: bytes, fetch_time: Instant,
+                 current: bytes | None, chain_id: int = 4663) -> RefreshPlan:
+    """Hash, parse and diff freshly fetched bytes. The fetch itself is an adapter's."""
+    if name not in INPUT_NAMES:
+        raise ValueError(f"unknown pinned input {name!r}")
+    parse = (parse_registry if name == REGISTRY
+             else lambda b: parse_directory(b, chain_id))
+    fresh = parse(raw)  # a malformed fetch is refused here, before anything is stored
+    old = parse(current) if current is not None else {}
+    added, removed, changed = _diff(old, fresh) if current is not None else ((), (), ())
+    pin = PinnedInput(name=name, locator=locator, sha256=sha256_hex(raw),
+                      byte_count=len(raw), fetch_time=fetch_time)
+    return RefreshPlan(pin=pin, raw=raw, added=added, removed=removed, changed=changed)
+
+
+def store(plan: RefreshPlan, registry_dir: Path = DEFAULT_DIR) -> Path:
+    """Write the raw bytes under their own hash. It is idempotent, and it never touches the pin."""
+    path = registry_dir / plan.filename
+    if path.exists():
+        if path.read_bytes() != plan.raw:
+            raise PinMismatch(f"{path.name} exists with different bytes")
+        return path
+    path.write_bytes(plan.raw)
+    return path
+
+
+def accept(plan: RefreshPlan, registry_dir: Path = DEFAULT_DIR, *,
+           held: Iterable[AssetId] = (), acknowledge_removed_held: bool = False) -> None:
+    """Bump the pin to `plan`: the explicit config change a new version requires.
+
+    It refuses to drop a held asset from the registry unless that is
+    acknowledged. Even acknowledged, the holding stays in the book, where
+    `Universe.held_asset` still describes it. After a new registry or directory
+    is accepted, the reviewed feed map no longer matches, and loading refuses
+    until the map is re-reviewed.
+    """
+    stored = registry_dir / plan.filename
+    if not stored.exists() or stored.read_bytes() != plan.raw:
+        raise PinMismatch(f"{plan.filename} is not stored; call store() first")
+    if plan.pin.name == REGISTRY:
+        removed = set(plan.removed)
+        dropped = [asset for asset in held if asset in removed]
+        if dropped and not acknowledge_removed_held:
+            raise HeldAssetRemoved(dropped)
+    pins = read_pins(registry_dir)
+    pins["inputs"][plan.pin.name] = _pin_to_json(plan.pin)
+    (registry_dir / PINS_FILE).write_text(json.dumps(pins, indent=2, sort_keys=True) + "\n")
