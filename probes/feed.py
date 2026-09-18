@@ -28,9 +28,12 @@ Run:  PYTHONPATH=src python3 -m probes.feed
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import sys
 import urllib.request
+
+from fund import config, redaction
 
 OUT_DIR = pathlib.Path(__file__).resolve().parent / "out"
 
@@ -241,7 +244,138 @@ def gecko_coverage(assets: dict[str, dict]) -> dict[str, dict]:
     return coverage
 
 
+# --- step 3: the chain, at one pinned block ---------------------------------
+
+CHAIN_ID = 4663
+
+#: AggregatorV3Interface. Selectors are recomputed from their signatures rather
+#: than copied: `uiMultiplier()` matches the `0xa60bf13d` recorded at
+#: `research/agent-os.md:374`, which is corroboration and not a coincidence.
+SELECTOR_LATEST_ROUND = "0xfeaf968c"
+SELECTOR_DECIMALS = "0x313ce567"
+
+
+def _rpc(method: str, params: list) -> dict:
+    payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method,
+                          "params": params}).encode("utf-8")
+    request = urllib.request.Request(
+        os.environ["RPC_4663_MAINNET"], data=payload,
+        headers={"Content-Type": "application/json", "User-Agent": USER_AGENT},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except Exception as error:
+        return {"error": redaction.Redactor().redact(f"{type(error).__name__}: {error}")}
+
+
+def _call(to: str, selector: str, block: str) -> str | None:
+    return _rpc("eth_call", [{"to": to, "data": selector}, block]).get("result")
+
+
+def _word(raw: str, index: int) -> int:
+    """One 32-byte word of an ABI return, as an unsigned integer."""
+    body = raw[2:]
+    return int(body[index * 64:(index + 1) * 64], 16)
+
+
+def _signed(value: int) -> int:
+    """int256 two's complement. A feed answer is typed int256, so a negative is
+    representable even where it would be nonsense for a price. Decoding it as
+    unsigned would turn one into ~1.2e77 and a staleness check would pass it."""
+    return value - (1 << 256) if value >= (1 << 255) else value
+
+
+def block_pin_is_honoured(block: str) -> dict:
+    """Does this RPC actually honour the block parameter, or serve latest anyway?
+
+    `planning/PHASE-0-1.md` 0.4 asks for readings "at one pinned block", and
+    `research/agent-os.md` §8 records that the one public 4663 endpoint carries
+    no archive data. Those two facts sit badly together: if the node ignores the
+    parameter and serves current state, every reading is still consistent with
+    itself and nothing in the output would reveal it.
+
+    So this asks the falsifying question directly — read a feed at block 1, long
+    before it was deployed. An honoured pin returns empty or errors. Current data
+    means the parameter is decorative and "pinned block" is not a claim we can
+    make.
+    """
+    feed = "0x6B22A786bAa607d76728168703a39Ea9C99f2cD0"  # Robinhood AAPL / USD
+    ancient = _call(feed, SELECTOR_LATEST_ROUND, "0x1")
+    now = _call(feed, SELECTOR_LATEST_ROUND, block)
+    honoured = ancient != now
+    print(f"\nblock pin at {int(block, 16)}: "
+          f"{'honoured' if honoured else 'NOT HONOURED — node served latest'} "
+          f"(block 1 -> {str(ancient)[:18]})")
+    return {"block_1_result": ancient, "pinned_result": now, "honoured": honoured}
+
+
+def read_chain(assets: dict[str, dict]) -> tuple[str, dict, dict]:
+    """Step 3 — every reading in one pass at one block."""
+    chain = _rpc("eth_chainId", []).get("result")
+    if not chain or int(chain, 16) != CHAIN_ID:
+        raise SystemExit(f"REFUSING: chain id is {chain}, expected {CHAIN_ID}")
+    block = _rpc("eth_blockNumber", []).get("result")
+    print(f"\nchain {int(chain, 16)} pinned at block {int(block, 16)} ({block})")
+
+    pin = block_pin_is_honoured(block)
+    readings: dict[str, dict] = {}
+
+    for ticker, asset in sorted(assets.items()):
+        row: dict = {"ticker": ticker}
+        raw = _call(asset["proxy"], SELECTOR_LATEST_ROUND, block)
+        if raw and raw != "0x":
+            row.update(
+                round_id=_word(raw, 0),
+                answer_raw=_signed(_word(raw, 1)),
+                started_at=_word(raw, 2),
+                updated_at=_word(raw, 3),
+                answered_in_round=_word(raw, 4),
+            )
+            # The phase-encoded round id: high 64 bits are the proxy's phase,
+            # low 64 the aggregator's own round. Worth splitting because the
+            # two proxies answer with different phases for the same round.
+            row["phase_id"] = row["round_id"] >> 64
+            row["aggregator_round"] = row["round_id"] & ((1 << 64) - 1)
+        else:
+            row["error"] = "latestRoundData returned nothing"
+
+        onchain_decimals = _call(asset["proxy"], SELECTOR_DECIMALS, block)
+        row["feed_decimals_onchain"] = (
+            int(onchain_decimals, 16) if onchain_decimals and onchain_decimals != "0x"
+            else None
+        )
+        row["feed_decimals_directory"] = asset["feed_decimals"]
+        row["decimals_agree"] = (
+            row["feed_decimals_onchain"] == asset["feed_decimals"]
+        )
+
+        if asset["address"]:
+            multiplier = _call(asset["address"], SELECTOR_UI_MULTIPLIER, block)
+            # A revert here is a finding, not an error: it is what separates a
+            # genuine Stock Token from an impersonator (research/agent-os.md:230).
+            row["ui_multiplier_raw"] = (
+                int(multiplier, 16) if multiplier and multiplier != "0x" else None
+            )
+            row["ui_multiplier_answers"] = row["ui_multiplier_raw"] is not None
+            row["ui_multiplier"] = (
+                row["ui_multiplier_raw"] / 1e18
+                if row["ui_multiplier_raw"] is not None else None
+            )
+
+        if "answer_raw" in row and row["feed_decimals_onchain"] is not None:
+            row["feed_price"] = row["answer_raw"] / (10 ** row["feed_decimals_onchain"])
+        readings[ticker] = row
+
+    answered = sum(1 for r in readings.values() if "feed_price" in r)
+    multiplied = sum(1 for r in readings.values() if r.get("ui_multiplier") not in (None, 1.0))
+    print(f"{answered} of {len(readings)} feeds answered; "
+          f"{multiplied} tokens carry a multiplier other than exactly 1.0")
+    return block, pin, readings
+
+
 def main() -> int:
+    config.load_environment()
     directory = enumerate_directory()
     assets = resolve_assets(directory["equity"])
     unresolved = {t: a["status"] for t, a in assets.items() if a["status"] != "ok"}
@@ -251,7 +385,9 @@ def main() -> int:
         print(f"  unresolved: {unresolved}")
 
     coverage = gecko_coverage(assets)
-    result = {"directory": directory, "assets": assets, "gecko": coverage}
+    block, pin, readings = read_chain(assets)
+    result = {"directory": directory, "assets": assets, "gecko": coverage,
+              "block": block, "block_pin": pin, "readings": readings}
     OUT_DIR.mkdir(exist_ok=True)
     path = OUT_DIR / "feed.json"
     path.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
