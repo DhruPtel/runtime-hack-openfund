@@ -4,7 +4,10 @@ A history of what went wrong, what surprised us, and what changed as a result.
 
 **This file is history, not authority.** [planning/PLAN.md](../planning/PLAN.md),
 [planning/ROADMAP.md](../planning/ROADMAP.md) and [planning/PHASE-0-1.md](../planning/PHASE-0-1.md) are the
-authoritative plan; every change recorded here has been folded into them. An
+authoritative plan; every change recorded here has been folded into them —
+checked entry by entry on 2026-09-18, after this claim had been false since
+before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
+it open rather than reconciling it. An
 entry says what we believed, what reality said, and what we did about it — it is
 the record a judge reads to see whether the plan bent when it should have.
 
