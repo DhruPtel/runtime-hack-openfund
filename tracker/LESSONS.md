@@ -746,3 +746,35 @@ reconciled*. The Base decision is not revisited. The $0.05 price stays
 provisional: F0.9.4 shows it needs 1.3–2.3 sales a day to cover inference at the
 floor, and 1.7 is where it is next confirmed or revised. Neither blocks Phase 1.
 **Affects:** 1.7, 7.2; `planning/PLAN.md` §11 (already marked; no change).
+
+## 2026-09-18 — Phase 1 replanned against the Phase 0 record
+Every Phase 1 unit in `planning/PHASE-0-1.md` was drafted before any probe ran.
+Each has been rewritten against `research/findings.md` and this file, and each
+now names what changed it. No unit is added or removed. Four are bigger than
+drafted:
+- **1.2:** two rules, and pinned raw snapshots of the registry and of
+  Chainlink's directory.
+- **1.3:** reads a price series.
+- **1.8:** four ways out of the universe, plus USDG and ETH as holdings.
+- **1.11:** seven cases, not four.
+
+Three places where the record overruled the draft, or the brief:
+- **1.5 no longer waits on a funded wallet.** Quotes are not balance-checked
+  (F0.3.3), and stock fills are gated (F0.5.1). So funding cannot make a stock
+  quote evidence about liquidity. The unfunded wallet blocks 3.3's sizing and
+  Phase 5's volume, not 1.5.
+- **Probe 0.8 kept parsed JSON, not the bytes it hashed.** The registry version
+  F0.8.1 recorded (`442718b5…`) cannot be re-verified from anything kept, since
+  re-serialising gives the same length and a different hash. 1.2 therefore
+  re-fetches and stores raw bytes in `config/registry/`.
+- **A failover RPC with archive access** was put forward for 1.3. It is neither
+  on the record nor in the environment: `RPC_4663_MAINNET` is the public
+  endpoint, which is documented as having no archive. It is recorded as
+  unverified, not built on.
+
+Two smaller catches: the $1M tier was set on GeckoTerminal's token-level
+volume, so 1.4 must use that measure; and three findings tables cite "1.4" for
+the x402 cached-record design, which is a 7.x concern.
+**Affects:** 1.1–1.11, Phase 1 exit, the re-evaluation gate; `config/README.md`;
+`planning/PLAN.md` §8's Phase 1 summaries and `planning/ROADMAP.md`'s Phase 1
+table (*fold pending*: outside this pass's paths).
