@@ -448,3 +448,82 @@ second spend that unit 0.5 does not authorise; it belongs at the head of Phase 5
 rather than bolted onto 0.5, and Phase 5 should not be treated as de-risked
 until it passes.
 **Affects:** Phase 5 entry, 4.12; planning/PLAN.md §13.
+
+## 2026-09-18 — DECISION: a Chainlink feed is a membership condition, capping the universe at 35
+*Operator decision at the 0.4 checkpoint, not a probe result.* An asset with no
+Chainlink feed cannot be marked independently of the venue we trade on, and
+without an independent mark the books are not honest — which is the project's
+differentiator, so the mark is not a detail to compromise on. Feed presence
+therefore becomes a **membership condition** enforced at 1.2 rather than a
+property discovered later: the investable universe is the **35 equity feeds**
+`research/findings.md` F0.4.1 enumerated, out of the issuer's **194** assets
+(F0.T.2), so 82% of the apparent universe is excluded before tradeability is
+asked at all.
+
+**This changes what carries identity, and it contradicts F0.3.6.** That finding
+made the `• Robinhood Token` name marker the load-bearing discriminator, because
+it was the only thing separating the real GME from two impersonators. The testnet
+probe then measured the marker as an *anti-signal* — 140 Robinhood-named tokens
+on 46630 and not one of them genuine (F0.T.4). The marker is not retired because
+it was wrong on mainnet; it is retired because it is forgeable and we now have
+three better anchors: the issuer's own registry (F0.T.2), the EIP-1967 beacon,
+and feed presence. F0.3.6 stands as the record of why we ever leaned on a name.
+**Affects:** 1.2, 2.1, 3.1, 0.8; `config/universe.json`.
+
+## 2026-09-18 — DECISION: divergence is tiered by corroborator liquidity, not one flat number
+*Operator decision at the 0.4 checkpoint.* `config/thresholds.json` carried
+`divergence_max_bps: null` on the assumption that one number would serve, and
+F0.4.5 measured why it cannot: agreement runs ~20 bps median on assets whose
+GeckoTerminal pool does over $1M of daily volume and up to 610 bps on thin ones,
+with the divergence tracking **the corroborator's liquidity rather than the feed
+being wrong**. A flat threshold either vetoes a third of the universe every cycle
+or never fires at all.
+
+The rule is two-tier: roughly **100 bps** for assets above the **$1M daily pool
+volume** line, and below that line the asset is **not held at all** rather than
+vetoed per cycle — a thin corroborator is a reason to exclude an asset from the
+universe, not a reason to re-litigate it every day. Both numbers are
+**provisional** and live in `config/thresholds.json`, never in code, so tightening
+them is a config change and not a release. Note this does not make every liquid
+name safe: AMZN diverged 499 bps on $2.19M of volume while feed and quote agreed
+to 20 bps, so the tier bounds the common case and the veto still has to fire.
+**Affects:** 3.4, 1.2, 1.4; `config/thresholds.json`.
+
+## 2026-09-18 — DECISION: depth returns, as corroborator quality only — reversing the 2026-09-17 deletion
+*Operator decision at the 0.4 checkpoint, and it reverses an earlier entry in
+this file.* The 2026-09-17 entry *"'Depth' removed as a concept"* deleted depth
+from the vocabulary because the plan asserted tokenized stocks have no AMM pool
+of their own, so the filter was gating on a number that could not exist. **The
+premise was false.** F0.4.3 measured SPY holding $9.16M in one USDG pool and AAPL
+twenty pools — the assertion came from `tokenized-stocks.md:42` via
+`research/bankr-skills.md` and was taken as fact without being checked on chain.
+
+Depth returns in a **strictly narrower role than it had before**: a
+corroborator-quality signal that tiers the divergence rule above, and nothing
+more. It is **not** a tradeability gate, because execution is RFQ against USDG
+rather than against these pools, so pool size describes how much to trust
+GeckoTerminal's price and says nothing about our fill. **Tradeability is
+unchanged**: a quote at intended size succeeded, quote age within bound, and
+impact known-and-within-limit or null — and null blocks. The 2026-09-17 entry
+keeps its place as the record of a correct decision taken on a false premise,
+which is the failure mode worth remembering: it was good reasoning about a fact
+nobody had measured.
+**Affects:** 1.4, 3.4, 3.8, 1.2; planning/PLAN.md §13; `config/thresholds.json`.
+
+## 2026-09-18 — Probe 0.6: credits and usage are different accounting boundaries
+planning/REVIEW-RESPONSE.md finding 13's correction of planning/PLAN-v1.md §4 is
+now **measured** rather than documented — `GET /v1/credits` returns a balance in
+132 ms, so cost can be reconciled against provider totals (`research/findings.md`
+F0.6.1). What finding 13 does not promise, and what 0.6 measured, is that the
+attribution stops at an **(API key × model × day-window) aggregate**: no
+per-request rows, no request id, so a per-analyst cost line can only ever be our
+own token count allocated across a measured total, and must carry
+`is_estimate: true` (F0.6.4). PHASE-0-1 0.6 anticipated that branch; what it did
+not anticipate is that `/v1/credits` is scoped to the **wallet** while
+`/v1/usage` is scoped to the **key**, and the wallet's spend includes every other
+key it owns plus Max Mode and agent runs — so the two endpoints cannot be
+reconciled against each other, and the balance today is already $0.17 below what
+this key's usage explains (F0.6.6, recorded unresolved). 6.3 must reconcile
+aggregate-to-aggregate within one key and treat the wallet balance as a separate
+account, not as a check on our own arithmetic.
+**Affects:** 6.3, 2.5, 1.7; planning/PLAN.md §2.5.

@@ -118,6 +118,45 @@ the gate fires pre-broadcast and costs no gas, and by four separate confounds �
 balance, address, price impact and spend limit — each being excluded by evidence
 rather than assumed.
 
+
+## Testnet — can chain 46630 host an execution demo?
+**Date:** 2026-09-18 · **Commit:** uncommitted
+
+Built `probes/testnet.py`, an out-of-order read-only probe run because 0.5 closed
+the mainnet stock gate and testnet was still open at the Phase 1 gate: it
+establishes the endpoint is live and advancing before drawing any negative from
+it, then answers the three questions from an issuer deployment list rather than
+a sample — the trap 0.4 fell into. The artifact is `research/findings.md`
+§Testnet, six findings, with captures in the gitignored
+`probes/out/testnet.json`; the headline is that `GET api.robinhood.com/rhj/assets`
+returns 194 assets whose deployments are **all** on chain 4663 and none on
+46630, while five equity-named tokens on testnet nonetheless run the issuer's own
+`Stock` contract behind an EIP-1967 beacon. Verified two ways that do not share a
+failure mode — the issuer registry and an exhaustive same-address check over all
+194 issuer addresses plus 187 discovery-list tokens and 35 feed proxies, none of
+which has code on testnet — with a positive control on `eth_getCode` (20 of 20
+recently-touched addresses have code) and a positive control on the Chainlink
+directory (`feeds-ethereum-testnet-sepolia.json` returns 60 feeds, so a 404 on
+the Robinhood testnet spellings is absence and not a wrong guess).
+
+
+## 0.6 — Credits and usage
+**Date:** 2026-09-18 · **Commit:** uncommitted
+
+Built `probes/credits.py`, which reads `GET /v1/credits` and `GET /v1/usage` with
+`BANKR_LLM_KEY` across six `days` values, carrying forward probe 0.2's two
+controls — an invalid key, refused 401 on both endpoints, and `BANKR_KEY_READ`,
+refused 403 with the gateway toggle named — because a 200 is only evidence of
+authorization if something is refused. The artifact is `research/findings.md`
+§0.6, six findings with both raw shapes recorded as returned rather than as
+documented; the verdict is that `planning/REVIEW-RESPONSE.md` finding 13 is
+confirmed and `planning/PLAN-v1.md` §4's "balance is not programmatically
+readable" is refuted, but attribution stops at an (API key × model × day-window)
+aggregate with no per-request row and no request id, so per-analyst cost stays an
+estimate. Verified that the probe cost nothing by reading `balanceUsd` before and
+after all thirteen calls — 2.825608 both times, delta 0.0 — and by confirming no
+declared credential value appears in the findings file.
+
 ---
 
 ## State at close — 2026-09-18 (second session)

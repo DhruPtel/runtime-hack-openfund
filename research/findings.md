@@ -801,3 +801,419 @@ requirement for a size large enough to separate them stands.
   and was not tested.
 - Nothing was broadcast, so this says nothing about receipt handling, revert
   behaviour, or the `200 success:false` path that unit 4.x must handle.
+
+---
+
+## Testnet — can chain 46630 host an execution demo?
+
+**Date:** 2026-09-18 · **Method:** `PYTHONPATH=src python3 -m probes.testnet` ·
+**Captures:** `probes/out/testnet.json`
+
+Out-of-order probe, run because 0.5 measured the mainnet stock gate closed
+(F0.5.1) and testnet was still an open question at the Phase 1 gate. Read-only
+throughout; no transaction was attempted on testnet, and the Bankr API was never
+called with a testnet chain parameter.
+
+### The three-line verdict
+
+| # | Question | Answer | Confidence |
+|---|---|---|---|
+| 1 | Do tokenized stock tokens exist on 46630? | **The issuer's 194 listed assets: no. The Stock Token contract family: yes — 5 tokens.** | **measured** |
+| 2 | Do Chainlink equity feeds exist there? | **No feeds published in Chainlink's reference directory.** Not exhaustively searched on chain. | **measured** (directory level) |
+| 3 | Does Bankr route to testnet? | **No.** The documented chain list is mainnet-only. | **documented** |
+
+### F0.T.1 — The endpoint is live, so absence below means absence
+
+**Confidence: measured. Verdict: pass.**
+
+Every claim in this section is a negative, and a negative against a dead endpoint
+is worthless. `RPC_4663_TESTNET` — the public endpoint named in the issuer's own
+network table — answers `eth_chainId` **0xb626 = 46630**, `net_version` 46630, and
+`web3_clientVersion` `nitro/v3.12.0-rc.2`. Block 121,324,358 advanced by ~30
+blocks in 4 seconds, and the latest block carried transactions. The explorer
+reports 277,060,820 transactions and 23,637,014 addresses with a 212 ms average
+block time.
+
+Testnet is not a ghost town — it has **more blocks than mainnet** (121.3M against
+66.4M) and heavy traffic.
+
+**A second control, for the method rather than the endpoint.** Of 40 addresses
+that recent testnet transactions actually touched, **39 have code**. So
+`eth_getCode` is answering, and "no code at this address" below is a fact about
+the chain rather than about the probe.
+
+### F0.T.2 — None of the issuer's 194 assets is deployed on testnet
+
+**Confidence: measured. Verdict: fail** (for the demo's purposes), and it is
+established from a deployment list, not a sample.
+
+`https://docs.robinhood.com/chain/stock-tokens/` documents an issuer assets API,
+and it turns out to be the authoritative registry this build has needed since
+0.8 was written. `GET https://api.robinhood.com/rhj/assets` returns **194
+assets**, each with a `deployments` array carrying an explicit `chainId`:
+
+```
+deployments by chain id: {4663: 194}
+```
+
+Every asset, exactly one deployment, all of them on **4663**. **Zero on 46630.**
+Each row also carries `tokenSymbol`, `tokenName`, `contractAddress`,
+`currentMultiplier`, `tradingCapabilities` and an `isin`.
+
+Corroborated independently by an **exhaustive same-address check**: of the 194
+issuer addresses, plus all 187 `• Robinhood Token` entries from the 0.3 discovery
+list, plus all 35 mainnet equity feed proxies (F0.4.1), plus USDG — **not one has
+code at the same address on testnet.** Same-address deployment: no.
+
+**This is the answer to question 1 as the plan meant it.** The tokenized stocks
+the fund would hold do not exist on testnet.
+
+### F0.T.3 — But the issuer's Stock Token *contracts* are deployed there: five of them
+
+**Confidence: measured. Verdict: pass.** Different-address deployment, and it is
+a genuinely different answer from F0.T.2.
+
+Five equity-named tokens on testnet are the same contract family as mainnet stock
+tokens:
+
+| Symbol | Name | Address | Holders | `uiMultiplier()` | Decimals |
+|---|---|---|---|---|---|
+| AMZN | Amazon | `0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02` | 286,850 | **1.0** | 18 |
+| TSLA | Tesla | `0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E` | 223,165 | **1.0** | 18 |
+| AMD | AMD | `0x71178BAc73cBeb415514eB542a8995b82669778d` | 223,026 | **1.0** | 18 |
+| PLTR | Palantir Technologies | `0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0` | 220,569 | **1.0** | 18 |
+| NFLX | Netflix | `0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93` | 219,034 | **1.0** | 18 |
+
+`uiMultiplier()` answers on all five. That alone proves little (F0.T.4), so three
+harder checks were run:
+
+**The proxy bytecode is byte-identical to mainnet's.** Both are 283-byte
+`BeaconProxy` runtimes. Removing the embedded beacon address and the solc
+metadata trailer leaves 428 hex characters on each side that are **identical**.
+This is the technique `research/bankr-skills.md` records for `pantheon-staking`
+— "byte-identical (ex-metadata)" — applied here.
+
+**They share one beacon, and it is not mainnet's.** All five resolve through
+EIP-1967 to beacon `0x1df3ca0fd30ed5eeb09eb01938f4e9c5196e6ca5` (verified,
+`AccessControlsRegistry`) → implementation
+`0xbd14156e05c6af28ad39aa53a2ab8eb9cdf657da`. Mainnet stock tokens resolve to
+beacon `0xe10b6f6b275de231345c20d14ab812db62151b00` → implementation
+`0xb35490d6f9163de4f80d88dc75c3516eb64c5ae2`. Different addresses, and different
+sizes — 21,986 bytes on testnet against 23,230 on mainnet — so testnet runs a
+different version of the contract.
+
+**The implementation is a verified contract named `Stock`.** solc
+`v0.8.33+commit.64118f21`, verified 2026-03-13, exposing exactly the Robinhood
+stock-token surface: `uiMultiplier`, `newUIMultiplier`, `updateMultiplier`,
+`effectiveAt`, `balanceOfUI`, `totalSupplyUI`, `adminBurn`, `mint`, `pause`,
+`tokenPaused`, `uid`, `ACCESS_CONTROLLED_REGISTRY`.
+
+**What this does and does not establish.** It establishes that the Stock Token
+machinery runs on 46630 and that five equity-named tokens use it. It does **not**
+establish that Robinhood deployed them: attribution rests on identical proxy
+bytecode, the contract name, and verification, all of which are circumstantial,
+and the mainnet explorer returned 403 so the deployer addresses could not be
+compared. The five are also an arbitrary subset — no AAPL, no NVDA, no SPY — and
+carry no `isin`, no `tradingCapabilities`, and no entry in the issuer's registry.
+
+### F0.T.4 — On testnet the identity heuristics invert, and `uiMultiplier()` is worthless
+
+**Confidence: measured. Verdict: pass, as a warning.**
+
+F0.4.6 recorded `uiMultiplier()` answering as "necessary, not sufficient — nothing
+stops an impersonator implementing a function that returns a number". Testnet is
+that caveat made real, at scale:
+
+- **23 distinct tokens claim the symbol AAPL**, among them `Mock Apple Stock`,
+  `Apple (test)`, `AAPLProject`, `Pledge Finance mAAPL` and `vibecat`.
+- The explorer returns **140 distinct tokens with Robinhood-flavoured names** —
+  `Apple • Robinhood Token`, `AAPL Robinhood Token`, `TEST Robinhood AAPL Stock
+  Token`, `Mock Robinhood Stock`. **Not one of the 140 sits behind the Stock
+  beacon.** Every token that advertises itself as Robinhood's is a fake.
+- The five genuine-looking ones are named plainly — `Amazon`, `Tesla` — with no
+  marker at all, and hold 219k–287k holders against the fakes' 11–23.
+
+**The mainnet marker is an anti-signal here.** F0.3.6 established that the
+`• Robinhood Token` name marker was the only thing separating the real GME from
+two impersonators on mainnet. On testnet the marker appears **only** on fakes.
+Any identity rule written at 1.2 or 0.8 that leans on the name marker, or on
+`uiMultiplier()` answering, would resolve every one of these the wrong way. The
+check that survived is the EIP-1967 beacon.
+
+### F0.T.5 — Chainlink publishes no reference directory for Robinhood testnet
+
+**Confidence: measured, at the directory level. Verdict: fail.**
+
+Four namings were tried and all 404: `feeds-robinhood-testnet.json`,
+`feeds-robinhood-testnet-sepolia.json`, `feeds-robinhood-chain-testnet.json`,
+`feeds-robinhood-mainnet-testnet.json`.
+
+**With a positive control, because 0.4's mistake was concluding absence from a
+guess.** `feeds-ethereum-testnet-sepolia.json` returns **200 with 60 feeds**, so
+the `feeds-<chain>-testnet-<name>.json` convention exists and is served. A 404 on
+the Robinhood testnet spellings is therefore evidence of absence from the
+directory, not evidence of a wrong guess.
+
+**The limit of this finding, stated plainly:** it is about the *directory*, not
+the *chain*. No exhaustive on-chain search for `AggregatorV3Interface` contracts
+was run, and none is practical without a list to search. Unpublished feeds cannot
+be ruled out. What can be said is that nothing publishes them, so a consumer
+would have no way to discover a feed address — which for our purposes is the same
+constraint.
+
+### F0.T.6 — Bankr does not route to testnet
+
+**Confidence: documented. Verdict: fail.**
+
+`https://docs.bankr.bot/wallet-api/swap/`, read 2026-09-18, gives the chain
+parameter as *"one of `base`, `mainnet` (Ethereum), `polygon`, `unichain`,
+`arbitrum`, `bnb`, `worldchain`, `robinhood`, `solana`"*. All mainnet chains; no
+testnet variant of any of them. The string `testnet` appears **zero** times
+across the Bankr swap, portfolio, wallet-api and root documentation pages, and
+`46630` appears zero times.
+
+**Deliberately not measured.** Calling `/wallet/swap` or `/wallet/swap-quote` with
+a testnet chain value would settle it empirically, but that is a write path on an
+unfamiliar parameter and this probe had no authorization to poke it. The
+documented answer is unambiguous enough that an unauthorized experiment is not
+worth it.
+
+### What this means for the demo
+
+Stated as consequence, not as design — the execution path is not this probe's to
+choose.
+
+The combination is **(1) partially yes, (2) no, (3) no**. Five stock-family
+tokens exist on testnet, but Bankr cannot reach them, so any execution there
+means calling a DEX directly — which the plan already identifies as "a different
+and larger piece of work". And with no discoverable price feed, `planning/PLAN.md`
+§11's "Chainlink marks the book" has nothing to mark with on 46630, so a testnet
+demo would need a different mark as well as a different executor.
+
+Testnet does not rescue the execution story. What Phase 5 already planned — a
+real ungated swap on 4663 mainnet through the treasurer — remains the only path
+that exercises the real executor, and F0.5.5's open question about whether
+`BANKR_KEY_EXEC` can transact still gates it.
+
+### What this changes
+
+| Change | Where |
+|---|---|
+| The issuer's asset registry is found; it is the deployment list 0.8 needs | 0.8, 1.2; `config/universe.json` |
+| Identity must key on the EIP-1967 beacon, not the name marker or `uiMultiplier()` | 0.8, 1.2 |
+| Testnet carries no issuer assets, no published feeds, no Bankr routing | Phase 1 gate, Phase 5 |
+
+### Method limitations
+
+- **The token sweep is not exhaustive.** The explorer's token list was walked to
+  60,000 entries, ordered by holder count descending, and the cut fell at **7
+  holders** — so every testnet ERC-20 with more than 7 holders was examined, and
+  anything below that was not. The *absence* claim in F0.T.2 does not rest on
+  this sweep; it rests on the issuer registry and the same-address check.
+- Attribution of the five tokens to Robinhood is **circumstantial**. The mainnet
+  Blockscout API returned 403 to this probe, so deployer addresses could not be
+  compared across chains.
+- The public testnet RPC rate-limits aggressively (HTTP 429 under batching).
+  Calls retry with backoff and a rate-limit is recorded as its own outcome,
+  never as a missing contract — a 429 read as "no code" would manufacture
+  exactly the absence this probe is testing for.
+- No transaction was attempted on testnet, so nothing here says whether a swap
+  there would succeed, what DEX liquidity exists, or whether the five tokens are
+  transferable by an ordinary holder.
+
+---
+
+## 0.6 — Credits and usage
+
+**Date:** 2026-09-18 · **Method:** `PYTHONPATH=src python3 -m probes.credits` ·
+**Captures:** `probes/out/credits.json` (13 read-only GETs)
+
+**One-line verdict on attribution granularity:** usage is attributable to an
+**(API key × model × rolling day-window)** aggregate and to nothing finer — there
+are no per-request rows and no request identifier anywhere in the response.
+**Measured** for the response envelope; the per-model row shape is **documented,
+not measured**, because this key has zero usage and `byModel` came back empty.
+
+### F0.6.1 — Both endpoints exist and answer; finding 13 is confirmed
+
+**Confidence: measured. Verdict: pass.**
+
+| Call | Status | Fields returned |
+|---|---|---|
+| `GET /v1/credits` (`BANKR_LLM_KEY`) | **200** | `object`, `balanceUsd`, `effectiveBalanceUsd`, `undeductedCostUsd` |
+| `GET /v1/usage` (`BANKR_LLM_KEY`) | **200** | `object`, `days`, `startDate`, `endDate`, `totals`, `byModel` |
+| `GET /v1/credits` (*invalid key, control*) | **401** | `{"error":{"message":"Invalid or inactive API key","type":"auth_error"}}` |
+| `GET /v1/usage` (*invalid key, control*) | **401** | same |
+| `GET /v1/credits` (`BANKR_KEY_READ`) | **403** | *"This API key does not have LLM Gateway access enabled…"* |
+| `GET /v1/usage` (`BANKR_KEY_READ`) | **403** | same |
+
+The controls are what make the 200s evidence. The invalid key is refused on both
+endpoints, so the header is read rather than ignored (the F0.2.1 argument), and
+`BANKR_KEY_READ` is refused with the toggle named explicitly, so these endpoints
+sit behind the LLM Gateway capability and are not open to any key on the account
+(consistent with F0.2.4).
+
+**`planning/REVIEW-RESPONSE.md` finding 13 is confirmed, and
+`planning/PLAN-v1.md` §4 is refuted.** §4 asserted "credit balance is not
+programmatically readable, so our cost figures are our own token counts and must
+be labelled as estimates". The balance reads in 132 ms. The original source,
+`research/openclaude.md`, was careful — it said unreadable *through the path that
+repo used* — and the generalisation into a platform fact happened downstream of
+it. **This is the same over-reading as F0.2.1**, from the same report, on a
+different claim: a scoped negative about one client turned into a claim about the
+provider.
+
+**But finding 13 must not be over-read in the other direction either.** It says
+cost estimates "get reconciled against provider **totals**", and totals is exactly
+what is on offer. It does not promise per-call attribution, and F0.6.4 is why
+that distinction decides unit 6.3.
+
+### F0.6.2 — The reads cost nothing, measured rather than assumed
+
+**Confidence: measured. Verdict: pass.**
+
+`balanceUsd` was read before the probe's calls and again after: **2.825608 both
+times, delta 0.0**, with `undeductedCostUsd: 0` and
+`effectiveBalanceUsd == balanceUsd` (nothing in flight). The documentation states
+every GET keeps working even when a spend budget is exceeded; this confirms they
+are also free. Thirteen requests changed nothing.
+
+### F0.6.3 — Field sets as returned, against as documented
+
+**Confidence: measured. Verdict: pass, with two additions and one informative absence.**
+
+**`/v1/credits`.** Every documented field was present except `dailyBudget`, which
+is documented as *"Present only when a daily spend budget is set on the wallet.
+Omitted entirely when spend is uncapped."* Its absence is therefore a measurement,
+not a gap: **this wallet has no daily spend cap set.** The documentation adds that
+there are no per-key spending caps at all — the balance is the whole limit. So the
+only thing bounding gateway spend today is the $2.83 balance itself.
+
+**`/v1/usage`.** All six documented top-level fields present. `totals` carried
+**ten** fields where the documentation lists eight — two undocumented:
+`totalImageOutputTokens` and `totalImageCost`. Both zero here. They cost nothing
+to carry and unit 2.5 should read them rather than assume image spend is
+impossible.
+
+```
+totals: totalRequests, totalInputTokens, totalOutputTokens,
+        totalCacheReadInputTokens, totalCacheWriteInputTokens, totalTokens,
+        totalCost, totalCacheCost, totalImageOutputTokens, totalImageCost
+```
+
+Everything is **zero** and `byModel` is `[]`. Expected — no successful inference
+call has ever been made on this key. F0.2.7 recorded the gateway at zero credits
+and every call returning 402; it has since been funded, and nothing has spent it.
+
+### F0.6.4 — Attribution is aggregate only. There is no per-request evidence.
+
+**Confidence: measured (the envelope). Verdict: fail, against per-call reconciliation.**
+
+This is the finding unit 6.3 turns on, and *readable* is not the same property as
+*attributable*.
+
+The response contains no array other than `byModel`, no `requestId`, no `traceId`,
+and no identifier field of any kind — `totalRequests` is a **count**, not a
+handle. The finest attribution the provider offers is:
+
+| Axis | Available? | How we know |
+|---|---|---|
+| Per API key | yes | the endpoint is scoped to the authenticated key (documented), and `BANKR_KEY_READ` is refused rather than returning its own row |
+| Per model | field present | `byModel` is present as a key — **but empty**, so the row shape is documented and not measured |
+| Per time window | yes | `days` measurably moves `startDate`/`endDate` (F0.6.5) |
+| **Per request** | **no** | no array, no id field, in a complete envelope |
+| **Per analyst** | **no** | nothing in the response knows what an analyst is |
+
+**The honest limit of this finding.** With zero usage on the key, an empty
+per-request array could in principle be omitted rather than returned as `[]` —
+though `byModel` *was* returned as `[]`, which is evidence the endpoint does emit
+empty collections rather than dropping them. The documented schema independently
+shows no per-request rows. Both point the same way; neither is a demonstration
+against live data.
+
+**What would settle it, and why this probe did not do it:** one real gateway
+completion, followed by re-reading `/v1/usage` to see whether a row appears and
+whether it carries anything that maps back to that call. That spends credits and
+is outside 0.6's scope, which is two GETs. It belongs with unit 1.7's cost
+measurement, which has to make real calls anyway.
+
+**Consequence for 6.3, stated as a constraint and not a design.** A per-cycle or
+per-analyst cost line cannot be evidenced by the provider. It can only be *our*
+token count, allocated, and reconciled in aggregate against `totals.totalCost` for
+a window. So the total may be booked as measured; any finer breakdown must carry
+`is_estimate: true`. `planning/PLAN.md` §2.5's "token accounting per call,
+reconciled against `/v1/usage`" remains correct only if "reconciled" means
+aggregate-to-aggregate — the per-call half is ours alone.
+
+### F0.6.5 — `days` is accepted, and silently coerced out of range
+
+**Confidence: measured. Verdict: pass, with a trap.**
+
+| Request | `days` returned | Window |
+|---|---|---|
+| `/usage` | 30 | 2026-08-19 → 2026-09-18 |
+| `/usage?days=1` | 1 | 2026-09-17 → 2026-09-18 |
+| `/usage?days=7` | 7 | 2026-09-11 → 2026-09-18 |
+| `/usage?days=90` | 90 | 2026-06-20 → 2026-09-18 |
+| `/usage?days=0` | **30** | 2026-08-19 → 2026-09-18 |
+| `/usage?days=91` | **90** | 2026-06-20 → 2026-09-18 |
+
+A time range is accepted and genuinely moves the window. Out-of-range values are
+**silently coerced** — `0` falls back to the default 30 and `91` clamps to 90,
+both returning **200** with no warning. A caller that asks for 91 days and books
+the answer as 91 days of cost is wrong by a day and has nothing in the status code
+to tell it. The window is self-describing, so the rule for 1.7 and 6.3 is to read
+`days`, `startDate` and `endDate` back off the response and never trust the value
+that was sent.
+
+Also note `endDate` is **now**, not midnight: the window trails the request
+instant. Two calls seconds apart cover different windows, so a cost figure is only
+meaningful with the returned `startDate`/`endDate` attached.
+
+### F0.6.6 — Credits and usage are different accounting boundaries
+
+**Confidence: documented, with a measured discrepancy that it explains.**
+**Verdict: unresolved.**
+
+`/v1/usage` is scoped to *"the authenticated API key"*. `/v1/credits` reports the
+*wallet*, and the documentation says the wallet's spend *"spans all metered LLM
+spend on the wallet, not just gateway traffic: requests from every API key it
+owns, plus Max Mode and app-invoked Bankr agent runs."* **These are not the same
+boundary**, so a balance movement cannot be explained by one key's usage, and the
+two endpoints cannot be reconciled against each other without knowing every other
+consumer of the wallet.
+
+The measured hint: the balance reads **$2.825608**, while `tracker/LOGS.md` records
+the gateway being funded to **$3.00**, and `/v1/usage` reports **0 requests and
+$0.00 cost across a full 90-day window**. A gap of roughly **$0.174** is
+unaccounted for by this key's gateway traffic.
+
+**Marked unresolved, deliberately.** The $3.00 is our own note of an operator
+action, not a provider receipt, so the gap may be a funding fee, a rounding, or
+spend by another consumer of the same wallet — the documentation makes the last
+one entirely ordinary. It is recorded because it is exactly the class of
+discrepancy the books are supposed to surface rather than smooth away, and because
+a reconciliation built on "balance delta equals our usage" would already be wrong
+by $0.17 before the fund has made a single inference call.
+
+### What 0.6 changes
+
+| Change | Where |
+|---|---|
+| Finding 13 confirmed; §4's "not readable" is refuted | `planning/PLAN-v1.md` §4 (superseded), 6.3 |
+| Aggregate reconciliation only; per-analyst cost stays `is_estimate: true` | 6.3, 2.5 |
+| Read `days`/`startDate`/`endDate` back; never trust the value sent | 1.7, 6.3 |
+| `totals` carries two undocumented image fields | 2.5 |
+| No daily budget and no per-key cap: the balance is the only bound | 0.10, `config/thresholds.json` |
+| Credits is wallet-scoped, usage is key-scoped — not reconcilable to each other | 6.3 |
+
+### Method limitations
+
+- **Zero usage on the key.** Every number is a zero, so this measures the
+  *shape* of the endpoints and not their behaviour under load. `byModel`'s row
+  contents, the cache-token fields and per-model cost are all unobserved.
+- One key, one wallet, one account, one day. Nothing here bounds what a wallet
+  with a daily budget set would return.
+- Read-only GETs only. No inference call was made, so nothing here demonstrates
+  how quickly usage appears after a request, or whether it appears at all before
+  a request settles.
