@@ -305,8 +305,9 @@ what each finding changed, is in `PHASE-0-1.md`.*
   into a cycle budget at four analysts plus risk, a daily cost, and a
   per-request endpoint price.
 - **1.8** Held-but-untradeable handling: an asset out of the buy universe remains
-  a holding with explicit valuation and execution status. There are four ways
-  out, each with its own status, and USDG and ETH are carried as holdings.
+  a holding with explicit valuation and execution status. There are five ways
+  out, each with its own status — listed-but-not-ACTIVE among them — and USDG
+  and ETH are carried as holdings.
 - **1.9** ▶ **Fixture generation and offline replay:** *Show: the same command
   producing a byte-identical snapshot from a fixture, network off.* Fixtures are
   the only mechanism for historical reproducibility, because no archive RPC is

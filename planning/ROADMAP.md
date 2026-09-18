@@ -76,7 +76,7 @@ Turn a permissionless chain into one trustworthy, frozen object.
 | 1.5 | Quote adapter: quotes at the $25 intended size, with age, fees and signed, three-valued impact — prices, not fills |
 | 1.6 ▶ | Snapshot builder: merge, filter, hash |
 | 1.7 | Analyst cost and latency against the real snapshot (relocated from 0.9) |
-| 1.8 | Held-but-untradeable assets stay in the book with a status, four ways out; cash and gas are holdings too |
+| 1.8 | Held-but-untradeable assets stay in the book with a status, five ways out; cash and gas are holdings too |
 | 1.9 ▶ | Fixtures and offline replay |
 | 1.10 | Selftest attesting every address against chain |
 | 1.11 ▶ | Skew rejection |

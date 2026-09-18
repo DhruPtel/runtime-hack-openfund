@@ -888,7 +888,7 @@ where it can be, flagged, and never dropped. What the record adds:
 
 - **Holdings come from the chain.** Balances are read over RPC (1.3), because
   `/wallet/portfolio` omits every token (F0.7b.8).
-- **There are four ways out of the buy universe, and each gets its own status**,
+- **There are five ways out of the buy universe, and each gets its own status**,
   because each means something different for valuation:
   - **Not tradeable this snapshot** (quote, age or impact; 1.6). The asset is
     still marked.
@@ -901,9 +901,13 @@ where it can be, flagged, and never dropped. What the record adds:
     a substitute (F0.3.5, F0.4.4, 0.4 decision). How such a holding is shown is
     this unit's decision, with two constraints: it may not be the venue quote,
     and it may not silently become zero.
-  - **Identity in doubt.** The registry no longer lists the asset, or lists it
-    with a status other than `ACTIVE` — a form never observed (F0.8.1) — or its
-    beacon disagrees, which fails the cycle outright (0.8 decision).
+  - **Listed but not ACTIVE** (`LISTED_NOT_ACTIVE`). The registry still lists
+    it, so identity passes, but its status is something other than `ACTIVE` —
+    a form never observed (F0.8.1). It is refused for buying at 1.2's standing
+    rule, and it keeps its registry record and its mark.
+  - **Identity in doubt** (`IDENTITY_IN_DOUBT`). The registry no longer lists
+    the asset, or its beacon read is undetermined. A beacon that disagrees fails
+    the cycle outright (0.8 decision).
 - **Cash and gas are holdings.** Since 0.10 the wallet holds USDG (0.078742) and
   ETH on 4663. Neither is in the registry, and both are in the book, valued by
   their Chainlink feeds (1.4). Base holdings, which are x402 revenue in USDC,
@@ -911,12 +915,12 @@ where it can be, flagged, and never dropped. What the record adds:
 
 **Artifact:** both statuses on every holding, cash and gas included.
 
-**Done when:** tests take a held asset out of the universe each of the four ways,
+**Done when:** tests take a held asset out of the universe each of the five ways,
 and each time the position survives with its named status. USDG and ETH appear
 in the book, valued from their feeds.
 
 **Risk:** this is the quiet bug that makes a portfolio report lie, and there are
-now four doors instead of one.
+now five doors instead of one.
 
 **Changed by:** F0.7b.8, F0.4.1, F0.3.5, F0.8.1–F0.8.2 (CRM), and the 0.10 swap
 that made USDG a holding; the 0.4 membership and tier decisions; 0.8's beacon
