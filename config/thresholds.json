@@ -14,9 +14,9 @@
   "_impact_max_resolved_by": "0.11 checkpoint decision (tracker/LESSONS.md 2026-09-18); provisional",
 
   "feed_staleness_rule": "per_feed_heartbeat_plus_margin",
-  "feed_staleness_margin_seconds": null,
+  "feed_staleness_margin_seconds": 3600,
   "_feed_staleness_note": "Replaces the single feed_staleness_max_seconds. Staleness is not a constant: a feed's newest observation is stale when its age exceeds that feed's own documented heartbeat plus feed_staleness_margin_seconds. Equity feeds document 86,400 s (findings F0.4.1); read each feed's heartbeat from the pinned feed data, never assume it. An updatedAt 3.6 h old is normal in market hours (F0.4.7), and overnight and weekend behaviour is unmeasured. Applies to the newest point of a series only; historical points are old by definition (decision 2026-09-18).",
-  "_feed_staleness_resolved_by": "rule: 0.11 checkpoint decision (tracker/LESSONS.md 2026-09-18). The margin was not given in that decision and stays null, which blocks the check until it is set.",
+  "_feed_staleness_resolved_by": "rule: 0.11 checkpoint decision; margin: decision before unit 1.1 (tracker/LESSONS.md 2026-09-18). Provisional. An equity feed's newest point is stale past 86,400 + 3,600 s. Weekend behaviour of us_equities_24/5 feeds is unmeasured and is 1.11's checkpoint question.",
 
   "divergence_max_bps": 100,
   "corroborator_min_volume_usd_24h": 1000000,
