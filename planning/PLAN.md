@@ -259,48 +259,67 @@ re-evaluate before detailing the next.
 
 ### Phase 1 — adapters and snapshot
 
-- **1.1** Types module: Snapshot, Observation, AnalystReport, Proposal, Plan,
-  Decision, Order, JournalEvent, Statement.
+*Replanned 2026-09-18 against the Phase 0 record; unit-level detail, including
+what each finding changed, is in `PHASE-0-1.md`.*
+
+- **1.1** Types module: the contracts everything imports. `Observation` keeps
+  source time and fetch time separate, always. A price series type. `Asset`
+  carries identity and markability as separate fields. Amounts carry explicit
+  decimals with no default. Checks are three-valued. An `Order` does not assume
+  a swap is a transaction sent from our wallet (F0.10.3).
 - **1.2** Universe: two rules, evaluated separately and never collapsed.
   **Identity** is membership in the issuer registry keyed by
-  `(chain_id, address)`, from a pinned snapshot versioned by its sha256.
-  **Markability** is the existence of a Chainlink equity feed. The EIP-1967
-  beacon is a cross-check with an independent trust root, and a disagreement
-  with the registry **fails the cycle loudly**. `uiMultiplier()` and the name
-  marker are not identity signals (0.8 decisions).
+  `(chain_id, address)`, from a pinned snapshot versioned by its sha256. It is
+  stored as raw bytes in `config/registry/`, because 0.8's recorded hash cannot
+  be re-verified. **Markability** is the existence of a Chainlink equity feed,
+  pinned by address from a pinned copy of the directory. The EIP-1967 beacon is
+  a cross-check with an independent trust root, and a disagreement with the
+  registry **fails the cycle loudly**. `uiMultiplier()` and the name marker are
+  not identity signals (0.8 decisions). USDG, the cash leg, is pinned separately.
 - **1.3** Chain adapter: block-pinned reads, feed staleness and pause rules,
   source time separate from fetch time. Explicit request timeouts and fail
   loudly; no failover is claimed and no archive read is assumed. Reads a
-  **price series** ending at the pinned block (invariant 2). Which series and
-  what window are this unit's to decide.
+  **price series** ending at the pinned block (invariant 2); which series and
+  what window are this unit's to decide. Staleness binds the newest point:
+  each feed's own heartbeat plus a configured margin. Balances are read over
+  RPC, and the wallet is not an EOA on 4663.
 - **1.4** Price cross-check: Chainlink as the accounting mark, corroboration from
   GeckoTerminal (probe 0.4: 32 of 32 covered, independent of the venue),
   divergence recorded with its independence stated and gated by the tiered rule
-  in `config/thresholds.json`.
+  in `config/thresholds.json`, on the volume measure the tier was set on. Cash
+  and gas are marked by their own feeds.
 - **1.5** Quote adapter (read-only): quotes at the $25 intended size, with quote
   age, fees, and impact as a three-valued field. Impact is **signed** — negative
   is price improvement — so a gate compares `impact > limit`, never
-  `abs(impact) > limit`. Re-runs probe 0.3 against a funded wallet, which is when
-  its numbers first mean anything about liquidity.
+  `abs(impact) > limit`. A quote is a price, not a fill: quotes are not
+  balance-checked (F0.3.3) and stock execution is gated (F0.5.1), so no amount of
+  funding makes them evidence about liquidity.
 - **1.6** ▶ **Snapshot builder:** merge, filter, hash. *Show: a real snapshot
-  JSON, with per-asset tradeable/thin/excluded status and every timestamp
-  visible.*
-- **1.7** Analyst cost probe (relocated from 0.9): one realistic analyst prompt
-  against the real snapshot from 1.6; record input and output tokens, latency and
-  cost, then multiply into a cycle budget at four analysts plus risk, a daily
-  cost, and a per-request endpoint price.
+  JSON with history up to its pinned block, a per-asset status with a named
+  reason, and every timestamp visible.*
+- **1.7** Analyst cost probe (relocated from 0.9, which also ran early as a
+  floor): a realistic analyst prompt against the real snapshot from 1.6. Record
+  input and output tokens, latency and cost over at least two calls. Multiply
+  into a cycle budget at four analysts plus risk, a daily cost, and a
+  per-request endpoint price.
 - **1.8** Held-but-untradeable handling: an asset out of the buy universe remains
-  a holding with explicit valuation and execution status.
+  a holding with explicit valuation and execution status. There are four ways
+  out, each with its own status, and USDG and ETH are carried as holdings.
 - **1.9** ▶ **Fixture generation and offline replay:** *Show: the same command
   producing a byte-identical snapshot from a fixture, network off.* Fixtures are
   the only mechanism for historical reproducibility, because no archive RPC is
-  assumed.
-- **1.10** Adapter selftest attesting every address in the table against chain.
-- **1.11** ▶ **Two-block skew test:** *Show: a deliberately inconsistent snapshot
-  rejected with a named reason.*
+  assumed. They capture each asset's series.
+- **1.10** Adapter selftest attesting every address in the table against chain,
+  beacon included; the execution wallet is expected to carry its 7702
+  delegation on 4663.
+- **1.11** ▶ **Skew rejection:** *Show: six named refusals — mixed blocks, a
+  stale newest point, a replayed body, an observation from after the pinned
+  block, a paused feed, a market-closed feed — and one acceptance: old history
+  with a fresh newest point.*
 
-**Exit:** hashed snapshot from live data; identical replay from fixture; bad
-inputs rejected, not absorbed.
+**Exit:** hashed snapshot from live data, with history up to its pinned block;
+identical replay from fixture; bad inputs rejected, not absorbed, and old
+history accepted.
 
 ### Phase 2 — analyst contract and fan-out
 
