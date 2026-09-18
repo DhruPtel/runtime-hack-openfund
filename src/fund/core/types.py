@@ -23,11 +23,17 @@ module that may define one (CODEBASE §3). This module supplies exact ordering o
 like-for-like quantities, and nothing more.
 
 `core/` imports nothing from `adapters/`: this module is stdlib only.
+
+Deliberately absent: `AnalystReport`, `Proposal`, `Plan`, `Decision`,
+`JournalEvent` and `Statement`. Nothing in the record fixes their shapes yet, and
+2.1 requires the report format to be designed by hand before any code. Each
+arrives with the unit that designs it (tracker/LESSONS.md 2026-09-18).
 """
 
 from __future__ import annotations
 
 import enum
+import functools
 import hashlib
 import json
 import re
@@ -93,6 +99,7 @@ def content_id(obj: Any) -> str:
 _INT_STR = re.compile(r"^-?(0|[1-9][0-9]*)$")
 
 
+@functools.cache
 def _enum_fields(cls: type) -> dict[str, type]:
     """Fields whose declared type is an Enum (optionally `| None`)."""
     found = {}
