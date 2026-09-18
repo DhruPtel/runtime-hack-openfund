@@ -267,6 +267,26 @@ recorded source, and we know what the beacon check adds on top.
 **Risk:** the beacon check is a consistency test, not proof of issuer. Do not let
 a pass here become the authority.
 
+**Run 2026-09-18 — done, and decided.** The issuer registry is
+`GET api.robinhood.com/rhj/assets`: 194 assets, all on 4663, with no version, no
+`ETag` and no `Last-Modified`, so the snapshot's sha256 serves as its version
+(F0.8.1). Five checks were run against nine candidates (F0.8.2):
+
+- Feed presence **admits both GME counterfeits** (F0.8.3).
+- The registry and the beacon agree on all 381 addresses swept (F0.8.4).
+
+Decisions (`tracker/LESSONS.md` 2026-09-18):
+
+- Registry membership is the identity test.
+- `uiMultiplier()` and the name marker are retired.
+- The beacon is a cross-check that fails the cycle loudly.
+- Feed presence is markability, not identity.
+
+The ceiling on all of this: both counterfeits were crude. A proxy-cloning forgery
+would be caught only by the registry, and a counterfeit that got into the
+registry would defeat every check. The snapshot this probe took is in the
+gitignored `probes/out/`; 1.2 pins its own.
+
 ---
 
 ### 0.9 — relocated to unit 1.7
@@ -353,9 +373,20 @@ harder. Source time and fetch time are separate fields, always.
 **Goal:** an asset can only enter the system if we know it's the real one.
 
 **Build:** `core/universe.py` plus `config/universe.json`. The allowlist from
-probe 0.8, keyed by `(chain_id, address)`, with issuer source, snapshot date, and
-a version. A loader that refuses unknown addresses. The beacon check wired as a
-secondary consistency flag, not the authority.
+probe 0.8, keyed by `(chain_id, address)`, with issuer source, fetch time, and
+the snapshot's sha256 as its version. The registry has no version of its own
+(F0.8.1), so the rule is: pin a snapshot, diff it on refresh, never look it up
+live. A loader that refuses unknown addresses. Rules from the 0.8 decisions:
+
+- **Two rules, evaluated separately and never collapsed.** Identity is registry
+  membership. Markability is a Chainlink feed (0.4 decision). CRM is the case
+  that proves they differ: genuine, and unmarkable.
+- **The beacon is a cross-check with an independent trust root.** If it
+  disagrees with the registry, the cycle fails loudly. A warning is not enough.
+- `uiMultiplier()` and the name marker carry no identity weight.
+- Never join the registry to the feed directory on ticker (F0.8.1: `RHDELL`).
+- Do not assume `status` is always `ACTIVE` or that `deployments` has length 1.
+  Neither has been observed otherwise, and neither is guaranteed.
 
 **Artifact:** the versioned allowlist file and a loader.
 

@@ -54,7 +54,9 @@ Each is structural where possible, and tested where not.
    determinism. Fresh inference against a recorded snapshot is a separate
    experiment, labelled as one, never presented as a replay.
 8. **Assets are pinned by `(chain_id, address)`** from a versioned,
-   issuer-derived allowlist with recorded provenance.
+   issuer-derived allowlist with recorded provenance. The issuer's registry
+   carries no version of its own, so a pinned snapshot's sha256 is its version;
+   it is diffed on refresh and never queried live at cycle time.
 9. **Nothing is booked from an HTTP status.** A fill is evidenced by a receipt;
    revenue is evidenced by settlement.
 10. **Everything published is immutable and addressed by content id.**
@@ -239,8 +241,13 @@ re-evaluate before detailing the next.
 
 - **1.1** Types module: Snapshot, Observation, AnalystReport, Proposal, Plan,
   Decision, Order, JournalEvent, Statement.
-- **1.2** Universe: versioned issuer allowlist keyed by `(chain_id, address)`,
-  provenance recorded, beacon check as secondary.
+- **1.2** Universe: two rules, evaluated separately and never collapsed.
+  **Identity** is membership in the issuer registry keyed by
+  `(chain_id, address)`, from a pinned snapshot versioned by its sha256.
+  **Markability** is the existence of a Chainlink equity feed. The EIP-1967
+  beacon is a cross-check with an independent trust root, and a disagreement
+  with the registry **fails the cycle loudly**. `uiMultiplier()` and the name
+  marker are not identity signals (0.8 decisions).
 - **1.3** Chain adapter: block-pinned reads, feed staleness and pause rules,
   source time separate from fetch time. Explicit request timeouts and fail
   loudly; no failover is claimed and no archive read is assumed.
@@ -462,7 +469,9 @@ book.
 
 **Identity:** an unlisted clone with a matching ticker and beacon is refused; a
 correct token on the wrong chain is refused; an address change requires explicit
-version acceptance.
+version acceptance; a counterfeit whose ticker has a Chainlink feed is still
+refused; a genuine asset with no feed is admitted as genuine and excluded as
+unmarkable; a registry-listed asset whose beacon disagrees fails the cycle.
 
 **Analyst contract:** valid reports validate; malformed output retries once then
 records a failed worker; `NO_CALL` accepted; out-of-scope assertions rejected;
