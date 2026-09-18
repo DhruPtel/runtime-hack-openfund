@@ -844,14 +844,15 @@ _VALUE_TYPES = _VALUE_TYPES + (Quote,)
 # --- holdings ------------------------------------------------------------------
 
 class UniverseStatus(enum.Enum):
-    """Can we buy it? The four ways out of the buy universe are kept distinct
-    (1.8), because each means something different for valuation."""
+    """Can we buy it? The ways out of the buy universe are kept distinct (1.8),
+    because each means something different for valuation."""
 
     TRADEABLE = "tradeable"
     NOT_TRADEABLE = "not_tradeable"                      # this snapshot: quote, age or impact
     BELOW_CORROBORATOR_LINE = "below_corroborator_line"  # still marked by Chainlink
     UNMARKABLE = "unmarkable"                            # no feed: no independent mark
-    IDENTITY_IN_DOUBT = "identity_in_doubt"              # registry or beacon
+    LISTED_NOT_ACTIVE = "listed_not_active"              # identity passes; the registry's status is not ACTIVE
+    IDENTITY_IN_DOUBT = "identity_in_doubt"              # no longer listed, or the beacon disagrees
     NOT_A_STOCK = "not_a_stock"                          # cash leg, gas
 
 

@@ -46,6 +46,7 @@ from typing import Any, Iterable, Mapping
 from .types import (
     MULTIPLE, PERCENT, SECONDS, Asset, AssetId, AssetKind, ChainAddress, Check, Deployment,
     FeedRef, Fixed, Instant, Observation, PinnedInput, RegistryRecord, TradingCapability,
+    UniverseStatus,
 )
 
 # --- rules and refusals --------------------------------------------------------
@@ -398,6 +399,18 @@ class Admission:
 
     decision: Check
     rule: str | None
+
+    @property
+    def universe_status(self) -> UniverseStatus | None:
+        """The status a refusal books as. None when every rule passed, because
+        whether an admitted asset is tradeable this snapshot is 1.6's call."""
+        return {
+            None: None,
+            RULE_IDENTITY: UniverseStatus.IDENTITY_IN_DOUBT,     # no longer listed
+            RULE_STANDING: UniverseStatus.LISTED_NOT_ACTIVE,     # listed, identity passes
+            RULE_BEACON: UniverseStatus.IDENTITY_IN_DOUBT,       # unread or disagreeing
+            RULE_MARKABILITY: UniverseStatus.UNMARKABLE,
+        }[self.rule]
 
 
 @dataclass(frozen=True)

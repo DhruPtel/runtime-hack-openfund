@@ -248,6 +248,7 @@ def test_the_real_gme_is_admitted(pinned):
     assert gme.identity.passes and gme.markability.passes
     admission = pinned.admission(gme)
     assert admission.decision.passes and admission.rule is None
+    assert admission.universe_status is None  # tradeable-this-snapshot is 1.6's call
 
 
 @pytest.mark.parametrize("fake", [FAKE_GAMESTOP, FAKE_GREATEST_MEME_EVER],
@@ -268,6 +269,7 @@ def test_crm_is_genuine_and_correctly_unmarkable(pinned):
     assert not crm.markability.passes and crm.feed is None
     admission = pinned.admission(crm)
     assert admission.rule == u.RULE_MARKABILITY and admission.decision.value is False
+    assert admission.universe_status is UniverseStatus.UNMARKABLE
 
 
 def test_markability_admits_every_mapped_feed_and_only_by_address(pinned):
@@ -404,7 +406,8 @@ def test_a_delisted_status_refuses_buying_at_standing_and_keeps_the_holding(regi
                        status=FetchStatus.OK)
     balance = Observation(value=Amount(10**18, 18, GME), source=RPC, source_time=None,
                           fetch_time=Instant(1), block=None, status=FetchStatus.OK)
-    Holding(asset=GME, balance=balance, universe_status=UniverseStatus.IDENTITY_IN_DOUBT,
+    assert admission.universe_status is UniverseStatus.LISTED_NOT_ACTIVE
+    Holding(asset=GME, balance=balance, universe_status=admission.universe_status,
             universe_reason="registry status ASSET_STATUS_DELISTED, not ACTIVE",
             mark=mark, value=Fixed(25, 0, USD), value_reason=None)
 
