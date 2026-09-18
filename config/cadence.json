@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "schedule": "daily",
+  "manual_trigger_enabled": true,
+  "_manual_trigger_note": "Runs the identical code path as the scheduled cycle. It is a trigger, not a demo mode.",
+
+  "confirmation_depth": null,
+  "_confirmation_depth_resolved_by": "unit 5.3",
+
+  "cycle_deadline_seconds": null,
+  "_cycle_deadline_resolved_by": "unit 2.4, informed by probe 0.9",
+
+  "retry_budget_per_worker": null,
+  "_retry_budget_resolved_by": "unit 2.4"
+}

@@ -282,8 +282,8 @@ residual reconciling.
 **▶ 7.5 — the business model working**
 *You see:* a client paying, receiving the record, and the payment landing in the
 books.
-*Judge:* is the x402 revenue line real? This is the first non-zero one in the
-ecosystem.
+*Judge:* is the x402 revenue line real, and does it reconcile from settlement
+evidence rather than from a handler log?
 *Could change:* price, tiering, what the free preview includes.
 
 **▶ 7.7 — what a judge sees**

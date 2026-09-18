@@ -1,0 +1,26 @@
+[project]
+name = "openfund"
+version = "0.0.0"
+description = "An onchain fund that holds tokenized equities on Robinhood Chain and shows its work"
+requires-python = ">=3.11"
+
+# No runtime dependencies yet. Unit 0.1 is stdlib only. Dependencies are added
+# by the unit that first needs them, pinned exactly, so the dependency list
+# stays readable as a record of what the system actually reaches for.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

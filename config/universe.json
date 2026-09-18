@@ -1,0 +1,11 @@
+{
+  "version": 0,
+  "_status": "empty. An address cannot enter a snapshot until it appears here with recorded provenance (unit 1.2).",
+  "chain_id": 4663,
+  "source": null,
+  "source_url": null,
+  "snapshot_date": null,
+  "_source_resolved_by": "probe 0.8, from the issuer's canonical deployment list",
+  "_identity_note": "Keyed by (chain_id, address). Tickers are display-only and never resolve an asset. The EIP-1967 beacon check is a secondary consistency flag, not the authority.",
+  "assets": []
+}

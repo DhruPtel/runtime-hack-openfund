@@ -1,1 +1,33 @@
+# WSL download markers
 *:Zone.Identifier
+
+# Credentials. Never commit.
+.env
+.env.*
+!.env.example
+
+# Durable state. The SQLite file is the fund's books; it is not source.
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Captured live data. Fixtures that are committed live in fixtures/snapshots
+# and fixtures/accounting; anything under live/ is a real capture and stays out.
+fixtures/live/*
+!fixtures/live/.gitkeep
+
+# Probe output may contain unredacted bodies until it is reviewed into
+# research/findings.md.
+probes/out/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
