@@ -275,6 +275,26 @@ rather than argument. Latency rather than cost is the binding constraint, and
 model choice swings the monthly budget 139× across the 68 models the gateway
 lists.
 
+
+## 0.7e — Who can pay us: the x402 client gap
+**Date:** 2026-09-18 · **Commit:** 0adc360
+
+Built `probes/x402_clients/`: pinned, unpatched copies of the v1 client
+(`x402-fetch` 1.2.0) and the v2 client (`@x402/fetch` 2.26.0), driven against a
+byte-for-byte replay of our live 402 that refuses any paid request. The replay
+showed four things: the v1 client, which is the one Bankr's own docs recommend,
+fails on the network identifier alone; a buyer-side adapter reaches signing
+without breaking the signature; Bankr's CLI implements no x402 and pays
+server-side through an undocumented `/wallet/x402-pay`; and the v2 client, which
+F0.7.3 never looked at, reaches signing unmodified. The artifact is
+`research/findings.md` §0.7e, which opens with a verdict table. The one
+authorised payment went through the unmodified `@x402/fetch` and settled,
+verified on chain by `PaymentSettled` and by USDC's `AuthorizationUsed`
+carrying the exact nonce the client signed, which refutes F0.7.3's headline and
+narrows the honest claim to "payable by any x402 v2 client and by Bankr users" —
+with the non-Bankr buyer inferred rather than measured, because the signer was
+the fund's Bankr-custodied EOA, and a net spend of $0.00.
+
 ---
 
 ## State at close — 2026-09-18 (second session)
