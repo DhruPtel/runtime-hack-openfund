@@ -146,7 +146,7 @@ Egress IP is fixed and added to the execution key's allowlist.
 |---|---|---|
 | `BANKR_KEY_READ` | analyst + snapshot process | read-only, Agent API off |
 | `BANKR_KEY_EXEC` | treasurer process only | read-write, IP allowlist, low platform caps |
-| `BANKR_LLM_KEY` | analyst + risk inference | gateway only, header `X-API-Key` |
+| `BANKR_LLM_KEY` | analyst + risk inference | Read Only ON, LLM Gateway ON. Not gateway-only: it reads the Wallet API too (findings F0.2.2). Either auth header works; we send `X-API-Key` |
 | `RPC_4663_MAINNET` | chain reads | timeout, fail loudly, block-pinned; no archive assumed |
 | `RPC_4663_TESTNET` | probes and drills on 46630 | never the source of a published mark or a booked fill |
 | `SIGNING_KEY` | treasurer process only | ed25519 private key; public key published |
