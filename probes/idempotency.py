@@ -22,10 +22,18 @@ attempt to show `BANKR_KEY_EXEC` can transact at all, which 0.5 could not
 **The size.** 0.00003 ETH, about $0.08: the smallest amount that quoted on
 2026-09-18. 0.00001 was refused with "The amount is too small to swap".
 
-**The arbiter is the chain, not the HTTP bodies.** The wallet's nonce is read
-before and after. It rises by exactly the number of transactions the wallet
-broadcast, whatever either response claims. Every hash returned is fetched over
-RPC for its sender and receipt.
+**The arbiter is the chain, not the HTTP bodies.** The wallet's ETH and USDG
+balances are read over RPC before and after; two fills would show twice the
+sell and twice the buy, whatever either response claims.
+
+**Corrected after the one run (2026-09-18).** This probe also took the wallet's
+nonce and the transaction's `from` as arbiters, on the assumption that the swap
+would be an ordinary transaction from our wallet. It was not. Bankr runs it as
+an ERC-4337 UserOperation inside an EIP-7702 transaction sent by a bundler, so
+`from` is the bundler, and the nonce moved because the wallet's 7702
+authorization consumed it — not because a transaction was broadcast. Both
+printed lines are relabelled below. The chain evidence is read by
+`probes/idempotency_evidence.py`.
 
 **What we do not do.** No retry and no loop. Two submissions, the second sent as
 soon as the first returns, each printed before it is sent. The timeout is
@@ -236,12 +244,13 @@ def main() -> int:
 
     print("\n" + "=" * 72)
     print(f"second submission:        {verdict}")
-    print(f"transactions broadcast:   {broadcast}  (nonce {before['nonce']} -> "
-          f"{after_settle['nonce']}, read over RPC)")
+    print(f"EOA nonce delta:          {broadcast}  (nonce {before['nonce']} -> "
+          f"{after_settle['nonce']}; counts 7702 authorizations too — not a swap count)")
     for r in receipts:
         print(f"  {r['hash']}  from {r['from']}  block {r['block']}  status {r['status']}  "
               f"gas {r['gas_used']}")
-    print(f"BANKR_KEY_EXEC transacted: {transacted}")
+    print(f"tx sent from our wallet:  {transacted}  (False for a bundled UserOperation; "
+          f"see idempotency_evidence.py)")
     print(f"ETH  {before['eth_wei']} -> {after_settle['eth_wei']} wei "
           f"(delta {after_settle['eth_wei'] - before['eth_wei']})")
     print(f"USDG {before['usdg_raw']} -> {after_settle['usdg_raw']} raw "
