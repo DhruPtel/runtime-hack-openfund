@@ -193,3 +193,166 @@ still a useful shape check but not a useful number.
   `x-ratelimit-*` headers is **not** evidence that they never appear. Probe 0.10
   owns that question.
 - Read endpoints only. Nothing here bounds write behaviour on any surface.
+
+---
+
+## 0.3 — Quote shape
+
+**Date:** 2026-09-17 · **Method:** `PYTHONPATH=src python3 -m probes.quote` and
+`python3 -m probes.assets` · **Captures:** `probes/out/quote.json` (6 quotes)
+
+> **Sizing caveat, and it bounds everything below.** The wallet holds ~$2 of ETH
+> on Base and nothing on Robinhood Chain (F0.2.6). This is a **shape probe, not a
+> realistic-size probe**: it establishes which fields exist, not what the fund
+> could actually trade. `planning/PLAN.md` §11 sets the nominal size at $25 and
+> unit 1.5 exists precisely because a small quote tells you nothing about a real
+> position. **Unit 1.5 must re-run this against a funded wallet** before any
+> number here is treated as evidence about executable liquidity.
+
+> **Address caveat.** `config/universe.json` is empty until 0.8. Addresses came
+> from `https://tokens.coingecko.com/robinhood/all.json`, the discovery list
+> `research/agent-os.md` documents *and distrusts*. They are **unverified**.
+
+### F0.3.1 — USDG is 6 decimals, not 18
+
+**Confidence: measured, three independent ways. Verdict: fail** (against the
+research and `planning/PLAN-v1.md` §4).
+
+| Source | Says |
+|---|---|
+| `research/agent-os.md` (`poolsfun/chains.py:70`) | 18 |
+| `planning/PLAN-v1.md` §4 | 18 |
+| CoinGecko discovery list | 6 |
+| **`decimals()` on chain**, block 65,979,130 | **6** |
+| **`/wallet/swap-quote` response**, `from.decimals` | **6** |
+
+The two documented sources agree with each other and are both wrong. A sizing
+path that trusted them would be off by 10^12 — $25 would become $25 × 10^-12, or
+an attempted spend of $25 trillion, depending on direction.
+
+Robinhood stock tokens are confirmed **18** decimals (AAPL, NVDA, TSLA, GME), so
+the research is right about stocks and wrong about the cash leg. The two are
+different, which is exactly the shape of error a single "tokens on 4663 are 18
+decimals" mental model produces.
+
+**Plan change:** nothing in `planning/PLAN.md` §7–§13 states USDG decimals, so
+there is nothing to correct there; the number is recorded in `probes/assets.py`
+with its on-chain provenance and belongs in `config/universe.json` at 1.2. The
+general lesson is in `tracker/LESSONS.md`.
+
+### F0.3.2 — The documented response schema matches reality exactly
+
+**Confidence: measured. Verdict: pass.**
+
+All 12 documented fields were present in all 6 responses. Nothing documented was
+absent; nothing undocumented appeared.
+
+```
+from{chain, token, amount, formattedAmount, symbol, decimals, usdValue}
+to  {chain, token, amount, formattedAmount, symbol, decimals, usdValue}
+minBuyAmount  feeBps  feeWaivedForEcosystemToken  slippageBps
+priceImpactBps  swapImpactBps  maxPriceImpactBps
+sellTokenPriceUsd  buyTokenPriceUsd  quoteId
+```
+
+PHASE-0-1 0.3's done-condition assumed only three fields were guaranteed —
+`from`, `to`, `minBuyAmount`. In practice all 12 appeared every time. **This does
+not upgrade them to guarantees.** Six responses, three tickers, one size pair,
+one minute. Unit 1.5 still treats an absent field as `null`, never as zero.
+
+`amount` is **human-readable** in the request (`"5"`, not base units), while the
+response carries both `amount` (raw integer string) and `formattedAmount`. That
+matches our `(raw_int, decimals, asset_id)` convention on the way out and breaks
+it on the way in, so 1.5 owns the conversion at the adapter edge.
+
+### F0.3.3 — A $25 quote prices fine against an empty wallet
+
+**Confidence: measured. Verdict: pass** (and it is the useful kind of pass).
+
+Every $25 quote returned 200 with a full price, though the wallet holds no USDG
+at all. Quotes are documented as ungated; this measures that they are also not
+balance-checked.
+
+**Consequence, and it is the one that matters:** a successful quote is not
+evidence of anything about ability to execute. This is the concrete instance of
+`planning/PLAN-technical-review.md` finding 3 — "a small snapshot quote supports a
+stock, but the eventual position requires a much larger order" — and it means
+unit 3.3's planner must size against *reconciled holdings*, never against the
+fact that a quote returned.
+
+### F0.3.4 — Impact can be negative, and the two impact fields never differed
+
+**Confidence: measured. Verdict: unresolved** (on which field gates).
+
+| Ticker | $5 | $25 |
+|---|---|---|
+| AAPL | +2 bps | 0 bps |
+| NVDA | 0 bps | −2 bps |
+| TSLA | −12 bps | −15 bps |
+
+Two things follow.
+
+**Impact is signed.** Negative is price improvement. A gate written as
+`abs(impact) > limit` would reject a *better* price; it must be
+`impact > limit`. Recorded for unit 3.4.
+
+**`priceImpactBps` and `swapImpactBps` were identical in all 6 responses.**
+`planning/PLAN-v1.md` §4 claims execution gates on `swapImpactBps` while
+`priceImpactBps` is display-only. This probe cannot distinguish them — at these
+sizes they never diverged. Unresolved, and it stays unresolved until a size large
+enough to separate them is quotable, which needs a funded wallet.
+
+`maxPriceImpactBps` came back **1500** on every quote, confirming the documented
+15% platform limit. `slippageBps` defaulted to **500** and `feeBps` was **0**.
+
+### F0.3.5 — The quote carries a USD price per token
+
+**Confidence: measured. Verdict: pass, with a caveat for 0.4.**
+
+`buyTokenPriceUsd`: AAPL 337.10, NVDA 221.36, TSLA 369.29. `sellTokenPriceUsd`
+for USDG was 1.0022, so USDG is not exactly a dollar and $25 nominal is ~24.94
+USDG — a rounding the planner must do, not assume away.
+
+This is a **candidate corroborating price source for probe 0.4**, which matters
+because 0.4's fallback plan already anticipates GeckoTerminal having no coverage
+for stock tokens. It is the fallback the plan named, and it carries the same
+caveat the plan gave it: **not independent of the execution venue.** It is the
+venue's own price.
+
+### F0.3.6 — Three tokens answer to the symbol GME, identically
+
+**Confidence: measured. Verdict: pass** (as a warning, not a capability).
+
+The discovery list carries `GameStop • Robinhood Token` (`0x1b0e…`), `GameStop`
+(`0x7e86…`) and `Greatest Meme Ever` (`0xef67…`). All three are on 4663, all
+three are 18 decimals, and all three answer `decimals()` on chain
+indistinguishably. Only the `• Robinhood Token` name marker separates them, and
+`research/agent-os.md` records that the same list truncates `name` at 60
+characters, chopping that marker off longer names.
+
+This is the concrete case probe 0.8 has to solve, and it is why
+`planning/PLAN.md` §2 invariant 8 pins assets by `(chain_id, address)`.
+
+### Two operational notes
+
+**Both discovery sources and the 4663 RPC return 403 without a `User-Agent`
+header.** `tokens.coingecko.com`, `reference-data-directory.vercel.app` and
+`RPC_4663_MAINNET` all refused a bare `urllib` request and all answered with one
+set. Unit 1.3's HTTP client must send a User-Agent, and a 403 from any of them
+should not be read as an auth failure.
+
+**The quote endpoint leaks no schema.** Five differently-shaped bodies all
+returned an identical `{"message":"Invalid request body"}`. The request schema
+came from `https://docs.bankr.bot/wallet-api/swap/`, read 2026-09-17 —
+**documented**, not measured, except that the documented shape demonstrably works.
+
+### What 0.3 changes
+
+| Change | Where |
+|---|---|
+| USDG is 6 decimals; stock tokens are 18 | `config/universe.json` at 1.2 |
+| Impact gates compare signed values, not magnitudes | 3.4 |
+| A successful quote is not evidence of executability | 3.3 planner |
+| Request `amount` is human-readable; adapter owns conversion | 1.5 |
+| HTTP client must send a User-Agent | 1.3 |
+| `swapImpactBps` vs `priceImpactBps` distinction unproven | re-run at 1.5 |
