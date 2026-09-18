@@ -108,7 +108,7 @@ make cycle       # live cycle, durable orders, reconciled journal    [unit 4.8]
 | Units and the 27 checkpoints | [`planning/ROADMAP.md`](planning/ROADMAP.md) |
 | Phase 0 and 1 in detail | [`planning/PHASE-0-1.md`](planning/PHASE-0-1.md) |
 | Target file tree and boundary rules | [`planning/CODEBASE.md`](planning/CODEBASE.md) |
-| External technical review of the v1 plan | [`PLAN-technical-review.md`](PLAN-technical-review.md) |
+| External technical review of the v1 plan | [`planning/PLAN-technical-review.md`](planning/PLAN-technical-review.md) |
 | Discovery reports behind the plan's factual claims | [`research/`](research/) |
 
 Probe results are marked **measured**, **documented**, or **inferred**, and

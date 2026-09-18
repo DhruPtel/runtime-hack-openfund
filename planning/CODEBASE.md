@@ -59,6 +59,7 @@ fund/
 │   ├── PHASE-0-1.md            unit-level detail for the first two phases
 │   ├── CODEBASE.md             this file
 │   ├── REVIEW-RESPONSE.md      disposition of every technical-review finding
+│   ├── PLAN-technical-review.md  the external review the response answers
 │   └── PLAN-v1.md              superseded. Kept for comparison; v2 wins.
 │
 ├── tracker/
@@ -136,7 +137,6 @@ fund/
 │   ├── snapshots/              raw captured source responses + rebuilt snapshots
 │   └── accounting/             the known-answer fixture
 ├── research/                   the seven discovery reports + findings.md
-├── PLAN-technical-review.md    the external review the response answers
 └── tests/
     ├── test_snapshot.py
     ├── test_universe.py
