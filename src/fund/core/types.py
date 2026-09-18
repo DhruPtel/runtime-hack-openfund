@@ -398,6 +398,13 @@ class Price(_Ordered):
         _is("base", self.base, AssetId)
         _text("quote_unit", self.quote_unit)
 
+    @classmethod
+    def parse(cls, text: str, base: AssetId, quote_unit: str) -> Price:
+        """Exact, from decimal text. Bankr sends prices as JSON floats
+        (`1.0022236982588135`); the adapter passes their shortest text here."""
+        raw, decimals = _parse_decimal(text)
+        return cls(raw, decimals, base, quote_unit)
+
     def _pair(self, other):
         if not isinstance(other, Price):
             raise TypeError(f"cannot compare Price with {type(other).__name__}")
@@ -764,3 +771,64 @@ class Asset:
                 raise ValueError("cash and gas are not registry assets")
         if self.kind is AssetKind.GAS and not self.id.is_native:
             raise ValueError("the gas asset is the chain's native token")
+
+
+# --- quotes --------------------------------------------------------------------
+
+@canonical
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Quote:
+    """A `/wallet/swap-quote` response: a price at size, and nothing more.
+
+    A quote is not evidence of executability. It is not balance-checked
+    (F0.3.3), and stock execution is gated (F0.5.1).
+
+    Impact is **signed**. Negative is price improvement, and four of six quotes
+    in probe 0.3 came back negative (F0.3.4). Every impact field is optional,
+    because all 12 documented fields appearing in six responses is not a
+    guarantee (F0.3.2); an absent impact is None, and None blocks. The field that
+    gates is `swap_impact` (documented).
+
+    `sell_price` and `buy_price` are the venue's own USD prices (F0.3.5). They
+    are recorded, and never used as a mark (F0.4.4).
+
+    A quote carries no timestamp. Its age comes from the fetch time of the
+    Observation that wraps it.
+    """
+
+    sell: Amount
+    buy: Amount
+    min_buy: Amount
+    price_impact: Fixed | None
+    swap_impact: Fixed | None
+    max_price_impact: Fixed | None
+    fee: Fixed | None
+    fee_waived: bool | None
+    slippage: Fixed | None
+    sell_price: Price | None
+    buy_price: Price | None
+    quote_id: str | None
+
+    def __post_init__(self):
+        for name in ("sell", "buy", "min_buy"):
+            _is(name, getattr(self, name), Amount)
+        if self.min_buy.asset != self.buy.asset:
+            raise ValueError("min_buy is an amount of the bought asset")
+        if self.sell.asset == self.buy.asset:
+            raise ValueError("a quote sells one asset for another")
+        for name in ("price_impact", "swap_impact", "max_price_impact", "fee", "slippage"):
+            value = getattr(self, name)
+            _is(name, value, Fixed, optional=True)
+            if value is not None and value.unit != BPS:
+                raise ValueError(f"{name} is in basis points")
+        if self.fee_waived is not None and type(self.fee_waived) is not bool:
+            raise TypeError("fee_waived is True, False or None")
+        for name, asset in (("sell_price", self.sell.asset), ("buy_price", self.buy.asset)):
+            value = getattr(self, name)
+            _is(name, value, Price, optional=True)
+            if value is not None and value.base != asset:
+                raise ValueError(f"{name} prices the wrong asset")
+        _text("quote_id", self.quote_id, optional=True)
+
+
+_VALUE_TYPES = _VALUE_TYPES + (Quote,)

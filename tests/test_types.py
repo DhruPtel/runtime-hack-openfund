@@ -15,7 +15,7 @@ import pytest
 from fund.core.types import (
     BPS, MULTIPLE, PERCENT, SECONDS, USD, Amount, AssetId, BlockRef, ChainAddress,
     Asset, AssetKind, Check, Deployment, FeedRef, FetchStatus, Fixed, Instant,
-    Observation, Price, RegistryRecord, Series, Source, TradingCapability,
+    Observation, Price, Quote, RegistryRecord, Series, Source, TradingCapability,
     content_id, from_canonical, to_canonical,
 )
 
@@ -387,3 +387,66 @@ def test_the_directory_float_threshold_must_be_converted_not_passed():
         FeedRef(proxy=ChainAddress(CHAIN, "0x" + "22" * 20), decimals=8,
                 heartbeat=Fixed(86_400, 0, SECONDS), deviation_threshold=0.5,
                 market_hours=None, name="x")
+
+
+# --- quotes --------------------------------------------------------------------
+
+TSLA = AssetId(CHAIN, "0x322f0929c4625ed5bad873c95208d54e1c003b2d")
+QUOTES = Source("bankr-quote", "/wallet/swap-quote")
+
+
+def tsla_quote(impact_bps: int | None) -> Quote:
+    """Probe 0.3's TSLA quote at $25, as recorded in probes/out/quote.json.
+
+    `from.amount` came back human ("25") and `to.amount` raw; `minBuyAmount` is
+    human; the two USD prices are JSON floats. Each is converted exactly here,
+    the way 1.5 will have to.
+    """
+    bps = None if impact_bps is None else Fixed(impact_bps, 0, BPS)
+    return Quote(
+        sell=Amount.from_units("25", 6, USDG),
+        buy=Amount(67948238487403141, 18, TSLA),
+        min_buy=Amount.from_units("0.064550826563032984", 18, TSLA),
+        price_impact=bps, swap_impact=bps,
+        max_price_impact=Fixed(1500, 0, BPS), fee=Fixed(0, 0, BPS), fee_waived=False,
+        slippage=Fixed(500, 0, BPS),
+        sell_price=Price.parse(repr(1.0022236982588135), USDG, USD),
+        buy_price=Price.parse(repr(369.2925339180603), TSLA, USD),
+        quote_id="c9f64995-fa7c-469b-a880-4796cfa739d9")
+
+
+def test_a_negative_impact_is_price_improvement_and_passes_a_positive_limit():
+    quote = tsla_quote(-15)
+    limit = Fixed(50, 0, BPS)  # impact_max_bps, compared signed
+    assert quote.swap_impact < Fixed(0, 0, BPS)
+    # The gate itself lives in core/gates.py; here the comparison it will make
+    # must come out right. A magnitude comparison would have refused this fill.
+    assert not (quote.swap_impact > limit)
+    assert Fixed(abs(quote.swap_impact.raw), 0, BPS) < limit  # and so would abs, here
+    assert not (Fixed(-60, 0, BPS) > limit)  # but abs would refuse -60; signed does not
+    roundtrip(quote)
+
+
+def test_an_absent_impact_is_none_never_zero():
+    quote = tsla_quote(None)
+    assert quote.swap_impact is None and quote.price_impact is None
+    roundtrip(quote)
+
+
+def test_a_quote_is_an_observation_with_no_source_time():
+    seen = Observation(value=tsla_quote(-15), source=QUOTES, source_time=None,
+                       fetch_time=Instant.from_seconds(T0), block=None,
+                       status=FetchStatus.OK, source_ref="c9f64995-fa7c-469b-a880-4796cfa739d9")
+    roundtrip(seen)
+
+
+def test_quote_fields_carry_their_units():
+    with pytest.raises(ValueError):
+        Quote(sell=Amount(1, 6, USDG), buy=Amount(1, 18, TSLA), min_buy=Amount(1, 6, USDG),
+              price_impact=None, swap_impact=None, max_price_impact=None, fee=None,
+              fee_waived=None, slippage=None, sell_price=None, buy_price=None, quote_id=None)
+    with pytest.raises(ValueError):
+        Quote(sell=Amount(1, 6, USDG), buy=Amount(1, 18, TSLA), min_buy=Amount(1, 18, TSLA),
+              price_impact=Fixed(-15, 0, PERCENT), swap_impact=None, max_price_impact=None,
+              fee=None, fee_waived=None, slippage=None, sell_price=None, buy_price=None,
+              quote_id=None)
