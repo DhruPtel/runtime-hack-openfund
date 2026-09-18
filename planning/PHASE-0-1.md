@@ -58,9 +58,15 @@ with `Authorization: Bearer`.
 **Artifact:** a table in findings: surface × header × result.
 
 **Done when:** every surface has a confirmed working header; the LLM Gateway
-toggle is confirmed **on** for `BANKR_LLM_KEY`; and the Agent API is confirmed
-**off** for both Bankr keys. Nothing in the system calls `/agent/prompt`, so an
-Agent API that answers is a surface to disable, not a capability to keep.
+toggle is confirmed **on** for `BANKR_LLM_KEY`; and the Agent API is set off in
+the console with **no call to `/agent/prompt` anywhere in the system**, asserted
+in code.
+
+The Agent API half changed after measurement (finding F0.2.5): a read against
+`/agent/job/{id}` returns 404 with a body that conflates missing-job with
+no-permission, so the toggle state cannot be confirmed from a read, and settling
+it would need a write that consumes quota. We assert the property we actually
+care about — that nothing calls it — rather than a toggle we cannot observe.
 
 **Risk:** the CLI-minted key has Agent API off by default, which is what we want.
 Do not "fix" it in the web console.
