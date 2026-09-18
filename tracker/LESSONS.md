@@ -720,3 +720,20 @@ named to resolve and had not (`research/findings.md`, Phase 0 exit summary):
   models (F0.9.5) gets tested against output quality.
 **Affects:** 1.3, 1.5, 1.6, 1.7, 1.11, 2.4; `config/thresholds.json`,
 `config/models.json`.
+
+## 2026-09-18 — DECISION: Phase 5's live leg is ETH↔USDG on 4663
+*Operator decision at the 0.11 checkpoint*, answering the question
+`planning/PHASE-0-1.md` 0.11 and `planning/PLAN.md` §12 left open. The live leg
+is **ETH→USDG on 4663**. It is proven ungated and working: 0.10's one sell
+executed through `BANKR_KEY_EXEC`, deduplicated on its `idempotencyKey`, and
+cost the wallet no gas (`research/findings.md` F0.10.1–F0.10.3).
+
+**The record's caveat, stated with the decision.** What 0.10 proved is one
+direction at $0.08. The return leg, USDG→ETH, has not been exercised, and 5.2's
+round trip needs it. Its sponsorship, its 7702 path and its fee (F0.10.4 found
+6 bps unaccounted for on the sell) are therefore inferred from the sell and not
+measured. This replaces the plan's earlier "memecoin/USDG" wording for the
+ungated leg.
+**Affects:** Phase 5, 5.2, 5.4, 5.7; `planning/PHASE-0-1.md` 0.11 and the
+re-evaluation gate; `planning/PLAN.md` §12 and Phase 5 text, `planning/ROADMAP.md`
+Phase 5 (*fold pending*: outside this pass's paths).
