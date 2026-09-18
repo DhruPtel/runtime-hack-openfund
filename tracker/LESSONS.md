@@ -9,17 +9,12 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds, as of the Phase 1 replan (2026-09-18).** That pass could write
-only to `planning/PHASE-0-1.md`, `config/` and `tracker/`. So entries whose
-**Affects** line says *fold pending* have reached PHASE-0-1 but not yet
-`planning/PLAN.md` or `planning/ROADMAP.md`:
-- PLAN §9, where the staleness rules still carry the "open" marker;
-- PLAN §12 and the Phase 5 text, which still describe the live leg as open or as
-  "memecoin/USDG";
-- PLAN §8's and ROADMAP's one-line Phase 1 summaries, including 1.5's
-  funded-wallet sentence.
-
-Until they are folded, PHASE-0-1 is the newer text. An
+**Pending folds: none, as of 2026-09-18, before unit 1.1.** The Phase 1 replan
+could write only to `planning/PHASE-0-1.md`, `config/` and `tracker/`, so three
+entries below carry a *fold pending* marker. Those folds were made in the next
+pass, into PLAN §8, §9, §12 and the Phase 5 text, and into ROADMAP's Phase 1 and
+Phase 5 text. The claim above was then re-checked entry by entry. The markers
+are left in place as the record of when each fold was late. An
 entry says what we believed, what reality said, and what we did about it — it is
 the record a judge reads to see whether the plan bent when it should have.
 
