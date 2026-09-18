@@ -1871,3 +1871,62 @@ auto-wrap did not happen, and the raw object reached a runtime that required a
 **Documented behaviour and measured behaviour disagree**, and the measured one is
 what ships. Whether the trigger is specifically the missing `async` is tested in
 F0.7d.3 by changing that and nothing else.
+
+### F0.7d.3 — The config diff: no meaningful difference. The handler diff: the whole fault.
+
+**Confidence: measured. Verdict: the leading hypothesis is refuted.**
+
+`bankr x402 add wizardcheck` then `bankr x402 configure wizardcheck` were run
+through a pty, accepting every default, and the generated config compared to our
+hand-written one field by field. The CLI's own source
+(`@bankr/cli/dist/commands/x402.js:226,286`) was read alongside and agrees with
+what the wizard produced.
+
+| Field | Wizard | Ours | Material? |
+|---|---|---|---|
+| `price` | `"0.001"` | `"0.001"` | identical |
+| `description` | present | present | identical in kind |
+| `methods` | `["GET"]` | `["GET"]` | identical |
+| `schema` | present | present | identical in kind |
+| `currency` | `"USDC"` per service | inherited from top level | **no** — documented as inherited |
+| `network` | `"base"` per service | inherited from top level | **no** — documented as inherited |
+| `paymentScheme` | `"exact"` | absent | **no** — defaulted correctly; the live 402 advertised `"scheme":"exact"` |
+| `category`, `tags` | absent | `"data"`, `["probe"]` | ours has *extra* documented fields |
+
+**The wizard sets nothing our config lacked in any way that mattered.** Two
+fields it writes per-service are inherited from the top level in ours, one
+defaulted to exactly the value the wizard would have set — proven by the 402
+challenge captured in F0.7.2 — and the only asymmetry runs the other way, with
+ours carrying two extra documented fields.
+
+**So the plan this task was built on does not survive its own first step, and the
+contingency fires: there is no meaningful config difference, and the cause is
+elsewhere.** F0.7d.1 already located it.
+
+**The handler is where the two diverge, and it is not subtle:**
+
+```ts
+// the CLI's scaffold
+export default async function handler(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  return Response.json({ message: "Hello from wizardcheck!",
+                         timestamp: new Date().toISOString() });
+}
+
+// ours
+export default function handler(_req: Request) {
+  return { ok: true, probe: "0.7", work: "none" };
+}
+```
+
+Three differences: **`async`**, the declared **`Promise<Response>`** return type,
+and returning **`Response.json(...)` rather than a plain object**. The runtime
+raised `fetch() did not return a Response`, which names the third directly.
+
+**The documentation is wrong on this point, and that is worth recording
+separately from our bug.** The quick-start states *"You can return plain objects,
+strings, or any JSON-serializable value — Bankr auto-wraps them into a JSON
+response"*. The platform's own scaffold does not rely on that, and our handler,
+which did, failed. Either the auto-wrap requires something the docs do not state
+(a promise, most likely) or it does not exist on this runtime path. Unit 7.2
+should follow the scaffold, not the prose.

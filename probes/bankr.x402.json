@@ -35,6 +35,39 @@
           }
         }
       }
+    },
+    "wizardcheck": {
+      "price": "0.001",
+      "description": "wizardcheck service",
+      "methods": [
+        "GET"
+      ],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "param": {
+              "type": "string",
+              "description": "Example query parameter"
+            }
+          },
+          "required": [
+            "param"
+          ]
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "result": {
+              "type": "string",
+              "description": "Result value"
+            }
+          }
+        }
+      },
+      "currency": "USDC",
+      "network": "base",
+      "paymentScheme": "exact"
     }
   }
 }
