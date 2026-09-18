@@ -2733,7 +2733,7 @@ built on the v2 client line, and it proves nothing.
 
 **The v2 client line exists and is published.** `@x402/core`, `@x402/fetch` and
 `@x402/evm` are at **2.26.0**, last published 2026-09-15. `@x402/fetch` first
-appeared as 0.0.1 on **2025-12-11** and has 28 versions since. The maintainers
+appeared as 0.0.1 on **2025-12-11**, 28 published versions in all. The maintainers
 are the same two Coinbase accounts that publish `x402` and `x402-fetch`, and the
 repository is the same `x402-foundation/x402`. PyPI's `x402` is at 2.23.0. F0.7.3
 looked at `x402`, `x402-fetch` and `@coinbase/x402` — the right names for v1 and
