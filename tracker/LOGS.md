@@ -297,53 +297,46 @@ the fund's Bankr-custodied EOA, and a net spend of $0.00.
 
 ---
 
-## State at close — 2026-09-18 (second session)
+## State at close — 2026-09-18 (third session)
 
-**Done.** Units 0.1, 0.2, 0.3, 0.4 (Chainlink feeds, coverage and the
-multiplier) and 0.5 (execution eligibility). 32 tests, offline, no credentials.
-Findings for 0.2–0.5 are in `research/findings.md`, each marked measured /
-documented / inferred with a pass / fail / unresolved verdict.
+**Done.** 0.1 through 0.8, the out-of-order Testnet probe, and 0.7's follow-ups
+b–e. 0.9 was run early as a labelled floor; the full cost probe is still unit
+1.7, against the real snapshot. 32 tests, offline, no credentials. Every probe
+has a verdict in `research/findings.md`, marked measured / documented / inferred.
 
-**0.5 is settled: stock execution is refused for region.** 403, pre-broadcast,
-no gas, body naming both gate and asset. planning/PLAN.md §13 and the
-2026-09-17 decision to make stock legs paper are both confirmed on evidence
-rather than documentation. Nothing in the plan changes.
+**Decided since the last note.** At the 0.4 checkpoint: a Chainlink feed is a
+membership condition (35 markable assets), divergence is tiered by corroborator
+liquidity, and depth returns as corroborator quality only. At the close of 0.8:
+registry membership on `(chain_id, address)` is the identity test, pinned by
+sha256; `uiMultiplier()` and the name marker are retired; the beacon is a
+cross-check that fails the cycle loudly; feed presence is markability, not
+identity.
 
-**0.4 is still at its checkpoint, undecided.** Three decisions remain open and
-none has been taken:
+**Measured since the last note.** 0.6: provider cost is attributable only in
+aggregate. 0.7–0.7d: our endpoint settles, revenue is an on-chain
+`PaymentSettled`, and a paid round trip is ~4.6 s. 0.7e: the v1 x402 clients
+cannot pay us, while the v2 client `@x402/fetch` can — signed by Bankr's service,
+so a third-party buyer is inferred. 0.9: an analyst call costs $0.0134 and takes
+58 s at the floor, and a single-block snapshot gives a trend analyst nothing.
 
-- **Does "depth" return?** Deleted on 2026-09-17 because the plan said tokenized
-  stocks have no AMM pool to measure. They do — SPY holds $9.16M in one USDG
-  pool (F0.4.3). The false clause in §13 is corrected; the operational
-  definition of tradeable is untouched pending this call.
-- **What does `divergence_max_bps` become?** Still null. A flat threshold cannot
-  work: 19.5 bps median on liquid names, 164.7 on illiquid, worst case 610
-  (F0.4.5).
-- **Is a Chainlink feed a membership condition at 1.2?** Only 35 of 187 marked
-  tokens have one (F0.4.8).
+**Open.**
 
-**Carried forward as unresolved.**
+- Whether the feed already includes `uiMultiplier` is still **not** measured
+  (F0.4.4); 1.4 follows the documented rule and must say so.
+- Whether `BANKR_KEY_EXEC` can **transact** is still unproven (F0.5.5). 0.10 is
+  the first unit that can show it.
+- The 0.7 checkpoint's price question: $0.05 needs 1.3–2.3 sales a day to cover
+  inference at the floor (F0.9.4), and no third party has ever paid us.
+- Config values still null whose named resolver has already run:
+  `feed_staleness_max_seconds`, `quote_max_age_seconds`, `impact_max_bps`,
+  `worker_deadline_seconds`, `analyst_model`.
 
-- Whether the feed already includes `uiMultiplier` is **not** measured (F0.4.4);
-  the effect is 22 bps against a 142 bps noise floor. 1.4 follows the two
-  documented sources and must label them documented.
-- Whether `BANKR_KEY_EXEC` can **transact** is still unproven (F0.5.5). The
-  location gate fired first, so the read-only-key cause was never reached.
-  **Phase 5's live leg rests on this and should not be treated as de-risked.**
-  One ungated ETH→USDG swap with the same key settles it; it is a second spend,
-  was not authorised by 0.5, and belongs at the head of Phase 5.
+**Not run.** 0.10 (idempotency and rate limits; spends) and the 0.11 checkpoint.
 
-**Blocked.** 0.10 (idempotency and rate limits) has not been run and needs
-explicit per-probe authorization. 0.7 (x402 round trip) needs USDC on Base.
+**Funding**, wallet balances re-read over RPC. Base: 0.000241 ETH, 0.107346
+USDC, 10 USER. Robinhood Chain: 0.000490 ETH and no USDG, against the ~$200 in
+`planning/PLAN.md` §11. LLM gateway: $2.799976 as last measured, at 0.9 (F0.9.3).
 
-**Funding.** $0.63 of ETH on Base and $1.28 on Robinhood Chain — funded since
-0.2, which is what made 0.5 runnable. No USDG or other tokens on any chain,
-against the ~$200 in planning/PLAN.md §11. The LLM gateway holds $3.00.
-
-**Next.** 0.6 (credits and usage) and 0.8 (issuer allowlist and the beacon
-check) both run today with what is already in `.env`; 0.8 has a concrete case in
-the three GME tokens and a working discriminator in `uiMultiplier()` (F0.4.6).
-Unit 1.5 must re-run probe 0.3 against a wallet funded with USDG before any of
-its numbers count as evidence about liquidity, and 0.4's divergence numbers are
-one block on one day during market hours — they do not bound the overnight or
-weekend tail.
+**Next.** Sync the plan docs to the decisions above, run 0.10, then hold the
+0.11 checkpoint. Unit 1.5 must still re-run probe 0.3 against a USDG-funded
+wallet before its numbers count as evidence about liquidity.
