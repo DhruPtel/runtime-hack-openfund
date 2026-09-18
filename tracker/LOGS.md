@@ -249,6 +249,32 @@ beacon earning its place. The conclusion is that registry membership keyed by
 marker are dropped, and the beacon is worth keeping only as an independent trust
 root that should fail a cycle loudly if it ever disagrees.
 
+
+## 0.9 — Analyst cost
+**Date:** 2026-09-18 · **Commit:** 498237b
+
+Built `probes/llm_cost.py`, which runs one rough price-trend brief over six
+assets hand-assembled from real 0.4 numbers against `claude-sonnet-5` and labels
+every figure it emits a floor, because PHASE-0-1 relocated this unit to 1.7
+precisely on the grounds that snapshot bytes dominate the count and no snapshot
+exists until 1.6. The artifact is `research/findings.md` §0.9 — 1,793 input
+tokens, 982 output, **$0.013406** and **58,070 ms** for one call, which multiplies
+to $0.067 per five-call cycle and $2.01 per thirty days, against an extrapolated
+~$0.117 per cycle once the universe is the 35 markable assets rather than six.
+Verified three ways that agree to the last digit — the published rate, the
+response's own `usage` block and the credit balance — and cross-checked against
+`/v1/usage`, which is where the unit found what it was not looking for: the
+aggregate was observed going **backwards**, reporting 0 requests then 1 then 0
+then 2, so a before/after delta around a single call is not a sound
+reconciliation technique and 6.3 must compare settled windows instead. Two
+further incidental findings: the first attempt was cut off client-side by
+`_capture`'s 20-second default and **was billed anyway**, so a timed-out analyst
+call is a cost with no report; and two identical calls at temperature 0 returned
+864 and 982 output tokens, corroborating the invariant 6 rewording by measurement
+rather than argument. Latency rather than cost is the binding constraint, and
+model choice swings the monthly budget 139× across the 68 models the gateway
+lists.
+
 ---
 
 ## State at close — 2026-09-18 (second session)
