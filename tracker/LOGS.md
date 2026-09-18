@@ -201,6 +201,29 @@ every ERC-20 the wallet holds, eliminating staleness as the cause; F0.2.6's "the
 wallet is empty" still stands on the transfer history, though the evidence it was
 originally drawn from never supported it.
 
+
+## 0.7d — The endpoint fixed, and which hypothesis was right
+**Date:** 2026-09-18 · **Commit:** 7d5d1ae
+
+Read the endpoint's logs first — the CLI has no `logs` command, so the path came
+from the installed CLI's own endpoint list — and they refuted the task's leading
+hypothesis outright: the handler **ran and threw** `fetch() did not return a
+Response`, so the platform had routed the request, priced it and accepted the
+payment authorization, and the deploy config was never at fault; `bankr x402
+revenue` showing 0 requests had been a filter artefact, since only settled
+requests are counted. Diffing the hand-written config against `bankr x402 add`
+plus `configure` driven through a pty confirmed it field by field — the wizard
+sets nothing we lacked that mattered, currency and network being inherited and
+`paymentScheme` defaulting to the `exact` the live 402 already advertised — while
+the real divergence was the handler, ours returning a plain object where the
+platform's own scaffold returns `Response.json(...)`. Changing only that, the
+payment settled: `PaymentSettled` with the fund as `owner`, verified on chain
+rather than from the 200, which is the first revenue evidence this project has
+produced, alongside a real cold start of ~513 ms and an `x-402-payer` header that
+turns out to be a bare payer address the handler cannot verify, since `X-PAYMENT`
+is not forwarded. Three self-payments, all fee-free and netting to zero, so the
+unit cost nothing.
+
 ---
 
 ## State at close — 2026-09-18 (second session)
