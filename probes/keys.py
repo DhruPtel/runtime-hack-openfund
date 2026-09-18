@@ -80,6 +80,32 @@ CHECKS: list[dict] = [
         "role": None,
         "expectation": "denied: control, proves the surface reads the header at all",
     },
+    # Gateway. research/openclaude.md is explicit that this surface takes
+    # X-API-Key and NOT Authorization: Bearer, and documents it as a named
+    # protocol exception alongside Azure's. research/agent-os.md sends both and
+    # reports Bearer is harmless alongside. Those cannot both be the whole story,
+    # so this pair is the one that settles it.
+    {
+        "surface": "gateway",
+        "endpoint": f"{GATEWAY_BASE}/models",
+        "credential": "BANKR_LLM_KEY",
+        "role": Role.ANALYST,
+        "expectation": "authorized: the gateway toggle is on for this key",
+    },
+    {
+        "surface": "gateway",
+        "endpoint": f"{GATEWAY_BASE}/models",
+        "credential": "BANKR_KEY_READ",
+        "role": Role.ANALYST,
+        "expectation": "denied: gateway is scoped to BANKR_LLM_KEY",
+    },
+    {
+        "surface": "gateway",
+        "endpoint": f"{GATEWAY_BASE}/models",
+        "credential": "__INVALID__",
+        "role": None,
+        "expectation": "denied: control",
+    },
 ]
 
 #: A syntactically plausible key that was never issued.
