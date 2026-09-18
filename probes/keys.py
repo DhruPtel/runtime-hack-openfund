@@ -39,6 +39,9 @@ GATEWAY_BASE = "https://llm.bankr.bot/v1"
 
 HEADERS = ("X-API-Key", "Authorization")
 
+#: A job id that was never issued. Reading it costs nothing and creates nothing.
+NONEXISTENT_JOB_ID = "00000000-0000-4000-8000-000000000000"
+
 
 def header_value(header_name: str, key: str) -> str:
     return key if header_name == "X-API-Key" else f"Bearer {key}"
@@ -102,6 +105,32 @@ CHECKS: list[dict] = [
     {
         "surface": "gateway",
         "endpoint": f"{GATEWAY_BASE}/models",
+        "credential": "__INVALID__",
+        "role": None,
+        "expectation": "denied: control",
+    },
+    # Agent API. planning/PLAN.md §6 requires this OFF on both Bankr keys, and
+    # nothing in the system calls it. GET on a job id that was never issued is
+    # read-only and free: an enabled key should get 404 (no such job), a disabled
+    # one should be refused before the lookup happens. The difference between
+    # those two statuses is the toggle state.
+    {
+        "surface": "agent",
+        "endpoint": f"{WALLET_BASE}/agent/job/{NONEXISTENT_JOB_ID}",
+        "credential": "BANKR_KEY_READ",
+        "role": Role.ANALYST,
+        "expectation": "denied: Agent API must be off on the read key",
+    },
+    {
+        "surface": "agent",
+        "endpoint": f"{WALLET_BASE}/agent/job/{NONEXISTENT_JOB_ID}",
+        "credential": "BANKR_KEY_EXEC",
+        "role": Role.TREASURER,
+        "expectation": "denied: Agent API must be off on the execution key",
+    },
+    {
+        "surface": "agent",
+        "endpoint": f"{WALLET_BASE}/agent/job/{NONEXISTENT_JOB_ID}",
         "credential": "__INVALID__",
         "role": None,
         "expectation": "denied: control",
