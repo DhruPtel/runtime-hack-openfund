@@ -247,6 +247,25 @@ cached-record design is confirmed necessary rather than merely prudent.
 **Checkpoint:** you see the timings and the payment landing. Judge whether this
 feels like a product an agent would call repeatedly, and what a fair price is.
 
+**Run 2026-09-18, across 0.7, 0.7b, 0.7c, 0.7d and 0.7e.** `stockwatch` no longer
+existed, so a trivial handler was deployed in its place.
+
+- **Timings.** Unpaid 402: 107–280 ms. Paid call: ~4.6 s end to end,
+  ~1.5 s of it inside the platform. Cold start: ~0.5 s (F0.7d.5). That
+  confirms the cached-record design.
+- **What made it settle.** The first paid call failed because our handler
+  returned a plain object rather than a `Response` (F0.7d.2).
+- **The payer header.** `x-402-payer` is a bare payer address that the
+  platform asserts. `X-PAYMENT` is not forwarded to the handler (F0.7d.7).
+- **Revenue evidence.** Revenue is an on-chain `PaymentSettled` with the fund
+  as `owner` (F0.7b.5–F0.7b.6).
+- **"A standard client can pay us" needed a second probe.** The published v1
+  clients cannot pay, failing on the network enum alone. The v2 client
+  `@x402/fetch` 2.26.0 pays unmodified (F0.7e). The Bankr CLI implements no
+  x402; it asks Bankr's server to pay (F0.7e.4).
+
+The checkpoint's price question — what a fair price is — has not been decided.
+
 ---
 
 ### 0.8 Asset identity

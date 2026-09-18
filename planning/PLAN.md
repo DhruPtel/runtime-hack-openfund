@@ -224,6 +224,14 @@ re-evaluate before detailing the next.
 - **0.7** ▶ **x402 probe:** deploy a trivial handler, time an unpaid and a paid
   call, capture `x-402-payer`, confirm USDC-on-Base is payable by a standard
   client.
+  *Run 2026-09-18 across 0.7–0.7e (`research/findings.md`):*
+  - The endpoint settles once the handler returns a `Response`.
+  - A paid call takes ~4.6 s end to end, with a ~0.5 s cold start.
+  - Revenue is an on-chain `PaymentSettled` event with our address as `owner`.
+  - `x-402-payer` is a bare address that the platform asserts.
+  - The published v1 clients cannot pay us, failing on the network enum alone,
+    while the v2 client `@x402/fetch` pays us unmodified.
+  - The Bankr CLI is not an x402 client: it asks Bankr's server to pay.
 - **0.8** Identity probe: issuer allowlist source, plus the beacon check against
   a good token and the fake GME. *Runs before 0.3.*
 - **0.9** *Relocated to unit 1.7.* The analyst-cost probe needs the real snapshot
