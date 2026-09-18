@@ -34,6 +34,9 @@ import sys
 import urllib.request
 
 from fund import config, redaction
+from fund.credentials import Role
+
+from . import _capture
 
 OUT_DIR = pathlib.Path(__file__).resolve().parent / "out"
 
@@ -374,6 +377,163 @@ def read_chain(assets: dict[str, dict]) -> tuple[str, dict, dict]:
     return block, pin, readings
 
 
+# --- step 4: compare, and settle the multiplier question ---------------------
+
+QUOTE_URL = "https://api.bankr.bot/wallet/swap-quote"
+QUOTE_CHAIN = "robinhood"
+
+#: planning/PLAN.md §11's nominal size. F0.3.3 established a quote is not
+#: balance-checked, so this prices against an empty wallet and is evidence about
+#: a price and nothing else.
+QUOTE_SIZE_USDG = "25"
+USDG_ADDRESS = "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+
+
+def bps(value: float, reference: float) -> float | None:
+    """Signed divergence of `value` from `reference`, in basis points.
+
+    Signed on purpose. F0.3.4 is the precedent: price impact came back negative
+    and a gate written over a magnitude would have rejected the best fills. A
+    mark that is systematically *below* its corroborator is a different fault
+    from one systematically above, and averaging their magnitudes hides it.
+    """
+    if not reference:
+        return None
+    return (value - reference) / reference * 10_000
+
+
+def bankr_quotes(assets: dict[str, dict]) -> dict[str, dict]:
+    """The execution venue's own price, for every covered ticker.
+
+    `planning/PHASE-0-1.md` 0.4 names this the fallback corroborator *if*
+    GeckoTerminal has no coverage. Coverage exists, so it is not the fallback —
+    it is here because the 0.4 checkpoint asks whether the divergence threshold
+    chosen for a veto is realistic, and that needs a distribution rather than the
+    three points 0.3 produced. It remains **not independent of the execution
+    venue**, and nothing below lets it mark the book.
+    """
+    key = config.load(Role.ANALYST).secret("BANKR_KEY_READ")
+    quotes: dict[str, dict] = {}
+    for ticker, asset in sorted(assets.items()):
+        if not asset["address"]:
+            continue
+        capture = _capture.call(
+            label=f"quote/{ticker}", url=QUOTE_URL, header_name="X-API-Key",
+            header_value=key, max_body_chars=4000,
+            json_body={
+                "fromChain": QUOTE_CHAIN, "fromToken": USDG_ADDRESS,
+                "toChain": QUOTE_CHAIN, "toToken": asset["address"],
+                "amount": QUOTE_SIZE_USDG,
+            },
+        )
+        parsed = _capture.as_json(capture) or {}
+        price = parsed.get("buyTokenPriceUsd")
+        quotes[ticker] = {
+            "status": capture.status,
+            "buy_token_price_usd": float(price) if price is not None else None,
+            "price_impact_bps": parsed.get("priceImpactBps"),
+            "swap_impact_bps": parsed.get("swapImpactBps"),
+        }
+    priced = sum(1 for q in quotes.values() if q["buy_token_price_usd"])
+    print(f"\nBankr quotes at ${QUOTE_SIZE_USDG}: {priced} of {len(quotes)} priced")
+    return quotes
+
+
+def compare(readings: dict, coverage: dict, quotes: dict) -> dict:
+    """Step 4 — does the feed answer already carry `uiMultiplier`?
+
+    The design is a control group, because the effect being tested is small. Nine
+    tokens carry a multiplier other than exactly 1.0; the rest carry exactly 1.0,
+    where multiplying changes nothing and the two hypotheses are identical by
+    construction. Those tickers therefore measure the noise floor between the
+    feed and a pool price, and the question is whether the nine sit inside that
+    floor as-is, or only after the multiplier is applied.
+
+    Stated as two hypotheses so neither can be assumed:
+
+      - **already-adjusted** — the feed answer is a price per *token*, so it
+        should agree with a pool price directly, and multiplying again is the
+        double-application `planning/PHASE-0-1.md` 1.4 warns about,
+      - **per-share** — the feed answer needs `× uiMultiplier` to become a price
+        per token.
+    """
+    rows = []
+    for ticker, reading in sorted(readings.items()):
+        feed = reading.get("feed_price")
+        multiplier = reading.get("ui_multiplier")
+        gecko_price = coverage.get(ticker, {}).get("price_usd")
+        gecko = float(gecko_price) if gecko_price else None
+        quote = quotes.get(ticker, {}).get("buy_token_price_usd")
+        if feed is None or multiplier is None or gecko is None:
+            continue
+        rows.append({
+            "ticker": ticker,
+            "feed_price": feed,
+            "ui_multiplier": multiplier,
+            "gecko_price": gecko,
+            "quote_price": quote,
+            "is_control": multiplier == 1.0,
+            "multiplier_bps": (multiplier - 1) * 10_000,
+            "as_is_vs_gecko_bps": bps(feed, gecko),
+            "multiplied_vs_gecko_bps": bps(feed * multiplier, gecko),
+            "as_is_vs_quote_bps": bps(feed, quote) if quote else None,
+            "multiplied_vs_quote_bps": bps(feed * multiplier, quote) if quote else None,
+        })
+
+    control = [r for r in rows if r["is_control"]]
+    treatment = [r for r in rows if not r["is_control"]]
+
+    def spread(group, field):
+        values = [r[field] for r in group if r[field] is not None]
+        if not values:
+            return None
+        values.sort()
+        return {
+            "n": len(values),
+            "median": values[len(values) // 2],
+            "min": values[0],
+            "max": values[-1],
+            "mean_abs": sum(abs(v) for v in values) / len(values),
+        }
+
+    print(f"\n{'tk':7} {'mult bps':>9} {'feed':>10} {'gecko':>10} {'quote':>10} "
+          f"{'as-is':>8} {'×mult':>8}")
+    for row in sorted(rows, key=lambda r: -r["multiplier_bps"]):
+        marker = "  " if row["is_control"] else "* "
+        print(f"{marker}{row['ticker']:5} {row['multiplier_bps']:>9.1f} "
+              f"{row['feed_price']:>10.4f} {row['gecko_price']:>10.4f} "
+              f"{(row['quote_price'] or 0):>10.4f} "
+              f"{row['as_is_vs_gecko_bps']:>8.1f} "
+              f"{row['multiplied_vs_gecko_bps']:>8.1f}")
+
+    summary = {
+        "control": {
+            "tickers": [r["ticker"] for r in control],
+            "as_is_vs_gecko": spread(control, "as_is_vs_gecko_bps"),
+            "as_is_vs_quote": spread(control, "as_is_vs_quote_bps"),
+        },
+        "treatment": {
+            "tickers": [r["ticker"] for r in treatment],
+            "multiplier_bps": spread(treatment, "multiplier_bps"),
+            "as_is_vs_gecko": spread(treatment, "as_is_vs_gecko_bps"),
+            "multiplied_vs_gecko": spread(treatment, "multiplied_vs_gecko_bps"),
+            "as_is_vs_quote": spread(treatment, "as_is_vs_quote_bps"),
+            "multiplied_vs_quote": spread(treatment, "multiplied_vs_quote_bps"),
+        },
+    }
+
+    print("\n* = uiMultiplier != 1.0 (the nine that can distinguish the two "
+          "hypotheses)\n")
+    for group in ("control", "treatment"):
+        print(f"{group}:")
+        for label, stats in summary[group].items():
+            if isinstance(stats, dict):
+                print(f"  {label:22} n={stats['n']:<3} median={stats['median']:>8.1f} "
+                      f"mean|x|={stats['mean_abs']:>7.1f} "
+                      f"[{stats['min']:.1f}, {stats['max']:.1f}] bps")
+    return {"rows": rows, "summary": summary}
+
+
 def main() -> int:
     config.load_environment()
     directory = enumerate_directory()
@@ -386,8 +546,11 @@ def main() -> int:
 
     coverage = gecko_coverage(assets)
     block, pin, readings = read_chain(assets)
+    quotes = bankr_quotes(assets)
+    comparison = compare(readings, coverage, quotes)
     result = {"directory": directory, "assets": assets, "gecko": coverage,
-              "block": block, "block_pin": pin, "readings": readings}
+              "block": block, "block_pin": pin, "readings": readings,
+              "quotes": quotes, "comparison": comparison}
     OUT_DIR.mkdir(exist_ok=True)
     path = OUT_DIR / "feed.json"
     path.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
