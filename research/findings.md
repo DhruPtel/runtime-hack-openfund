@@ -2853,3 +2853,161 @@ probe's.
   the platform's cold start.
 - **Cost:** $0.001 paid and returned in the same transaction, `feeBps` 0, gas paid
   by the facilitator. **Net spend: $0.00.**
+
+---
+
+## 0.10 — Idempotency and rate limits
+
+**Date:** 2026-09-18 · **Method:** `PYTHONPATH=src python3 -m probes.idempotency --confirm`,
+`python3 -m probes.idempotency_evidence` (read-only), `python3 -m probes.ratelimit`
+(read-only) · **Captures:** `probes/out/idempotency.json`,
+`probes/out/idempotency_evidence.json`, `probes/out/ratelimit.json`
+
+> **This unit spent, once.** It made one ungated swap with `BANKR_KEY_EXEC`:
+> 0.00003 ETH (~$0.08) into USDG on 4663, the smallest size that quoted (0.00001
+> was refused as "too small to swap"). It was the wallet's first transaction on
+> 4663. The ETH was converted, not lost: the wallet now holds 0.078742 USDG. It
+> paid no gas (F0.10.3).
+
+### F0.10.1 — The same idempotency key returns the original result and does not broadcast twice
+
+**Confidence: measured. Verdict: pass**, for a repeat sent after the original
+completed.
+
+| | Status | Time | Body |
+|---|---|---|---|
+| Submission 1 | 200 | 5,734 ms | `{"success":true,"hash":"0xb9e4…e2a5","amountSold":0.00003,"amountReceived":0.078742,…}` |
+| Submission 2 — identical body, same `idempotencyKey`, sent as soon as 1 returned | 200 | **178 ms** | **byte-identical**, same hash |
+
+**The chain agrees that there was one fill, not two.** The wallet's ETH fell by
+exactly one sell (30,000 gwei), and its USDG rose by exactly one
+`amountReceivedRaw` (78,742). The EntryPoint reports **one** operation executed
+under the UserOperation's own nonce key (F0.10.3). The 178 ms reply is the
+stored result, not a fresh quote-and-execute. Bankr's documentation — *"A repeat
+POST with the same key returns the original result, never a second broadcast"* —
+is now measured for this case.
+
+**Not measured: the in-flight case.** The documented reply to a repeat sent while
+the original is still processing is `409`. That is the case `planning/PLAN.md` §4
+actually worries about, a retry after a timeout. This run sent the repeat only
+after the original had returned, so the 409 path is still **documented**. The
+crash drill (4.10) is where it gets exercised.
+
+### F0.10.2 — `BANKR_KEY_EXEC` can transact. F0.5.5 is settled.
+
+**Confidence: measured. Verdict: pass.**
+
+The swap moved the fund wallet's ETH and delivered USDG to it. The UserOperation
+that did it names **our wallet as `sender`** and reports `success: true`. This is
+the first evidence that the execution key can transact at all. 0.5 could not show
+it, because the location gate fired first (F0.5.5), and Phase 5's live leg rested
+on it. The evidence is narrow: one sell of $0.08, ETH into USDG, on 4663. The
+buy-and-sell round trip that 5.2 requires has not been done.
+
+### F0.10.3 — Bankr runs the swap as a sponsored ERC-4337 UserOperation, and our wallet is now EIP-7702-delegated on 4663
+
+**Confidence: measured** (the transaction and its logs); **inferred** where
+noted. **Verdict: pass, as a constraint on 4.x and 5.x.**
+
+```
+tx 0xb9e412815dc9bce933100bf23ece1e2b24fedcbcb91a4fa90c49ad36e64ae2a5   block 66,586,209
+  type 0x4 (EIP-7702 set-code)
+  from 0x8e3435ad7c1183bc0e34f9ec34ea3423182e1c67        a bundler, account nonce 76,800
+  to   0x0000000071727de22e5e9d8baf0edac6f37da032        16,035 bytes; selector 0x765e827f
+  authorizationList  chainId 4663  delegate 0xd6cedde84be40893d153be9d467cd6ad37875b28  nonce 0
+UserOperationEvent  sender 0x93fa…a3da (us)   paymaster 0x0   success true
+                    actualGasCost 0 wei   actualGasUsed 353,353
+outer gas           24,352,064,730,000 wei, paid by the bundler
+wallet code         4663: 0xef0100d6cedde84be40893d153be9d467cd6ad37875b28     Base: 0x
+```
+
+The target address matches the canonical ERC-4337 EntryPoint v0.7 address, and
+it emits `UserOperationEvent` with the canonical signature. The identification
+rests on that match, which is **inferred**; we did not verify its source. The
+authorization carries our wallet's signature for chain 4663 only, so the wallet
+now runs the delegate's code **on 4663** and is still a plain EOA on Base.
+
+**Consequences, stated as constraints; the design belongs to 4.x and 5.x:**
+
+- **`tx.from` is the bundler, not us.** Receipt reconciliation (5.3) must key on
+  `UserOperationEvent.sender` and on `Transfer` logs to or from our wallet. A
+  check that the transaction was sent from our wallet returns False for a swap
+  that plainly moved our funds, and this probe's first cut made exactly that
+  mistake.
+- **The outer receipt's `status` says the bundle mined, not that our swap
+  worked.** The swap's own outcome is `UserOperationEvent.success`, so a reverted
+  swap can sit inside a status-1 transaction. Bankr's documented
+  `200 success:false` presumably reflects the latter. That is **inferred**; no
+  revert was observed.
+- **Gas was sponsored.** Our wallet paid nothing, and the bundler paid ~$0.06.
+  Whether sponsorship is permanent, or depends on size or plan, is undocumented.
+  The journal's gas line for these swaps is zero, measured once.
+- **The wallet's nonce no longer counts our transactions.** The first swap
+  consumed nonce 0 with the delegation. That is why this probe's first arbiter —
+  nonce delta equals broadcasts — was wrong (corrected in `probes/idempotency.py`).
+- **The fund's wallet now runs code chosen by Bankr on 4663.** Custody was
+  already Bankr's, so the trust boundary barely moves, but it is now enforced by
+  code as well as by key custody. What the delegate at `0xd6ce…5b28` permits
+  (24,469 bytes; not read) is **unresolved**.
+
+### F0.10.4 — 6 bps of the sale is unaccounted for, although the quote said `feeBps: 0`
+
+**Confidence: measured (the gap). Verdict: unresolved.**
+
+The wallet sold 30,000 gwei of ETH; WETH minted 29,982 gwei. The other 18 gwei
+(0.06%) went to an address that appears in no log and in no field of the
+transaction. The native balances of every address the transaction names were
+read at blocks N−1 and N, and none of them received it. The RPC exposes neither
+`debug_traceTransaction` nor `trace_transaction`, so the recipient cannot be
+found from here. The USDG received equalled the quoted `formattedAmount`
+exactly, which suggests the cost is priced into the quote rather than added on
+top. That is **inferred**.
+
+**For the books:** a quote's `feeBps: 0` is not evidence of a fee-free fill.
+Reconcile from balances. The gap is $0.00005 here, and would be about $0.015 on a
+$25 trade.
+
+### F0.10.5 — No rate limit within 150 requests in 4.1 s, and no rate-limit headers at all
+
+**Confidence: measured (a lower bound). Verdict: unresolved.**
+
+`GET /wallet/me` with `BANKR_KEY_READ`, 8 threads, 150 requests in 4.1 s (~37
+per second): **150 × 200**, p50 142 ms, max 1,309 ms. No response carried
+`Retry-After`, `X-RateLimit-*` or `RateLimit-*`. The full header set is recorded,
+and it shows an AWS load balancer (`AWSALB*` cookies) and an
+`access-control-expose-headers` naming only the x402 headers. The limit
+follow-ups never fired.
+
+The shape of a 429 — body, `Retry-After` — is therefore still only
+**documented** (*"429 — Rate limited, retry in a moment"*). The burst was not
+escalated, and no other endpoint was tried: "adjust until something trips" is the
+loop this repository avoids, and the result is stated as the bound it is.
+**Consequence for 1.3:** there are no advance-warning headers to pace against, so
+the client treats a 429 as its only signal and backs off without a published
+budget.
+
+### What 0.10 changes
+
+| Change | Where |
+|---|---|
+| A repeat with the same key returns the original result; §4's "never mint a new key" rule holds for completed swaps | §4, 4.2, 4.9 |
+| The 409-in-flight path is still documented only | 4.10 |
+| `BANKR_KEY_EXEC` can transact — F0.5.5 settled for one ungated sell | Phase 5, 5.2 |
+| Swaps are sponsored 4337 UserOperations inside 7702 transactions; reconcile on `UserOperationEvent` and `Transfer` logs, never `tx.from` or the EOA nonce | 4.6, 5.3 |
+| The wallet is 7702-delegated to a Bankr delegate on 4663 | `planning/PLAN.md` §6, §13 |
+| 6 bps unaccounted for despite `feeBps: 0`; reconcile fills from balances | 4.6, 6.2 |
+| No rate-limit headers; no limit reached at ~37 req/s for 4 s | 1.3 |
+
+### Method limitations
+
+- **One swap:** one direction, one asset, $0.08, one day. Nothing here bounds
+  larger sizes, sells of USDG, or sponsorship that depends on plan or size.
+- The repeat was sequential; the in-flight 409 is untested.
+- The EntryPoint and the delegate are identified by canonical address, code
+  presence and event signature. Neither contract's source was read.
+- No tracing on the RPC, so internal calls, including the 18 gwei, are not
+  visible.
+- Rate limit: one endpoint, one key, one burst. The result is a lower bound, and
+  the per-key and recovery follow-ups never ran.
+- **Cost:** 0.00003 ETH converted to 0.078742 USDG, gas $0 to us, and 18 gwei
+  (~$0.00005) unaccounted for.
