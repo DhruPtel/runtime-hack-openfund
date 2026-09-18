@@ -27,7 +27,7 @@ what the human saw and what they decided.
 
 ## 0.0 — Onboarding: plan read, tracker established
 **Date:** 2026-09-17
-**Commit:** c099dde
+**Commit:** bbe824e
 **Built:** `tracker/` with this log and `tracker/LESSONS.md`. `README.md` expanded
 from placeholder to a judge-facing overview: the cycle, the three differentiators,
 the architecture line, intended run commands, and an explicit planning status.
@@ -43,7 +43,7 @@ it; PLAN-v1.md was superseded and removed.
 
 ## 0.1 — Repo skeleton and credential redaction
 **Date:** 2026-09-17
-**Commit:** c099dde
+**Commit:** bbe824e
 **Built:** The target tree from CODEBASE.md, with docs moved to the repository
 root and the package at `src/fund/`. Placeholder modules for every file the tree
 names, each stating the unit that fills it, so an empty file is legible rather
