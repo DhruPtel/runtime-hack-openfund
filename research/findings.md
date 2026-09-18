@@ -2550,3 +2550,162 @@ It also confirms `NO_CALL` is reachable in practice rather than theoretically
   against the $0.013406 charged. **Unresolved:** it may be the gateway's own
   wholesale cost, implying roughly a 2.2× markup, but the field is undocumented
   and nothing was measured that confirms the interpretation.
+
+---
+
+## 0.7e — Who can pay us: the x402 client gap, measured
+
+**Date:** 2026-09-18 · **Method:** `node probes/x402_clients/gap.mjs`,
+`adapter.mjs` and `v2.mjs` (one free unpaid GET, then offline), and
+`node probes/x402_clients/pay.mjs --confirm` (one payment) · **Captures:**
+`probes/out/x402_clients.json`, `probes/out/x402_logs_roundtrip.json` ·
+**Packages:** pinned exactly in `probes/x402_clients/package-lock.json`, installed
+unmodified
+
+Question: F0.7.3 measured that the published `x402` / `x402-fetch` 1.2.0 cannot
+parse our challenge. Is the only client that can pay us Bankr's own? This section
+does not re-derive F0.7.3, F0.7b or F0.7d; it tests clients against them.
+
+The offline runs replay the live 402 byte for byte — body and headers — to the
+unmodified client, answer its unpaid request, and **refuse** any request carrying
+a payment header. That drives a client exactly to the point of signing and no
+further. Each run signs with a key generated for that process, never printed and
+never funded.
+
+### F0.7e.1 — The gap, field by field: one client-side blocker, not two
+
+**Confidence: measured. Verdict: fail** for `x402-fetch@1.2.0` unmodified, and a
+partial correction of F0.7.3.
+
+The live 402 carries the same JSON three times: the body, a base64
+`payment-required` header, and a base64 `x-payment-required` header. Checked
+with `x402@1.2.0`'s own zod schemas rather than read off its source:
+
+| Field of `accepts[0]` | Present | `PaymentRequirementsSchema` |
+|---|---|---|
+| `scheme` | yes | ok |
+| **`network`** | yes | **fails** — `eip155:8453` is not in the 17-name enum |
+| `maxAmountRequired` | yes | ok |
+| `resource`, `description`, `mimeType` | yes | ok (`mimeType: ""` is a valid string) |
+| `outputSchema` | no | ok (optional) |
+| `payTo`, `maxTimeoutSeconds`, `asset`, `extra` | yes | ok |
+| `amount` | yes | unknown to v1; zod strips it |
+
+At the top level, `x402Version: 2`, `error: "Payment Required"` (not one of
+`ErrorReasons`) and `accepts` all fail `x402ResponseSchema`, and `facilitator` is
+unknown to it. **But `x402-fetch` never applies that schema.** It destructures
+`{ x402Version, accepts }` from the body (`x402-fetch/dist/cjs/index.js:39`) and
+parses only the `accepts` entries. Driving the unmodified client, one field
+changed at a time:
+
+| Replay | Result |
+|---|---|
+| unmodified | throws before signing — `network: Invalid enum value … received 'eip155:8453'` |
+| `network` → `"base"` only | **reaches signing**; sends `X-PAYMENT` `{x402Version: 2, network: "base", …}` |
+| `x402Version` → `1` only | throws before signing — the same network error |
+
+**So the network identifier is the only thing that stops the v1 client.** The
+version is carried straight into its payment header rather than rejected. F0.7.3's
+*"throws before selection or signing — for two independent reasons"* is one
+reason on the client side; whether version 2 in a v1-shaped header matters to the
+*server* is F0.7e.3's open question.
+
+**An instrument error, caught before it was recorded.** The first run reported the
+network-only variant as *"Invalid evm wallet client provided"*. `createSigner` is
+async in `x402@1.2.0` and was passed unawaited, and a Promise fails the library's
+wallet check with a message that reads like a protocol rejection. Once it was
+awaited, the variant reached signing. This is the same class of error as F0.7d.7's
+regex, where the probe was at fault rather than the platform.
+
+### F0.7e.2 — The signature does not cover the fields an adapter would rewrite
+
+**Confidence: measured** (source read, then confirmed by recovering signatures).
+**Verdict: pass** — an adapter is not ruled out by the cryptography.
+
+`x402@1.2.0` signs EIP-3009 `TransferWithAuthorization`
+(`x402/dist/cjs/client/index.js:453`):
+
+```
+domain   { name: extra.name, version: extra.version,
+           chainId: getNetworkId(network), verifyingContract: asset }
+message  { from, to: payTo, value: maxAmountRequired,
+           validAfter, validBefore, nonce }
+```
+
+`x402Version` and the network *string* are envelope fields outside the
+signature. The network enters only as `chainId`, and `"base"` resolves to 8453,
+the same chain `eip155:8453` names. `@x402/evm@2.26.0` signs the **identical**
+typed data (`chunk-6RBEXVZ5.mjs:26`) — same domain, same message. The one
+difference is `validAfter`: v1 uses now − 600 s and v2 uses `"0"`, and both are
+valid EIP-3009 values.
+
+Confirmed by recovery: each adapter signature in F0.7e.3 recovers to its signer
+under the live USDC domain on chain 8453, and its `to`/`value` equal the live
+`payTo`/`amount`. Rewriting did not change what was signed.
+
+### F0.7e.3 — A thin adapter gets the v1 client to signing; whether Bankr accepts the result is unresolved
+
+**Confidence: measured to the signing stage. Verdict: unresolved** at the server.
+
+Two depths, both wrapping the fetch *underneath* the unmodified `x402-fetch`
+(`probes/x402_clients/adapter.mjs`):
+
+| Depth | What it does | Sends | Result |
+|---|---|---|---|
+| **inbound** (~20 lines) | rewrites the 402: `eip155:<id>` to the v1 name via `x402`'s own `ChainIdToNetwork`, `x402Version` to 1, `maxAmountRequired` from `amount` if absent | `X-PAYMENT` `{x402Version: 1, scheme, network: "base", payload}` | reaches signing, signature valid |
+| **envelope** | also re-wraps that payload as v2 | `PAYMENT-SIGNATURE` `{x402Version: 2, payload, accepted}` | reaches signing, signature valid |
+
+**Neither was sent.** Whether Bankr's server accepts a v1 `X-PAYMENT` is not
+known, and it cannot be read for free: the facilitator the challenge advertises
+has no `GET /supported`, and both `/facilitator/supported` and `/facilitator/`
+return 404. So the (version, network) kinds it verifies are not published. The
+one authorised payment went to the v2 client (F0.7e.5), on purpose.
+
+**The envelope depth is not really an adapter.** Its output has the same three
+keys as the v2 client's own payload (F0.7e.5), so at that depth it reimplements
+`@x402/fetch`. A buyer willing to install it should install `@x402/fetch`
+instead.
+
+**The buyer bears it; we cannot absorb it.** The challenge is emitted by Bankr's
+platform in front of our handler (F0.7d.1). Our `bankr.x402.json` already says
+`"network": "base"`, and the platform emits `eip155:8453` regardless. The
+documented config offers `network` and nothing about protocol version or
+identifier format (`docs.bankr.bot/docs/x402-cloud/config-file.md`, read
+2026-09-18). **Documented, not tested**, and changing the endpoint config is
+outside this unit's authorisation anyway.
+
+### F0.7e.4 — Bankr's CLI does not implement x402: Bankr pays on your behalf, server-side
+
+**Confidence: measured (source read). Verdict: pass, as a constraint.**
+
+`@bankr/cli` 0.3.37 depends on `@inquirer/prompts`, `chalk`, `commander`, `open`,
+`ora` and `viem`, and on **no x402 package**. `x402CallCommand`
+(`dist/commands/x402.js:978`) optionally probes the 402 for the price, then
+POSTs `{url, method, body, maxPaymentUsd}` to **`/wallet/x402-pay`** with the
+CLI's API key (`:1167`). Bankr's server builds and signs the payment from the
+custodial wallet. The CLI is a thin client of a Bankr payment service, not an
+x402 client.
+
+**As a library it offers nothing a non-Bankr buyer can use.** An `x402Pay`
+function exists in `dist/lib/api.js:350` but is not exported from the package
+entry (`dist/index.js` re-exports config helpers and agent-prompt calls only). The
+usable surface is the HTTP endpoint, which appears nowhere in the pages read —
+the docs index (`llms.txt`), the Wallet API overview, or the x402 examples. Its
+request shape is known only from the CLI source. **Either way it needs a Bankr
+account and a Bankr-held wallet: this is the "agents already inside Bankr" case.**
+
+**Bankr's own documentation recommends the client that fails.**
+`docs.bankr.bot/docs/x402-cloud/examples.md` (read 2026-09-18), under *"TypeScript
+— x402-fetch"*: `bun add x402-fetch viem`, then `wrapFetchWithPayment(fetch,
+wallet, …)`. That is exactly the v1 client F0.7e.1 measured throwing on our
+challenge. The same page's cURL sample shows `"network": "base"` where the live
+challenge says `eip155:8453`, so the docs describe a challenge the platform no
+longer emits. **Documented against measured, and the measured one is what buyers
+hit.** The same page's "Manual 402 Flow" uses `PAYMENT-SIGNATURE`, the v2
+header.
+
+**Inferred, circumstantial.** The request Bankr's payer sent our handler (F0.7d.7)
+carried `access-control-expose-headers: PAYMENT-RESPONSE,X-PAYMENT-RESPONSE`.
+That is the exact string `@x402/fetch` 2.x sets on its paid request
+(`dist/esm/index.mjs:60`). It is consistent with Bankr's server-side payer being
+built on the v2 client line, and it proves nothing.
