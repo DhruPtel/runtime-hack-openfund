@@ -635,3 +635,19 @@ snapshot gives a trend analyst nothing to answer (F0.9.6). The relocation itself
 is unchanged. 1.7 still measures against the real snapshot, and 0.9's numbers
 are quoted only as floors.
 **Affects:** 0.9, 1.7, 2.4, 6.3; `planning/PHASE-0-1.md` 0.9, `planning/ROADMAP.md`.
+
+## 2026-09-18 — DECISION: the snapshot carries price history up to its pinned block
+*Operator decision on F0.9.6.* Invariant 2 specified one frozen snapshot per
+cycle, pinned to a single block, and 0.9 measured what that gives an analyst.
+Asked for a price-trend brief over six assets, it returned `NO_CALL` on all six,
+and it was right to: a single block-pinned reading carries no price history
+(`research/findings.md` F0.9.6). A price-trend analyst has nothing to answer
+from one block, and the roster in `config/analysts.json` has one.
+
+Invariant 2 therefore rewords to **one frozen snapshot per cycle, containing
+history up to a pinned block**, and the adapter reads a series. Which series and
+what window are unit 1.3's work, not this decision's. What does not change: the
+snapshot is still frozen, content-hashed and loaded into every analyst's prompt
+as bytes, and nothing after the pinned block may enter it.
+**Affects:** `planning/PLAN.md` §2 invariant 2, 1.3, 1.6, 1.7 (the token count
+grows), 1.11, §9; `config/analysts.json` (`price-trend`).
