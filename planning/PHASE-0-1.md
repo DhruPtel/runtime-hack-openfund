@@ -442,7 +442,10 @@ everything at it. Multicall where possible. Per-feed rules: max age, market
 session awareness, paused-oracle detection. Explicit request timeouts on every
 call, and **fail loudly** — exactly one public 4663 endpoint is documented and it
 carries no archive data, so no failover is claimed and no archive read is assumed
-anywhere in the system. Return `Observation`s, never bare numbers.
+anywhere in the system. Return `Observation`s, never bare numbers. The HTTP
+client sends a `User-Agent` by default: the 4663 RPC, the CoinGecko list and the
+Chainlink directory all return 403 without one, and that 403 is not an auth
+failure (probe 0.3).
 
 **Artifact:** a module that, given a block, returns prices and balances with full
 provenance.
@@ -490,7 +493,10 @@ resolved it.
 **Build:** `adapters/bankr_quote.py`, read-only key only, no signing import.
 Request quotes at the **$25 intended size**, never a token size. Record quote
 age, fees, and the impact fields when present. Handle absent fields as null, not
-zero.
+zero. Decimals are per asset and read on chain, never assumed: USDG is **6**,
+while two documented sources said 18 (F0.3.1); stock tokens are 18; feeds are 8
+(F0.4.7). The request `amount` is human-readable, and the adapter owns the
+conversion to raw units (F0.3.2).
 
 **Artifact:** sized quotes attached to each asset.
 

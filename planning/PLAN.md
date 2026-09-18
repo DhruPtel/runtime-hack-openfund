@@ -560,7 +560,7 @@ the fund is readable without opening a JSON file.
 
 | Parameter | Value | Config |
 |---|---|---|
-| Capital under management | ~$200 | `thresholds.json`, `mandate.json` |
+| Capital under management | ~$200 — a target, not yet funded: the wallet holds about $2 (`tracker/LOGS.md`, state note) | `thresholds.json`, `mandate.json` |
 | Nominal per-trade size for quoting | $25 | `thresholds.json`, `mandate.json` |
 | Cadence | daily, plus a manual trigger on the identical code path | `cadence.json` |
 | Roster | 4 analysts, 1 risk agent, 1 treasurer | `analysts.json` |
