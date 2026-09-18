@@ -49,3 +49,18 @@ unresolved value is explicitly null and null blocks the check that reads it.
 Verified by `tests/test_redaction.py`, 25 tests passing offline, the
 load-bearing one adding a credential that did not exist when `redaction.py` was
 written and asserting it is masked anyway.
+
+## 0.2 — Auth headers and key permissions
+**Date:** 2026-09-17 · **Commit:** 692c58e
+
+Built `probes/_capture.py`, a stdlib HTTP harness that masks every declared
+credential before returning anything and turns a transport failure into a result
+rather than an exception, and `probes/keys.py`, which calls one read endpoint on
+each of the wallet, gateway and agent surfaces with `X-API-Key` and again with
+`Authorization: Bearer`, for each key plus a never-issued key as a negative
+control. The artifact is `research/findings.md` §0.2 — seven findings from 20
+read-only requests, each marked measured, documented or inferred — with raw
+captures in the gitignored `probes/out/keys.json`. Verified by the control
+returning 401 on all three surfaces, which is what makes the 200s evidence of
+authorization rather than of a surface ignoring the header, and by checking that
+no declared credential value appears anywhere in the findings file.
