@@ -379,6 +379,34 @@ evidence: six listed containers wait for the units that design them. Building
 `Quote` from the recorded bytes also showed that the quote response mixes human,
 raw and lossy amount formats, a refinement of F0.3.2 recorded for 1.5.
 
+
+## 1.2 — Universe
+**Date:** 2026-09-18 · **Commit:** e3e294a
+
+Built `src/fund/core/universe.py` and pinned `config/registry/`: the issuer
+registry and Chainlink's directory stored as raw bytes named by their sha256,
+through the unit's own plan–store–accept refresh path. The fresh registry
+hashes to exactly the `442718b5…` 0.8 recorded, so that version is now verified.
+The module also has:
+- identity, standing and markability as separate checks;
+- a beacon cross-check that raises on disagreement;
+- `held_asset()`, which never refuses;
+- a feed map keyed by address, which is the one place a name meets an address,
+  because the directory carries no token address.
+
+The artifact is that module with 36 tests on the real pin, each refusal asserted
+at its own rule:
+- the real GME is admitted, and both counterfeits are refused at identity;
+- CRM passes identity and is refused at markability;
+- a changed byte is refused at the pin;
+- a constructed disagreement stops the cycle;
+- a constructed `DELISTED` status is refused at standing while the holding keeps
+  its description.
+
+The network reads — the registry fetch and the beacon slot — are adapter work
+outside this unit's paths. The core takes their results as arguments. Several
+folds and LESSONS entries are owed, listed in the state note below.
+
 ---
 
 ## State at close — 2026-09-18 (1.1 done)
