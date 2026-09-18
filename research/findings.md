@@ -1930,3 +1930,101 @@ response"*. The platform's own scaffold does not rely on that, and our handler,
 which did, failed. Either the auto-wrap requires something the docs do not state
 (a promise, most likely) or it does not exist on this runtime path. Unit 7.2
 should follow the scaffold, not the prose.
+
+### F0.7d.4 — The endpoint works. One variable changed, and it settled.
+
+**Confidence: measured. Verdict: pass.**
+**Method:** `PYTHONPATH=src python3 -m probes.x402_paid --confirm`
+
+Between the failure and this attempt, exactly one thing changed: the handler
+returns `Response.json({...})` instead of a plain object. Same service name, same
+URL, same $0.001, same network, same asset, same hand-written config, still no
+work in the handler.
+
+```
+rc=0 in 4,615 ms
+Paid $0.0010 USDC on eip155:8453
+Status 200
+{"ok": true, "probe": "0.7", "work": "none"}
+```
+
+**Verified from the chain, not from the 200** (F0.7b.4's rule):
+
+```
+PaymentSettled — block 51,482,994
+tx 0x769587739708e5d7fe1b111381d6e2bfdf460d4f349533e6dcfdf870e61a5a16
+payer = 0x93faecde3c88a713e1edddf417c02c326889a3da
+owner = 0x93faecde3c88a713e1edddf417c02c326889a3da
+total = 1000   ownerAmount = 1000   bankrFee = 0   feeBps = 0
+```
+
+**This is the first revenue evidence the fund has produced** — a `PaymentSettled`
+event with our own address as `owner`, queryable by anyone from a public log.
+
+And the endpoint's own log agrees: `status=200`, **`settled=true`**, against the
+earlier `status=500`, `settled=false`. Both entries are now visible side by side,
+which is as clean a before-and-after as this probe could hope for.
+
+**So the cause is settled: the handler's return shape, and nothing else.** The
+config was never at fault (F0.7d.3), and self-payment was never refused
+(F0.7b.7, now confirmed directly — payer and owner are the same address in a
+settlement that went through).
+
+**What this does not isolate.** Three things changed in the handler at once —
+`async`, the `Promise<Response>` type, and `Response.json(...)`. The runtime error
+named the return value, so that is the likely trigger, but each further variant
+would cost another paid call and the unit authorised one. Unit 7.2 should copy
+the scaffold's shape entirely rather than pick at which part mattered.
+
+### F0.7d.5 — A real cold start: ~513 ms of container init
+
+**Confidence: measured.**
+
+| | failed attempt (v1) | successful attempt (v2) |
+|---|---|---|
+| **Init Duration** | 506.38 ms | **512.98 ms** |
+| Handler duration | 209.24 ms | **148.20 ms** |
+| Billed duration | 716 ms | 662 ms |
+| Platform `durationMs` | 1,485 | 1,480 |
+| Client wall clock | 2,849 (failed) | **4,615** |
+| Memory | 256 MB, 87 MB used | 256 MB, 86 MB used |
+
+Both attempts were fresh deploys, so **both init figures are genuine cold
+starts**, and they agree within 7 ms.
+
+The layers separate cleanly: **~513 ms container init**, **~148 ms** running a
+handler that does nothing, **~1,480 ms** total platform-side, and **~4,615 ms**
+end to end for the client including CLI startup and payment signing. So roughly
+**3.1 s of the round trip is payment and client work outside the platform's own
+handler path.**
+
+**This confirms the cached-record design as required, with our own numbers.**
+F0.7b.3 could only bound it from outside at ~4.6 s against a third-party handler.
+Now: against a documented 30-second handler ceiling, a handler that does
+*literally nothing* already consumes ~1.5 s platform-side and ~4.6 s end to end. A
+multi-analyst cycle takes minutes. The handler must serve something already
+computed.
+
+### F0.7d.6 — A self-paid sale nets to zero, and the balance is not the evidence
+
+**Confidence: measured. Verdict: pass, as a warning for the books.**
+
+USDC before and after: **107,346 both times, delta 0** — even though a sale
+settled. The transaction explains it:
+
+```
+0x93fa…a3da  ->  0x8aee…01a0 (router)   1000
+0x8aee…01a0  ->  0x93fa…a3da (us)       1000
+```
+
+We are both payer and owner, so the money left and came back in the same
+transaction. Gas was paid by the facilitator (`0x4a15…a584`), not by us.
+
+**A balance delta is therefore not a revenue signal.** Here it is zero for a real,
+settled, fee-free sale. `PaymentSettled` is the evidence — which is what F0.7b.6
+already concluded, now with a case that would have defeated the naive check.
+
+This is an artefact of the fund owning both sides, and it will not arise once a
+separate buyer agent pays. It is worth recording anyway, because the demo's buyer
+agent is not built yet and any reconciliation written before it exists would be
+tested against exactly this net-zero case.
