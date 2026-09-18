@@ -850,3 +850,71 @@ decimals, and turns the two prices into exact decimals from their shortest text.
 The general lesson is the one F0.3.1 taught about decimals: a field's
 *documented* shape is not its measured shape until someone reads the bytes.
 **Affects:** 1.5; refines F0.3.2.
+
+## 2026-09-18 — 0.8's registry version is verified: the registry was byte-identical five hours later
+The Phase 1 replan recorded that 0.8's registry hash (`442718b5…`) could not be
+re-verified, because 0.8 kept the parsed JSON and not the bytes it hashed.
+Building 1.2, a fresh fetch at 23:13Z hashed to exactly that version. So the
+version is now verified against real bytes, which sit in `config/registry/`
+under that name, and the registry did not change between 18:24Z and 23:13Z. The
+lesson stands anyway: a hash whose bytes were not kept could not be verified,
+and was verified only because the source happened not to change.
+**Affects:** 1.2; `config/registry/pins.json`.
+
+## 2026-09-18 — Chainlink's directory carries no token address, so markability's link is a reviewed name match
+0.8 recorded "never join the registry to the feed directory on ticker"
+(F0.8.1). Building 1.2 found that nothing else *can* join them. The directory's
+57 entries carry proxy, aggregator and secondary-proxy addresses, and nothing
+that names a token contract; a feed names its asset only by `baseAsset`,
+entity id and name. So the address-keyed `config/registry/feed_map.json` has to
+start from a name match. It does, once, under review, never at cycle time. It
+is safe from F0.8.3's failure because `propose_feed_map` iterates the
+**registry's** records: the symbol it matches is the issuer's, for an address
+the issuer lists, and a counterfeit can never be proposed a feed. 32 feeds
+matched exactly, and 3 were reviewed by hand. The loader refuses any map entry
+naming an unlisted asset.
+**Affects:** 1.2, 1.4, 1.10; refines the F0.8.1 rule.
+
+## 2026-09-18 — Unlike the registry, the feed directory sends ETag and Last-Modified
+F0.8.1 measured the issuer registry sending no version, no `ETag` and no
+`Last-Modified`. Chainlink's directory, fetched for 1.2, sends both — `ETag
+"2a7c7d90…"`, `Last-Modified` 23:10:03Z on the day of the fetch — so it did
+change that day. It is still pinned by the sha256 of its bytes, which is what
+the loader verifies, but a refresh can ask whether it changed without
+downloading it. 57 feeds and 35 equity feeds, the same counts F0.4.1 measured.
+**Affects:** 1.2 refresh.
+
+## 2026-09-18 — SGOV and USAR carry no assetClass; filtering on it dropped them silently
+The first cut of `propose_feed_map` selected equity feeds by
+`docs.assetClass == "Equity"` and found 33, not F0.4.1's 35. SGOV and USAR's
+entries carry no `assetClass` at all, only `us_equities_24/5` market hours. So
+they were not reported as unmatched; they vanished. It was caught only because
+the count disagreed with a measured number. The filter now counts either
+signal, giving 35: 32 exact matches and 3 for review. This is the silent
+truncation the whole build guards against, surfacing in the code meant to
+prevent it.
+**Affects:** 1.2; `src/fund/core/universe.py`.
+
+## 2026-09-18 — DECISION: listed but not ACTIVE is refused for buying, and never dropped as a holding
+*Decided in 1.2, as delegated.* The registry carries a `status`, and only
+`ASSET_STATUS_ACTIVE` has ever been observed (F0.8.1). An asset listed with any
+other status keeps its identity, because identity is registry membership (0.8
+decision). It is refused for buying at a separate **standing** rule, and it
+books as `UniverseStatus.LISTED_NOT_ACTIVE`, which is not `IDENTITY_IN_DOUBT`.
+As a holding it keeps its registry record and its mark. An asset dropped from
+the registry entirely is also never dropped from the book:
+- `held_asset()` never refuses;
+- `accept()` refuses a refresh that removes a held asset unless acknowledged.
+**Affects:** 1.2, 1.6, 1.8; `src/fund/core/types.py`, `src/fund/core/universe.py`.
+
+## 2026-09-18 — The registry fetch and the beacon read are adapter work; core takes their results as arguments
+`core/` makes no network calls (CODEBASE §1), and 1.2 needs two network reads.
+The first is fetching the registry and directory for a refresh; the second is
+reading each token's EIP-1967 beacon slot. So `core/universe.py` takes both as
+arguments — fetched bytes into `plan_refresh`, and slot observations into
+`cross_check_beacons` — and its only I/O is its own files under
+`config/registry/`. The beacon read belongs to 1.3's chain adapter. The
+registry and directory fetch has **no unit that owns it**; 1.2's initial pin
+used a one-off fetch standing in for it. This is a finding about the layout,
+not a workaround.
+**Affects:** 1.2, 1.3; the refresh path; `planning/PHASE-0-1.md` 1.2.
