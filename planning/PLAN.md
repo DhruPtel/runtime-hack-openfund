@@ -266,7 +266,9 @@ what each finding changed, is in `PHASE-0-1.md`.*
   source time and fetch time separate, always. A price series type. `Asset`
   carries identity and markability as separate fields. Amounts carry explicit
   decimals with no default. Checks are three-valued. An `Order` does not assume
-  a swap is a transaction sent from our wallet (F0.10.3).
+  a swap is a transaction sent from our wallet (F0.10.3). The report, proposal,
+  plan, decision, journal and statement types wait for the units that design
+  them (2.1–6.1).
 - **1.2** Universe: two rules, evaluated separately and never collapsed.
   **Identity** is membership in the issuer registry keyed by
   `(chain_id, address)`, from a pinned snapshot versioned by its sha256. It is

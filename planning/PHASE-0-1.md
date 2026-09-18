@@ -440,11 +440,17 @@ and is now an underestimate by an amount nobody has measured.
 
 **Goal:** the contracts everything imports, defined once.
 
-**Build:** `core/types.py`. `Observation` (value, source, source_time,
-fetch_time, block), `Asset`, `Snapshot`, `AnalystReport`, `Proposal`, `Plan`,
-`Decision`, `Order`, `JournalEvent`, `Statement`. Every numeric field carries
-units and decimals explicitly. Verification fields are three-valued: true /
-false / null. What the record adds:
+**Build:** `core/types.py`: `Observation` (value, source, source_time,
+fetch_time, block), `Asset`, `Snapshot` and `Order`, with the leaf types they
+need. Every numeric field carries units and decimals explicitly. Verification
+fields are three-valued: true / false / null.
+
+**Narrowed while building** (LESSONS 2026-09-18). `AnalystReport`, `Proposal`,
+`Plan`, `Decision`, `JournalEvent` and `Statement` are deferred to 2.1–2.2, 3.1,
+3.3, 3.7, 4.6 and 6.1. Nothing in the record fixes their shapes, and 2.1 requires
+the report format be designed by hand before any code.
+
+What the record adds:
 
 - **A series type.** The snapshot carries history up to its pinned block
   (invariant 2), so an asset holds an ordered series of `Observation`s per
@@ -466,8 +472,6 @@ false / null. What the record adds:
   the operation's own `success`. The outer transaction's sender and status, and
   the wallet's nonce, describe the bundle rather than our swap. Their full
   shape is Phase 4's to finish; 1.1 must not preclude it.
-- `Statement` cost lines carry `is_estimate` (F0.6.4), and revenue is referenced
-  by a settlement event (F0.7b.6). Both shapes are finished in Phases 6–7.
 
 **Artifact:** one module, no imports from `adapters/`.
 

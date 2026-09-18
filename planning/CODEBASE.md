@@ -87,8 +87,8 @@ fund/
 │   │   └── cache.py            raw source responses to disk, timestamped by code
 │   │
 │   ├── core/                   PURE. No network, no keys, no clock reads outside inputs.
-│   │   ├── types.py            Observation, Asset, Snapshot, AnalystReport, Proposal,
-│   │   │                       Plan, Decision, Order, JournalEvent, Statement
+│   │   ├── types.py            Observation, Series, Asset, Quote, Holding, Snapshot,
+│   │   │                       Order (1.1); report/plan/decision/journal types later
 │   │   ├── universe.py         allowlist loading, address verification, status assignment
 │   │   ├── snapshot.py         merge → filter → canonicalize → hash
 │   │   ├── aggregate.py        reports → weights or no-rebalance. A total function.
