@@ -38,9 +38,12 @@ Each is structural where possible, and tested where not.
    credentials. Analyst processes never receive execution or signing secrets.
    Proven by an environment test from the deployed analyst process, not by an
    import graph alone.
-2. **One frozen snapshot per cycle**, pinned to a single block, content-hashed,
-   loaded into each analyst's prompt as bytes. Passing an id to a tool-less
-   model is not data delivery.
+2. **One frozen snapshot per cycle**, containing history up to a pinned block,
+   content-hashed, loaded into each analyst's prompt as bytes. Nothing after the
+   pinned block enters it. Passing an id to a tool-less model is not data
+   delivery. *(Reworded 2026-09-18 from "pinned to a single block": a single
+   reading gives a price-trend analyst nothing to answer — findings F0.9.6,
+   `tracker/LESSONS.md`.)*
 3. **Risk sees every full report and the sized plan.** If the bundle exceeds the
    context budget, the cycle vetoes. It never silently summarizes.
 4. **Gates exist once.** One module, called by both risk and treasurer. Never
@@ -260,7 +263,9 @@ re-evaluate before detailing the next.
   marker are not identity signals (0.8 decisions).
 - **1.3** Chain adapter: block-pinned reads, feed staleness and pause rules,
   source time separate from fetch time. Explicit request timeouts and fail
-  loudly; no failover is claimed and no archive read is assumed.
+  loudly; no failover is claimed and no archive read is assumed. Reads a
+  **price series** ending at the pinned block (invariant 2). Which series and
+  what window are this unit's to decide.
 - **1.4** Price cross-check: Chainlink as the accounting mark, corroboration from
   GeckoTerminal (probe 0.4: 32 of 32 covered, independent of the venue),
   divergence recorded with its independence stated and gated by the tiered rule
@@ -480,7 +485,11 @@ Written alongside the code they cover, runnable offline.
 **Snapshot:** identical inputs produce an identical hash; mixed blocks rejected;
 stale or paused feeds excluded and labelled; a replayed old HTTP body with a
 fresh fetch timestamp rejected; a held asset excluded from trading remains in the
-book.
+book; no observation dated after the pinned block enters the snapshot. *Open
+since invariant 2 gained history:* the staleness and replay rules above are
+written for single observations, and whether they apply to a series' newest
+point or to every point is undecided. Read point by point, they reject every
+series (see `PHASE-0-1.md` 1.11).
 
 **Identity:** an unlisted clone with a matching ticker and beacon is refused; a
 correct token on the wrong chain is refused; an address change requires explicit

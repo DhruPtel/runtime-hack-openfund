@@ -442,7 +442,12 @@ everything at it. Multicall where possible. Per-feed rules: max age, market
 session awareness, paused-oracle detection. Explicit request timeouts on every
 call, and **fail loudly** — exactly one public 4663 endpoint is documented and it
 carries no archive data, so no failover is claimed and no archive read is assumed
-anywhere in the system. Return `Observation`s, never bare numbers. The HTTP
+anywhere in the system. Return `Observation`s, never bare numbers. Read a
+**price series** ending at the pinned block, per invariant 2 (decision
+2026-09-18, F0.9.6). Which series and what window are this unit's choice. The
+no-archive rule above applies to it: the series has to come from state readable
+at the pinned block, or from an offchain source that carries its own source
+times. The HTTP
 client sends a `User-Agent` by default: the 4663 RPC, the CoinGecko list and the
 Chainlink directory all return 403 without one, and that 403 is not an auth
 failure (probe 0.3).
@@ -514,8 +519,8 @@ smaller one.
 **Goal:** the frozen object.
 
 **Build:** `core/snapshot.py`. Merge observations (already fetched; no network in
-`core/`), apply the tradeability filter, assign each asset a status, canonicalize,
-hash.
+`core/`), including each asset's price series up to the pinned block, apply the
+tradeability filter, assign each asset a status, canonicalize, hash.
 
 **Tradeable** means all three of: a quote at the intended size succeeded; quote
 age is within bound; and impact is either known and within limit, **or null — and
@@ -555,7 +560,9 @@ implied floor under the $0.05 endpoint price.
 either confirmed or revised against them.
 
 **Risk:** the prompt is still a draft until checkpoint 2.1, so treat the number as
-a floor. Retries and the risk context bundle are additional.
+a floor. Retries and the risk context bundle are additional. The snapshot now
+carries a price series per asset, so its bytes will exceed 0.9's 35-asset
+extrapolation, which assumed one reading per asset (F0.9.4).
 
 **What 0.9 already showed.** Set the client timeout from the measured 58 s, not
 from `_capture`'s 20 s default, because a timed-out call is still billed. Read
@@ -621,6 +628,13 @@ red.
 **Build:** tests that construct: observations from two different blocks, an
 offchain body with an old source time and a fresh fetch time, a paused feed, and
 a market-closed feed.
+
+**Open, not reconciled:** invariant 2 now carries history (decision 2026-09-18).
+A series is made of observations whose source times are old by design, so the
+"old source time, fresh fetch time" rule — and the staleness rule in PLAN §9 —
+would reject every historical point if applied point by point. Whether these
+rules bind a series' newest point, every point, or something else is undecided
+here. It has to be decided before this unit's tests are written.
 
 **Artifact:** four named rejections.
 
