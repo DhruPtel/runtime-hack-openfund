@@ -651,3 +651,23 @@ snapshot is still frozen, content-hashed and loaded into every analyst's prompt
 as bytes, and nothing after the pinned block may enter it.
 **Affects:** `planning/PLAN.md` §2 invariant 2, 1.3, 1.6, 1.7 (the token count
 grows), 1.11, §9; `config/analysts.json` (`price-trend`).
+
+## 2026-09-18 — DECISION: the x402 buyer client is @x402/fetch 2.26.0, and the claim narrows to match
+*Operator decision on 0.7e.* Probe 0.7e found:
+- `@x402/fetch` 2.26.0 with `@x402/evm`, unmodified, paid our endpoint, and the
+  payment settled on chain (`research/findings.md` F0.7e.5).
+- `x402-fetch` / `x402` 1.2.0 cannot pay it; they throw before signing (F0.7e.1).
+- Bankr's own documentation points buyers at `x402-fetch` 1.2.0 (F0.7e.4).
+
+So the buyer instructions name `@x402/fetch` 2.26.0 explicitly rather than
+leaving buyers to follow Bankr's docs into a client that fails. The claim is
+**"payable by any x402 v2 client, and by Bankr users"** — not "payable by any
+x402 client".
+
+**The open inference, recorded with the decision rather than under it.** The
+test payment was signed by Bankr's signing service (`/wallet/sign`) for the
+fund's own custodial wallet, not by a locally held key, and it was self-paid
+(F0.7e.6). The server saw only the library's payload and an EOA signature, so a
+buyer holding their own key should look identical to it. That remains an
+inference until a fresh key pays us, which is planned for Phase 7 (7.5).
+**Affects:** 7.2, 7.5, 7.8, 8.6, the pitch; `planning/PLAN.md` §11, §13.
