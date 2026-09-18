@@ -391,9 +391,9 @@ and the isolation test green. No real submission happens before 4.12 passes.
 
 Tokenized-stock execution is location-gated and unavailable to this operator, so
 stock legs are paper. This phase proves the money path against a real chain using
-an **ungated leg** — memecoin/USDG swaps on 4663 need no location verification —
-so receipts, reconciliation, confirmation depth and explorer evidence are genuine
-rather than mocked. Opens once 4.12 passes; it is not gated on probe 0.5. It
+an **ungated leg** — **ETH→USDG on 4663**, decided at the 0.11 checkpoint, which
+needs no location verification — so receipts, reconciliation, confirmation depth
+and explorer evidence are genuine rather than mocked. Opens once 4.12 passes; it is not gated on probe 0.5. It
 does rest on `BANKR_KEY_EXEC` being able to transact. 0.5 could not show that,
 because the location gate fired first (findings F0.5.5). 0.10 has now shown it,
 with one $0.08 ETH-to-USDG sell on 4663 (F0.10.2). The buy-and-sell round trip
@@ -401,7 +401,9 @@ with one $0.08 ETH-to-USDG sell on 4663 (F0.10.2). The buy-and-sell round trip
 
 - **5.1** Live executor behind the same interface the paper executor satisfies.
 - **5.2** Small real buy **and** sell round trip on the ungated leg, with
-  production-shaped permissions.
+  production-shaped permissions. ETH→USDG was proven once (F0.10.1–F0.10.3).
+  USDG→ETH has not been exercised, so its sponsorship, its 7702 path and its fee
+  are inferred from the sell until this unit runs it.
 - **5.3** Receipt reconciliation, confirmation depth, `200 success:false`.
   Bankr sends a swap as a gas-sponsored ERC-4337 UserOperation inside an
   EIP-7702 transaction from a bundler (F0.10.3). So reconcile on
