@@ -2200,3 +2200,140 @@ universe depend on an unversioned third-party endpoint with no integrity signal.
 **no example** of how a delisted asset, a pending corporate action, or a
 multi-chain asset is represented. 1.2 must not assume `status == ACTIVE` is the
 only value, and must not assume `deployments` has length 1.
+
+### F0.8.2 — Every check against every candidate
+
+**Confidence: measured.** Nine candidates, including six the checks are supposed
+to **admit** — a check only ever pointed at things it obviously catches proves
+nothing.
+
+| Candidate | registry | beacon | feed | `uiMultiplier` | name marker | should be |
+|---|---|---|---|---|---|---|
+| GME `0x1b0e…153e` (issuer) | ✓ | ✓ | ✓ | ✓ | ✓ | admit |
+| GME fake `0x7e86…8123` "GameStop" | ✗ | ✗ | **✓** | ✗ | ✗ | reject |
+| GME fake `0xef67…d5f6` "Greatest Meme Ever" | ✗ | ✗ | **✓** | ✗ | ✗ | reject |
+| AAPL `0xaf3d…93f9` | ✓ | ✓ | ✓ | ✓ | ✓ | admit |
+| NVDA `0xd060…9eec` | ✓ | ✓ | ✓ | ✓ | ✓ | admit |
+| TSLA `0x322f…3b2d` | ✓ | ✓ | ✓ | ✓ | ✓ | admit |
+| ORCL `0xb099…ee03` | ✓ | ✓ | ✓ | ✓ | ✓ | admit |
+| CRM `0xd95b…6D44` (genuine, no feed) | ✓ | ✓ | **✗** | ✓ | ✓ | admit, unmarkable |
+| USDG `0x5fc5…d168` (genuine, not a stock) | ✗ | ✗ | ✗ | ✗ | ✗ | reject as a stock |
+
+**Beacon resolution is confirmed on mainnet**, not carried over from testnet. The
+real GME resolves through EIP-1967 to beacon `0xe10b6f6b…1b00` →
+implementation `0xb35490d6…5ae2`; both fakes have **no beacon slot set at all**
+(their code is 9,662 and 6,498 bytes of ordinary ERC-20, against the genuine
+token's 568-byte proxy).
+
+### F0.8.3 — Feed presence is worthless as an identity check. It admits both fakes.
+
+**Confidence: measured. Verdict: fail.**
+
+This is the finding the unit exists to produce, and it is the one that would have
+been missed by testing only against things a check obviously catches.
+
+Feed presence **admitted both counterfeits**. The reason is structural: a
+Chainlink feed exists for the *ticker* `GME`, and a counterfeit picks its own
+ticker. The check asks "does a feed exist for the symbol this contract claims",
+which a forger satisfies by typing three characters. **It carries zero identity
+weight and must never appear in an admissibility rule.**
+
+It remains required for a *different* question. The 0.4 checkpoint decided feed
+presence is a **membership condition for markability** — no feed, no independent
+mark, so the asset is not held. CRM shows the two questions are genuinely
+separate: genuine, in the registry, behind the issuer's beacon, and correctly
+**not markable**. Identity and markability must be two rules, evaluated
+independently, and 1.2 should not collapse them.
+
+### F0.8.4 — Registry and beacon never disagree, on anything we can test
+
+**Confidence: measured, exhaustively over both available populations.**
+
+| Population | Both admit | Registry only | Beacon only | Neither |
+|---|---|---|---|---|
+| All **194** registry assets | **194** | 0 | 0 | 0 |
+| All **187** `• Robinhood Token`-marked addresses from the untrusted CoinGecko list | **187** | 0 | 0 | 0 |
+
+Every registry asset resolves to the issuer's beacon; every marked discovery-list
+address is in the registry *and* behind the beacon. **Zero disagreements in 381
+addresses.** The only counterexamples available anywhere — the two GME fakes —
+are rejected by both.
+
+**So no mainnet evidence separates these two checks, and we say that rather than
+implying the second is pulling weight.** They agree on every address we can put
+to them. The mainnet `• Robinhood Token` marker also happens to be perfectly
+accurate today — all 187 carrying it are genuine — which is exactly the
+comfortable position that made F0.3.6 trust it before testnet found 140
+forgeries.
+
+### F0.8.5 — The minimum sufficient combination is the registry alone
+
+**Confidence: measured for sufficiency on the available counterexamples;
+inferred for the trust argument.**
+
+**Registry membership, keyed by `(chain_id, address)`, is necessary and
+sufficient.** It admitted every genuine asset and rejected every counterfeit, and
+it is the only source that supplies what an allowlist actually needs — the
+address-to-asset mapping itself, plus ISIN, status, decimals and multiplier. The
+other three checks cannot name an asset; they can only opine on one.
+
+What each of the others contributes, stated plainly:
+
+| Check | Catches anything the registry misses? | Keep? |
+|---|---|---|
+| **EIP-1967 beacon** | **No** — 0 of 381 | **Judgement call, not a discrimination one** (below) |
+| **Feed presence** | No, and it *admits counterfeits* (F0.8.3) | **Not for identity.** Required for markability, a separate rule |
+| **`uiMultiplier()`** | No — rejected exactly what the beacon rejected, and testnet showed five tokens answering it, so it is a function anyone can implement | **Drop** |
+| **Name marker** | No — and testnet measured 140 forgeries carrying it (F0.T.4) | **Drop** |
+
+**On the beacon, the honest position.** It caught nothing. The argument for
+keeping it is not discrimination but **an independent trust root**: the registry
+is plain HTTPS with no auth, no signature, no version and no `ETag`, so its
+authority rests entirely on TLS to `api.robinhood.com`, while the beacon rests on
+the chain and the beacon contract's owner. They fail in different ways — a
+hijacked or stale registry response does not move the beacon, and a compromised
+beacon upgrade does not change the registry. It is also the *only* check that
+speaks to the contract's state **now**, where a pinned snapshot is by
+construction historical.
+
+That is a real argument, and it is still an argument for **insurance, not for
+detection**. Whether the fund pays for that insurance is a design decision for
+1.2, and this probe's recommendation is: **one rule, registry membership, plus
+the beacon as a cheap assertion that fails the cycle loudly if it ever
+disagrees** — because the day it disagrees is the day one of the two is
+compromised, and that is worth knowing. Both `uiMultiplier()` and the name marker
+should be deleted from the vocabulary rather than kept for reassurance; they cost
+code and would hide which check is load-bearing.
+
+**Stated limitation:** sufficiency is established against **two** counterfeits and
+381 genuine-or-absent addresses. A counterfeit that got itself *into* the registry
+would defeat every check here, and nothing in this probe bounds that risk — it is
+the issuer's control, not ours.
+
+### What 0.8 changes
+
+| Change | Where |
+|---|---|
+| Identity = registry membership on `(chain_id, address)`; that is the rule | 1.2 |
+| The snapshot carries its own version (sha256 + fetched_at); pin it, never query live | 1.2; `config/universe.json` |
+| Feed presence is markability, not identity — two independent rules | 1.2, 3.4 |
+| `uiMultiplier()` and the name marker are dropped as identity signals | 1.2; retires part of F0.3.6 and F0.4.6 |
+| Beacon kept as an independent-trust-root assertion, not a filter | 1.2 |
+| Never join the registry to the feed directory on ticker | 1.2, 1.4 |
+
+### Method limitations
+
+- **Two counterfeits.** Both are crude — ordinary ERC-20s with no beacon slot.
+  Nothing here tests a forgery that clones the proxy and points at its own
+  beacon, which is what a serious attacker would deploy, and which only the
+  registry would catch.
+- Registry and beacon agree on all 381 testable addresses, so **their relative
+  strength is untested**. The preference for the registry rests on what it
+  supplies, not on a case where it won.
+- One fetch, one day, one chain. The registry carries no version, so we cannot
+  tell whether it changed yesterday or has been static for a month.
+- Every asset is `ACTIVE` with one deployment; delisting and multi-chain
+  representation are unobserved.
+- The 4663 explorer is behind Cloudflare, so there is no enumeration of all
+  tokens on the chain — "no other token is behind the issuer's beacon" is **not**
+  established, only that none of the 381 checked is anomalous.
