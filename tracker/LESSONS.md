@@ -275,18 +275,17 @@ lesson is that a value copied from a research report into a plan is not evidence
 and every address-scoped number now gets an on-chain read before first use.
 **Affects:** 1.2, 1.5, 3.3; `config/universe.json`.
 
-## 2026-09-17 — Probe 0.3: a quote is not balance-checked, and impact is signed
-A $25 quote priced fine against a wallet holding no USDG at all, which confirms
-quotes are ungated *and* unchecked against balances — so a successful quote is
-never evidence of ability to execute, the concrete instance of
-planning/PLAN-technical-review.md finding 3. Separately, `priceImpactBps` came
-back negative on four of six quotes (price improvement), so a gate written
-`abs(impact) > limit` would reject a better price; it must compare the signed
-value. The two impact fields were identical in all six responses, leaving
-PLAN-v1's claim that execution gates on `swapImpactBps` while `priceImpactBps` is
-display-only **unresolved** until a size large enough to separate them is
-quotable.
-**Affects:** 1.5, 3.3, 3.4; planning/PLAN.md §8.
+## 2026-09-17 — Probe 0.3: a successful quote proves nothing about executability
+A $25 quote priced fine against a wallet holding no USDG at all, confirming that
+quotes are ungated *and* unchecked against balances (`research/findings.md`
+F0.3.3). A quote returning 200 is therefore evidence about a price and about
+nothing else, which is the concrete instance of
+planning/PLAN-technical-review.md finding 3 — a small quote supporting a stock
+that the eventual position cannot actually fill. Unit 1.5 must size against
+reconciled holdings rather than against the fact that a quote came back, and the
+risk gate must treat quote success as an input to sizing, never as a
+tradeability verdict on its own.
+**Affects:** 1.5, 3.3, 3.4.
 
 ## 2026-09-17 — Probe 0.3: three discovery sources need a User-Agent
 `tokens.coingecko.com`, `reference-data-directory.vercel.app` and
