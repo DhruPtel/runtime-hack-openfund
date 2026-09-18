@@ -408,11 +408,31 @@ unresolved; findings written.
 
 # Phase 1 — adapters and snapshot
 
-**Purpose:** turn a permissionless chain and three data sources into one frozen,
+**Purpose:** turn a permissionless chain and its data sources into one frozen,
 hashed, trustworthy object that an analyst can reason over and a judge can
-verify.
+verify. The sources, as Phase 0 measured them, fall into three groups:
 
-**Estimated:** a day to a day and a half.
+- **the chain itself**, over the public 4663 RPC;
+- **two inputs pinned by content hash**: the issuer registry and Chainlink's
+  feed directory;
+- **two live offchain sources**: GeckoTerminal and Bankr quotes.
+
+**Replanned 2026-09-18 against the Phase 0 record.** Every unit below was drafted
+before any probe ran, and each now names the findings and decisions that changed
+it (`research/findings.md`, `tracker/LESSONS.md`). No unit is added or removed.
+Four are bigger than drafted:
+
+- **1.2** carries two rules and pinned raw snapshots.
+- **1.3** reads a price series.
+- **1.8** has to book cash and gas, and four different ways out of the universe.
+- **1.11** has seven cases instead of four.
+
+What Phase 1 still cannot do is listed after 1.11. Where `PLAN.md` §8's one-line
+Phase 1 summaries disagree with the units below, these are newer; that fold is
+pending.
+
+**Estimated:** a day to a day and a half. That was drafted before the replan,
+and is now an underestimate by an amount nobody has measured.
 
 ---
 
