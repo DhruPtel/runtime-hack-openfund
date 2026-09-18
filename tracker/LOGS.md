@@ -351,6 +351,34 @@ funded wallet (F0.3.3); 0.8's registry hash cannot be re-verified, so 1.2
 re-fetches raw bytes into `config/registry/`; and a failover RPC with archive
 access is unverified, since the configured endpoint is the public one.
 
+
+## 1.1 — Types
+**Date:** 2026-09-18 · **Commit:** 1665fcf
+
+Built `src/fund/core/types.py`, stdlib only. Its one serialisation is canonical
+JSON: floats are refused both ways, and integers that can pass 2**53 are
+encoded as strings. On top of that it defines:
+- signed fixed-point quantities with no default decimals;
+- `(chain_id, address)` identity;
+- three-valued checks;
+- an `Observation` whose fetch status keeps "unreachable" apart from "false";
+- a `Series` whose freshness is judged on its newest point;
+- an `Asset` that keeps identity, markability and the beacon as three verdicts;
+- a signed, nullable `Quote`;
+- a `Holding` that is never silently valued at zero;
+- a hash-stable `Snapshot`;
+- an `Order` attributed through the UserOperation's sender and `Transfer` logs,
+  never a bundler's `from` or the wallet nonce.
+
+The artifact is that module, with `tests/test_types.py`: 54 tests, built from
+recorded data — CRM's registry record, the real GME counterfeit, probe 0.3's
+TSLA quote, a Chainlink round id above 2**53, and the 0.10 swap read back from
+its receipt. They prove a byte-stable round trip, and that all five measured
+cases coexist in one hashed snapshot. The unit was narrowed on the record's
+evidence: six listed containers wait for the units that design them. Building
+`Quote` from the recorded bytes also showed that the quote response mixes human,
+raw and lossy amount formats, a refinement of F0.3.2 recorded for 1.5.
+
 ---
 
 ## State at close — 2026-09-18 (Phase 0 closed, Phase 1 replanned)
