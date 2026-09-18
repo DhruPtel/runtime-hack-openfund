@@ -409,35 +409,43 @@ folds and LESSONS entries are owed, listed in the state note below.
 
 ---
 
-## State at close — 2026-09-18 (1.1 done)
+## State at close — 2026-09-18 (1.2 done)
 
-**Done.** All of Phase 0, the Phase 1 replan, and **unit 1.1 (types)**:
-`src/fund/core/types.py` with 54 tests, 86 in the suite, offline. Every config
-value Phase 1 needs is set, provisionally:
-- staleness is each feed's heartbeat plus a 3,600 s margin;
-- quote age 60 s;
-- impact 50 bps, compared signed;
-- worker deadline 120 s;
-- transport timeout 180 s;
-- `claude-sonnet-5` as the provisional analyst model;
-- the execution wallet named.
+**Done.** All of Phase 0, the Phase 1 replan, 1.1 (types) and **1.2
+(universe)**. 122 tests, offline. `config/registry/` holds:
+- the pinned registry (`442718b5…`, the version 0.8 recorded, now verified);
+- the pinned Chainlink directory (`2ae1ea5f…`);
+- `pins.json`: our own pins — issuer beacon, USDG cash leg, ETH gas;
+- `feed_map.json`: 37 feeds, 5 of them reviewed by hand.
 
-The pending folds into PLAN.md and ROADMAP.md are made, and `.env.example` is
-corrected. The LESSONS preamble records the claim as re-checked.
+**Owed, and outside the 1.2 pass's paths** (`src/fund/core/universe.py`,
+`config/registry/`, `tests/`, this file):
+- **Folds.**
+  - PHASE-0-1 1.2 and `config/README.md` still name `config/universe.json` as
+    the allowlist. The pin now lives in `config/registry/pins.json` and
+    `feed_map.json`, and `universe.json` is still the empty placeholder, to
+    retire or re-point.
+  - `config/mandate.json`'s `allowed_assets` note still points at `universe.json`.
+- **LESSONS entries.**
+  - The registry is byte-stable, and 0.8's hash is verified.
+  - The directory carries no token address, so markability's link is a reviewed
+    name match. It is safe because it runs only over registry records.
+  - Unlike the registry, the directory does send `ETag` and `Last-Modified`.
+  - SGOV and USAR carry no `assetClass`, which silently dropped them until the
+    filter was fixed.
+  - Non-ACTIVE means refused for buying at standing, and never dropped as a
+    holding.
+  - The refresh fetch and the beacon read need adapters. That is a layout
+    finding.
+- **A types gap.** `UniverseStatus` has no value for "listed but not ACTIVE". The
+  1.2 test uses `IDENTITY_IN_DOUBT`, following 1.8's wording, although identity
+  itself still passes.
 
-**Open.**
-- **For 2.4, not blocking Phase 1:** the 180 s transport timeout is longer than
-  the 120 s worker deadline, so in the runner it could never fire.
-- **Unmeasured until 1.3:** the price series itself, and the weekend behaviour
-  of 24/5 feeds.
-- **Types not yet defined:** `AnalystReport`, `Proposal`, `Plan`, `Decision`,
-  `JournalEvent` and `Statement` wait for 2.1–6.1.
-- **The quote response's mixed formats** are 1.5's to handle.
+**Still open from before.** The 180 s transport timeout exceeds the 120 s worker
+deadline (for 2.4). The price series and weekend feed behaviour are for 1.3. The
+quote response's mixed formats are for 1.5. Six types wait for 2.1–6.1.
 
 **Funding.** Unchanged since 0.10.
-- Base: 0.000241 ETH, 0.107346 USDC, 10 USER.
-- Robinhood Chain: 0.000460 ETH and 0.078742 USDG; the wallet is 7702-delegated
-  there.
-- LLM gateway: $2.799976 as last measured.
 
-**Next.** Unit 1.2 (universe), when the operator says go.
+**Next.** Unit 1.3 (chain adapter), which also supplies the beacon-slot reads
+1.2 cross-checks, when the operator says go.
