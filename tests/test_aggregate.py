@@ -55,7 +55,7 @@ def run(reports, current=None, cash=None, limits=LIMITS, nav="200"):
 
 
 def targets(proposal) -> dict[str, str]:
-    return {r.symbol: aggregate._text(r.target) for r in proposal.rows if r.target}
+    return {r.symbol: aggregate.decimal_text(r.target) for r in proposal.rows if r.target}
 
 
 FOUR = [approved(seat) for seat in SEATS]
