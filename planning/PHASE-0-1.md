@@ -994,12 +994,12 @@ snapshot from 1.6 embedded, run against `analyst_model` (`claude-sonnet-5`,
 provisionally, per the config decision). What 0.9 established about how to
 measure:
 
-- **Timeouts.** `transport_timeout_seconds` is 180, above the measured call
+- **Timeouts.** `transport_timeout_seconds` was 180, above the measured call
   latency (58 s at the floor). A call timed out client-side is still billed
   (F0.9.1, F0.9.3): 0.9's first call was cut off by `_capture`'s 20 s default and
-  charged anyway. `worker_deadline_seconds` is 120. That is shorter than the
-  transport timeout, which matters to 2.4's runner, not to this unit's single
-  calls (LESSONS 2026-09-18).
+  charged anyway. `worker_deadline_seconds` was 120, shorter than the transport
+  timeout. After 1.7 both were set from its measurement: 600 s and 630 s, with
+  `max_output_tokens` 12,000 (DECISION, LESSONS 2026-09-18).
 - **Cost from the response's own `usage` block**, not from a `/v1/usage` delta
   around the call, because the aggregate went backwards (F0.9.2). Reconcile
   against settled windows, reading `days`, `startDate` and `endDate` back
@@ -1037,8 +1037,11 @@ bytes, 4,628 rounds), four calls at `claude-sonnet-5` (`research/findings.md`
 - **Reconciliation:** the balance and a settled `/v1/usage` window agree to
   the last digit.
 
-The numbers are in findings. **The $0.05 price has not yet been confirmed or
-revised by the operator**, so this unit is not done.
+The numbers are in findings, and the operator revised the price against them
+to **$0.25 a record**, provisional, which covers a cycle in 8 records (DECISION,
+LESSONS 2026-09-18). **Done.** The cap and timeouts the unit recommended were
+set too: `max_output_tokens` 12,000, transport 600 s, and worker deadline
+630 s.
 
 **Risk:** the prompt is still a draft until checkpoint 2.1, so the number is a
 floor, and retries and the risk bundle come on top. Latency, not cost, was the
@@ -1241,8 +1244,8 @@ Stated before the code, so that no unit's done-condition quietly assumes it:
   daylight time.
 - **Settle Phase 2's model settings.** `risk_model`, `max_output_tokens`,
   `context_budget_tokens` and `cycle_deadline_seconds` are still null. They
-  block Phase 2, not Phase 1. The transport timeout (180 s) is longer than the
-  worker deadline (120 s), which 2.4 has to resolve.
+  block Phase 2, not Phase 1. The timeouts and output cap were set after 1.7:
+  transport 600 s, worker deadline 630 s, output 12,000 tokens.
 - **Read an old block, or fail over to anything.** There is one configured
   endpoint, the public one, and it has no archive on the record. Past feed
   rounds are current state, so the series needs no archive: it is read at the

@@ -319,7 +319,7 @@ what each finding changed, is in `PHASE-0-1.md`.*
   into a cycle budget at four analysts plus risk, a daily cost, and a
   per-request endpoint price. *Measured:* $0.454 an analyst call and $1.87 a
   cycle at Sonnet 5, uncached; the timeline is two thirds of the input
-  (findings §1.7). The price awaits the operator.
+  (findings §1.7). The operator raised the price to $0.25 against it.
 - **1.8** Held-but-untradeable handling: an asset out of the buy universe remains
   a holding with explicit valuation and execution status. There are five ways
   out, each with its own status — listed-but-not-ACTIVE among them — and USDG
@@ -661,11 +661,14 @@ the fund is readable without opening a JSON file.
 | Nominal per-trade size for quoting | $25 | `thresholds.json`, `mandate.json` |
 | Cadence | daily, plus a manual trigger on the identical code path | `cadence.json` |
 | Roster | 4 analysts, 1 risk agent, 1 treasurer | `analysts.json` |
-| Paid endpoint price | $0.05 per decision record, USDC on Base | set at unit 7.2 |
+| Paid endpoint price | $0.25 per decision record, USDC on Base; provisional (raised from $0.05 after 1.7) | set at unit 7.2 |
 
 Both platform caps ($500/24h, $500/tx) sit well above our sizing, so they are a
 backstop rather than a binding constraint. The endpoint price is provisional
-until unit 1.7 reports real per-cycle inference cost. *1.7 reported:* at $1.87 a cycle, covering one cycle takes 37 records a day at $0.05 (findings F1.7.3). The price is the operator's to confirm or revise.
+until unit 1.7 reports real per-cycle inference cost. *1.7 reported:* at $1.87 a cycle, covering one
+cycle took 37 records at $0.05 (findings F1.7.3). The operator raised the price
+to $0.25, which covers a cycle in 8 records. It stays provisional, and can move
+again once the cycle cost settles (DECISION, LESSONS 2026-09-18).
 
 ---
 
