@@ -1,12 +1,19 @@
 # Simplification plan: Phases 2 to 8
 
-**Status: a proposal, awaiting the operator.** Written 2026-09-19, after the
-Phase 1 gate, with the deadline about 16 hours away. Nothing in it is built.
-PLAN, ROADMAP, PHASE-0-1 and `config/` are unchanged. If it is approved, the
-folds are listed in the last section.
+**Status: approved as analysis on 2026-09-19** (DECISION, LESSONS 2026-09-19).
+The pivot is stated in PLAN §8, where the phase list begins.
+- **Approved:** the minimal, full and given-up version of every unit, the ten
+  units marked equal, and the two report vocabularies. The minimal version is
+  what gets built.
+- **Not adopted:** the five-stage build order. The work follows the phase and
+  unit order, and the section below is marked superseded.
+- **Decided since this was written,** and folded in below: SIWE agent wallets
+  (unverified), the preview and paid split, the live leg as a demonstration, and
+  execution before the sale. The criteria are in `JUDGING-CRITERIA.md`.
 
-Where this and `PHASE-1-GATE.md` §5 disagree, this wins. The gate cut units;
-this keeps every unit and cuts its depth.
+Written 2026-09-19, after the Phase 1 gate, with the deadline about 16 hours
+away. Where this and `PHASE-1-GATE.md` §5 disagree, this wins. The gate cut
+units; this keeps every unit and cuts its depth.
 
 ## In short
 
@@ -27,19 +34,19 @@ this keeps every unit and cuts its depth.
   outside the signed record or the mandate. Secrets stay redacted. What goes is
   ceremony: mandate hash-and-replay, a separate deployed host, and
   exhaustive regression suites.
-- **Q1:** repoint the fourth seat to **price integrity**: can this asset's mark
+- **Q1, decided:** repoint the fourth seat to **price integrity**: can this asset's mark
   be trusted today? The snapshot already holds three prices per asset, and no
   seat asks that question.
 - **Q2:** in a closed session no market-data veto fires on the tradeable names.
   Build the risk moment on the five closed-session divergence findings. The
   venue's own price is the third witness: it sides with the market on two of
   them and with the frozen mark on three.
-- **Q3:** five new Bankr accounts, one read-only gateway key each, each funded
-  with its own LLM credits. The agents exist, are identified and pay for their
+- **Q3:** five new Bankr accounts, created with `bankr login siwe` from local
+  keys (DECISION 2026-09-19, **unverified**). Each has one read-only gateway key
+  and its own LLM credits. The agents exist, are identified and pay for their
   own inference. They do not transact and do not sign.
-- **Build order:** five stages. Each ends in something a judge could watch. At
-  the record's pace the plan does not fit in 16 hours, so the order decides what
-  exists when time runs out.
+- **Order of work:** the phase and unit order. Execution comes before the sale
+  (DECISION 2026-09-19). The five-stage build order is superseded.
 
 ---
 
@@ -52,8 +59,9 @@ this keeps every unit and cuts its depth.
 - **Output.** Reports are a summary and a few key values. Books are a NAV and
   four lines.
 - **Edge cases.** Handled if likely. Recorded here if not.
-- **Stops.** Five review stops, one at the end of each stage, replace the 21
-  remaining ▶ checkpoints. The rest are shown, not stopped.
+- **Stops,** as the unit rows below set them: 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1's
+  stop was spent on approving this analysis. Every other ▶ is shown, not
+  stopped.
 - **Records.** Each decision is written once. The other documents point at it.
 
 ---
@@ -62,8 +70,8 @@ this keeps every unit and cuts its depth.
 
 ### 1. The fourth seat: repoint it to price integrity
 
-**Recommendation: repoint `fundamentals-calendar` to `price-integrity`.** Its
-question: can this asset's mark be trusted today?
+**Decided (LESSONS 2026-09-19): repoint `fundamentals-calendar` to
+`price-integrity`.** Its question: can this asset's mark be trusted today?
 
 - **Dropping to three is out.** The brief keeps four analysts in parallel.
   Three would be a different demonstration.
@@ -112,7 +120,7 @@ expiry), and the context budget.
 
 **The risk agent's own veto** can fire on anything it reads.
 
-**Recommendation: build the risk moment around the five divergence findings.**
+**Recommendation, adopted as 3.8's minimal version: build the risk moment around the five divergence findings.**
 The venue's price is the third witness. Computed from two fields the capture
 carries (not a recorded finding):
 
@@ -158,10 +166,25 @@ address (F0.2.3). A wallet per agent therefore means an account per agent: the
 four analysts and risk. That is **five new accounts**. The treasurer keeps the
 fund's wallet, `0x93fa…a3da`. The aggregator and planner are code, not agents.
 
-- **Account creation.** Not in the record. It is the operator's step, repeated
-  five times. The record does not say whether one person may hold several
-  accounts, or what each sign-up requires. Check that first.
-- **Keys.** One per account, set at `bankr.bot/api`:
+- **Account creation, DECISION 2026-09-19:** `bankr login siwe --private-key`,
+  from five locally generated keys rather than five email sign-ups. **It is
+  unverified.** Prove it works before Phase 2 depends on it. If it does not,
+  that is a finding. The fallback is **not** one shared wallet, which collapses
+  what is being demonstrated.
+  - **What the installed CLI's help says** (0.3.37; documented, not measured):
+    - read-only is the default;
+    - the Agent API and the Token Launch API are **on by default**, so
+      `--no-agent-api` and `--no-token-launch` must be passed;
+    - **no LLM gateway option is listed.**
+  - **Unknown:**
+    - how an agent key gets gateway access;
+    - whether the wallet is the SIWE key's own address;
+    - whether credits can be bought in it;
+    - whether a login replaces the CLI's session, which is the fund's (inferred
+      risk).
+  - **The private key is setup material.** It never enters an agent process or
+    the repository.
+- **Keys.** One per account:
   - Read Only ON, LLM Gateway ON, Agent API OFF. That is today's
     `BANKR_LLM_KEY` scope.
   - The Agent API must stay off. It carries `/agent/sign` and `/agent/submit`
@@ -234,12 +257,12 @@ it later.
 
 | Unit | Minimal: what gets built | Full: recorded | Given up |
 |---|---|---|---|
-| **2.1 ▶** Format · L | The format below. Two seat kinds, a three-sentence summary, up to eight calls, and field paths whose values code fills in. Approving this document approves the format, so the 2.1 stop is spent here. | Sections, depth, evidence citation, conviction told from speculation. Hand-written and approved at its own stop before code. | Depth. A report is a view with its key numbers, not research. No horizon per call, and no "what would change my mind". |
+| **2.1 ▶** Format · L | The format below. Two seat kinds, a three-sentence summary, up to eight calls, and field paths whose values code fills in. The format was approved with this analysis on 2026-09-19, so 2.1's stop is spent; its work is still to do. | Sections, depth, evidence citation, conviction told from speculation. Hand-written and approved at its own stop before code. | Depth. A report is a view with its key numbers, not research. No horizon per call, and no "what would change my mind". |
 | **2.2** Schema · L | One validator: required fields and types; the call from its seat kind's set; confidence 0–1; every asset address in the snapshot's tradeable set (tickers never resolve an asset); every field path present in the snapshot; the snapshot hash echoed back and equal. A failure is a named rejection. | Hard validation of every field; out-of-scope assertions refused per seat; address-scoped claims (§9 analyst contract). | Scope enforcement per seat. Numbers in the prose are the model's and are not checked. Only the key-values table is the snapshot's. |
 | **2.3** Brief · L | One versioned file, `briefs/analyst.v1.md`: the seat's question from `analysts.json`, the rules 0.9's brief states, the schema, and the snapshot's bytes. Every seat sees the whole universe and differs in question. | Mandate, explicit scope boundaries, snapshot bytes, schema, effort scaling; assets partitioned in config. | Asset partitioning and effort scaling. Overlap is prevented by question only. |
 | **2.4** Runner · L; isolation **H** | Four analyst processes started in parallel. Each environment holds only its own key. The snapshot is passed as a file. Worker deadline 630 s and transport 600 s (set). One retry on a malformed reply, then a failed worker. A partial-failure flag. Every step writes an event to the cycle's log, which the page reads. | Bounded width, per-worker deadline, transport timeout, retry budget, pre-allocated slots, per-worker fallback, partial-failure disclosure. | Fallback models, and retry budgets beyond one. A timed-out call is still billed (F0.9.3). It is recorded as spend with no report, and nothing tries to cancel it. |
 | **2.5** Tokens · L | Each call records the response's `usage` block, the price at the published rate, and its own account's `/v1/credits` before and after. 0.9 found the rate, the usage block and the balance agreeing to the last digit. | Per-call counts reconciled to `/v1/usage` in settled windows, aggregate to aggregate (F0.6.4, F0.9.2). | `/v1/usage` reconciliation. A balance delta assumes nothing else spends from that account, which holds while only the agent uses it. |
-| **2.6 ▶** First report · L | One analyst call on the committed snapshot, shown on the page with cost and latency. It can run before the agent accounts exist, on the fund's own key ($0.937 covers about three calls), labelled as such. | A stop to judge the gap from 2.1. | The stop. Whether a report is worth paying for moves to stage A's review. |
+| **2.6 ▶** First report · L | One analyst call on the committed snapshot, shown on the page with cost and latency. It can run before the agent accounts exist, on the fund's own key ($0.937 covers about three calls), labelled as such. | A stop to judge the gap from 2.1. | The stop. Whether a report is worth paying for moves to 3.8's stop. |
 | **2.7** Store · L | Each report written once as canonical JSON named by its sha256. Writing an existing name must match or it fails. | Content-addressed store in SQLite (PLAN §5). | SQLite and queries. Files are enough for one runner. |
 | **2.8 ▶** Drill · L | Three offline tests on a fake gateway: malformed, hung past the deadline, and `NO_CALL`. Each cycle completes with the failure named in its log, and the page shows a failed seat. | A live drill of all three. | A live drill. Quorum is set without watching one. |
 
@@ -254,7 +277,7 @@ it later.
 | **3.5** Risk · model L; override rule **H** | A fifth process on its own account. It reads every report in full and the plan with its evidence, and returns approve or veto per order with one sentence each, plus an overall verdict. In code, any failed or null gate is a veto whatever the model says. The model may veto what the gates pass, never the reverse. | Full reports and the sized plan in, a verdict out; model text cannot override a fixed gate. | Nothing structural. The verdict is short. |
 | **3.6** Context budget · L | The bundle is measured before the call, conservatively from its bytes, because the gateway has no token-count endpoint (F1.7.2). Over budget is a veto, never a summary. | An exact budget over reports, plan and risk output (invariant 3). | An exact count. The estimate errs toward vetoing. |
 | **3.7** Record · **H**, = equal | Canonical JSON with the sha256 of the snapshot, every report, the config, the proposal, the plan, the gate results and the risk output. Every closed-session finding is carried. It is signed ed25519 by the treasurer's key, and `signed=false` never authorizes. One pinned dependency, `cryptography`, is added. | The same. | Nothing. This is what is sold. A thinner record is a different claim. |
-| **3.8 ▶** A veto · **H** (gate half) | Built as Q2 says: `price-integrity` names the case, the plan carries the three prices, risk decides, and the fixed gates that fire are shown too. Shown at stage A's review, from a recorded cycle if the live one does not veto. | A cycle where divergence, quote age or unknown impact trips a fixed gate. | A fixed divergence veto in a closed session, by DECISION. A live veto is not guaranteed; the recorded one is replay. |
+| **3.8 ▶** A veto · **H** (gate half) | Built as Q2 says: `price-integrity` names the case, the plan carries the three prices, risk decides, and the fixed gates that fire are shown too. **A stop,** shown from a recorded cycle if the live one does not veto. | A cycle where divergence, quote age or unknown impact trips a fixed gate. | A fixed divergence veto in a closed session, by DECISION. A live veto is not guaranteed; the recorded one is replay. |
 | **3.9 ▶** Replay · **H** | One test. A recorded cycle's decision record is rebuilt byte for byte, with no network, from its capture (1.9), its recorded reports, plan quotes and risk output. | The same, as a stop. | The stop. The treasurer's side is not replayed. |
 
 ### Phase 4: treasurer (paper) and the journal
@@ -268,11 +291,11 @@ it later.
 | **4.5** Paper executor · **H** | The live executor's interface. A stock leg fills at a fresh quote's amounts, and the journal event is marked paper. Stock legs route here because each stock quote's `executable` is null (F0.5.1). | The same. | Partial fills and a slippage model. A paper fill is the quote. |
 | **4.6** Journal · **H** | Append-only events: opening balance, fill (paper or live), fee, gas, x402 settlement, inference cost. Chain events carry chain id, tx hash, log index, block, raw units and decimals. | Every event type: transfers, credit purchase and consumption, marks. | External transfers, credit purchases, and marks as events. Marks come from the snapshot. |
 | **4.7** Positions · **H**, = equal | Derived from the journal, never written directly. Valued only by `core/valuation.value()`, which exists. | The same. | Nothing. |
-| **4.8 ▶** Paper cycle · L | `make cycle-demo` runs the committed capture through reports, weights, plan, verdict, signed record, paper fills and positions, on the page. | The same, as a stop. | The stop. |
+| **4.8 ▶** Paper cycle · L | `make cycle-demo` runs the committed capture through reports, weights, plan, verdict, signed record, paper fills and positions. Shown, not stopped. It appears on the page once 7.6 lands. | The same, as a stop. | The stop. |
 | **4.9** Startup, lock · **H** | Before a new cycle, every order left submitted or unknown is resolved: re-sent with its key, which Bankr deduplicates, or found on chain. One lock row; a second runner refuses. | Startup reconciliation and a single-owner lock. | The in-flight `409` path (F0.10.1) is treated as unknown and left to the next start. |
 | **4.10 ▶** Crash · **H** | One offline test on the fake executor: killed after `submitted` is written, restarted, resolved once. | A live kill mid-submission. | A live kill. The claim is "tested against a simulated crash". |
-| **4.11 ▶** Known answer · **H** | A fixture: opening capital, two paper buys, one live round trip with its fee, one x402 sale, one inference cost. Its NAV and four lines equal a hand-computed answer. Built in stage D. | A partial sale, external transfer, reverted-trade gas, settled and unsettled revenue, credits bought and consumed. | Those cases. The books are known to count only what the fixture holds. |
-| **4.12** Treasurer process · **H**, = equal in substance | The treasurer is its own process holding `BANKR_KEY_EXEC` and `SIGNING_KEY`, and reads approved intents from SQLite. Tests: both keys are unreadable from every agent's environment, and each agent key is refused a swap (live, authorized once, Q3). The signer lands in stage A; execution in C. | The same on a deployed host behind an IP allowlist (PLAN §5). | The separate host. Isolation is by process environment on one machine. Whether the execution key has an allowlist today is not recorded, and this build neither adds nor removes one. |
+| **4.11 ▶** Known answer · **H** | A fixture: opening capital, two paper buys, one live round trip with its fee, one x402 sale, one inference cost. Here it checks positions and value against a hand-computed answer. 6.1 adds the NAV and four lines to the same fixture, and it is shown at 6.6's stop. | A partial sale, external transfer, reverted-trade gas, settled and unsettled revenue, credits bought and consumed. | Those cases. The books are known to count only what the fixture holds. |
+| **4.12** Treasurer process · **H**, = equal in substance | The treasurer is its own process holding `BANKR_KEY_EXEC` and `SIGNING_KEY`, and reads approved intents from SQLite. Tests: both keys are unreadable from every agent's environment, and each agent key is refused a swap (live, authorized once, Q3). 3.7 builds `treasurer/sign.py`; this unit moves signing and execution into the treasurer's own process. | The same on a deployed host behind an IP allowlist (PLAN §5). | The separate host. Isolation is by process environment on one machine. Whether the execution key has an allowlist today is not recorded, and this build neither adds nor removes one. |
 
 ### Phase 5: live chain activity
 
@@ -281,17 +304,19 @@ it later.
 | **5.1** Live executor · **H** | `adapters/bankr_exec.py`, the only signing path, behind the paper interface: `/wallet/swap` with the idempotency key, ETH and USDG only, by the mandate. | The same. | Other assets. |
 | **5.2** Round trip · **H**, = equal in substance | One ETH→USDG and one USDG→ETH, about $0.50 each, from what the wallet holds (about $1.21 of ETH), authorized once. USDG→ETH has never run, and its sponsorship is inferred. | A small real buy and sell with production-shaped permissions. | Size, and nothing about the path. |
 | **5.3** Receipts · **H** | Confirmed from the `UserOperationEvent` naming the wallet with `success`; amounts from `Transfer` logs to and from the wallet. Never from `tx.from`, the outer status or the nonce (F0.10.3). `success:false` is failed. | Confirmation depth, reorgs, mined reverts, balance-based amounts, the 6 bps. | Reorgs past a fixed depth, and the 6 bps (F0.10.4). A gap shows as an exception in 6.2. |
-| **5.4 ▶** Explorer · **H**, = equal | The page links the transaction on the 4663 explorer beside its order row and journal entry, booked once. A review stop: this is the claim. | The same. | Nothing. |
+| **5.4 ▶** Explorer · **H**, = equal | The page links the transaction on the 4663 explorer beside its order row and journal entry, booked once. **A stop:** this is the claim. | The same. | Nothing. |
 | **5.5** Access lost · **H** | A 401 or 403 from the execution key stops new submissions, keeps holdings and reconciliation, and shows "access lost". One test. | Pause, preserve, expose remediation. | Remediation, and detecting expiry ahead of time. |
 | **5.6 ▶** The 403 · L | 0.5's recorded body through a decoder that names the location gate from its prose, and fails closed with the raw body on anything else. Shown as why stock legs are paper. | A live 403 decoded against the seven causes. | A fresh 403. 0.5 measured one, and another proves nothing new. |
 | **5.7 ▶** Live cycle · L | One of 8.3's unattended cycles carries the live leg. | A scheduled live cycle as its own stop. | The separate stop. |
 
-**The live leg, a decision the record leaves open.** Nothing on record says what
-drives it. The proposal: the planner appends one live order to each cycle that
-trades, at a fixed small size and alternating direction, so the wallet
-round-trips over two cycles. It is labelled **the demonstration leg**. It proves
-the money path, and no analyst decided it. It passes the same gates, risk,
-signature and treasurer as every other order. The operator decides.
+**The live leg, DECISION 2026-09-19.** It is labelled **a demonstration of the
+money path that no analyst chose**, and no decision is manufactured to justify
+it. It passes the same gates, risk, signature and treasurer as every other
+order.
+
+**Proposed mechanics, not decided:** the planner appends one live order to each
+cycle that trades, at a fixed small size and alternating direction, so the
+wallet round-trips over two cycles.
 
 ### Phase 6: books and attribution
 
@@ -302,7 +327,7 @@ signature and treasurer as every other order. The operator decides.
 | **6.3** Cost · L | Per agent, its calls' cost from 2.5, totalled from its own account's balance. | Estimate flags and pricing basis, reconciled to `/v1/usage` in settled windows. | Settled-window reconciliation. |
 | **6.4** Contribution · L | For each executed order, the seats whose calls supported it and their share, with a residual. Stock marks are frozen all weekend, so realized P&L is zero and shares are shown, not dollars. | Realized P&L allocated once by executed weight, with a residual. | Dollar attribution until marks move. |
 | **6.5** Accuracy · L | Each call stored with the mark at decision time, and scored against a later snapshot, labelled hypothetical and never in profit. Over the demo window it reads "not yet scorable". | Hit rate against a horizon and benchmark. | Any score in the demo. |
-| **6.6 ▶** Statement · L | The books panel after real cycles. A review stop, at stage D. | The same. | Nothing. |
+| **6.6 ▶** Statement · L | The books after real cycles. **A stop.** | The same. | Nothing. |
 | **6.7 ▶** Overlap · L | A test: two seats buying the same asset share its credit once, and the residual reconciles. | Shown as a stop. | The stop. |
 | **6.8 ▶** Exception · L | 6.2's exceptions as a panel, with a test that a deliberate mismatch appears. If 0.10's 6 bps shows up live, it is a real one. | Shown as a stop. | The stop. |
 
@@ -314,9 +339,9 @@ signature and treasurer as every other order. The operator decides.
 | **7.2** x402 handler · L | The TypeScript handler 0.7d proved, returning `Response.json(record)` for a decision id. $0.25 USDC on Base, no state, no inference. How it holds the full record without that record being free elsewhere: see "What the minimal versions must not claim", item 4. | Resolve `latest` to an id before purchase, then serve by id. | Resolving `latest` in the handler. The buyer asks by id, which the page shows. |
 | **7.3** Binding · L | A purchase row from each `PaymentSettled` with the fund as owner: payer, amount, tx hash. | Request, decision id, payer, price, asset, network, delivery status, settlement reference. | Which record a payment bought, and whether it was delivered. `x-402-payer` is platform-asserted (F0.7d.7) and unused. |
 | **7.4** Revenue · **H**, = equal | Revenue booked only from `PaymentSettled` on Base with the fund as owner, never from the handler (invariant 9, F0.7b.5). | The same. | Nothing. |
-| **7.5 ▶** Purchase · **H**, = equal | A fresh local key with about $1 of USDC on Base and no Bankr account pays through `@x402/fetch` 2.26.0 and receives the record. The sale appears in the books. A review stop: it closes §13's inference (F0.7e.6). | The same. | Nothing. |
-| **7.6** Page · L | One static page, HTML and plain JavaScript, no build step. It polls the cycle's event log and the published records, and shows: the basket; four seats deliberating, with their addresses and costs; the aggregation table; the plan; the gates; the verdict landing; the signed record and its buy link; fills with the explorer link; the books. Served locally for the demo, and statically wherever records are published. It grows panel by panel through the stages. | A public page over the same records. | Styling, history beyond recent cycles, and in-browser signature checks. |
-| **7.7 ▶** The page · L | Judged at stage E's dry run. | A stop on the page itself. | The separate stop. |
+| **7.5 ▶** Purchase · **H**, = equal | A fresh local key with about $1 of USDC on Base and no Bankr account pays through `@x402/fetch` 2.26.0 and receives the record. The sale appears in the books. **A stop:** it closes §13's inference (F0.7e.6). | The same. | Nothing. |
+| **7.6** Page · L | One static page, HTML and plain JavaScript, no build step. It polls the cycle's event log and the published records, and shows: the basket; four seats deliberating, with their addresses and costs; the aggregation table; the plan; the gates; the verdict landing; the signed record's preview and its buy link; fills with the explorer link; the books. Served locally for the demo, and statically wherever previews are published. Built at 7.6 in unit order, reading the event log 2.4 writes, so the stops at 3.8, 5.4, 6.6 and 7.5 are shown without it (LESSONS 2026-09-19). | A public page over the same records. | Styling, history beyond recent cycles, and in-browser signature checks. |
+| **7.7 ▶** The page · L | Judged at 8.5's dry run. The page shows the preview; the reasoning is in the paid record. | A stop on the page itself. | The separate stop. |
 | **7.8** Skill · L | A `SKILL.md` naming the endpoint, the price, and the buyer client: `@x402/fetch` 2.26.0, not the v1 client Bankr's docs name (F0.7e.1). | A manifest other Bankr agents can call. | Testing it with another agent. |
 | **7.9 ▶** Recovery · L | Stated, not drilled: a dropped response is paid again to retrieve it, and refunds are manual (§13). A buyer can check the bytes against the id. | Retrieval by id without a second charge. | Free re-retrieval. |
 
@@ -328,8 +353,8 @@ signature and treasurer as every other order. The operator decides.
 | **8.2** Kill switch · **H**, = equal | A file the treasurer checks before each submission. If present, no new submissions; reconciliation continues. | The same. | Nothing. |
 | **8.3 ▶** Unattended · L | Three cycles with no hands: one carries the live leg (5.7), and at least one decides not to trade. Stock marks are frozen all weekend, so a second cycle's calls should resemble the first's and a no-rebalance is expected, not staged. | Several cycles, including a no-rebalance. | Duration: hours, not days. |
 | **8.4** Script · L | The committed capture for the reproducible part, a live cycle, the purchase, the explorer. | The same. | Nothing. |
-| **8.5 ▶** Dry run · L | The demo once, timed. A review stop. | The same. | Nothing. |
-| **8.6** Submission · L | Architecture, limitations (§13 updated) and the six judging criteria. | The same. | Nothing, but it is **blocked on the criteria**, which are not in the repository. |
+| **8.5 ▶** Dry run · L | The demo once, timed. **A stop.** | The same. | Nothing. |
+| **8.6** Submission · L | Architecture, limitations (§13 updated), and the six judging criteria in `JUDGING-CRITERIA.md`. | The same. | Nothing. Token design has no unit behind it (LESSONS 2026-09-19). |
 | **8.7 ▶** Read-through · L | Folded into 8.5: page and README read in order after the dry run. | A separate cold read as a judge. | The separate stop. |
 
 ---
@@ -350,13 +375,16 @@ behind.
 4. **"Sells its research" while the full record is free.** PLAN §5 publishes
    records on a public path, the handler fetches from it, and the page reads the
    same records. As written, anyone can read the full record without paying.
-   - **Minimal fix:** the public copy is a preview: summary, verdict, hashes
-     and signature. The full record is reachable only through the handler.
-   - **How the handler holds it:** either bundled into the handler at each
-     deploy, or kept at a private URL only the handler knows. Deploys are proven
-     (0.7d), but their latency is not measured. Whether x402 Cloud keeps a
-     secret is not in the record.
-   - The operator's call.
+   - **DECISION 2026-09-19.** The public preview holds the basket, the weights,
+     the verdict, and that a veto fired. The paid record holds every analyst
+     report and its reasoning.
+   - **Open: how the handler holds the full record.** Either bundled into the
+     handler at each deploy, or kept at a private URL only the handler knows.
+     Deploys are proven (0.7d), but their latency is not measured. Whether
+     x402 Cloud keeps a secret is not in the record.
+   - **Open: the decision id, the hashes and the signature.** The decided
+     preview names none of them. 7.2 serves by id, and without the hashes a
+     buyer cannot check what they bought against what they saw.
 5. **P&L or accuracy over the demo window.** Stock marks are frozen all weekend,
    so any figure would be zero or invented.
 6. **"Gates exist once" read as "in one module".** After minimal 3.4, three
@@ -442,83 +470,58 @@ Proposals, not written. Each is provisional, and none is set until approved.
 | `mandate.live_leg_usd` (new) | 0.50 | Fits what the wallet holds. |
 | `mandate.allowed_assets` | the 35 markable stocks (paper), ETH and USDG (live) | The snapshot decides which are tradeable each cycle. |
 | `mandate.approved_by`, `approved_at`, `expires_at` | the operator, at approval, plus 7 days | 4.1 refuses nulls. |
-| `analysts.json` fourth seat | `price-integrity` | Q1. |
+| `analysts.json` fourth seat | `price-integrity` | Decided (Q1). Written with 2.1. |
 
 ---
 
 ## What the operator has to do
 
-These run on the operator's clock, alongside stage A's code.
+These run on the operator's clock, alongside Phase 2's code. Done on
+2026-09-19: approving this analysis and the 2.1 format, the live leg's label,
+the preview and paid split, and supplying the criteria.
 
 | Action | Blocks | Spend |
 |---|---|---|
-| Approve this plan, the 2.1 format and the config values | everything | none |
-| Create five Bankr accounts, with one key each: Read Only ON, LLM Gateway ON, Agent API OFF | stage A live (A is built and tested offline first) | none |
-| Buy LLM credits in each account from USDC on Base | stage A live | about $22, plus about 5.8% |
+| Approve the config values below | 2.4, 3.1, 3.4, 3.6, 4.1 | none |
+| **Verify `bankr login siwe` works for one agent,** then create the other four. Each key: read-only, LLM gateway on, Agent API and Token Launch off. | Phase 2 live runs (Phase 2 is built and tested offline first) | none |
+| Buy LLM credits in each account from USDC on Base | Phase 2 live runs | about $22, plus about 5.8% |
 | Authorize one refused-swap attempt per agent key | 4.12 | nothing if refused |
-| Decide the live leg's rule | 3.3, 5.2 | none |
+| Settle the live leg's mechanics (proposed above) | 3.3, 5.2 | none |
 | Authorize the live round trip | 5.2 | about $1 moved, gas sponsored so far (F0.10.3) |
-| Choose how the handler holds full records, and where previews and the page live | 7.1, 7.2, 7.6 | none |
+| Choose how the handler holds full records, and whether the preview names the decision id and hashes | 7.1, 7.2, 7.6 | none |
 | Approve the x402 deploy of the real handler | 7.2 | none |
 | Fund a fresh local key with about $1 of USDC on Base | 7.5 | about $1 |
-| Supply the six judging criteria | 8.6 | none |
 
 ---
 
-## Build order
+## Build order: superseded
 
-Each stage ends in a state a judge could watch on the page. A later stage never
-leaves an earlier one half done.
+**Not adopted** (DECISION, LESSONS 2026-09-19). The five-stage build order that
+stood here was a second map of the same units. The work follows the phase and
+unit order in PLAN §8 and ROADMAP, with execution (Phases 4 and 5) before the
+sale (Phase 7). The removed section is in git at `57f9fda`.
 
-| Stage | Units | The stopping state | Review stop | Guess |
-|---|---|---|---|---|
-| **A1** The swarm deliberates | 2.1–2.8, 7.6 begun | Four analyst processes, each on its own account, report on one snapshot. The page shows them arrive with address, cost and latency; a failed seat is disclosed. | none | 2.5 h |
-| **A2** The fund decides | 3.1–3.9, 4.12's signer | Weights, a re-quoted plan, the gates, the risk verdict landing, and a signed record, all on the page. The replay test passes. | **1** (3.2, 3.8) | 3 h |
-| **B** The record is sold | 7.1–7.5, 7.8, 7.9 | The record is published, a stranger's key buys it, and revenue shows from chain evidence. | **2** (7.5) | 1.5 h |
-| **C1** The treasurer acts on paper | 4.1–4.10, 4.12 | `make cycle-demo`: orders written before action, paper fills, positions, lock, isolation tests passing. | none | 2.5 h |
-| **C2** The treasurer acts on chain | 5.1–5.7 | One real ETH↔USDG round trip through the treasurer, confirmed from receipts, on the explorer, booked once. | **3** (5.4) | 1.5 h |
-| **D** The books | 4.11, 6.1–6.8 | NAV as two figures and four lines, exceptions, and per-agent cost. | **4** (6.6) | 1.5 h |
-| **E** Unattended and submitted | 7.7, 8.1–8.7 | Three unattended cycles, a timed dry run, the submission. | **5** (8.5) | 2 h |
-
-**The guesses are not measurements.**
-- They total about 14.5 hours, roughly a third of the record's pace: 0.7 h a
-  unit at full discipline, 42 h for these 60 units (gate §5).
-- Nothing on record shows that pace is reachable. If the real rate is half the
-  old one rather than a third, the deadline falls inside stage C.
-- That is why each stage's end is a demo.
-
-**Why B before C.** B is small and reuses a handler proven twice (0.7d, 0.7e).
-C is the money path under full discipline and the largest stage. If time runs
-out inside C, the fund still decides, signs, publishes and sells. If C came
-first and ran over, nothing would be sold.
-
-**If the six criteria weight on-chain activity above revenue, swap B and C.**
-The fund reads Robinhood Chain live at every stage, but its one on-chain act is
-C2.
-
-**What each stopping point lacks, plainly:**
-- **After A2:** no sale, no execution.
-- **After B:** no execution.
-- **After C1:** nothing on chain yet.
-- **After C2:** no books.
-- **After D:** no unattended run and no submission text.
+One warning from it still holds. At the record's pace, 0.7 h a unit at full
+discipline, these 60 units come to about 42 h (gate §5). The minimal versions
+are how they are meant to fit. Nothing on record shows that pace is reachable.
 
 ---
 
-## If approved
+## Where the decisions landed (2026-09-19)
 
-These folds wait for approval and are not made by this document:
-- **PLAN:**
-  - §2 invariant 4: the three named exceptions outlive 3.4;
-  - §6: five agent keys, and the account per agent;
-  - §8: each unit's minimal version, pointing here;
-  - §13: the one-account limitation narrowed; the demonstration leg; the
-    preview/full split;
-  - §11: NAV as two figures.
-- **ROADMAP:** the five review stops replace the ▶ marks.
-- **config:**
-  - `analysts.json`: the fourth seat and the two seat kinds;
-  - the values above.
-- **`credentials.py` and `.env.example`:** five rows. This is H, so it is
-  done with the full discipline.
-- **`CLAUDE.md`:** nothing. The pace rule already covers this.
+- **LESSONS 2026-09-19:** every decision, with its reasoning and what it
+  contradicts.
+- **PLAN §8, before Phase 0:** the pivot, read before the units. Contradictions
+  are marked in place in §1, §2 invariant 4, §5, §6, §11, §12 and §13, and at
+  7.7 and 8.6.
+- **ROADMAP:** a minimal line on every unit from 2.1, and the five stops.
+- **PHASE-0-1:** the pivot at the top, and the forward references it changes
+  (0.5 on 5.6, 1.3 to 1.5 on 3.4's sweep, 1.5 on 3.3, 1.9 on 8.4).
+- **`JUDGING-CRITERIA.md`:** the six criteria and the bonus.
+- **`CLAUDE.md`:** read this file before building a unit.
+
+**Owed outside the plan docs:**
+- `config/analysts.json`: the fourth seat and the two vocabularies, with 2.1;
+- `credentials.py` and `.env.example`: five agent keys, once SIWE is verified.
+  This is H, so it keeps the full discipline;
+- the config values above, each set by the unit that needs it.
