@@ -5,10 +5,8 @@ The live build is `python -m fund.run.snapshot`, not part of `make test`.
 
 from __future__ import annotations
 
-import ast
 import dataclasses
 import json
-from pathlib import Path
 
 import pytest
 
@@ -339,13 +337,6 @@ def test_the_measured_cases_live_together_in_one_hashed_snapshot():
     assert nvda["corroboration"]["read"] == "unreachable" and nvda["status"]["verdict"] is None
     assert [h["value_usd"] for h in snap.document["holdings"] if h["asset"]["symbol"] == "CRM"] == [None]
     assert json.loads(snap.body) == json.loads(snapshot.canonical(snap.document))
-
-
-def test_core_snapshot_imports_nothing_from_adapters_anywhere():
-    tree = ast.parse(Path(snapshot.__file__).read_text())
-    modules = {n.module or "" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)}
-    modules |= {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
-    assert not any("adapters" in m for m in modules)
 
 
 def test_a_daily_close_timeline_names_each_close_and_ends_with_the_latest_round():

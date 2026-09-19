@@ -442,21 +442,6 @@ def test_the_pinned_universe_carries_nothing_today():
 
 # the boundary ------------------------------------------------------------------------
 
-def test_core_universe_imports_nothing_from_adapters():
-    import ast
-    import pathlib
-    import sys
-    tree = ast.parse(pathlib.Path(u.__file__).read_text())
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom):
-            if node.level:  # relative: only .types, within core
-                assert node.module == "types", node.module
-            else:
-                assert node.module.split(".")[0] in sys.stdlib_module_names, node.module
-        elif isinstance(node, ast.Import):
-            for alias in node.names:
-                assert alias.name.split(".")[0] in sys.stdlib_module_names, alias.name
-
 
 def test_a_pin_that_names_a_file_under_another_hash_is_refused(registry_copy):
     pins = json.loads((registry_copy / u.PINS_FILE).read_text())

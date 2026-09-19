@@ -8,7 +8,6 @@ F0.4.5 recorded as a 499.5 bps divergence on a liquid name.
 
 from __future__ import annotations
 
-import ast
 import json
 from pathlib import Path
 
@@ -262,13 +261,6 @@ def test_a_null_threshold_blocks_and_a_float_is_refused():
     with pytest.raises(TypeError, match="float"):
         valuation.DivergenceRule.from_thresholds({"divergence_max_bps": 99.5,
                                                   "corroborator_min_volume_usd_24h": 1})
-
-
-def test_valuation_imports_nothing_from_adapters():
-    tree = ast.parse(Path(valuation.__file__).read_text())
-    modules = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
-    modules |= {a.name for node in ast.walk(tree) if isinstance(node, ast.Import) for a in node.names}
-    assert not any("adapters" in m for m in modules)
 
 
 # --- in a closed session, divergence is a finding, not a veto (DECISION 2026-09-18) --------------

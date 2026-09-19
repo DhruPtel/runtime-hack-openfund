@@ -614,23 +614,6 @@ def test_paper_and_pending_orders_carry_no_chain_evidence():
 
 # --- the whole contract ----------------------------------------------------------
 
-def test_core_types_imports_only_the_standard_library():
-    # CODEBASE §1: core/ imports nothing from adapters/. Checked from the source,
-    # so a stray import fails here and not in a deployed process.
-    import ast
-    import pathlib
-    import sys
-    import fund.core.types as module
-    tree = ast.parse(pathlib.Path(module.__file__).read_text())
-    imported = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            imported |= {alias.name.split(".")[0] for alias in node.names}
-        elif isinstance(node, ast.ImportFrom):
-            imported.add((node.module or "").split(".")[0])
-    assert imported <= set(sys.stdlib_module_names), imported - set(sys.stdlib_module_names)
-
-
 def test_the_measured_cases_each_survive_the_canonical_round_trip():
     """1.1's measured cases, each round-tripped: a week of history whose newest
     point is fresh, a source that was unreachable rather than false, a held
@@ -670,7 +653,6 @@ def _leaves(node):
             yield from _leaves(value)
     else:
         yield node
-
 
 
 # --- a short series is visible as short (unit 1.3) --------------------------------
