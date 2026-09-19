@@ -86,7 +86,8 @@ fund/
 │   ├── analysts.json           the roster and its scope partition
 │   ├── chain.json              the 4663 RPC: endpoints, deadlines, pacing, series window (1.3)
 │   ├── sessions.json           closed sessions inferred from feed rounds, with evidence (1.4)
-│   └── gecko.json              GeckoTerminal: network slug, batch size, pacing (1.4)
+│   ├── gecko.json              GeckoTerminal: network slug, batch size, pacing (1.4)
+│   └── quote.json              Bankr swap-quote: endpoint, read key, pacing (1.5)
 │
 ├── src/fund/
 │   │

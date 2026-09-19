@@ -305,7 +305,9 @@ what each finding changed, is in `PHASE-0-1.md`.*
   is price improvement — so a gate compares `impact > limit`, never
   `abs(impact) > limit`. A quote is a price, not a fill: quotes are not
   balance-checked (F0.3.3) and stock execution is gated (F0.5.1), so no amount of
-  funding makes them evidence about liquidity.
+  funding makes them evidence about liquidity. *Built:* `adapters/bankr_quote.py`;
+  31 of 35 tradeable at $25 at one moment, 4 refused at impact (LESSONS
+  2026-09-18).
 - **1.6** ▶ **Snapshot builder:** merge, filter, hash. *Show: a real snapshot
   JSON with history up to its pinned block, a per-asset status with a named
   reason, and every timestamp visible.*
@@ -660,8 +662,9 @@ until unit 1.7 reports real per-cycle inference cost.
 - How many of the ~190 tickers are actually tradeable at our $25 size?
   *Partly answered at the 0.4 checkpoint:* markability caps the universe at 35,
   and the $1M corroborator line left 19 of the 32 measured, on one block on one
-  day (F0.4.5). Operational tradeability at $25 is measured when 1.5 quotes,
-  and it does not need a funded wallet: quotes are not balance-checked (F0.3.3).
+  day (F0.4.5). *Measured at 1.5, unfunded:* 31 of the 35 were operationally
+  tradeable at $25 at one moment; 4 were refused at impact.
+  Quotes are not balance-checked (F0.3.3).
   Whether a $25 stock order would actually fill cannot be measured at all,
   because stock execution is gated (F0.5.1).
 - What is the smallest round trip that still produces meaningful receipt

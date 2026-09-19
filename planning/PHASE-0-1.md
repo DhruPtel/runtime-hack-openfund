@@ -840,6 +840,34 @@ impact.
 **Done when:** a $25 quote succeeds or fails explicitly for every asset, a
 missing impact is null and blocks, and a negative impact passes the gate.
 
+**Built:** `adapters/bankr_quote.py` on the shared `adapters/http.py`.
+- **The key.** It supplies only a transport that carries `X-API-Key`.
+- **Replies.** It records every reply, so the venue's refusal keeps its words.
+  Two `http.py` changes are owed (LESSONS 2026-09-18).
+- **Decimals** come from the pins and are checked against the response.
+- **The four number formats** are converted exactly, and absent is null.
+- **`tradeability()`** names its rule — `quote`, `size`, `quote-age` or
+  `impact` — as the third named exception until 3.4. It compares
+  `swapImpactBps` signed, and carries `executable` undetermined on every
+  verdict.
+- **The size.** $25 is converted at USDG's Chainlink mark, not the venue's
+  price, which is a choice recorded for the operator.
+- **Read-only.** A test asserts the module cannot reach `bankr_exec`, the
+  treasurer or the signing key. `Settings.load` refuses any credential that can
+  transact.
+
+**Met**, by `python -m fund.adapters.bankr_quote --prove`, live Sat 01:52Z:
+- all 35 markable stocks were quoted at 25.001227 USDG and judged at one
+  instant;
+- 31 are tradeable, with CRWV, MU, QQQ and RKLB admitted at negative impact;
+- 4 were refused at `impact` at the nominal size: CLSK, RGTI, IONQ, NBIS;
+- a tradeable quote was refused at `quote-age` after waiting 64.6 s;
+- the venue's `No quote available`, an HTTP 500, was refused at `quote`;
+- a dead port was undetermined at `quote`.
+
+Offline, 39 tests in `tests/test_bankr_quote.py` assert each refusal at its
+own rule, and six mutations of the rules were each caught.
+
 **What funding does and does not change.** The draft had this unit re-run probe
 0.3 "against a funded wallet, which is when its numbers first mean anything
 about liquidity". The record does not support that, for two reasons:
@@ -855,9 +883,10 @@ in Phase 1 can. What the unfunded wallet does block is 3.3's sizing against
 reconciled holdings, and Phase 5's volume.
 
 The same reasoning applies to the impact fields. F0.3.4 said separating them
-"needs a funded wallet". F0.3.3 suggests a larger quote prices unfunded, so this
-unit can test that with a read-only quote above $25. That is inferred, and
-untested.
+"needs a funded wallet". F0.3.3 suggested a larger quote prices unfunded, and
+1.5 tested that. At 25,000 USDG, read-only, the two fields were identical up to
+7,084 bps, and the venue quoted past its own 1,500 bps cap (LESSONS
+2026-09-18). Which field gates is still only documented.
 
 **Risk:** reading a successful quote as tradeability on its own. It is one of
 three conditions (1.6), and never proof of a fill.
