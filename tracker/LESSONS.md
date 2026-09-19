@@ -9,13 +9,18 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds: none, as of 2026-09-18, after 1.4.** The two folds owed in
-`planning/PHASE-0-1.md` 1.3 since 1.3's close-out were made in 1.4's pass: the
-staleness-exception DECISION, and the verdict naming a schedule, not a
-session. Every 1.4 entry was folded in the same pass, into PLAN, PHASE-0-1,
-CODEBASE and `config/`. Two entries leave questions marked open in the plan
-docs rather than reconciled: where the divergence tier is compared, and which
-unit revisits the staleness exception.
+**Pending folds into the plan docs: none, as of 2026-09-18, after 1.5.** Every
+1.5 entry and both DECISIONs taken before it were folded in 1.5's pass.
+
+**Owed in code, outside 1.5's paths.** Two things are recorded and folded but
+not yet true in the code:
+1. **`core/valuation.py` still vetoes divergence in a closed session.** A
+   DECISION makes it a finding that reaches the decision record. Its docstring
+   also still calls the tier's location "open, not decided", which the
+   named-exception DECISION settled.
+2. **`adapters/http.py` owes two changes**, found by 1.5: a caller-named
+   status returned as an answer without retries, and caller headers on
+   `urllib_transport`. 1.5 works around both inside its own module.
 
 Every earlier entry was checked as folded: the 1.2 and 1.3 entries in their own
 passes, and the older ones entry by entry before unit 1.1.
