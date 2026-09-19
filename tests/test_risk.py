@@ -127,11 +127,84 @@ def test_a_reply_in_the_wrong_shape_vetoes_everything(gateway, tmp_path, reply, 
     assert g.count("risk") == 1  # never retried
 
 
-def test_a_missing_order_vote_vetoes_everything():
+def test_a_missing_order_vote_vetoes_that_order_alone(tmp_path):
+    """S6: an order the reply does not vote on is vetoed on its own; the rest stand."""
     plan = written()
     reply = scripted(plan).replace("ORDER 2 USO approve\n", "")
     votes, why = risk.parse(reply, plan, document_id(plan))
-    assert votes is None and why == "no vote on order(s) [2]"
+    assert why is None and 2 not in votes.orders and "no vote on order(s) [2]" in votes.notes[0]
+    outcome = review(plan, None, tmp_path, recorded=reply)
+    uso = next(o for o in outcome["decision"]["orders"] if o["symbol"] == "USO")
+    assert uso["vetoed_by"] == ["risk-no-vote"] and approved(outcome) == ["AMD", "META", "INTC"]
+
+
+# --- S6: the shapes a real model may write, each of which vetoed everything at the sweep -----------
+
+def reply_lines(plan, order_line, overall_line="OVERALL approve", head=None):
+    """A reply whose first order is written as `order_line` (with {sha} and the
+    order's own symbol in it), every other order plainly approved."""
+    sha = document_id(plan)
+    lines = [head if head is not None else f"RISK {sha}"]
+    for o in plan["orders"]:
+        if o["index"] == 1:
+            lines.append(order_line.format(symbol=o["asset"]["symbol"]))
+        else:
+            lines.append(f"ORDER {o['index']} {o['asset']['symbol']} approve")
+        lines.append("A reason.")
+    return "\n".join(lines + [overall_line, "A summary."]) + "\n"
+
+
+@pytest.mark.parametrize("order_line, vote", [
+    ("ORDER 1 {symbol} veto (quote-age)", "veto"),
+    ("ORDER 1 {symbol} veto - stale mark", "veto"),
+    ("ORDER 1: {symbol} — Veto", "veto"),
+    ("**ORDER 1 {symbol} veto**", "veto"),
+    ("  - ORDER 1 {symbol} approve", "approve"),
+    ("Order #1 {symbol}: Approved.", "approve"),
+    ("ORDER 1 vetoed: no symbol given", "veto"),
+])
+def test_each_shape_that_vetoed_everything_at_the_sweep_is_now_read(order_line, vote):
+    plan = written()
+    votes, why = risk.parse(reply_lines(plan, order_line), plan, document_id(plan))
+    assert why is None, why
+    assert votes.orders[1][0] == vote and set(votes.orders) == {1, 2, 3, 4}
+
+
+@pytest.mark.parametrize("overall_line, vote", [
+    ("OVERALL: approve", "approve"), ("OVERALL approve.", "approve"),
+    ("**Overall verdict: VETO**", "veto")])
+def test_the_overall_line_is_read_in_its_variants(overall_line, vote):
+    plan = written()
+    votes, why = risk.parse(reply_lines(plan, "ORDER 1 {symbol} approve", overall_line), plan,
+                            document_id(plan))
+    assert why is None and votes.overall[0] == vote
+
+
+def test_a_reason_that_begins_overall_is_prose_not_a_verdict():
+    plan = written()
+    reply = reply_lines(plan, "ORDER 1 {symbol} approve", "Overall, the plan follows the reports.")
+    votes, why = risk.parse(reply, plan, document_id(plan))
+    assert votes.overall is None and "no OVERALL line" in votes.notes[-1]
+    assert all(v == "approve" for v, _ in votes.orders.values())
+
+
+def test_what_still_cannot_be_read_vetoes_everything():
+    plan = written()
+    other = "RISK " + "0" * 64
+    assert risk.parse(reply_lines(plan, "ORDER 1 {symbol} approve", head=other), plan,
+                      document_id(plan))[0] is None  # a vote on another plan
+    assert risk.parse("I approve of all of these trades.", plan, document_id(plan))[0] is None
+
+
+def test_a_vote_given_both_ways_or_under_the_wrong_symbol_vetoes_that_order():
+    plan = written()
+    both = reply_lines(plan, "ORDER 1 {symbol} approve").replace(
+        "ORDER 2 USO approve", "ORDER 2 USO approve\nORDER 2 USO veto")
+    votes, _ = risk.parse(both, plan, document_id(plan))
+    assert 2 not in votes.orders and 1 in votes.orders
+    wrong = reply_lines(plan, "ORDER 1 MSFT approve")
+    votes, _ = risk.parse(wrong, plan, document_id(plan))
+    assert 1 not in votes.orders and "voted under MSFT" in " ".join(votes.notes)
 
 
 @pytest.mark.parametrize("step, reason", [(("status", 504), "refused"), (("hang", 10), None)])

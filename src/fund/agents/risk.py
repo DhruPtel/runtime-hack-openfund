@@ -57,10 +57,19 @@ RULE_RISK = "risk"  # the model vetoed this order
 RULE_RISK_OVERALL = "risk-overall"  # the model vetoed the whole plan
 RULE_RISK_UNREADABLE = "risk-unreadable"  # the reply broke its shape
 RULE_RISK_UNAVAILABLE = "risk-unavailable"  # no reply: timeout, refusal, transport, crash
+RULE_RISK_NO_VOTE = "risk-no-vote"  # the reply was read, and this order had no clear vote
 
-_HEAD = re.compile(r"^RISK ([0-9a-f]{64})$")
-_ORDER = re.compile(r"^ORDER (\d+) (\S+) (approve|veto)$")
-_OVERALL = re.compile(r"^OVERALL (approve|veto)$")
+#: The reply's lines, read tolerantly: no real model had read `risk.v1.md` before
+#: the 3.8 sweep, and a parser that vetoes everything on a shape it did not
+#: expect looks exactly like a risk agent doing its job (S6). Each is matched on
+#: the line with emphasis, bullets and indentation removed, case aside.
+_SEP = r"[\s:.)\-–—|]*"
+_HEAD = re.compile(r"^RISK" + _SEP + r"([0-9a-fA-F]{64})\b", re.I)
+_ORDER = re.compile(r"^ORDER" + _SEP + r"#?(\d+)" + _SEP + r"(?:([A-Z][A-Z0-9.]*)" + _SEP + r")?"
+                    r"(approved?|vetoe?d?)\b" + _SEP + r"(.*)$", re.I)
+_OVERALL = re.compile(r"^OVERALL(?:\s+(?:VERDICT|VOTE))?" + _SEP + r"(approved?|vetoe?d?)\b"
+                      + _SEP + r"(.*)$", re.I)
+_BULLET = re.compile(r"^(?:[-*•+]|\d+[.)])\s+")
 
 
 @dataclass(frozen=True)
@@ -123,49 +132,90 @@ def render(plan: Mapping[str, Any], plan_sha256: str, gate_report: Mapping[str, 
 
 @dataclass(frozen=True)
 class Votes:
-    orders: Mapping[int, tuple[str, str]]  # index -> (vote, why)
-    overall: tuple[str, str]
+    orders: Mapping[int, tuple[str, str]]  # index -> (vote, why): the orders clearly voted on
+    overall: tuple[str, str] | None  # None when the reply gave no overall line
+    notes: tuple[str, ...] = ()  # each way the reply departed from the brief's shape
+
+
+def _plain(line: str) -> str:
+    """A reply line as the parser reads it: no emphasis, bullet or indentation."""
+    return _BULLET.sub("", line.replace("*", "").replace("`", "").strip()).strip()
+
+
+def _vote(word: str) -> str:
+    return "approve" if word.lower().startswith("approv") else "veto"
 
 
 def parse(text: str, plan: Mapping[str, Any], plan_sha256: str) -> tuple[Votes | None, str | None]:
-    """The model's votes, or why the reply cannot be read. Every order in the plan
-    must be voted on once, under its own number and symbol."""
+    """The model's votes, read tolerantly, or why the reply cannot be read at all.
+
+    Accepted, and noted:
+    - emphasis, bullets and indentation;
+    - `ORDER 1: AMD — Veto (quote-age)`, with the rest of the line joining the
+      reason;
+    - `approved` and `vetoed`;
+    - `OVERALL: approve.`;
+    - a missing symbol on an ORDER line.
+
+    **Fail closed per order, not for the whole reply.** An order with no clear
+    vote is left out of `orders`, and `decide` vetoes that order alone. Its vote
+    may be missing, given twice with different words, or given under another
+    order's symbol. With no OVERALL line, the orders' own votes stand.
+
+    **Unreadable, which vetoes every order:**
+    - no ORDER line at all;
+    - a first RISK line naming a different plan."""
     lines = [line.rstrip() for line in text.strip().split("\n")]
-    if lines and lines[0].startswith("```") and lines[-1].strip() == "```":
+    if lines and lines[0].strip().startswith("```") and lines[-1].strip() == "```":
         lines = lines[1:-1]
-    if not lines or not _HEAD.match(lines[0]) or _HEAD.match(lines[0]).group(1) != plan_sha256:
-        return None, f"the first line must be 'RISK {plan_sha256}'"
+    plain = [_plain(line) for line in lines]
+    notes: list[str] = []
+    head = next((match for match in map(_HEAD.match, plain) if match), None)
+    if head is None:
+        notes.append("no RISK line naming the plan")
+    elif head.group(1).lower() != plan_sha256:
+        return None, f"the reply names plan {head.group(1)[:12]}…, not {plan_sha256[:12]}…"
     symbols = {o["index"]: o["asset"]["symbol"] for o in plan["orders"]}
     votes: dict[int, tuple[str, list[str]]] = {}
+    unclear: set[int] = set()
     overall: tuple[str, list[str]] | None = None
     current: list[str] | None = None
-    for line in lines[1:]:
-        if line.startswith("ORDER "):
-            match = _ORDER.match(line)
-            if match is None:
-                return None, f"cannot read {line[:80]!r}"
-            index, symbol, vote = int(match.group(1)), match.group(2), match.group(3)
-            if index not in symbols or symbols[index] != symbol:
-                return None, f"order {index} {symbol} is not in the plan"
-            if index in votes:
-                return None, f"order {index} is voted on twice"
-            current = []
-            votes[index] = (vote, current)
-        elif line.startswith("OVERALL"):
-            match = _OVERALL.match(line)
-            if match is None or overall is not None:
-                return None, f"cannot read {line[:80]!r}"
-            current = []
-            overall = (match.group(1), current)
-        elif current is not None:
-            current.append(line.strip())
-    missing = sorted(set(symbols) - set(votes))
+    for line in plain:
+        order = _ORDER.match(line)
+        closing = _OVERALL.match(line)
+        if order:
+            index, symbol = int(order.group(1)), order.group(2)
+            vote, rest = _vote(order.group(3)), order.group(4).strip()
+            if index not in symbols:
+                notes.append(f"a vote on order {index}, which the plan does not have, is ignored")
+                current = None
+                continue
+            if symbol and symbol.upper() != symbols[index].upper():
+                notes.append(f"order {index} was voted under {symbol}, not {symbols[index]}: "
+                             "no clear vote")
+                unclear.add(index)
+                current = None
+                continue
+            if index in votes and votes[index][0] != vote:
+                notes.append(f"order {index} was voted both ways: no clear vote")
+                unclear.add(index)
+            current = [rest] if rest else []
+            votes.setdefault(index, (vote, current))
+        elif closing and overall is None:
+            current = [closing.group(2).strip()] if closing.group(2).strip() else []
+            overall = (_vote(closing.group(1)), current)
+        elif current is not None and line:
+            current.append(line)
+    if not votes and symbols:
+        return None, "no ORDER line could be read"
+    clear = {i: (v, " ".join(w).strip()) for i, (v, w) in votes.items() if i not in unclear}
+    missing = sorted(set(symbols) - set(votes) - unclear)
     if missing:
-        return None, f"no vote on order(s) {missing}"
+        notes.append(f"no vote on order(s) {missing}: each is vetoed")
     if overall is None:
-        return None, "no OVERALL line"
-    return Votes({i: (v, " ".join(w).strip()) for i, (v, w) in votes.items()},
-                 (overall[0], " ".join(overall[1]).strip())), None
+        notes.append("no OVERALL line: the orders' own votes stand")
+    return Votes(clear, None if overall is None else (overall[0], " ".join(overall[1]).strip()),
+                 tuple(notes)), None
 
 
 def decide(gate_report: Mapping[str, Any], votes: Votes | None,
@@ -188,11 +238,13 @@ def decide(gate_report: Mapping[str, Any], votes: Votes | None,
             rule = no_votes[0] if no_votes else RULE_RISK_UNAVAILABLE
             if rule not in by:
                 by.append(rule)
+        elif index not in votes.orders:
+            by.append(RULE_RISK_NO_VOTE)  # read, but no clear vote on this order: it alone
         else:
             vote, why = votes.orders[index]
             if vote != "approve":
                 by.append(RULE_RISK)
-            if votes.overall[0] != "approve":
+            if votes.overall is not None and votes.overall[0] != "approve":
                 by.append(RULE_RISK_OVERALL)
         approved = bool(order["cleared"]) and not by
         entry = {"index": index, "symbol": order["symbol"], "approved": approved,
@@ -213,8 +265,9 @@ def decide(gate_report: Mapping[str, Any], votes: Votes | None,
             "approved": [o["index"] for o in decided if o["approved"]],
             "vetoed": [o["index"] for o in decided if not o["approved"]],
             "cash_floor": floor.as_dict(),
-            "overall": None if votes is None else {"vote": votes.overall[0],
-                                                   "why": votes.overall[1]},
+            "overall": None if votes is None or votes.overall is None else {
+                "vote": votes.overall[0], "why": votes.overall[1]},
+            "reply_notes": [] if votes is None else list(votes.notes),
             "no_votes": None if votes is not None else {
                 "rule": (no_votes or (RULE_RISK_UNAVAILABLE, ""))[0],
                 "why": (no_votes or ("", "no reply"))[1]}}
