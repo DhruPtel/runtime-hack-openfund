@@ -611,10 +611,19 @@ def test_a_multicall_reply_with_the_wrong_count_is_refused_not_trusted():
     assert got.status is FetchStatus.REFUSED and "0 results for 1 calls" in got.detail
 
 
-def test_settings_come_from_chain_json_and_the_margin_from_thresholds():
-    s = chain.Settings.load()
+def test_settings_come_from_chain_json_and_the_margin_from_thresholds(tmp_path):
+    # Values other than the configured ones, so a number written into the code
+    # instead of read from these files cannot pass.
+    chain_doc = json.loads(chain.CHAIN_CONFIG.read_text())
+    chain_doc["series_window_seconds"] = 7 * DAY
+    thresholds = json.loads(chain.THRESHOLDS.read_text())
+    thresholds["feed_staleness_margin_seconds"] = 7200
+    (tmp_path / "chain.json").write_text(json.dumps(chain_doc))
+    (tmp_path / "thresholds.json").write_text(json.dumps(thresholds))
+    s = chain.Settings.load(chain_path=tmp_path / "chain.json",
+                            thresholds_path=tmp_path / "thresholds.json")
     assert s.chain_id == CHAIN and s.endpoints == ("RPC_4663_MAINNET",)
-    assert s.staleness_margin_s == 3600 and s.window_s == 30 * DAY and s.sampling == "daily_close"
+    assert s.staleness_margin_s == 7200 and s.window_s == 7 * DAY
     rpc = s.client(lambda name: f"https://{name}.invalid/key")
     assert [e.name for e in rpc.endpoints] == ["RPC_4663_MAINNET"]
     assert "invalid/key" not in repr(rpc.endpoints)
