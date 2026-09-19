@@ -999,7 +999,9 @@ staleness rule in 1.3: PHASE-0-1 1.3, `config/thresholds.json`, and the
 `Series` docstring. So `chain_4663.freshness()` compares age against heartbeat
 plus margin. Either 1.8 moves the comparison into `gates.py` and the adapter
 reports only age and heartbeat, or the rule gets a named exception. This pass
-does not decide which.
+does not decide which. *(Correction, 2026-09-18: `gates.py` is built at 3.4,
+not 1.8. ROADMAP, PLAN §8 and the stub all say so; 1.8 is held-but-untradeable.
+See the DECISION below.)*
 
 **Where the HTTP client lives.** CODEBASE lists `adapters/http.py`, "one HTTP
 client: timeouts, retries, Retry-After, redaction", as 1.3's. This pass was
@@ -1050,3 +1052,31 @@ needs a definition the operator chooses: a documented schedule pinned as the
 directory is, with daylight saving and holidays, or a rule drawn from observed
 rounds.
 **Affects:** 1.4 (whether a weekend price may be a mark), 1.6, 1.8, 1.11; PLAN §13.
+
+## 2026-09-18 — DECISION: the feed staleness comparison stays in the chain adapter, as a named exception to "gates exist once"
+*Decided by the operator after 1.3.* Two places state the rule:
+- CODEBASE §3 and its rules table: `core/gates.py` is the only module defining
+  a threshold comparison;
+- PLAN §2 invariant 4, "Gates exist once".
+
+1.3 built the feed staleness comparison in `adapters/chain_4663.py`
+(`freshness()`), where the record placed it: PHASE-0-1 1.3 and
+`config/thresholds.json`. It stays there for now, as a recorded exception, not
+an unmarked contradiction.
+
+**The reason.** The plan assigned the rule to 1.3, and `gates.py` does not
+exist until 3.4. The comparison is still defined in one place, and its margin
+is still read from `config/thresholds.json`.
+
+**Still open.** Whether a later unit moves it into `gates.py`, leaving the
+adapter to report only age and heartbeat.
+
+**Open, not reconciled.** The decision as given says "whether 1.8 moves it".
+That unit number came from 1.3's summary, and it was wrong: `gates.py` is 3.4's
+(the correction above). Which unit revisits the location is the operator's to
+say.
+
+When the "one gate definition" test is written, it must name this exception or
+it will fail on it.
+**Affects:** 3.4; CODEBASE §3 and rules table; PLAN §2 invariant 4; PHASE-0-1
+1.3 (*fold pending*: outside this pass's paths).
