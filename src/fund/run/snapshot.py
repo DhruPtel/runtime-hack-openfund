@@ -65,12 +65,14 @@ class ChainRead:
 
 @dataclass(frozen=True)
 class Sources:
-    """The three adapters' clients. `live_sources` makes the real ones; a test
-    passes clients over recorded-shape transports, and nothing else changes."""
+    """The three adapters' clients, and the chain reader's clock. `live_sources`
+    makes the real ones; a capture wraps them; a replay and the offline test pass
+    clients over recorded transports, and nothing else changes."""
 
     rpc: chain_4663.RpcClient
     corroborator: gecko.Gecko
     venue: bankr_quote.QuoteAdapter
+    chain_clock: Callable[[], Instant] = chain_4663.wall_clock
 
 
 def live_sources(cfg: config.Config, settings: chain_4663.Settings) -> Sources:
@@ -98,8 +100,9 @@ def stocks_of(u: universe.Universe) -> list[AssetId]:
 
 
 def read_chain(settings: chain_4663.Settings, rpc: chain_4663.RpcClient, u: universe.Universe,
-               wallet: ChainAddress, block: BlockRef) -> ChainRead:
-    read = settings.reader(rpc, block)
+               wallet: ChainAddress, block: BlockRef,
+               clock: Callable[[], Instant] | None = None) -> ChainRead:
+    read = settings.reader(rpc, block, clock)
     stocks = stocks_of(u)
     readings = read.latest_rounds(dict(u.feeds))
     def series_of(a: AssetId) -> Series:
@@ -156,8 +159,9 @@ def read_offchain(chain: ChainRead, u: universe.Universe, settings: chain_4663.S
     return OffchainRead(corroborations, size, quotes, clock())
 
 
-def _config_sha256() -> dict[str, str]:
-    return {name: hashlib.sha256((CONFIG / name).read_bytes()).hexdigest() for name in CONFIG_FILES}
+def _config_sha256(config_dir: Path = CONFIG) -> dict[str, str]:
+    return {name: hashlib.sha256((config_dir / name).read_bytes()).hexdigest()
+            for name in CONFIG_FILES}
 
 
 def _rules(settings: chain_4663.Settings, rule: valuation.DivergenceRule,
@@ -200,7 +204,8 @@ def _rules(settings: chain_4663.Settings, rule: valuation.DivergenceRule,
 
 def assemble(chain: ChainRead, offchain: OffchainRead, u: universe.Universe,
              settings: chain_4663.Settings, rule: valuation.DivergenceRule,
-             limits: bankr_quote.Limits, wallet: ChainAddress) -> snapshot.Inputs:
+             limits: bankr_quote.Limits, wallet: ChainAddress,
+             config_dir: Path = CONFIG) -> snapshot.Inputs:
     """The adapters' verdicts, made here, and everything handed to core as data."""
     block = chain.block
     at_s = block.timestamp.epoch_ms // 1000
@@ -248,7 +253,7 @@ def assemble(chain: ChainRead, offchain: OffchainRead, u: universe.Universe,
         block=block, built_at=offchain.built_at, stocks=tuple(stocks), cash=marked(u.cash()),
         gas=marked(u.gas()), wallet=wallet, balances=chain.balances, held_outside=held_outside,
         closed_sessions=closed, divergence_rule=rule,
-        rules=_rules(settings, rule, limits, offchain.quote_size), config=_config_sha256())
+        rules=_rules(settings, rule, limits, offchain.quote_size), config=_config_sha256(config_dir))
 
 
 @dataclass(frozen=True)
@@ -260,13 +265,16 @@ class Built:
 
 def read_and_build(sources: Sources, *, settings: chain_4663.Settings, u: universe.Universe,
                    rule: valuation.DivergenceRule, limits: bankr_quote.Limits,
-                   wallet: ChainAddress, clock: Callable[[], Instant] = now) -> Built:
-    """Pin a block, read everything, judge, and build: the whole live path."""
+                   wallet: ChainAddress, clock: Callable[[], Instant] = now,
+                   config_dir: Path = CONFIG) -> Built:
+    """Pin a block, read everything, judge, and build: the whole live path.
+    `config_dir` is whose files the snapshot names by hash: config/, or a
+    capture's own copies on replay."""
     block = chain_4663.pin_block(sources.rpc, settings.chain_id, settings.block_tag)
-    chain = read_chain(settings, sources.rpc, u, wallet, block)
+    chain = read_chain(settings, sources.rpc, u, wallet, block, sources.chain_clock)
     offchain = read_offchain(chain, u, settings, limits, sources, clock)
-    return Built(snapshot.build(assemble(chain, offchain, u, settings, rule, limits, wallet), u),
-                 chain, offchain)
+    inputs = assemble(chain, offchain, u, settings, rule, limits, wallet, config_dir)
+    return Built(snapshot.build(inputs, u), chain, offchain)
 
 
 def write(snap: snapshot.Snapshot) -> Path:
