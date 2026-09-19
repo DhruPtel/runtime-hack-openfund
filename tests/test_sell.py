@@ -4,7 +4,9 @@ Buying into an asset and exiting one are different risks. A sell needs a price
 to value what it sells, and a fresh quote at its size, with the mandate in force
 and the order size. A buy keeps every check. DELL is the case: held, below the
 corroborator line so outside the buy universe, and its $25 quote costs 64 bps,
-past the 50 bps a buy may pay. It is not among the mandate's allowed assets.
+past the 50 bps a buy may pay. It is not among the mandate's allowed assets here:
+the mandate approved at 4.1 names all 35 markable stocks, DELL included, so these
+tests narrow it by DELL to keep the case an asset the mandate does not name.
 """
 
 from __future__ import annotations
@@ -21,8 +23,10 @@ from phase3 import ADDRESS, ENTRIES, LIMITS, SNAPSHOT, book, worth, written
 from test_cash import REPORTS, SETTINGS, approve_all, calls
 from test_schema import example, verdict
 
-MANDATE = config.load_json("mandate.json")
 DELL = ADDRESS["DELL"]
+APPROVED = config.load_json("mandate.json")
+MANDATE = {**APPROVED, "allowed_assets": [a for a in APPROVED["allowed_assets"]
+                                          if a["address"] != DELL]}
 
 
 def evaluate(plan, snapshot=SNAPSHOT, mandate=MANDATE):
