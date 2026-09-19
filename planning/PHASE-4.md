@@ -1,8 +1,10 @@
 # Phase 4: the treasurer and the ledger
 
-**Status, 2026-09-19:** a plan, waiting for the operator. Nothing is built.
-Phase 3 closed with 3.9: the exit run's signed decision rebuilds byte for byte
-(`tests/test_replay_cycle.py`).
+**Status, 2026-09-19:** the six decisions are made (below), and 4.0 is being
+built: twelve values, one definition each. Phase 3 closed with 3.9: the exit run's
+signed decision rebuilds byte for byte (`tests/test_replay_cycle.py`). Before 4.0,
+the replay was made to read the config its cycle carries and to judge by the gate
+set its record names (LOGS, "3.9 hardened"), because 4.1 and 4.4 change both.
 
 **Read first:**
 - `CLAUDE.md`;
@@ -24,13 +26,16 @@ into a process of its own. Nothing here touches the chain: stock legs are paper
   quantity, cost basis, realised and unrealised value, and cash would each be
   computed in three or four places. Each is specified below as one function,
   built and tested before any unit that uses it.
-- **Four decisions come before 4.0,** because the primitives encode them:
-  - the cost-basis method;
-  - what paper cash is held as;
-  - the mandate's approval values;
-  - where the fund's published signing key lives.
-
-  The recommendations are below.
+- **Twelve values, not seven.** The orientation after Phase 3 found five more
+  that several units would each compute: what a ledger event that is not a fill
+  does, which book an event belongs to, a book's NAV and which holding is cash,
+  cash partway through a decision, and the state of an order the chokepoint
+  refuses. They are P8 to P12.
+- **The six decisions are made** (the operator, 2026-09-19; LESSONS). Two are
+  encoded by 4.0: average cost (P6), and paper cash as USDG at its own mark
+  (P5). The other four wait for the units that use them: the mandate (4.1), the
+  published key (4.2), the snapshot's age limit (4.4), and the refused swaps
+  (4.12).
 - **A stop at 4.11,** the known-answer accounting fixture (the operator,
   2026-09-19). `CLAUDE.md`'s stop list does not name 4.11 yet, and that file is
   outside this pass's paths: owed.
@@ -87,15 +92,16 @@ and its rule. All are **H**. Each rule is broken in a copy and a test must fail.
   - 4.5 moves an order through them;
   - 4.9 resolves `submitted` and `unknown`;
   - 4.10 drills a crash between two of them.
-- **One definition:** `core/orders.py`, `transition(order, event) -> Order`.
+- **One definition:** `core/orders.py`, `transition(order, to, reason=…) -> Order`.
   It is a pure table of the allowed moves, and any other move is refused by
   name:
 
   | From | To |
   |---|---|
-  | `prepared` | `submitted` |
+  | `prepared` | `submitted`, or `refused` (P12) |
   | `submitted` | `confirmed`, `failed` or `unknown` |
   | `unknown` | `confirmed` or `failed`, or `submitted` again with the same key |
+  | `confirmed`, `failed`, `refused` | nothing: each is final |
 
   `store/orders.py` persists what `transition` returns. It never decides a
   state.
@@ -108,7 +114,8 @@ and its rule. All are **H**. Each rule is broken in a copy and a test must fail.
   5.1 (sent with the order), 4.9 (a re-send).
 - **One definition:** `core/orders.py`, `order_id(decision_id, index)` and
   `idempotency_key(decision_id, index)`. Both are deterministic, so a restart
-  derives the same key.
+  derives the same key. The key is UUID-shaped, as the key F0.10.1 measured
+  being deduplicated was; that another UUID is accepted the same way is inferred.
 
 ### P3. What a fill gives and takes
 
@@ -116,11 +123,15 @@ and its rule. All are **H**. Each rule is broken in a copy and a test must fail.
   4.7 (positions), 4.11 (the fixture). Later, 5.3 builds a live fill from
   `Transfer` logs.
 - **One definition:** `core/ledger.py`, `Fill`: the asset given and its raw
-  amount, the asset got and its raw amount, the mode, and the marks at fill
-  time. `paper_fill(order, quote)` takes the fresh quote's `sell` and `buy`
-  amounts exactly: "a paper fill is the quote".
-- **Rule:** a fill records the marks it was valued at, so its worth is never
-  recomputed later at another price.
+  amount, the asset got and its raw amount, the mode, the marks at fill time,
+  and which leg is cash. `paper_fill(order, quote, snapshot)` takes the fresh
+  quote's `sell` and `buy` amounts exactly: "a paper fill is the quote". It
+  refuses a live order, a quote for another order, and one below `min_buy`.
+- **Rules:**
+  - a fill records the marks it was valued at, so its worth is never
+    recomputed later at another price;
+  - a fill's value is its cash leg at that leg's recorded mark: what a buy
+    paid, and what a sell received. Every trade has a USDG leg.
 
 ### P4. Position quantity
 
@@ -130,10 +141,11 @@ and its rule. All are **H**. Each rule is broken in a copy and a test must fail.
   - 4.9 (reconciliation);
   - the next cycle's planner (its `holdings` input);
   - 4.11.
-- **One definition:** `core/ledger.py`, `holdings(events) -> {asset: Amount}`:
-  the sum of every fill's amounts per asset, in raw units. It is the only way a
-  quantity held is known. `plan.book` takes its holdings from it, and nothing
-  writes a position directly (PLAN §8 4.7).
+- **One definition:** `core/ledger.py`, `holdings(events, *, book) -> {asset:
+  Amount}`: every event's effect per asset (P8), in raw units, for one book (P9).
+  It is the only way a quantity held is known. A book that would hold less than
+  nothing refuses at the event that did it, and so does an order filled twice.
+  Nothing writes a position directly (PLAN §8 4.7).
 
 ### P5. Cash
 
@@ -143,24 +155,28 @@ and its rule. All are **H**. Each rule is broken in a copy and a test must fail.
   - the planner's `cash_usd` input;
   - `gates.settle`, on the approved orders;
   - 4.11.
-- **One definition:** paper cash is the USDG the ledger holds, from P4. Its
-  dollar value is `cash.worth` at USDG's mark. `core/cash.py` gains
-  `ledger_cash(events, snapshot)`, and `cash_after` stays the definition for
-  plans.
-- **Recommended decision:** hold paper cash as USDG units, not as a bare USD
-  figure. Then paper and live cash are one kind of thing, the live wallet's
-  USDG (Phase 5), and the $0.99995 USDG mark (1.4) is not assumed away.
+- **One definition:** cash is the cash leg the ledger holds, from P4: USDG.
+  Its dollar value is `cash.worth` at USDG's own mark. `core/ledger.py`,
+  `cash(events, *, book, snapshot)`. It sits in the ledger, not `core/cash.py`
+  as first planned, because `cash.py` cannot import the ledger that imports it.
+  `cash.cash_after` stays the projection for plans (P11).
+- **Decided (the operator):** paper cash is USDG units, valued at USDG's own
+  mark, never assumed to be a dollar. The exit run's snapshot marks USDG at
+  0.99992279.
 
 ### P6. Cost basis
 
 - **Who computes it:** 4.7 (unrealised value), 6.1 (the statement), 6.4
   (contribution), 4.11.
-- **One definition:** `core/ledger.py`, `basis(events, asset)`.
-- **Recommended decision: average cost.**
+- **One definition:** `core/ledger.py`, `basis(events, asset, *, book)`.
+- **Decided (the operator): average cost.**
   - A buy adds what it gave, at the marks recorded in its fill (P3).
   - A sell removes basis in proportion to the units it sells.
-
-  FIFO needs lots, and nothing in the minimal build needs them.
+  - Every asset is held this way, USDG and ETH included. So a move in USDG's
+    own mark is value, realised or not, rather than a gap nothing explains.
+  - The basis a disposal removes is rounded half-even to 10⁻³⁰ USD. Every other
+    ledger figure is exact, and an inexact step raises.
+- **Decided (the operator): a fee is not basis** (P8).
 
 ### P7. Realised and unrealised value
 
@@ -174,16 +190,101 @@ and its rule. All are **H**. Each rule is broken in a copy and a test must fail.
   - paper and real are never added together (SIMPLIFICATION 6.1, "a blended
     NAV");
   - over a closed weekend marks are frozen, so both are near zero, and nothing
-    is claimed as P&L (SIMPLIFICATION, item 5).
+    is claimed as P&L (SIMPLIFICATION, item 5);
+  - per book, NAV = what opened it + realised + unrealised − costs, exactly.
+    Inference is an expense beside it, never in a NAV (P8).
+
+### P8. Ledger events that are not fills
+
+- **Who computes it:** 4.6 (the ledger records them), 4.7, 4.11 (the fixture
+  holds all three), 6.1 (costs and expenses), 6.3.
+- **One definition:** the one fold in `core/ledger.py` that every reader of P4
+  to P7 derives from. It applies each event in the order the ledger holds them:
+
+  | Event | Book | Holdings and cash | Basis | Value |
+  |---|---|---|---|---|
+  | Opening balance | named | + the amount | + its worth at the recorded mark | none: what opened the book |
+  | Fill (P3) | by its mode (P9) | − given, + got | given: − its average cost; got: + the fill's value | realised += value − the basis given up |
+  | Fee | named | − the amount paid | − the average cost of what paid it | cost += its worth at the recorded mark; realised += that worth − that basis |
+  | Inference | real | none | none | expense += its USD |
+
+- **Rules:**
+  - **a fee never counts toward basis** (the operator): it is its own cost
+    line, as 6.1 shows it, so no dollar is counted twice. Paying it disposes of
+    what paid it, at average cost;
+  - inference is paid from LLM credits, which neither book holds, so it touches
+    no holding and no NAV. It is an expense, real.
+
+### P9. Paper and real: which book an event belongs to
+
+- **Who computes it:** 4.7 and 6.1 (never added), 6.2 (real holdings only), the
+  planner (paper only), 4.11.
+- **One definition:** `ledger.book_of(event)`: a fill by its mode, `paper` or
+  `live` to the `paper` or `real` book, and an opening or a fee by the book it
+  names. Every reader of events takes `book=` with no default, and no function
+  returns a figure summed across books.
+- **Why it matters now:** P5's decision makes paper cash and live cash the same
+  asset, USDG. Without the book in the signature, every consumer would filter
+  its own way.
+
+### P10. A book's NAV, and which holding is cash
+
+- **Who computes it:** 4.7, 4.8 (the next cycle plans from the ledger), 4.11,
+  6.1.
+- **One definition:**
+  - `cash.cash_leg(snapshot)`: the one test of which asset is cash, USDG. Every
+    other holding is a position, ETH included;
+  - `cash.nav(cash_usd, values)`: a book's NAV, its cash plus each position's
+    worth, exact. `plan.book` and `ledger.value` both call it;
+  - `ledger.value(events, *, book, snapshot)`: the book's cash and positions at
+    the snapshot's marks, each with its basis, and its NAV;
+  - `ledger.planner_book(events, snapshot)`: the paper book as `plan.book`
+    takes it, stocks and a USD cash figure. `plan.book` raises on an address
+    outside the snapshot's assets, so ETH never reaches the planner.
+- **Rule:** a holding with no usable mark refuses, as `plan.book` does. No value
+  is never a value of zero. What the cycle then signs is S12's, at 4.8.
+
+### P11. Cash partway through a decision
+
+- **Who computes it:** 4.4 (the floor, each time it admits an order), 4.5, 4.11.
+- **The two definitions it reconciles.** `cash.cash_after` credits a sell at
+  its Chainlink mark: a projection, made before anything fills. A paper fill
+  credits the USDG its quote returns: what was booked. Once one order has filled,
+  a floor check that used either alone would be wrong: the projection ignores
+  what the fill really got, and booked cash ignores what is still to come.
+- **One definition:** `gates.settle(plan, approved, …, booked_usd, filled)`.
+  The orders already filled count at what they booked, which is in
+  `booked_usd` (P5). The approved orders not yet filled count at `cash_after`'s
+  projection. A filled order is never projected again and never dropped.
+  Orders run in the plan's order, sells first, so every buy is judged against
+  the sells' booked proceeds, not their marks.
+- At decision time nothing has filled. `settle` is called as before, from the
+  plan's own cash, and a recorded decision is unchanged.
+
+### P12. An order the chokepoint refuses
+
+- **Who computes it:** 4.3 (the state), 4.4 (the refusal), 4.9 (startup).
+- **One definition:** `prepared → refused` in P1's table, with the chokepoint's
+  reasons as its `state_reason`. `refused` is final. Nothing was sent, so no key
+  was spent and no fill can arrive. `failed` stays what PLAN §4 says it is: an
+  evidenced failure after sending.
+- **Left to 4.9:** a `prepared` order found at startup was never sent. It is
+  admitted again, or refused.
 
 **What 4.0 delivers:**
 - `core/orders.py` and `core/ledger.py`, pure and stdlib-only like the rest of
-  `core/`, with `cash.ledger_cash`;
+  `core/`;
+- `OrderState.REFUSED`, `cash.cash_leg`, `cash.nav`, and `gates.settle` taking
+  what has filled;
 - `tests/test_orders.py` and `tests/test_ledger.py`, with every rule above
   broken in a copy.
 
-No unit consumes them yet. The boundary test gains one line: no module outside
-`core/ledger.py` sums fills into a holding.
+No unit consumes the order and ledger primitives yet. The boundary test gains
+the lines that keep each of the five new values in one place:
+- no module outside `core/ledger.py` reads a fill's legs or decides an event's
+  book;
+- no module outside `core/cash.py` tests which asset is cash;
+- no module outside `core/orders.py` moves an order's state.
 
 ---
 
@@ -379,21 +480,16 @@ booked.
 
 ---
 
-## Decisions needed before Batch A
+## Decisions, made by the operator on 2026-09-19
 
-1. **Cost basis:** average cost (recommended), or FIFO.
-2. **Paper cash:** held as USDG units valued at USDG's mark (recommended), or as
-   a USD figure.
-3. **The mandate:**
-   - `approved_by`, `approved_at` and `expires_at`;
-   - `allowed_assets`: the 35 markable stocks plus ETH and USDG
-     (SIMPLIFICATION), or today's 20.
-4. **The published key:** the fund's public key into `config/keys.json`, so a
-   record is verified against it, not against the key its envelope names (S13).
-   It is `1c232435…`, as the 3.8 envelope shows.
-5. **S11's limit:** how old a snapshot may be at decision and at submission. A
-   proposal: the same session, and at most one hour.
-6. **4.12's refused swaps:** which keys, and the authorization.
+| # | Decision | Applied at |
+|---|---|---|
+| 1 | **Cost basis:** average cost. A fee is not basis (asked and answered at 4.0). | 4.0 (P6, P8) |
+| 2 | **Paper cash:** USDG units, valued at USDG's own mark, not assumed to be a dollar. | 4.0 (P5) |
+| 3 | **The mandate:** approved by the operator, expiring 7 days after approval; `allowed_assets` the 35 markable stocks plus ETH and USDG. | 4.1 writes `mandate.json` |
+| 4 | **The published key:** `config/keys.json`, the public half only: `1c232435…`, as both 3.8 envelopes show. | 4.2 (S13) |
+| 5 | **S11's limit:** a snapshot at most 15 minutes old, at decision and at submission. The 17:13Z decision came 11 hours after its snapshot; the exit run's, about 2 minutes. | 4.4, as gate set 2 |
+| 6 | **4.12's refused swaps:** authorized. | 4.12 |
 
 ---
 
@@ -409,6 +505,8 @@ booked.
 | `config.load()` merges all of `.env` into the caller | LOGS open item 3 | 4.12 |
 | `cumulative_budget_usd` and `confirmation_depth` are null | `config/` | Phase 5 (5.2, 5.3) |
 | 4.11 is a stop, but `CLAUDE.md`'s list does not say so | the operator, 2026-09-19 | `CLAUDE.md`, owed |
+| S10 against today's mandate refuses every buy: USDG, the leg a buy sells, is not in it | the orientation, 2026-09-19 | 4.1's mandate, before 4.4 |
+| A quote matches an order in two shapes: `gates.fresh_quote` on the record's plan, `orders.quote_is_for` on an `Order` | 4.0 | 4.4 calls `quote_is_for` |
 
 ## What Phase 4 ends with
 

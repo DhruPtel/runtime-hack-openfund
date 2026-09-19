@@ -210,7 +210,7 @@ Make the money path correct before it touches money.
 
 | Unit | Goal (full version) | Minimal: what gets built |
 |---|---|---|
-| 4.0 | Shared primitives, before any unit (added 2026-09-19, the design lesson; `PHASE-4.md`) | Order state and transitions, order identity and key, fill, holdings, cash, cost basis, realised and unrealised value: each one function in `core/`, tested with its rules broken in a copy. |
+| 4.0 | Shared primitives, before any unit (added 2026-09-19, the design lesson; `PHASE-4.md`) | Twelve values, each one function in `core/`, tested with its rules broken in a copy: order state and transitions, order identity and key, fill, holdings, cash, cost basis, realised and unrealised value; and, found after Phase 3, events that are not fills, the paper and real books, a book's NAV and its cash leg, cash partway through a decision, and a refused order's state. |
 | 4.1 | Mandate: bounds, wallet, assets, budget, expiry, revocation | Loaded, with nulls refused and bounds checked. No hash-and-replay of approvals. |
 | 4.2 | Execution intent with stable idempotency key | **Equal in substance.** Orders from the signed record, each keyed by decision id and index. |
 | 4.3 | Durable order state machine, written before action | **Equal in substance.** Five states, each written before its act. No reservations, because orders run one at a time. |
