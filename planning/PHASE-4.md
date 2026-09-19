@@ -1,7 +1,10 @@
 # Phase 4: the treasurer and the ledger
 
-**Status, 2026-09-19:** the six decisions are made (below), and **4.0 is built**:
-twelve values, one definition each (LOGS, 4.0). Next is Batch B, from 4.1. Phase 3 closed with 3.9: the exit run's
+**Status, 2026-09-19:** **4.0 and Batch B (4.1 to 4.8) are built** (LOGS). The fund
+now acts on paper: a mandate authorizes it, orders are written before they are
+attempted, a chokepoint refuses what does not belong, fills are booked, and
+`make cycle-demo` takes the committed capture to a reconciling book. Next is Batch C,
+4.9 and 4.10, then the stop at 4.11. Phase 3 closed with 3.9: the exit run's
 signed decision rebuilds byte for byte (`tests/test_replay_cycle.py`). Before 4.0,
 the replay was made to read the config its cycle carries and to judge by the gate
 set its record names (LOGS, "3.9 hardened"), because 4.1 and 4.4 change both.
@@ -469,8 +472,8 @@ has moved since.
 
 | Batch | Units | Why together | Ends |
 |---|---|---|---|
-| **A** | 4.0 | The definitions every later unit calls. Built alone, so nothing else is computing the same values while they are. | Shown |
-| **B** | 4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 4.7 → 4.8 | Each consumes the one before: mandate, intent, state, admission, fill, ledger, positions, the cycle. Every shared value is 4.0's, so no two units define one. | 4.8, shown |
+| **A** | 4.0 | The definitions every later unit calls. Built alone, so nothing else is computing the same values while they are. | Built |
+| **B** | 4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 4.7 → 4.8 | Each consumes the one before: mandate, intent, state, admission, fill, ledger, positions, the cycle. Every shared value is 4.0's, so no two units define one. | Built; 4.8 shown |
 | **C** | 4.9 → 4.10 | Recovery over the states 4.3 writes and the fills 4.5 books. | 4.10, shown |
 | **stop** | **4.11** | The known answer: every primitive, checked by hand. | **Waits for the operator** |
 | **D** | 4.12 | It moves keys and splits `.env`: spend authority, with a live refused-swap test that needs authorizing. It goes after the stop, so the ledger is known-good first. | Shown |
@@ -496,18 +499,18 @@ booked.
 
 ## Open items the record already holds for Phase 4
 
-| Item | Where | Unit |
-|---|---|---|
-| The mandate's approval and expiry are placeholders; `allowed_assets` is provisional | `config/mandate.json`, LESSONS 2026-09-19 | 4.1 |
-| **S10:** the mandate gate checks the labelled asset, not the legs traded | LESSONS, the sweep | 4.4 |
-| **S11:** the snapshot's verdicts have no age limit | LESSONS, the sweep | 4.4 |
-| **S12:** one unmarkable holding stops the cycle with no signed record | LESSONS, the sweep | 4.8, with 3.7 |
-| **S13:** "authorizes" checks the envelope against the key it names | LESSONS, the sweep | 4.2, 4.4; publishing is 7.1 |
-| `config.load()` merges all of `.env` into the caller | LOGS open item 3 | 4.12 |
-| `cumulative_budget_usd` and `confirmation_depth` are null | `config/` | Phase 5 (5.2, 5.3) |
-| 4.11 is a stop, but `CLAUDE.md`'s list does not say so | the operator, 2026-09-19 | `CLAUDE.md`, owed |
-| S10 against today's mandate refuses every buy: USDG, the leg a buy sells, is not in it | the orientation, 2026-09-19 | 4.1's mandate, before 4.4 |
-| A quote matches an order in two shapes: `gates.fresh_quote` on the record's plan, `orders.quote_is_for` on an `Order` | 4.0 | 4.4 calls `quote_is_for` |
+| Item | Where | Unit | State |
+|---|---|---|---|
+| The mandate's approval and expiry are placeholders; `allowed_assets` is provisional | `config/mandate.json` | 4.1 | **closed:** approved by the operator, 7 days, the 35 markable stocks with ETH and USDG |
+| **S10:** the mandate gate checks the labelled asset, not the legs traded | the sweep | 4.1, 4.4 | **closed:** `gates.mandate_legs`, in gate set 2 |
+| **S11:** the snapshot's verdicts have no age limit | the sweep | 4.4 | **closed at decision:** 15 minutes, gate set 2. The chokepoint re-quotes but does not re-age the snapshot at submission: that gap is 4.9's, for an order found later |
+| **S12:** one unmarkable holding stops the cycle with no signed record | the sweep | 4.8, with 3.7 | **closed:** `decide.no_rebalance` signs a record that says why |
+| **S13:** "authorizes" checks the envelope against the key it names | the sweep | 4.2, 4.4 | **closed:** `config/keys.json`, checked by the signer, the intent, the chokepoint and the decision command. Publishing it to a buyer is 7.1's |
+| A quote matches an order in two shapes | 4.0 | 4.4 | **closed:** the chokepoint regates the record's plan through `gates.evaluate`, so the plan-shaped check is the only one it makes |
+| `config.load()` merges all of `.env` into the caller | LOGS open item 3 | 4.12 | open |
+| `cumulative_budget_usd` and `confirmation_depth` are null | `config/` | Phase 5 | open: the null live budget blocks every live order, which is what it is for until 5.2 |
+| 4.11 is a stop, but `CLAUDE.md`'s list does not say so | the operator, 2026-09-19 | `CLAUDE.md` | owed: outside this batch's paths, again |
+| The paper book opens with `capital_usd` of USDG: 200 USDG, worth $199.98 at the exit run's mark | 4.8 | the operator | open: chosen at 4.8 because paper cash is USDG; 4.11's fixture will use the same rule |
 
 ## What Phase 4 ends with
 
