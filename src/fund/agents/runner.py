@@ -50,7 +50,8 @@ from typing import Any, Mapping, Protocol, Sequence
 
 from fund import config, credentials
 from fund.adapters import bankr_llm
-from fund.agents import analyst
+from fund.agents import analyst, show
+from fund.store import reports as report_store
 
 SRC = Path(__file__).resolve().parents[2]
 
@@ -171,9 +172,28 @@ class _Events:
             log.write(json.dumps({"at": _now(), **event}, sort_keys=True) + "\n")
 
 
+def report_record(result: Mapping[str, Any], cycle: str) -> dict[str, Any] | None:
+    """What the report store keeps of one seat's turn (2.7): the reply exactly as the
+    model wrote it, whether it was accepted and why not, and where it came from.
+    None when no reply arrived, as with a timeout or a refusal from the gateway."""
+    text = show.reply_text(result)
+    if not text:
+        return None
+    last = (result.get("attempts") or [{}])[-1]
+    return {"seat": result.get("seat"), "agent": result.get("agent"),
+            "snapshot_sha256": result.get("snapshot_sha256"), "text": text,
+            "text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+            "status": result.get("status"), "accepted": result.get("status") in ("ok", "no_call"),
+            "refusals": list(last.get("refusals") or ()), "report": result.get("report"),
+            "cycle": cycle, "request_id": last.get("request_id"), "sent_at": last.get("at"),
+            "brief_files": result.get("brief_files"), "brief_sha256": result.get("brief_sha256"),
+            "cost": result.get("cost")}
+
+
 def run_cycle(snapshot_path: Path, key_source: KeySource, *, cycle_dir: Path,
               settings: Settings, seats: Sequence[str] | None = None,
               environ: Mapping[str, str] | None = None,
+              store: report_store.ReportStore | None = None,
               python: str = sys.executable) -> dict[str, Any]:
     """Fan the seats out on one snapshot and collect every outcome. Raises only
     SpendAuthorityError, and only before anything has started."""
@@ -220,7 +240,11 @@ def run_cycle(snapshot_path: Path, key_source: KeySource, *, cycle_dir: Path,
                        "reason": killed or "crashed",
                        "detail": killed and f"killed at the {killed}" or stderr[-600:]}
         key = held[seat].key
-        finish(seat, json.loads(json.dumps(outcome).replace(key, "[GATEWAY_KEY]")))
+        outcome = json.loads(json.dumps(outcome).replace(key, "[GATEWAY_KEY]"))
+        record = report_record(outcome, cycle_id) if store is not None else None
+        if record is not None:
+            outcome["report_id"] = store.put(record)
+        finish(seat, outcome)
 
     while queue or running:
         over = time.monotonic() - cycle_started > settings.cycle_deadline_s
@@ -278,6 +302,7 @@ def run_cycle(snapshot_path: Path, key_source: KeySource, *, cycle_dir: Path,
 # --- the live entry point (unit 2.6) -------------------------------------------------------------
 
 LIVE_CYCLES = SRC.parent / "fixtures" / "live" / "cycles"  # gitignored, beside the live captures
+LIVE_REPORTS = SRC.parent / "fixtures" / "live" / "reports"  # the report store, gitignored
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -334,6 +359,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     cycle_dir = args.cycle_dir or LIVE_CYCLES / datetime.now(timezone.utc).strftime(
         "%Y%m%dT%H%M%SZ")
     cycle = run_cycle(args.snapshot, keys, cycle_dir=cycle_dir, settings=settings,
+                      store=report_store.ReportStore(LIVE_REPORTS),
                       seats=chosen, environ=environ)
     print(f"\ncycle     {cycle['cycle']}  in {cycle_dir}")
     for seat, slot in cycle["seats"].items():

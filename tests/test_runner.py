@@ -20,6 +20,7 @@ import pytest
 
 from fund import credentials
 from fund.agents import analyst, runner
+from fund.store import reports
 
 REPO = Path(__file__).resolve().parents[1]
 FORMAT = (REPO / "planning" / "REPORT-FORMAT.md").read_text()
@@ -138,8 +139,9 @@ def test_four_workers_one_malformed_one_timed_out_one_abstaining_and_the_cycle_c
                  "execution-quality": [("report", MALFORMED)],
                  "price-integrity": [("hang", 10)]})
     started = time.monotonic()
+    store = reports.ReportStore(tmp_path / "store")
     cycle = runner.run_cycle(SNAPSHOT, shared_keys(), cycle_dir=tmp_path, environ=SHARED,
-                             settings=settings(g.url))
+                             settings=settings(g.url), store=store)
     took = time.monotonic() - started
     seats = cycle["seats"]
 
@@ -163,6 +165,13 @@ def test_four_workers_one_malformed_one_timed_out_one_abstaining_and_the_cycle_c
     # 2.5: four calls came back with a usage block, one timed out and has none.
     assert cycle["cost"]["usd"] == "1.057088" and cycle["cost"]["calls"] == 5
     assert cycle["cost"]["calls_of_unknown_cost"] == 1 and cycle["cost"]["is_estimate"] is True
+    # 2.7: every reply that arrived is stored, accepted or refused; the hung seat's is not.
+    assert "report_id" not in seats["price-integrity"]
+    assert store.text(seats["price-trend"]["report_id"]) == example("price-trend")
+    assert store.get(seats["price-trend"]["report_id"])["accepted"] is True
+    assert store.text(seats["cross-asset-macro"]["report_id"]) == no_calls("cross-asset-macro")
+    refused = store.get(seats["execution-quality"]["report_id"])
+    assert refused["text"] == MALFORMED and refused["accepted"] is False and refused["refusals"]
     assert cycle["counts"] == {"ok": 1, "no_call": 1, "failed": 2}
     assert took < 8, "the four ran together, not one after another"
     firsts = [min(r["at"] for r in g.requests if r["seat"] == s) for s in SEATS]
@@ -366,11 +375,14 @@ def test_confirm_runs_one_cycle_with_the_key_from_the_env_file(env_file, gateway
     env_file(FAKE_ENV)
     g = gateway({"price-integrity": [("report", no_calls("price-integrity"))]})
     monkeypatch.setattr(runner.Settings, "from_config", classmethod(lambda cls: settings(g.url)))
+    monkeypatch.setattr(runner, "LIVE_REPORTS", tmp_path / "store")  # never the real live store
     assert runner.main(["--snapshot", str(SNAPSHOT), "--seats", "price-integrity",
                         "--retries", "0", "--cycle-dir", str(tmp_path / "cycle"),
                         "--confirm"]) == 0
     assert len(g.requests) == 1 and g.requests[0]["key"] == FAKE_ENV["BANKR_LLM_KEY"]
     cycle = json.loads((tmp_path / "cycle" / "cycle.json").read_text())
     assert cycle["seats"]["price-integrity"]["status"] == "no_call" and cycle["partial"] is False
+    stored = reports.ReportStore(tmp_path / "store")
+    assert stored.text(cycle["seats"]["price-integrity"]["report_id"]) == no_calls("price-integrity")
     out = capsys.readouterr().out
     assert "partial   False" in out and FAKE_ENV["BANKR_LLM_KEY"] not in out
