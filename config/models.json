@@ -8,12 +8,12 @@
   "risk_model": null,
   "_model_resolved_by": "unit 2.4, informed by unit 1.7 and by the 0.9 floor, which priced the same tokens across the catalogue (findings F0.9.5)",
 
-  "max_output_tokens": null,
-  "_max_output_tokens_note": "Null, so replies are uncapped and no deadline can be derived from a cap. 1.7's analyst replies billed 7,725 and 9,087 output tokens, about 37-50% of it absent from the reply text (inferred: hidden reasoning, F1.7.5). Recommended at 1.7, not set: about 12,000.",
-  "worker_deadline_seconds": 120,
-  "_worker_deadline_note": "Provisional. One analyst call took 58 s at the 0.9 floor (F0.9.1). Against a real snapshot, 1.7 measured 62.4 and 75.0 s at ~121 output tokens/s, while 0.9's rate was ~17, so a reply like 1.7's could take ~535 s. Recommended at 1.7, not set: at least the transport timeout plus a margin, e.g. 630 (research/findings.md F1.7.4). It is shorter than transport_timeout_seconds (180); see that note.",
-  "transport_timeout_seconds": 180,
-  "_transport_timeout_note": "Provisional (decision before unit 1.1). It exceeds the 58 s measured for one analyst call (findings F0.9.1), because a client-side timeout is still billed and is a cost with no report (F0.9.3). It is longer than worker_deadline_seconds (120), so inside the 2.4 runner the deadline fires first and this never does. That interaction is recorded in tracker/LESSONS.md and left for 2.4 to resolve. 1.7 measured 62-75 s against a real snapshot, and recommends at least 600 s, derived from an output cap and the slowest rate measured (F1.7.4); not set here, because the value is 2.4's.",
+  "max_output_tokens": 12000,
+  "_max_output_tokens_note": "Set to 12,000 (DECISION after 1.7, tracker/LESSONS.md 2026-09-18), about 1.3 times the largest reply 1.7 measured: 9,087 output tokens billed, about 37-50% of it absent from the reply text (inferred: hidden reasoning, research/findings.md F1.7.5). The deadlines below are derived from it.",
+  "worker_deadline_seconds": 630,
+  "_worker_deadline_note": "Set to 630 s (DECISION after 1.7). It exceeds transport_timeout_seconds, so the transport ends a call and the worker still has time to record it: the old 120 s fired before the 180 s transport timeout could. 1.7 measured analyst calls at 62.4 and 75.0 s at ~121 output tokens/s; 0.9 measured ~17/s (F0.9.1), and a 9,087-token reply at that rate takes ~535 s (F1.7.4).",
+  "transport_timeout_seconds": 600,
+  "_transport_timeout_note": "Set to 600 s (DECISION after 1.7). A call cut off on our side is still billed and returns nothing (F0.9.3), so this must exceed the real call, not the hoped-for one: 600 s covers a 9,000-token reply at the slowest rate measured, 535 s. At the full 12,000-token cap and that rate the bound would be ~710 s; the cap is the backstop, not the expectation (F1.7.4).",
   "context_budget_tokens": null,
   "_context_budget_note": "Must cover every accepted full report plus the sized plan and the risk output. If the bundle does not fit, the cycle vetoes rather than summarizing (planning/PLAN.md section 2 invariant 3).",
   "_budgets_resolved_by": "units 2.4 and 3.6, informed by unit 1.7"
