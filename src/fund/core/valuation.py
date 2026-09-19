@@ -38,8 +38,9 @@ volume while feed and quote agreed to 20 bps (F0.4.5), and the veto fires there.
 LESSONS 2026-09-18). The feed is frozen at its last round while the pools trade
 on, so divergence then measures market movement since the close. 1.4's proof
 vetoed MSTR at -122.87 bps on a Saturday, and MSTR tracks bitcoin. So the mark
-stays at the last round, and the divergence is returned as a `Finding` that the
-snapshot entry carries and the decision record (3.7) must carry onward. The
+stays at the last round, and the divergence is returned as a `Finding`. The
+snapshot entry carries it only when it is past the open-session limit, and the
+decision record (3.7) must carry it onward (DECISIONs, LESSONS 2026-09-18). The
 caller says whether the mark's feed is inside its inferred closed span, because
 the span is config that `core/` is handed, never read.
 
