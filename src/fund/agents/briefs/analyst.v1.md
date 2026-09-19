@@ -50,6 +50,11 @@ Every figure ends with the snapshot field it came from, in brackets:
 - `[timeline]`: the whole series, for a figure computed from it;
 - several at once, separated by commas: `[timeline 2026-08-20, mark.price_usd]`.
 
+When a figure belongs to another asset, name that asset in the citation:
+`[META timeline 2026-08-20]`, not `[timeline 2026-08-20]` on another asset's call.
+Always write a field's full path as the snapshot nests it: `[quote.swap_impact_bps]`,
+not `[swap_impact_bps]`.
+
 A figure that is a single field must be that field's value, to the precision you
 write. Code checks each one against the snapshot, and a figure that does not match
 refuses the whole report. A computed figure, such as a change, a correlation or a
