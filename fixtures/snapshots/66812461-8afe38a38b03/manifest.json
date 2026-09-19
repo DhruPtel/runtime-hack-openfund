@@ -1,0 +1,110 @@
+{
+ "about": "Every answer one live build heard, at the transport, and every reading of each source's clock. `--replay` rebuilds the snapshot from these alone, with every connection refused, and it must be byte-identical to snapshot.json.",
+ "block": {
+  "chain_id": 4663,
+  "hash": "0x615034c40fffd23f7b928ed145673bb6b23bf24db4e01f4a46bcc84bd71e8bde",
+  "number": 66812461,
+  "time": "2026-09-19T04:54:53Z"
+ },
+ "captured": {
+  "commit": "75fa98502b3a601908a815d09e66e7ff671a68fa",
+  "finished_at": "2026-09-19T04:57:05Z",
+  "started_at": "2026-09-19T04:54:50Z",
+  "uncommitted_changes_in_src_or_config": false
+ },
+ "clock_readings": {
+  "chain": 19998,
+  "gecko": 2,
+  "run": 1,
+  "venue": 35
+ },
+ "endpoints": {
+  "BANKR_API": "https://api.bankr.bot",
+  "GECKOTERMINAL": "https://api.geckoterminal.com/api/v2",
+  "RPC_4663_MAINNET": "a declared credential: kept by name only"
+ },
+ "exchanges": {
+  "chain": 189,
+  "gecko": 2,
+  "venue": 35
+ },
+ "files": {
+  "chain.jsonl.gz": {
+   "bytes": 23577463,
+   "sha256": "a8f32c3913cd6501e27e72c76877df9cffee965b0d43d004d3824536024ca9ef"
+  },
+  "clock.json.gz": {
+   "bytes": 340673,
+   "sha256": "8086454af61b7e17ca28f0716ec5ab7eb0e3ca4bb655e7e1a9d971c10da254bb"
+  },
+  "config/chain.json": {
+   "bytes": 3594,
+   "sha256": "9a0dd26ca9458ba0e85ddb6e66fdcd0b2a51ac3d7e0356c82aec7061a091898a"
+  },
+  "config/gecko.json": {
+   "bytes": 1449,
+   "sha256": "af1aca97f02f9f0cb38b9d62c2dfd8d1a7f8f32d61d94b19a07179e228a8ef4c"
+  },
+  "config/mandate.json": {
+   "bytes": 1022,
+   "sha256": "9e1a19e0d83757a6403bae914e1a4360999af3f0ee5b8895315277e7cccd0e05"
+  },
+  "config/quote.json": {
+   "bytes": 1311,
+   "sha256": "2fdb8b8341f3fd4fa3f360984a84e4adf3d9e6c1f09f467ad0409607e728a482"
+  },
+  "config/registry/feed_map.json": {
+   "bytes": 12221,
+   "sha256": "07bf5cde173a81309b7365ba708f7496e010aa8d38dafdd32d36fc8d2cf52ed9"
+  },
+  "config/registry/pins.json": {
+   "bytes": 2268,
+   "sha256": "ba9167449f7f021f4910e177fc89b6a158031dd10c7fb1120ff7ba19728b5291"
+  },
+  "config/sessions.json": {
+   "bytes": 2450,
+   "sha256": "dc6c2d808fb5e167189d52750d39bf993b26bba600cfc79b43faf9c78fc247b3"
+  },
+  "config/thresholds.json": {
+   "bytes": 4014,
+   "sha256": "f98bed3c3c57e0928cd30d17a96e8fcaa9cb05bf9022fc6d860475092f32412f"
+  },
+  "gecko.jsonl.gz": {
+   "bytes": 36227,
+   "sha256": "829f07a4c44c0e836dfc33c0e77e030d817445f0498b9d4d22fd1c5719d501d8"
+  },
+  "snapshot.json": {
+   "bytes": 189098,
+   "sha256": "8afe38a38b033c4be45cafb96df4fe670c6b99b7dcbd9575bffe511eb8807ec9"
+  },
+  "venue.jsonl.gz": {
+   "bytes": 66243,
+   "sha256": "5b17010e36fdc6c1c957d135ed6534732cb6f2edb48bc73c3d776fa9038eb413"
+  }
+ },
+ "format": "openfund.capture/1",
+ "headers_dropped": [
+  "set-cookie"
+ ],
+ "pinned": {
+  "feed_directory": "2ae1ea5f432cab06904134759033d7c6434c323171f954120c4933fdde42e85d",
+  "held_in": "config/registry/, under their sha256, and not copied here",
+  "issuer_registry": "442718b5843e448e46a3deceab9f2d92f8719c0a4b1a77942d5d6da8098c8b4b"
+ },
+ "redaction": {
+  "credentials_checked": [
+   "[REDACTED:BANKR_KEY_EXEC]",
+   "[REDACTED:BANKR_KEY_READ]",
+   "[REDACTED:BANKR_LLM_KEY]",
+   "[REDACTED:RPC_4663_MAINNET]",
+   "[REDACTED:RPC_4663_TESTNET]",
+   "[REDACTED:SIGNING_KEY]"
+  ],
+  "strings_masked": 0
+ },
+ "replay": "PYTHONPATH=src python3 -m fund.run.snapshot --replay fixtures/snapshots/66812461-8afe38a38b03",
+ "snapshot": {
+  "bytes": 189098,
+  "sha256": "8afe38a38b033c4be45cafb96df4fe670c6b99b7dcbd9575bffe511eb8807ec9"
+ }
+}
