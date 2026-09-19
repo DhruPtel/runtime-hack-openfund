@@ -502,3 +502,138 @@ approved at 2.1.
 **The run:** four calls, about $1.06, on the committed capture or a fresh live
 snapshot. Whether the gateway serves four accounts' calls at once without
 throttling is unmeasured, and this run measures it.
+
+---
+
+## The four null values that block 2.4
+
+These are proposals. 2.4 writes them into config once approved.
+
+| Key | Value | Why, from the record |
+|---|---|---|
+| `cadence.cycle_deadline_seconds` | **1,800** | A snapshot build takes about 150 s. The analysts run in parallel, bounded at 630 s. Risk is one call, also bounded at 630 s. Re-quoting a plan of at most 8 orders takes seconds. The bounds sum to about 1,410 s; the rest is margin. A typical cycle is about 4 minutes: 150 + 75 + 8 s. The deadline matters only in the tail. |
+| `cadence.retry_budget_per_worker` | **1** | §9: a malformed reply retries once, then the worker is recorded as failed. A timeout is never retried, because it is billed (F0.9.3) and has used 600 s. After a typical 62–75 s first call about 550 s remain. That covers a retry at 1.7's fast rate (about 121 tokens/s) but not at 0.9's slowest (about 17 tokens/s). So a slow retry can be cut off and billed. This is stated, not hidden. |
+| `models.risk_model` | **`claude-sonnet-5`** | 1.7 measured a risk call on it: $0.048, 7.7 s. It matches the analysts, so there is one pricing basis and one set of measurements. The 180× spread across models (F1.7.7) is a later lever, pulled with evidence. |
+| `models.context_budget_tokens` | **70,000** | Invariant 3's bundle is every full report, the sized plan and the risk output. Four replies at the 12,000-token cap are 48,000 at most. The plan is at most 8 orders plus the demonstration leg, each with its asset's three prices and findings; about 8,000 with the risk brief. Risk's own reply is 12,000 at most. That totals about 68,000. |
+
+**On the context budget.** It is measured before the call from the bundle's
+bytes divided by 1.8, the lower of the two measured ratios, so it overcounts
+and errs toward vetoing. The gateway has no token-count endpoint (F1.7.2).
+
+**This corrects SIMPLIFICATION.md's proposed 60,000,** which left out the risk
+reply that the config note says the budget must cover. The fold is owed.
+
+It is well inside the model's window: 1.7 sent 185,168-token prompts. So it is
+the invariant's bound, not the model's limit.
+
+---
+
+## The page: pull a minimal slice forward
+
+**Recommendation: yes.** Build 7.6's first slice after 2.4 and before 2.6, as
+planned above.
+
+**Why:**
+- **Watched, not read.** Without it, the swarm's first real run (2.6), the drill
+  (2.8), and the stops at 2.1, 3.8, 5.4, 6.6 and 7.5 are shown as files and
+  terminal output.
+- **If time runs out before Phase 7, there is no page at all.** The demo cannot
+  be terminal output. This is the strongest reason.
+- **It shapes the event log.** A second reader of 2.4's log, arriving now, keeps
+  the log's shape honest early.
+
+**What it costs:**
+- **Now:** one L unit. That is one static file, no dependency, no server beyond
+  the standard library, and no network. A guess is about an hour. That is not
+  measured.
+- **Later:** a small panel per phase:
+  - Phase 3: weights, plan, gates and the verdict;
+  - Phases 4 and 5: orders and the transaction link;
+  - Phase 6: the books;
+  - Phase 7: the preview and the buy link.
+
+  7.6 then becomes making the page public and switching it to previews, not
+  building it.
+- **Risk:** L. The page reads only the run directory, and the events hold no
+  secret.
+
+**What it changes:** the strict unit order decided on 2026-09-19. The first
+slice of one Phase 7 unit moves into Phase 2. That is the operator's call. If
+it is declined, 2.6 and 2.8 are shown as files and the plan is otherwise the
+same.
+
+---
+
+## Where a minimal version would break an invariant
+
+None is proposed. Each is named so it stays out:
+- **Analyst processes that call `config.load()` as written** would hold every
+  secret in their environment: invariant 1. 2.4 builds each environment
+  instead.
+- **A runner that passes its own environment to children** breaks invariant 1
+  the same way. It is the first thing 2.4's H proof breaks on purpose.
+- **Briefs that embed a re-serialised snapshot** instead of its bytes could
+  differ between seats: invariant 2. 2.3 appends the bytes and tests that they
+  are identical.
+- **A store that keeps only a summary** could not replay from recorded outputs:
+  invariant 7. 2.7 keeps the raw reply.
+
+**Not an invariant, but ruled out by the operator:** one shared key or wallet
+for the four seats. The only exception is 2.6's single quality check on the
+fund's key, labelled, and only if 2.0 has not finished.
+
+---
+
+## What Phase 2 ends with
+
+**What a judge could watch.** One command takes the committed weekend capture,
+or a fresh live snapshot, and starts four analyst processes:
+`price-trend`, `cross-asset-macro`, `execution-quality` and
+`price-integrity`.
+- Each runs on its own Bankr account, with its own wallet address.
+- Each reads the same snapshot bytes, and the hash is shown.
+
+With the page pulled forward, the judge sees:
+- **the four seats thinking in parallel** for about a minute;
+- **each report landing:** a short summary; calls in its seat's vocabulary,
+  buy, hold or sell, or proceed or caution; key values from the snapshot; and
+  the call's cost and latency, paid from that agent's own credits;
+- **a seat that fails or hangs** shown as failed, with the cycle marked
+  partial.
+
+Without the page, the same run is files and terminal output. Behind all of it
+sits the hand-written format approved at 2.1.
+
+**What still would not exist.** Nothing combines the reports. There are:
+- no weights, no plan and no gates;
+- no risk verdict;
+- no signed decision record;
+- no order and no execution, paper or live;
+- no books;
+- no x402 sale;
+- no public page.
+
+The reports are opinions with no consequence yet. Phase 2 also does not show
+that they are worth paying for. That judgment is 2.1's on the example, and 3.8's
+on real output.
+
+Identical calls differ by about 18%, so the same snapshot gives different
+reports on different runs. Replay uses the recorded outputs (invariant 7), not
+fresh calls.
+
+---
+
+## Owed outside this plan's paths
+
+- **The 2.1 stop:**
+  - `CLAUDE.md` ("Stop only at…"), PLAN §8, ROADMAP and SIMPLIFICATION's 2.1
+    row still say 2.1's stop was spent;
+  - the operator's instruction makes it a stop;
+  - the stops from Phase 2 are 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5.
+- **ROADMAP:** unit 2.0, and the 7.6 slice if approved.
+- **SIMPLIFICATION.md:** the context budget, 70,000 rather than 60,000.
+- **Built by the units themselves:**
+  - `config/analysts.json` (2.3);
+  - `credentials.py` and `.env.example` (2.4);
+  - the four config values (2.4);
+  - the first of the two `http.py` changes (2.4).
