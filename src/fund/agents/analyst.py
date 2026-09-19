@@ -104,9 +104,11 @@ KEY_VARIABLE = "OPENFUND_GATEWAY_KEY"
 
 def _attempt_record(number: int, at: str, reply: bankr_llm.Reply, price: Mapping[str, Any],
                     refusals: tuple = ()) -> dict:
-    """One call, as the record keeps it. Its cost is an estimate from its own usage
-    block (2.5). `at` is when it was sent, which is what places it in a usage window."""
+    """One call, as the record keeps it: the reply's text in full, exactly as the model
+    wrote it (what `agents/show.py` prints), and its cost, an estimate from its own
+    usage block (2.5). `at` is when it was sent, which places it in a usage window."""
     return {"attempt": number, "at": at, "elapsed_ms": reply.elapsed_ms,
+            "reply_text": reply.text,
             "http_status": reply.status, "error": reply.error,
             "finish_reason": reply.finish_reason, "usage": dict(reply.usage),
             "request_id": reply.request_id, "cost": bankr_llm.cost(reply.usage, price),
@@ -182,7 +184,7 @@ def run(job: Mapping[str, Any], key: str, *, send: Any = None,
                           report_text=verdict.report.text)
             break
         result.update(reason="invalid", detail="; ".join(str(r) for r in refusals),
-                      last_reply_text=reply.text[:20000])
+                      last_reply_text=reply.text)
         user = (brief.user + "\n\nYour previous reply was refused: "
                 + "; ".join(str(r) for r in refusals)
                 + "\nWrite the whole report again, in the required format.\n")
