@@ -39,6 +39,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import urllib.request
 import uuid
 from pathlib import Path
 
@@ -111,22 +112,29 @@ class Masked:
         return entry
 
 
-def rpc(url: str, method: str, params: list) -> str:
-    capture = _capture.call(label=method, url=url, header_name="Accept",
-                            header_value="application/json", method="POST",
-                            json_body={"jsonrpc": "2.0", "id": 1, "method": method,
-                                       "params": params})
-    return (_capture.as_json(capture) or {}).get("result")
+def rpc(url: str, method: str, params: list) -> int | None:
+    """One JSON-RPC read, as 0.10's probes send it (the public endpoints refuse
+    urllib's default User-Agent). None when it cannot be read: unknown, never zero."""
+    payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method,
+                          "params": params}).encode("utf-8")
+    request = urllib.request.Request(url, data=payload, headers={
+        "Content-Type": "application/json", "User-Agent": "openfund-probe/2.0"})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            result = json.loads(response.read().decode("utf-8")).get("result")
+        return int(result, 16) if result and result != "0x" else None
+    except Exception:
+        return None
 
 
 def balances(address: str, rpc_4663: str) -> dict:
     """What the agent wallet could spend from, read at the chain, not the portfolio (F0.7b.8)."""
     padded = address.lower().removeprefix("0x").rjust(64, "0")
-    usdc = rpc(BASE_RPC, "eth_call", [{"to": USDC_BASE, "data": "0x70a08231" + padded}, "latest"])
     return {
-        "eth_4663_wei": int(rpc(rpc_4663, "eth_getBalance", [address, "latest"]), 16),
-        "eth_base_wei": int(rpc(BASE_RPC, "eth_getBalance", [address, "latest"]), 16),
-        "usdc_base_units": int(usdc, 16) if usdc and usdc != "0x" else None,
+        "eth_4663_wei": rpc(rpc_4663, "eth_getBalance", [address, "latest"]),
+        "eth_base_wei": rpc(BASE_RPC, "eth_getBalance", [address, "latest"]),
+        "usdc_base_units": rpc(BASE_RPC, "eth_call",
+                               [{"to": USDC_BASE, "data": "0x70a08231" + padded}, "latest"]),
     }
 
 
@@ -178,10 +186,13 @@ def main(confirmed: bool) -> int:
     before = balances(address, rpc_4663)
     runs["before"] = before
     print(f"  {before}")
-    empty = before["eth_4663_wei"] == 0 and before["eth_base_wei"] == 0 and before["usdc_base_units"] == 0
+    # Zero on every chain, each read explicitly. An unreadable balance is None, not
+    # zero, so it blocks, as null does everywhere else in the fund.
+    empty = all(value == 0 for value in before.values())
     if not empty:
-        print("\nBLOCKED: the agent wallet is not empty, so a write could move value. Nothing sent.")
-        runs["blocked"] = "wallet not empty"
+        print("\nBLOCKED: the agent wallet is not read empty on every chain, so a write could "
+              "move value, or the read failed. Nothing sent.")
+        runs["blocked"] = "wallet not read empty"
     elif not confirmed:
         print("\nPre-flight only. No write was sent. Re-run with --confirm.")
     else:
