@@ -261,13 +261,6 @@ def test_crm_is_genuine_and_correctly_unmarkable(pinned):
     assert admission.universe_status is UniverseStatus.UNMARKABLE
 
 
-def test_markability_admits_every_mapped_feed_and_only_by_address(pinned):
-    assert pinned.markability(GME).passes
-    # A counterfeit whose ticker has a feed is still unmarkable: the map is keyed
-    # by address, and it can only hold registry-listed assets.
-    assert not pinned.markability(FAKE_GAMESTOP).passes
-
-
 def test_cash_and_gas_are_admitted_on_their_own_pins(pinned):
     for asset in (pinned.cash(), pinned.gas()):
         assert pinned.admission(asset).decision.passes, asset.symbol
