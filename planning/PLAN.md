@@ -317,7 +317,9 @@ what each finding changed, is in `PHASE-0-1.md`.*
   floor): a realistic analyst prompt against the real snapshot from 1.6. Record
   input and output tokens, latency and cost over at least two calls. Multiply
   into a cycle budget at four analysts plus risk, a daily cost, and a
-  per-request endpoint price.
+  per-request endpoint price. *Measured:* $0.454 an analyst call and $1.87 a
+  cycle at Sonnet 5, uncached; the timeline is two thirds of the input
+  (findings §1.7). The price awaits the operator.
 - **1.8** Held-but-untradeable handling: an asset out of the buy universe remains
   a holding with explicit valuation and execution status. There are five ways
   out, each with its own status — listed-but-not-ACTIVE among them — and USDG
@@ -596,6 +598,13 @@ bundle. Insufficient inference capacity fails the cycle closed rather than
 half-running it. Auto top-up, if enabled, is spend authority and stays under the
 mandate.
 
+**Measured at 1.7** (findings §1.7): at `claude-sonnet-5`, uncached, a cycle of
+four analysts and one risk call is **$1.87**, and $56 over 30 days. The snapshot's
+timeline is 53% of that. The levers, each priced and none yet pulled:
+- the model, a 180× span per call;
+- caching the shared snapshot, about $0.96 a cycle, untested;
+- a shorter history, about $0.50 a cycle saved by halving it.
+
 ---
 
 ## 11. Decisions already made
@@ -656,7 +665,7 @@ the fund is readable without opening a JSON file.
 
 Both platform caps ($500/24h, $500/tx) sit well above our sizing, so they are a
 backstop rather than a binding constraint. The endpoint price is provisional
-until unit 1.7 reports real per-cycle inference cost.
+until unit 1.7 reports real per-cycle inference cost. *1.7 reported:* at $1.87 a cycle, covering one cycle takes 37 records a day at $0.05 (findings F1.7.3). The price is the operator's to confirm or revise.
 
 ---
 

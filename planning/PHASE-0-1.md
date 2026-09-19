@@ -1023,6 +1023,23 @@ measure:
 confirmed or revised the $0.05 price against them. The price stays provisional
 until then (0.11 decision).
 
+**Measured** by `probes/analyst_cost.py` against snapshot `7eba6212…` (335,294
+bytes, 4,628 rounds), four calls at `claude-sonnet-5` (`research/findings.md`
+§1.7):
+- **Cost:** $0.454 an analyst call (185,168 in; 7,725 and 9,087 out;
+  62–75 s), $0.048 a risk call, **$1.87 a cycle**, $56 over 30 days. That is
+  28 times the 0.9 floor.
+- **Price:** covering one cycle at $0.05 takes 37 records.
+- **The timeline** is 66.8% of the input and 53% of a cycle.
+- **The configured timeouts** cover these calls, but are not sized for an
+  uncapped reply at the slowest rate measured. Values are recommended in
+  F1.7.4 and left for 2.4.
+- **Reconciliation:** the balance and a settled `/v1/usage` window agree to
+  the last digit.
+
+The numbers are in findings. **The $0.05 price has not yet been confirmed or
+revised by the operator**, so this unit is not done.
+
 **Risk:** the prompt is still a draft until checkpoint 2.1, so the number is a
 floor, and retries and the risk bundle come on top. Latency, not cost, was the
 binding number at 0.9 (F0.9.1).
