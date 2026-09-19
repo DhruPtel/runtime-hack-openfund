@@ -140,7 +140,6 @@ MUTATIONS = {
     "asset: not in the snapshot": (AMD, "0x" + "0" * 39 + "1", "asset"),
     "asset: wrong symbol": (f"CALL AMD {AMD}", f"CALL AMZN {AMD}", "asset"),
     "asset: not tradeable": (f"CALL AMD {AMD}", f"CALL ASML {ASML}", "asset"),
-    "no-calls: both": ("\nCALL AMD", "\nNO CALLS\nCALL AMD", "no-calls"),
 }
 
 
@@ -458,3 +457,26 @@ def test_a_computed_figure_on_a_cited_line_is_computed_and_a_fabricated_one_is_n
     assert AMD_LINE in text
     v = verdict(text.replace(AMD_LINE, line, 1))
     assert v.ok is ok, v.refusals
+
+
+# --- S5: NO CALLS, however dressed, and beside calls ------------------------------------------------
+
+@pytest.mark.parametrize("line", ["NO CALLS", "NO CALLS.", "**NO CALLS**", "`NO CALLS`",
+                                  "No calls.", "  NO CALLS  "])
+def test_a_whole_report_abstention_however_it_is_written(line):
+    text = no_calls_example().replace("\nNO CALLS", "\n" + line, 1)
+    v = verdict(text, "cross-asset-macro")
+    assert v.ok and v.report.no_calls, (line, v.refusals)
+
+
+def test_no_calls_beside_calls_means_none_beyond_them():
+    """At the sweep this refused the report: `NO CALLS and CALL lines in one report`."""
+    text = example("price-trend") + "\nNO CALLS on anything else.\nNO CALLS\n"
+    v = verdict(text)
+    assert v.ok and not v.report.no_calls and len(v.report.calls) == 5
+
+
+def test_a_report_with_no_call_and_no_abstention_is_still_refused():
+    v = verdict(no_calls_example().replace("\nNO CALLS", "\nNothing to add.", 1),
+                "cross-asset-macro")
+    assert rules(v) == {"no-calls"}

@@ -8,7 +8,8 @@ A report is one plain text, in the format approved at 2.1
 
 Everything else is prose, for people and for the risk agent. A report with no
 CALL line must say `NO CALLS`, so an empty report is a decision rather than a
-reply cut short.
+reply cut short. The line may be dressed (`NO CALLS.`, `**NO CALLS**`), and beside
+calls it means none beyond them (the 3.8 sweep's S5).
 
 Two steps. Both return named refusals rather than raising, so a bad report fails
 its own worker and never the cycle:
@@ -278,6 +279,12 @@ def _bare(line: str) -> str:
     return bare
 
 
+def _no_calls(line: str) -> bool:
+    """The abstention line, however it is dressed: `NO CALLS`, `NO CALLS.`,
+    `**NO CALLS**`, `No calls.` (S5). A line that goes on after it is prose."""
+    return _bare(line).rstrip(".!:;").strip().upper() == NO_CALLS
+
+
 def _dedent(line: str, indent: int) -> str:
     """A line of an indented CALL block, with the block's indentation removed, so its
     figure lines and their continuations read as they would unindented."""
@@ -322,7 +329,7 @@ def parse(text: str) -> tuple[Report | None, tuple[Refusal, ...]]:
             current = []
             indent = len(line) - len(line.lstrip(" "))
             blocks.append((index + 1, match, current))
-        elif line.strip() == NO_CALLS:
+        elif _no_calls(line):
             no_calls.append(index + 1)
             current = None
         elif current is None:
@@ -333,8 +340,7 @@ def parse(text: str) -> tuple[Report | None, tuple[Refusal, ...]]:
     has_call_line = bool(blocks) or any(r.rule == "call-shape" for r in refusals)
     if not has_call_line and not no_calls:
         refusals.append(Refusal("no-calls", "a report with no CALL line must say NO CALLS"))
-    if has_call_line and no_calls:
-        refusals.append(Refusal("no-calls", "NO CALLS and CALL lines in one report", no_calls[0]))
+    # Beside calls, NO CALLS says there are none beyond them: not a contradiction (S5).
 
     calls = tuple(
         Call(symbol=m.group(1), address=m.group(2).lower(), word=m.group(3),
