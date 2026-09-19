@@ -2782,3 +2782,33 @@ Each primitive was attacked as it was built: 60 rules broken in a copy across
   to re-admit or refuse; the paper book opens with `capital_usd` of USDG, 200 USDG
   worth $199.98, which 4.11 will use and the operator may change.
 **Affects:** 4.9, 4.11, 4.12, 6.1; `CLAUDE.md`, still owed 4.11's stop.
+
+## 2026-09-19 — The audit's rules, applied at once: 12 breaks where Batch B had 61
+*The operator's, after the Batch B audit.*
+`CLAUDE.md` now carries six pace rules: one test per rule, break-to-prove for money
+and identity only, one definition with many call sites, no function without a caller,
+no module because a plan named a unit, and no precision without a requirement.
+
+**What they did to this batch.** 4.9, 4.10 and 4.12 are three units in **two**
+modules: the lock and the startup are one file, because both are what a runner does
+before a cycle, on one connection. They added **8 tests and 12 broken rules**, against
+Batch B's 97 and 61 for eight units. Every break is spend authority — the lock, what
+settles an order left in flight, the treasurer's key never being sent — and nothing
+was broken to prove a storage or display rule.
+
+**What the rules cost.** Two things the old discipline would have built are gone:
+`ledger.booked` is the only new reader, and it has a caller before it was written; and
+the "confirmed by its fill" branch of the startup is kept even though a paper order
+cannot reach it, because dropping it would let a fill sit with a failed order. That
+last one is the rules' edge: *no function without a caller* is about what a plan names,
+not about a branch that keeps the books honest.
+
+**Measured, not asserted** (4.12): both analyst keys were sent one real swap request
+and refused — `BANKR_KEY_READ` by read-only, `BANKR_LLM_KEY` by the Wallet API toggle.
+Nothing was spent. Invariant 1 now rests on a measurement at every layer: the toggles
+(0.2), the environment each process is given (2.4, 4.12), and the wire.
+
+**Owed:** `planning/` still calls 4.10 the crash drill; the operator reassigned it to
+the lock here, and the drill is covered by the kill tests at 4.3 and 4.8.
+**Affects:** 4.9, 4.10, 4.12, 4.11; `CLAUDE.md`, `planning/PHASE-4.md`, ROADMAP,
+SIMPLIFICATION.

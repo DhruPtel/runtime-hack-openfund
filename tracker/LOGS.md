@@ -1237,9 +1237,54 @@ snapshot cannot mark still signs a no-rebalance record that says why. Verified: 
 rules broken in a copy, each caught, among them orders written as they are attempted
 rather than before, which the kill drill catches. **Shown, not stopped.**
 
+## The audit's four cuts, and the rules that follow them
+**Date:** 2026-09-19 · **Commits:** 4992d62, ef51a93, a0afb5b, cb7fdab, and `CLAUDE.md`
+
+The Batch B audit found 33 rules expressed 61 times, six ledger readers and one table
+nothing called, and four rules defined twice. `CLAUDE.md` now carries the six pace
+rules that follow, and its stop list finally names 4.11. Four cuts taken, and no more:
+`order_moves` and `history()`, which nothing read; the six ledger readers, since every
+consumer reads the book `value()` returns, which also ends the two ways unrealised was
+summed; S12's no-rebalance record, which now reuses the head and tail every decision
+shares instead of repeating 62 lines; and `orders.quote_is_for`, the second definition
+of a rule `gates.fresh_quote` owns. The module folding and the exact arithmetic stay:
+the unit-to-module map is worth more for now, and 4.11 is what cashes the arithmetic
+in. Two tests went with them, 756 to 754.
+
+## 4.9, 4.10 — The lock, and what the last run left
+**Date:** 2026-09-19 · **Commit:** 5ad09fd
+
+One module, because both are what a runner does before a cycle is accepted, on one
+connection (`CLAUDE.md`: a plan naming a unit is not a reason for a module).
+`run/startup.py` holds the single-owner lock — a second runner refuses, and a row left
+by a process that died on this host is taken over, never one from another host — and
+settles what the last run left: an order in flight is confirmed when the journal holds
+its fill and failed when it does not, because a paper fill and its state are one
+write; a `prepared` order is refused as stale, since nothing was sent and the evidence
+is a cycle old, which is S11's rule at a restart; and a live order in flight refuses
+the cycle, because its outcome is on the chain and reading it is 5.3's. Verified H:
+eight rules broken in a copy, each caught, among them the lock never taken and a
+holder elsewhere taken over.
+
+## 4.12 — The treasurer alone, and the keys that cannot spend
+**Date:** 2026-09-19 · **Commits:** 17bc915, d1f7b42, 14eae92
+
+`python -m fund.treasurer.execute` is the treasurer's own process: it reads the
+decision's approved orders from SQLite, admits or refuses each, fills the paper ones
+and books them. The cycle starts it from an empty environment and hands it no
+credential — it reported being given `PATH`, `PYTHONPATH` and `LC_CTYPE`, and loading
+`SIGNING_KEY` itself — and `config.env_file_for` reads the treasurer's own file where
+the operator splits them. Then the claim invariant 1 makes, measured rather than
+asserted: one real swap request per analyst key, authorized by the operator and costing
+nothing because both were refused — `BANKR_KEY_READ` 403 "Read-only API key … cannot
+execute swaps", `BANKR_LLM_KEY` 403 "Wallet API access not enabled"
+(`python -m fund.run.isolation --live`). Verified H: four rules broken in a copy, each
+caught, among them the treasurer's key being sent and a request that went through
+counted as refused.
+
 ---
 
-## State at close — 2026-09-19, Batch B built: the fund acts on paper; next is 4.9
+## State at close — 2026-09-19, Phase 4 built but for 4.11, which is a stop
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -1253,16 +1298,17 @@ it. Where this note and git disagree, git is right.
 - Keys, signing and spend authority keep their full guard.
 - The operator is stopped at 2.1, 3.8, 4.11, 5.4, 6.6, 7.5 and 8.5. 2.1 was
   approved, and past 3.8 the operator asked for Phase 3's close. Then for the
-  orientation's fixes and 4.0, and then for Batch B, 4.1 to 4.8, stopping after it.
+  orientation's fixes and 4.0, then for Batch B, 4.1 to 4.8, then for the audit, its
+  four cuts, and 4.9, 4.10 and 4.12. **4.11 is next, and it is a stop.**
 
 **The deadline** was given at about 11:00Z on 2026-09-19 as "about 16 hours":
 about Sun 2026-09-20 03:00Z. That is this note's arithmetic, not a time the
-operator wrote down. This note was written at about 22:45Z.
+operator wrote down. This note was written at about 23:40Z.
 
 **Check it in a minute.** Nothing here spends unless marked. The `python3 -m`
 commands need `PYTHONPATH=src`.
 - `git log --oneline -25` and `git status -sb`.
-- `make test`: 756 passed when this was written, in about 35 s. The runner and
+- `make test`: 762 passed when this was written, in about 37 s. The runner and
   risk tests start real subprocesses against a fake gateway on 127.0.0.1.
 - `make cycle-demo`: two whole paper cycles on the committed capture and the exit
   run's four real reports, in about 8 s. A fake venue, a scripted risk vote and a
@@ -1288,6 +1334,9 @@ commands need `PYTHONPATH=src`.
   `--confirm`.
 - `python3 -m probes.keymap`: each key's measured capabilities, read-only. Run it
   before any live call.
+- `python3 -m fund.run.isolation [--live]`: one swap request per analyst key, to
+  measure that neither can transact. `--live` sends them; without it nothing is
+  sent. A refusal costs nothing, and a request that goes through is the finding.
 - `make replay` rebuilds the committed capture offline. `make check-env` names
   the credentials present. `make selftest` needs the RPC URL. `make snapshot`
   builds a live snapshot in about 2.5 minutes.
@@ -1324,6 +1373,9 @@ commands need `PYTHONPATH=src`.
   regates on a fresh quote, paper fills, a journal, positions derived from it, and
   one command that runs the whole cycle. Gate set 2 (S10, S11, the mandate's term)
   and records as `openfund.decision/3`.
+- **The audit, its four cuts, and `CLAUDE.md`'s six pace rules** (entry above).
+- **4.9, 4.10 and 4.12** (entries above): the lock and the startup, and the
+  treasurer in its own process, with both analyst keys measured refusing a swap.
 - **Decisions of 2026-09-19** (LESSONS): the pivot, and the Phase 2 decisions.
   Then the Phase 3 batch's:
   - a target starts at the weight held;
@@ -1344,27 +1396,25 @@ commands need `PYTHONPATH=src`.
     `treasurer/execute.py`;
   - `store/db.py`, `store/schema.sql`, `store/orders.py`, `store/journal.py`,
     `store/positions.py`;
-  - `run/cycle.py` and `run/fake_venue.py`.
+  - `run/cycle.py`, `run/startup.py` and `run/isolation.py`;
+  - `adapters/fake_venue.py`, where the fake venue moved at 4.12.
 
-  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 9 —
-  `run/startup.py` (4.9), `treasurer/reconcile.py` and `adapters/bankr_exec.py`
-  (Phase 5), `core/books.py` and `core/attribution.py` (Phase 6), `store/publish.py`
-  and the two surfaces (Phase 7), `run/schedule.py` (Phase 8).
+  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 8 —
+  `treasurer/reconcile.py` and `adapters/bankr_exec.py` (Phase 5), `core/books.py`
+  and `core/attribution.py` (Phase 6), `store/publish.py` and the two surfaces
+  (Phase 7), `run/schedule.py` (Phase 8).
 
 ### Next
-- **Batch C: 4.9 and 4.10,** then the stop at 4.11. Nothing from 4.9 is started.
-  - **4.9** resolves every order left `submitted` or `unknown` before a new cycle,
-    re-sent under its key, and takes one lock so two runners cannot both spend.
-    `run_order` leaves such an order alone today, and a `prepared` order found at
-    startup is 4.9's to admit again or refuse — with it, the snapshot's age at
-    submission, which S11 checks only at decision.
-  - **4.10** is the crash drill on the fake executor. The pieces are there: the
-    state is written before the act, the fill and the state are one write, and the
-    journal refuses a second fill for an order.
-  - **4.11 is a stop.** Its fixture will use 4.8's rule for the paper book's
-    opening, `capital_usd` of USDG.
-- **All six decisions are applied** except 4.12's refused swaps, which wait for
-  4.12 itself.
+- **4.11, the known-answer accounting fixture, and it is a stop.** Nothing of it
+  is started. Its fixture uses 4.8's rule for the paper book's opening,
+  `capital_usd` of USDG, and the journal already keeps the fee and inference events
+  it needs; no cycle books either yet.
+- **All six decisions are applied,** the refused swaps included (4.12, measured).
+- **Owed to the plan docs, outside this batch's paths:** `planning/` still says
+  4.10 is the crash drill. The operator reassigned it to the single-owner lock in
+  this batch; the crash drill is covered by the kill drills at 4.3 and 4.8, which
+  leave a store on disk and nothing booked. PHASE-4, ROADMAP and SIMPLIFICATION
+  need that, and `.env.example` needs the treasurer's file named.
 - **Stops:** 2.1, 3.8, **4.11**, 5.4, 6.6, 7.5 and 8.5. 4.11 was added by the
   operator on 2026-09-19. `CLAUDE.md`'s list is owed the same; it was outside
   this pass's paths.
@@ -1506,10 +1556,10 @@ commands need `PYTHONPATH=src`.
   `cumulative_budget_usd`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `cc14228`, pushed by the operator
-at about 21:48Z: everything through 3.9's hardening and 4.0. Every commit from
-`26d049f` (4.1's mandate) to the one that last changed this note — Batch B, 4.1 to
-4.8 — is committed and **not pushed**.
+Checked locally, with no fetch. `origin/main` is `385285f`, pushed by the operator:
+everything through Batch B. Every commit from `4992d62` (the audit's first cut) to
+the one that last changed this note — the cuts, the pace rules, 4.9, 4.10 and 4.12 —
+is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** LESSONS holds them in full.
