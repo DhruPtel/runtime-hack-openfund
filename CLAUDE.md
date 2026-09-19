@@ -4,8 +4,10 @@
 
 Before building any unit from 2.1 on, read its row in
 `planning/SIMPLIFICATION.md` and build the minimal version. PLAN §8 states the
-pivot. Keys, signing and spend authority keep their full guard. Stop only at
-3.8, 5.4, 6.6, 7.5 and 8.5.
+pivot, and `planning/PHASE-2.md` details Phase 2, which opens with 2.0 (the
+SIWE agent-wallet proof). Keys, signing and spend authority keep their full
+guard. Stop at 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1 is the report format:
+the operator reads it before any code consumes it.
 
 ## Verification scales with risk (operator, 2026-09-18, at the Phase 1 gate)
 
