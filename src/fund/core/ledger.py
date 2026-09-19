@@ -18,18 +18,48 @@ design lesson of the 3.8 sweep, where three components counted cash three ways
 one to the `real` book; an opening and a fee name theirs; inference is real.
 `book_of` is the one place that says so, and every reader takes `book=`, with no
 default and no way to sum across books.
+
+**One fold (P8).** `_walk` applies a book's events in the ledger's order, and every
+figure below is read from it: holdings (P4), cash (P5), basis (P6), realised and
+unrealised value (P7), costs and expenses. What each event does:
+
+    event      holdings            basis                          value
+    opening    + the amount        + its worth at its mark        what opened the book
+    fill       − gave, + got       gave: − its average cost;      realised += value − that basis
+                                   got: + the fill's value
+    fee        − the amount paid   − the average cost of what     cost += its worth at its mark;
+                                   paid it; never any position's  realised += that − that basis
+    inference  none                none                           expense += its USD
+
+Every asset is held at average cost, USDG and ETH included, so a move in USDG's own
+mark is value like any other. Then, per book and exactly:
+
+    NAV = opened + realised + unrealised − costs
+
+Inference is paid from LLM credits, which neither book holds: an expense beside the
+NAV, never in it. The basis a disposal removes is rounded half-even to 10⁻³⁰ USD;
+every other figure is exact, and an inexact step raises (`cash.EXACT`). A book that
+would hold less than nothing, or an order filled twice, refuses at that event.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal
-from typing import Any, Mapping, Union
+from decimal import (
+    ROUND_HALF_EVEN, Context, Decimal, DivisionByZero, InvalidOperation, Overflow, localcontext,
+)
+from typing import Any, Iterable, Mapping, Union
 
 from . import cash, orders
 from .types import USD, Amount, AssetId, ExecutionMode, Order, OrderState, Price, Quote
 
 PAPER, REAL = BOOKS = ("paper", "real")
+
+#: The basis a partial disposal removes is its share of the basis, rounded half-even
+#: to this, the one rounding in the ledger. Every other figure is exact.
+QUANTUM = Decimal("1E-30")
+_SHARE = Context(prec=100, rounding=ROUND_HALF_EVEN,
+                 traps=[InvalidOperation, DivisionByZero, Overflow])
 
 
 class LedgerError(ValueError):
@@ -184,3 +214,123 @@ def paper_fill(order: Order, quote: Quote, snapshot: Mapping[str, Any]) -> Fill:
                 got=quote.buy, gave_mark=cash.mark_of(snapshot, quote.sell.asset.address),
                 got_mark=cash.mark_of(snapshot, quote.buy.asset.address),
                 cash_asset=cash_asset)
+
+
+# --- P8: the one fold ----------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class _Walked:
+    held: Mapping[AssetId, tuple[Amount, Decimal]]  # each asset held: its amount and basis
+    opened: Decimal
+    realised: Decimal
+    costs: Decimal
+    expenses: Decimal
+
+
+def _walk(events: Iterable[Event], book: str) -> _Walked:
+    """One book's events applied in order, as the table above says."""
+    book = _book(book)
+    held: dict[AssetId, tuple[Amount, Decimal]] = {}
+    filled: set[str] = set()
+    opened = realised = costs = expenses = Decimal(0)
+
+    def acquire(amount: Amount, value: Decimal) -> None:
+        had, basis = held.get(amount.asset, (Amount(0, amount.decimals, amount.asset), Decimal(0)))
+        if had.decimals != amount.decimals:
+            raise LedgerError(f"{amount.asset.address} is held with two decimal counts")
+        held[amount.asset] = (Amount(had.raw + amount.raw, had.decimals, had.asset), basis + value)
+
+    def dispose(amount: Amount, at: int) -> Decimal:
+        """Give up `amount`, and return the basis it takes with it: all of it for all
+        the units, otherwise its share at average cost."""
+        had, basis = held.get(amount.asset, (Amount(0, amount.decimals, amount.asset), Decimal(0)))
+        if had.decimals != amount.decimals:
+            raise LedgerError(f"{amount.asset.address} is held with two decimal counts")
+        if amount.raw > had.raw:
+            raise LedgerError(f"event {at} gives {amount.raw} of {amount.asset.address}, and the "
+                              f"{book} book holds {had.raw}")
+        if amount.raw == had.raw:
+            del held[amount.asset]
+            return basis
+        with localcontext(_SHARE):
+            removed = (basis * amount.raw / had.raw).quantize(QUANTUM)
+        held[amount.asset] = (Amount(had.raw - amount.raw, had.decimals, had.asset), basis - removed)
+        return removed
+
+    with localcontext(cash.EXACT):
+        for at, event in enumerate(events):
+            if book_of(event) != book:
+                continue
+            if isinstance(event, Opening):
+                value = cash.worth(event.amount, event.mark)
+                acquire(event.amount, value)
+                opened += value
+            elif isinstance(event, Fill):
+                if event.order_id in filled:
+                    raise LedgerError(f"event {at} fills order {event.order_id} a second time")
+                filled.add(event.order_id)
+                value = event.value_usd
+                realised += value - dispose(event.gave, at)
+                acquire(event.got, value)
+            elif isinstance(event, Fee):
+                paid = cash.worth(event.amount, event.mark)
+                realised += paid - dispose(event.amount, at)
+                costs += paid
+            else:
+                expenses += event.usd
+    return _Walked(held, opened, realised, costs, expenses)
+
+
+# --- P4 to P8: what the fold says ----------------------------------------------------------------
+
+def holdings(events: Iterable[Event], *, book: str) -> dict[AssetId, Amount]:
+    """P4: what the book holds of each asset, in raw units. The only way a quantity
+    held is known. An asset it no longer holds is absent, never zero."""
+    return {asset: amount for asset, (amount, _) in _walk(events, book).held.items()}
+
+
+def cash_held(events: Iterable[Event], *, book: str,
+              snapshot: Mapping[str, Any]) -> tuple[Amount, Decimal]:
+    """P5: the book's cash, the cash leg it holds (USDG), and what that is worth at
+    the cash leg's own mark in the snapshot: never assumed to be a dollar."""
+    asset, decimals = cash.cash_leg(snapshot)
+    amount = holdings(events, book=book).get(asset, Amount(0, decimals, asset))
+    return amount, cash.worth(amount, cash.mark_of(snapshot, asset.address))
+
+
+def basis(events: Iterable[Event], asset: AssetId, *, book: str) -> Decimal:
+    """P6: what the book's holding of `asset` cost, at average cost. Zero when it
+    holds none. A fee is never part of it."""
+    held = _walk(events, book).held.get(asset)
+    return Decimal(0) if held is None else held[1]
+
+
+def realised(events: Iterable[Event], *, book: str) -> Decimal:
+    """P7: every disposal's proceeds, at the marks recorded when it happened, less the
+    basis it removed. A fill's proceeds are its value; a fee's, what it paid."""
+    return _walk(events, book).realised
+
+
+def unrealised(events: Iterable[Event], *, book: str, snapshot: Mapping[str, Any]) -> Decimal:
+    """P7: each holding at the snapshot's mark, less its basis. A holding with no usable
+    mark refuses (`cash.NoMark`): no value is never a value of zero."""
+    walked = _walk(events, book)
+    with localcontext(cash.EXACT):
+        return sum((cash.worth(amount, cash.mark_of(snapshot, asset.address)) - cost
+                    for asset, (amount, cost) in walked.held.items()), Decimal(0))
+
+
+def opened(events: Iterable[Event], *, book: str) -> Decimal:
+    """What opened the book: each opening balance at the mark it came in at."""
+    return _walk(events, book).opened
+
+
+def costs(events: Iterable[Event], *, book: str) -> Decimal:
+    """P8: every fee, at the mark it was paid at. 6.1's costs line."""
+    return _walk(events, book).costs
+
+
+def expenses(events: Iterable[Event], *, book: str) -> Decimal:
+    """P8: every inference cost. 6.1's expenses line, beside the NAV, never in it.
+    The paper book has none."""
+    return _walk(events, book).expenses
