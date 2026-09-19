@@ -42,6 +42,12 @@ pinned block is fixed by the block. So a re-read of the chain at the same block
 gives the same snapshot. Offchain values, GeckoTerminal and the quotes, carry
 the time they were fetched, because that is the only time they have.
 
+**It names its capture** (unit 1.9, schema /3). `inputs.capture` is the sha256
+of the raw answers the build heard, with each answer file's own sha256, so a
+record citing this snapshot cites the responses behind it, and every captured
+byte moves this snapshot's hash. A build whose answers were not recorded says
+so: the hash is `null`, with the reason.
+
 **What the builder refuses.** It raises; a snapshot is never partly right:
 - a chain value read at another block (`block-pin`);
 - a chain value dated after the pinned block (`after-pin`);
@@ -60,7 +66,8 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from typing import Any, Mapping
 
 from . import valuation
@@ -70,7 +77,7 @@ from .types import (
 )
 from .universe import Universe
 
-SCHEMA = "openfund.snapshot/2"  # /2 (1.8): sampled timelines, and holdings with both statuses
+SCHEMA = "openfund.snapshot/3"  # /2 (1.8): sampled timelines, holdings' two statuses; /3 (1.9): the capture
 
 RULE_BLOCK_PIN = "block-pin"
 RULE_AFTER_PIN = "after-pin"
@@ -121,6 +128,30 @@ class MarkedInputs:
 
 
 @dataclass(frozen=True)
+class CaptureRef:
+    """The raw answers a snapshot was built from, by hash (unit 1.9). Either the
+    capture's one hash and each answer file's, or no hash and the reason."""
+
+    sha256: str | None
+    files: Mapping[str, str] = field(default_factory=dict)   # answer file -> sha256
+    reason: str | None = None
+
+    def __post_init__(self):
+        digests = [self.sha256, *self.files.values()] if self.sha256 is not None else []
+        if any(not isinstance(d, str) or not re.fullmatch(r"[0-9a-f]{64}", d) for d in digests):
+            raise ValueError("a capture is named by sha256 hex digests")
+        if self.sha256 is not None and (not self.files or self.reason is not None):
+            raise ValueError("a capture names its answer files, and needs no reason")
+        if self.sha256 is None and (self.files or not (self.reason or "").strip()):
+            raise ValueError("a build with no capture says why, and names no files")
+
+    def document(self) -> dict[str, Any]:
+        if self.sha256 is None:
+            return {"sha256": None, "reason": self.reason}
+        return {"sha256": self.sha256, "files": dict(sorted(self.files.items()))}
+
+
+@dataclass(frozen=True)
 class Inputs:
     block: BlockRef
     built_at: Instant                       # when quote ages and tradeability were judged
@@ -134,6 +165,7 @@ class Inputs:
     divergence_rule: valuation.DivergenceRule
     rules: Mapping[str, str]                 # the rules applied, in words, from config
     config: Mapping[str, str]                # config file -> sha256 of its bytes
+    capture: CaptureRef                      # the raw answers, by hash, or why there are none
 
 
 @dataclass(frozen=True)
@@ -459,7 +491,8 @@ def build(inputs: Inputs, universe: Universe) -> Snapshot:
         "built_at": _time(inputs.built_at),
         "inputs": {"issuer_registry": _pin(universe.registry),
                    "feed_directory": _pin(universe.directory),
-                   "config_sha256": dict(inputs.config)},
+                   "config_sha256": dict(inputs.config),
+                   "capture": inputs.capture.document()},
         "rules": dict(inputs.rules) | {"order": ", ".join(ORDER)},
         "assets": entries,
         "holdings": holdings,

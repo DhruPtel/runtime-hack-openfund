@@ -214,6 +214,7 @@ def test_the_live_path_builds_a_whole_snapshot_with_no_network():
     built = build(chain)
     doc = built.snapshot.document
     assert doc["block"]["number"] == BLOCK_NUMBER and doc["block"]["closed_sessions"] == ["us_equities_24/5"]
+    assert doc["inputs"]["capture"] == {"sha256": None, "reason": run.NOT_RECORDED}  # nothing recorded it
     assert all(p == {"blockHash": BLOCK_HASH} for p in chain.block_params)  # every read at the pin
     assert [(s, st) for s, st, _ in doc["summary"]["assets"]] == [
         ("AMZN", "tradeable"), ("CLSK", "below_corroborator_line"), ("NVDA", "tradeable")]

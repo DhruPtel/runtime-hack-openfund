@@ -98,7 +98,12 @@ def balance(asset_id: AssetId, raw: int, decimals: int) -> Observation:
                        status=FetchStatus.OK)
 
 
-def inputs(*stocks, extra_balances=None, held_outside=None, built=BUILT) -> snapshot.Inputs:
+#: The builders' capture: none, and the snapshot says why (a live build names its own).
+NOT_CAPTURED = snapshot.CaptureRef(None, reason="built in a test from typed inputs, not recorded answers")
+
+
+def inputs(*stocks, extra_balances=None, held_outside=None, built=BUILT,
+           capture=NOT_CAPTURED) -> snapshot.Inputs:
     balances = {U.cash_leg: balance(U.cash_leg, 78_742, 6),
                 U.gas_asset: balance(U.gas_asset, 460_162_486_507_929, 18)}
     balances |= extra_balances or {}
@@ -107,7 +112,7 @@ def inputs(*stocks, extra_balances=None, held_outside=None, built=BUILT) -> snap
         gas=marked(U.gas(), 261_662_681_386), wallet=universe.ChainAddress(CHAIN, "0x" + "93" * 20),
         balances=balances, held_outside=held_outside or {}, closed_sessions=("us_equities_24/5",),
         divergence_rule=RULE, rules={"freshness": "heartbeat + 3600 s of open session"},
-        config={"thresholds.json": "0" * 64})
+        config={"thresholds.json": "0" * 64}, capture=capture)
 
 
 def entry(snap, symbol):
@@ -340,4 +345,18 @@ def test_a_daily_close_timeline_names_each_close_and_ends_with_the_latest_round(
     assert t["columns"] == ["close_of", "updated_at", "price_usd"]
     assert t["points"][0] == ["2026-09-10", "2026-09-10T20:00:00Z", "250"]
     assert t["points"][-1] == ["latest", "2026-09-18T20:00:00Z", "252.6"]
-    assert snap.document["schema"] == "openfund.snapshot/2"
+    assert snap.document["schema"] == "openfund.snapshot/3"
+
+
+def test_the_snapshot_names_its_capture_or_says_why_it_has_none():
+    answers = {"chain.jsonl.gz": "a" * 64, "clock.json.gz": "b" * 64}
+    named = snapshot.build(inputs(stock("NVDA"), capture=snapshot.CaptureRef("c" * 64, answers)), U)
+    assert named.document["inputs"]["capture"] == {"sha256": "c" * 64, "files": answers}
+    moved = snapshot.build(inputs(stock("NVDA"), capture=snapshot.CaptureRef("d" * 64, answers)), U)
+    assert moved.sha256 != named.sha256  # every captured byte moves the snapshot's hash
+    absent = snapshot.build(inputs(stock("NVDA")), U).document["inputs"]["capture"]
+    assert absent == {"sha256": None, "reason": NOT_CAPTURED.reason}
+    for wrong in ({"sha256": None}, {"sha256": None, "reason": " "}, {"sha256": "", "reason": "x"},
+                  {"sha256": "c" * 64}, {"sha256": "c" * 64, "files": answers, "reason": "x"}):
+        with pytest.raises(ValueError):
+            snapshot.CaptureRef(**wrong)

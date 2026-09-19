@@ -1,5 +1,6 @@
 {
  "about": "Every answer one live build heard, at the transport, and every reading of each source's clock. `--replay` rebuilds the snapshot from these alone, with every connection refused, and it must be byte-identical to snapshot.json.",
+ "answers_sha256": "c9d54b8b588e906a5230e868bd9551e831b69f984035544cebb3579dd43fef59",
  "block": {
   "chain_id": 4663,
   "hash": "0x615034c40fffd23f7b928ed145673bb6b23bf24db4e01f4a46bcc84bd71e8bde",
@@ -74,8 +75,8 @@
    "sha256": "829f07a4c44c0e836dfc33c0e77e030d817445f0498b9d4d22fd1c5719d501d8"
   },
   "snapshot.json": {
-   "bytes": 189098,
-   "sha256": "8afe38a38b033c4be45cafb96df4fe670c6b99b7dcbd9575bffe511eb8807ec9"
+   "bytes": 189576,
+   "sha256": "daafd94542e6a835ac8f81b2d611e605ec8c5590e1997ad5f6c24bef9758d3a3"
   },
   "venue.jsonl.gz": {
    "bytes": 66243,
@@ -104,7 +105,16 @@
  },
  "replay": "PYTHONPATH=src python3 -m fund.run.snapshot --replay fixtures/snapshots/66812461-8afe38a38b03",
  "snapshot": {
-  "bytes": 189098,
-  "sha256": "8afe38a38b033c4be45cafb96df4fe670c6b99b7dcbd9575bffe511eb8807ec9"
+  "bytes": 189576,
+  "rebuilt": {
+   "at": "2026-09-19T05:14:25Z",
+   "by_parent_commit": "8df6d7bb30623b34f6422949dacdfe1cb3ed0b84",
+   "live_build": {
+    "bytes": 189098,
+    "sha256": "8afe38a38b033c4be45cafb96df4fe670c6b99b7dcbd9575bffe511eb8807ec9"
+   },
+   "why": "schema openfund.snapshot/3 cites the capture's raw answers by hash, so snapshot.json was rebuilt from this capture's own answers, which are unchanged. It differs from the live build's only in the schema string and inputs.capture, checked field by field."
+  },
+  "sha256": "daafd94542e6a835ac8f81b2d611e605ec8c5590e1997ad5f6c24bef9758d3a3"
  }
 }

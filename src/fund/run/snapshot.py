@@ -210,7 +210,7 @@ def _rules(settings: chain_4663.Settings, rule: valuation.DivergenceRule,
 def assemble(chain: ChainRead, offchain: OffchainRead, u: universe.Universe,
              settings: chain_4663.Settings, rule: valuation.DivergenceRule,
              limits: bankr_quote.Limits, wallet: ChainAddress,
-             config_dir: Path = CONFIG) -> snapshot.Inputs:
+             config_dir: Path = CONFIG, *, capture: snapshot.CaptureRef) -> snapshot.Inputs:
     """The adapters' verdicts, made here, and everything handed to core as data."""
     block = chain.block
     at_s = block.timestamp.epoch_ms // 1000
@@ -258,7 +258,8 @@ def assemble(chain: ChainRead, offchain: OffchainRead, u: universe.Universe,
         block=block, built_at=offchain.built_at, stocks=tuple(stocks), cash=marked(u.cash()),
         gas=marked(u.gas()), wallet=wallet, balances=chain.balances, held_outside=held_outside,
         closed_sessions=closed, divergence_rule=rule,
-        rules=_rules(settings, rule, limits, offchain.quote_size), config=_config_sha256(config_dir))
+        rules=_rules(settings, rule, limits, offchain.quote_size), config=_config_sha256(config_dir),
+        capture=capture)
 
 
 @dataclass(frozen=True)
@@ -268,17 +269,26 @@ class Built:
     offchain: OffchainRead
 
 
+#: What a snapshot says when nothing recorded the answers it was built from.
+NOT_RECORDED = ("this build's answers were not recorded, so nothing can replay it or check it "
+                "against them")
+
+
 def read_and_build(sources: Sources, *, settings: chain_4663.Settings, u: universe.Universe,
                    rule: valuation.DivergenceRule, limits: bankr_quote.Limits,
                    wallet: ChainAddress, clock: Callable[[], Instant] = now,
-                   config_dir: Path = CONFIG) -> Built:
+                   config_dir: Path = CONFIG,
+                   seal: Callable[[], snapshot.CaptureRef] | None = None) -> Built:
     """Pin a block, read everything, judge, and build: the whole live path.
     `config_dir` is whose files the snapshot names by hash: config/, or a
-    capture's own copies on replay."""
+    capture's own copies on replay. `seal` is called once every answer is in,
+    before the build, and names the capture the snapshot cites; without it the
+    snapshot says its answers were not recorded."""
     block = chain_4663.pin_block(sources.rpc, settings.chain_id, settings.block_tag)
     chain = read_chain(settings, sources.rpc, u, wallet, block, sources.chain_clock)
     offchain = read_offchain(chain, u, settings, limits, sources, clock)
-    inputs = assemble(chain, offchain, u, settings, rule, limits, wallet, config_dir)
+    capture = seal() if seal else snapshot.CaptureRef(None, reason=NOT_RECORDED)
+    inputs = assemble(chain, offchain, u, settings, rule, limits, wallet, config_dir, capture=capture)
     return Built(snapshot.build(inputs, u), chain, offchain)
 
 
@@ -336,14 +346,27 @@ def _code() -> dict[str, object]:
     return {"commit": head, "uncommitted_changes_in_src_or_config": bool(dirty)}
 
 
-def write_capture(directory: Path, built: Built, recorders: dict[str, cache.Recorder],
-                  u: universe.Universe, settings: chain_4663.Settings, g: gecko.Settings,
-                  q: bankr_quote.Settings, started_ms: int) -> dict:
+def sealing(recorders: dict[str, cache.Recorder]) -> tuple[Callable[[], snapshot.CaptureRef], list]:
+    """A `seal` for `read_and_build`: it seals what the recorders heard, with the
+    config as it stands once the reads are done, and keeps the sealed capture in
+    the list it returns, for `write_capture`."""
+    kept: list[cache.Sealed] = []
+
+    def seal() -> snapshot.CaptureRef:
+        sealed = cache.seal(recorders, {name: (CONFIG / name).read_bytes() for name in CONFIG_FILES})
+        kept.append(sealed)
+        return snapshot.CaptureRef(sealed.sha256, sealed.answers)
+    return seal, kept
+
+
+def write_capture(directory: Path, built: Built, sealed: cache.Sealed, u: universe.Universe,
+                  settings: chain_4663.Settings, g: gecko.Settings, q: bankr_quote.Settings,
+                  started_ms: int) -> dict:
     """Write what the build heard, with the config it read, beside its snapshot.
-    The config is read back and must hash to what the snapshot names."""
-    config_files = {name: (CONFIG / name).read_bytes() for name in CONFIG_FILES}
+    The config copies must hash to what the snapshot names."""
     named = built.snapshot.document["inputs"]["config_sha256"]
-    changed = [n for n, data in config_files.items() if hashlib.sha256(data).hexdigest() != named[n]]
+    changed = [n for n in CONFIG_FILES if hashlib.sha256(sealed.files[f"{cache.CONFIG_DIR}/{n}"])
+               .hexdigest() != named[n]]
     if changed:
         raise ValueError(f"config changed during the build, so no capture: {', '.join(changed)}")
     block = built.chain.block
@@ -361,8 +384,7 @@ def write_capture(directory: Path, built: Built, recorders: dict[str, cache.Reco
         "snapshot": {"sha256": built.snapshot.sha256, "bytes": len(built.snapshot.body)},
         "replay": f"PYTHONPATH=src python3 -m fund.run.snapshot --replay {directory.relative_to(ROOT)}",
     }
-    return cache.write(directory, cache.seal(recorders, config_files), manifest=manifest,
-                       snapshot_body=built.snapshot.body)
+    return cache.write(directory, sealed, manifest=manifest, snapshot_body=built.snapshot.body)
 
 
 @dataclass(frozen=True)
@@ -432,7 +454,8 @@ def replay(directory: Path) -> Replayed:
                                    rule=valuation.DivergenceRule.from_thresholds(thresholds),
                                    limits=bankr_quote.Limits.from_thresholds(thresholds),
                                    wallet=wallet, clock=replayers["run"].clock(),
-                                   config_dir=config_dir)
+                                   config_dir=config_dir,
+                                   seal=lambda: snapshot.CaptureRef(capture.sha256, capture.answers))
     return Replayed(built.snapshot, capture, {s: r.unused() for s, r in replayers.items()})
 
 
@@ -477,13 +500,15 @@ def main(prove: bool = False, capture_to: Path = OUT / "captures") -> int:
     wallet = ChainAddress(settings.chain_id,
                           json.loads((CONFIG / "mandate.json").read_text())["execution_wallet"])
     sources, recorders, clock = capturing_sources(cfg, settings, g, q)
+    seal, sealed = sealing(recorders)
     started, started_ms = time.monotonic(), now().epoch_ms
     built = read_and_build(sources, settings=settings, u=u, rule=rule, limits=limits,
-                           wallet=wallet, clock=clock)
+                           wallet=wallet, clock=clock, seal=seal)
     snap, chain, offchain, block = built.snapshot, built.chain, built.offchain, built.chain.block
     path = write(snap)
     directory = capture_to / f"{block.number}-{snap.sha256[:12]}"
-    manifest = write_capture(directory, built, recorders, u, settings, g, q, started_ms)
+    manifest = write_capture(directory, built, sealed[0], u, settings, g, q, started_ms)
+    cited = snapshot.CaptureRef(sealed[0].sha256, sealed[0].answers)
 
     doc = snap.document
     oldest = max((offchain.built_at.epoch_ms - o.fetch_time.epoch_ms)
@@ -514,7 +539,7 @@ def main(prove: bool = False, capture_to: Path = OUT / "captures") -> int:
         return 0
 
     print("\n== the same build at the same block: the chain re-read, fresh, at "
-          f"{block.hash[:18]}…, with the same offchain answers")
+          f"{block.hash[:18]}…, with the same offchain answers and the first build's capture")
     again = read_chain(settings, sources.rpc, u, wallet, block)
     def content(o: Observation) -> tuple:  # everything but when it was fetched
         return o.status, o.value, o.source_time, o.source_ref, o.block
@@ -523,7 +548,10 @@ def main(prove: bool = False, capture_to: Path = OUT / "captures") -> int:
                           == [content(p) for p in chain.series[a].points] for a in chain.series)
                   and all(content(again.balances[a]) == content(chain.balances[a])
                           for a in chain.balances))
-    rebuilt = snapshot.build(assemble(again, offchain, u, settings, rule, limits, wallet), u)
+    # The re-read is not recorded; the first build's capture is cited, since the
+    # point is that the chain's values at the block are the same.
+    rebuilt = snapshot.build(assemble(again, offchain, u, settings, rule, limits, wallet,
+                                      capture=cited), u)
     print(f"   every chain value identical on re-read, fetch times apart: {same_chain}")
     print(f"   first  {snap.sha256}\n   second {rebuilt.sha256}\n   identical: "
           f"{rebuilt.sha256 == snap.sha256 and rebuilt.body == snap.body}")
@@ -533,7 +561,8 @@ def main(prove: bool = False, capture_to: Path = OUT / "captures") -> int:
         nudged = replace(c.price, value=replace(c.price.value, raw=c.price.value.raw + 1))
         changed = replace(offchain, corroborations={**offchain.corroborations,
                                                     target: replace(c, price=nudged)})
-        other = snapshot.build(assemble(chain, changed, u, settings, rule, limits, wallet), u)
+        other = snapshot.build(assemble(chain, changed, u, settings, rule, limits, wallet,
+                                        capture=cited), u)
         print(f"   one GeckoTerminal price moved by one unit in its last place: {other.sha256} "
               f"(different: {other.sha256 != snap.sha256})")
     return 0

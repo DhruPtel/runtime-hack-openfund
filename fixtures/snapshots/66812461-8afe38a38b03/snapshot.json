@@ -4542,6 +4542,15 @@
   }
  ],
  "inputs": {
+  "capture": {
+   "files": {
+    "chain.jsonl.gz": "a8f32c3913cd6501e27e72c76877df9cffee965b0d43d004d3824536024ca9ef",
+    "clock.json.gz": "8086454af61b7e17ca28f0716ec5ab7eb0e3ca4bb655e7e1a9d971c10da254bb",
+    "gecko.jsonl.gz": "829f07a4c44c0e836dfc33c0e77e030d817445f0498b9d4d22fd1c5719d501d8",
+    "venue.jsonl.gz": "5b17010e36fdc6c1c957d135ed6534732cb6f2edb48bc73c3d776fa9038eb413"
+   },
+   "sha256": "c9d54b8b588e906a5230e868bd9551e831b69f984035544cebb3579dd43fef59"
+  },
   "config_sha256": {
    "chain.json": "9a0dd26ca9458ba0e85ddb6e66fdcd0b2a51ac3d7e0356c82aec7061a091898a",
    "gecko.json": "af1aca97f02f9f0cb38b9d62c2dfd8d1a7f8f32d61d94b19a07179e228a8ef4c",
@@ -4739,7 +4748,7 @@
   "tradeability": "A venue quote for 25.001227 USDG ($25 at USDG's own mark) succeeded, is at most 60 s old at built_at, and its swapImpactBps is known and at most 50, compared signed. A quote is a price, not a fill.",
   "value": "Raw units times the mark, exact. No mark, no value, and never zero."
  },
- "schema": "openfund.snapshot/2",
+ "schema": "openfund.snapshot/3",
  "summary": {
   "assets": [
    ["AAPL", "tradeable", null],
