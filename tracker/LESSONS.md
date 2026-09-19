@@ -1089,3 +1089,35 @@ When the "one gate definition" test is written, it must name this exception or
 it will fail on it.
 **Affects:** 3.4; CODEBASE §3 and rules table; PLAN §2 invariant 4; PHASE-0-1
 1.3 (*fold pending*: outside this pass's paths).
+
+## 2026-09-18 — DECISION: a closed session is inferred from the feeds' own rounds, not a pinned calendar
+*Decided by the operator before 1.4.* This settles the question the entry "The
+feed verdict names a schedule, not a session" left open. The directory's label
+(`us_equities_24/5`) names a schedule, and nothing we hold says when it is open.
+So the session is inferred from when the feeds actually publish, and not from a
+pinned calendar of hours, timezone and holidays:
+- a gap that matches the inferred closed session is expected, and the last
+  published round stands as the mark;
+- a gap during an inferred open session is stale, and blocks.
+
+**The cost, stated with the decision.** Holidays are not modelled. A holiday
+looks like an unexpected gap in an open session, so the fund treats it as stale
+and refuses to value. That fails closed rather than open, and PLAN §13 says so.
+
+**The condition.** Measure the pattern before writing the rule. If the observed
+rounds do not support a clean inference, stop rather than fit a rule to one
+weekend.
+**Affects:** 1.3's `freshness()`, 1.4, 1.6, 1.8, 1.11; PLAN §13;
+`config/thresholds.json`.
+
+## 2026-09-18 — DECISION: the HTTP client moves to `adapters/http.py`
+*Decided by the operator before 1.4.* 1.3 built the deadline, failover on a
+hang, pacing, doubling backoff, User-Agent and redaction inside
+`chain_4663.py`, because that pass was scoped to one file. 1.4 (`gecko.py`) and
+1.5 (`bankr_quote.py`) need the same behaviour, and an adapter importing another
+adapter is worse than a shared transport. So it moves to `adapters/http.py`, the
+chain adapter imports it, and 1.3's `--prove` must still pass unchanged.
+CODEBASE says `http.py` also handles Retry-After, which the inline client never
+did, because the 4663 RPC sends none. Whether GeckoTerminal does was unmeasured,
+so it is measured first and handled if so.
+**Affects:** 1.3, 1.4, 1.5; `planning/CODEBASE.md` §2.
