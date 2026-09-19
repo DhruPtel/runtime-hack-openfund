@@ -4399,3 +4399,61 @@ our side, listed in the sweep and not fixed.
 
 Four ways of weakening the check were each broken in a copy, and each was
 caught.
+
+## The sweep after 3.8 — what else of this kind is waiting
+
+**Done 2026-09-19, read-only.** Four sweeps were made:
+- my own;
+- three reviewers, each reading one area without my conclusions: the Phase 3
+  code, the analyst contract, and the snapshot rules with the gates;
+- every serious finding was reproduced offline before it was listed here.
+
+**Nothing below is fixed.** Each is the operator's call.
+
+### Real bugs: the code does the wrong thing
+
+| # | Where | What | Evidence |
+|---|---|---|---|
+| R1 | `core/gates.py` `evaluate`, `agents/risk.py` `decide` | **The cash floor is judged on the whole plan, not the orders approved.** When a gate or the risk agent blocks a sell, the buys its proceeds paid for still clear, so approved cash can go below the floor and below zero. | Reproduced: approved cash **−$17.49** (and −$4.98 in a second case) |
+| R2 | `core/aggregate.py` against `core/plan.py` | **The aggregator and planner count cash differently.** The aggregator treats a cut's exact dollars as freed. The planner sells less: it rounds down to the cent and drops dust. So the planner writes plans its own cash-floor gate refuses, and every order is blocked, the sell included. | Reproduced: a $25.625 cut sold as $25; "leaves $19.38 … below the floor of $20" |
+| R3 | `core/plan.py` `size`, `gates.order_size` | **The per-trade limit can be passed on a cut to zero.** The last piece sells everything left, including the dust that was dropped, while its `usd` label says $25, and the gate reads the label. The overrun is under $1. | Reproduced: labelled $25, sells **$25.90** at the mark, gate passes |
+| R4 | `run/decide.py:260` | **A replay is not byte-stable.** The record's `risk.agent` is `"unassigned"` live and `null` on replay, so 3.9 would fail on the 3.8 fixture. | Read, and reproduced by a reviewer: `fe3ed128…` against `2c9c1a79…` |
+| R5 | `agents/schema.py` | **Two ways a fabricated figure passes the check that matters most:** a figure line with no citation is never checked, and a decimal right before a full stop is never read. | Reproduced: `- 999.99, Friday's close` and `- The close was 999.99. [mark.price_usd]` accepted |
+| R6 | `agents/schema.py` `parse` | **An indented or bolded `CALL` line is not a call.** It drops out of what the aggregator reads, while the risk agent and a buyer read it. The brief's own template is indented. | Reproduced: META's call gone from the parsed calls |
+| R7 | `agents/risk.py` `review` | **`context-budget` appears twice** in an order's `vetoed_by`, in the signed record. Cosmetic. | Read |
+
+### Strictness mismatches: a check asks more or less than the record says, or requires what no one is told
+
+| # | Where | What |
+|---|---|---|
+| S1 | `agents/schema.py` | **A computed decimal on a line that cites a single field is refused as fabricated.** Only `%`, and `bps` with no bps field cited, count as computed. `a 2.02 premium`, `8.3x`, `1.9 %`, `4.5pp`, `$4.42m` and `0.78 correlation` are all refused. The brief tells analysts to cite the fields a computed figure comes from, and that is what gets it checked. **The likeliest refusal on the next live run,** most of all for cross-asset-macro. Reproduced. |
+| S2 | `agents/schema.py` | **Every bps figure on a line citing a `_bps` field is checked against it.** No brief gives `divergence_bps`'s sign convention: `450.32 bps above` against AMZN's −450.32 is refused. |
+| S3 | `agents/schema.py` | **A loose citation puts every computed figure on its line through the fabrication check.** New with the check by value, but no stricter than before, when such a line was refused outright. The latest round has no citation form at all. |
+| S4 | `agents/schema.py` | **`+(-0.09)%` is not read as a percentage.** It is the one refusal left in the 3.8 replies. |
+| S5 | `agents/schema.py` | **`NO CALLS` must be exact, and cannot stand beside calls.** The brief says neither. Execution-quality nearly tripped this at 3.8. |
+| S6 | `agents/risk.py` `parse` | **The risk parser refuses any variation from its template,** such as `ORDER 1 AMD veto (quote-age)` or `OVERALL: approve`, and a refused reply vetoes everything. The brief invites naming the gate. Fails closed. No real model has seen it. |
+| S7 | `briefs/analyst.v1.md` | **The brief says code checks every figure.** Figures in the prose are not checked, by design (below). |
+| S8 | `core/gates.py` `tradeable`, `agents/schema.py` | **Sells are gated by buy-side status.** A held name that falls below the corroborator line can never be sold, and a sell call on it refuses the whole report. 1.2's DECISION says such a name is "refused for buying, never dropped as a holding". Reproduced. |
+| S9 | `core/gates.py` `cash_floor` | **The cash floor blocks sells that raise cash.** A book already below the floor cannot sell its way back. Reproduced. |
+| S10 | `core/gates.py` `mandate_allows` | **The mandate gate checks only the order's labelled asset,** not the legs traded. Reproduced on a constructed plan; the planner does not build such plans. |
+| S11 | `core/gates.py` `tradeable` | **The snapshot's verdicts have no age limit.** At 3.8 the decision came 11 h 15 m after the block. A Saturday snapshot decided after Monday's open would pass an open-session divergence as a finding. |
+| S12 | `core/plan.py` `book`, `run/decide.py` | **One unmarkable holding stops the cycle with no signed record.** A paused name, or a stale USDG mark on a sell-only plan, does it. The holiday case is recorded; these are not. |
+| S13 | `run/decide.py` | **"authorizes True" only shows the envelope agrees with itself.** It is checked against the key the envelope names. No published key is configured. |
+
+### Already planned, not bugs
+
+- **Numbers in report prose are not checked:** SIMPLIFICATION 2.2, "Given
+  up". The brief's wording is S7.
+- **A fresh quote before submission:** 4.4. **Stock legs to paper, since
+  `executable` is null:** 4.5.
+- **The ETH↔USDG leg:** Phase 5. **The mandate's approval and expiry:** 4.1.
+- **The refused replies, absent from the signed record:** owed since 3.8.
+- **Co-movement is ignored:** a recorded limit.
+- **Holidays and daylight saving:** recorded, with the re-derivation dated
+  2026-11-09.
+- **The output cap:** 12,000 tokens, documented. Execution-quality used 9,144
+  at 3.8, a 24% margin.
+
+**One cause behind R1 to R3:** the aggregator, the planner and the gates each
+count cash their own way. **One cause behind S1 to S3:** the figure check works
+per line, not per figure.

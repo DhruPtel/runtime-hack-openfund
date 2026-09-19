@@ -1032,7 +1032,7 @@ revisited).
 
 ---
 
-## State at close — 2026-09-19, after 3.8's run: no quorum, no veto, waiting at the stop
+## State at close — 2026-09-19, after 3.8 and its sweep: the validator fixed, the sweep's list waiting
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -1109,15 +1109,22 @@ commands need `PYTHONPATH=src`.
   Every other module is a stub: `grep -l "Not yet built" -r src/` lists 17.
 
 ### Next
-- **3.8 waits on the operator.** No veto happened, because no report was
-  accepted. The choices, in `research/findings.md` §3.8 and LESSONS:
-  - fix the two validator defects: thousands separators, and brackets read as
-    citations. That rescues price-integrity alone;
-  - whether a real value cited under the wrong path should refuse a report;
-  - a brief line on citing other assets by symbol and fields by full path;
-  - the refused replies carried in the signed record;
-  - another exit run, about $1.10, then the decision with a live risk call,
-    about $0.05.
+- **3.8 waits on the operator.**
+  - **Done since the run:** the operator's rule to check by value, the
+    validator's two faults, and the brief line. On the stored 3.8 replies,
+    three of four now pass: a quorum. Cross-asset-macro is refused on
+    `+(-0.09)%`.
+  - **The sweep** (`research/findings.md`, "The sweep after 3.8") lists seven
+    real bugs, thirteen strictness mismatches and the planned items. **None is
+    fixed**, by instruction.
+  - **The money bugs:**
+    - R1: the cash floor is not judged on the approved set;
+    - R2: the aggregator and planner count cash differently;
+    - R3: the per-trade limit is passed on a cut to zero.
+  - **R4** breaks 3.9's replay of the 3.8 fixture.
+  - **The next live run's likeliest refusal** is S1: a computed decimal on a
+    cited line.
+  - Then another exit run, and the decision with a live risk call.
 - **3.9 after that.** It replays the recorded cycle's record byte for byte.
   `fixtures/cycles/20260919T171351Z/` is a recorded cycle, though of a no-op.
 - **Owed from Phase 2, unchanged:**
