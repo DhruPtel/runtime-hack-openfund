@@ -50,8 +50,13 @@ from decimal import (
 )
 from typing import Any, Iterable, Mapping, Union
 
+import json
+
 from . import cash, orders, plan
-from .types import USD, Amount, AssetId, ExecutionMode, Order, OrderState, Price, Quote
+from .types import (
+    USD, Amount, AssetId, ExecutionMode, Order, OrderState, Price, Quote, from_canonical,
+    to_canonical,
+)
 
 PAPER, REAL = BOOKS = ("paper", "real")
 
@@ -195,6 +200,53 @@ def book_of(event: Event) -> str:
     if isinstance(event, (Opening, Fee)):
         return event.book
     raise LedgerError(f"not a ledger event: {type(event).__name__}")
+
+
+# --- how the ledger's store keeps an event (4.6) -------------------------------------------------
+
+def _plain(value: Any) -> Any:
+    return json.loads(to_canonical(value))
+
+
+def _typed(value: Any) -> Any:
+    return from_canonical(json.dumps(value).encode())
+
+
+def encode(event: Event) -> dict[str, Any]:
+    """An event as a plain document, for `store/journal.py` to keep. Its amounts and
+    marks keep their raw units and decimals exactly."""
+    if isinstance(event, Opening):
+        return {"kind": "opening", "book": event.book, "amount": _plain(event.amount),
+                "mark": _plain(event.mark)}
+    if isinstance(event, Fill):
+        return {"kind": "fill", "order_id": event.order_id, "mode": event.mode.value,
+                "gave": _plain(event.gave), "got": _plain(event.got),
+                "gave_mark": _plain(event.gave_mark), "got_mark": _plain(event.got_mark),
+                "cash_asset": _plain(event.cash_asset)}
+    if isinstance(event, Fee):
+        return {"kind": "fee", "book": event.book, "amount": _plain(event.amount),
+                "mark": _plain(event.mark), "what": event.what, "order_id": event.order_id}
+    if isinstance(event, Inference):
+        return {"kind": "inference", "seat": event.seat, "usd": format(event.usd, "f")}
+    raise LedgerError(f"not a ledger event: {type(event).__name__}")
+
+
+def decode(document: Mapping[str, Any]) -> Event:
+    """The event `encode` kept, exactly."""
+    kind = document.get("kind")
+    if kind == "opening":
+        return Opening(document["book"], _typed(document["amount"]), _typed(document["mark"]))
+    if kind == "fill":
+        return Fill(order_id=document["order_id"], mode=ExecutionMode(document["mode"]),
+                    gave=_typed(document["gave"]), got=_typed(document["got"]),
+                    gave_mark=_typed(document["gave_mark"]), got_mark=_typed(document["got_mark"]),
+                    cash_asset=_typed(document["cash_asset"]))
+    if kind == "fee":
+        return Fee(document["book"], _typed(document["amount"]), _typed(document["mark"]),
+                    document["what"], document.get("order_id"))
+    if kind == "inference":
+        return Inference(document["seat"], Decimal(document["usd"]))
+    raise LedgerError(f"not a ledger event: {kind!r}")
 
 
 # --- P3: a paper fill ----------------------------------------------------------------------------

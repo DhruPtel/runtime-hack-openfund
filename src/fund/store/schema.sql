@@ -26,3 +26,18 @@ CREATE TRIGGER IF NOT EXISTS order_moves_append_only_update BEFORE UPDATE ON ord
     BEGIN SELECT RAISE(ABORT, 'order_moves is append-only'); END;
 CREATE TRIGGER IF NOT EXISTS order_moves_append_only_delete BEFORE DELETE ON order_moves
     BEGIN SELECT RAISE(ABORT, 'order_moves is append-only'); END;
+
+-- The journal (4.6): every event that moves value, appended in order and never edited.
+-- `body` is core/ledger.encode's document; `kind` and `order_id` are repeated from it
+-- for the one rule the store itself keeps: an order is filled at most once.
+CREATE TABLE IF NOT EXISTS events (
+    seq      INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind     TEXT NOT NULL CHECK (kind IN ('opening', 'fill', 'fee', 'inference')),
+    order_id TEXT,
+    body     TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS one_fill_per_order ON events (order_id) WHERE kind = 'fill';
+CREATE TRIGGER IF NOT EXISTS events_append_only_update BEFORE UPDATE ON events
+    BEGIN SELECT RAISE(ABORT, 'the journal is append-only'); END;
+CREATE TRIGGER IF NOT EXISTS events_append_only_delete BEFORE DELETE ON events
+    BEGIN SELECT RAISE(ABORT, 'the journal is append-only'); END;
