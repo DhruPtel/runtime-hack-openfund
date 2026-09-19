@@ -1323,3 +1323,62 @@ mark instead: $0.99995 gives 25.001227 USDG, rounded down.
 - **Status.** A choice made inside the unit, recorded here for the operator to
   overrule.
 **Affects:** 1.5, 3.3.
+
+## 2026-09-18 — DECISION: the live read lives in `run/snapshot.py`
+*Decided in 1.6, as delegated.* `core/` makes no network calls, so something
+above it must call the adapters and hand `core/snapshot.build()` their results.
+That is `run/`: CODEBASE §5 draws `run/cycle.py` calling `chain_4663`, `gecko`
+and `bankr_quote` before the build. `cycle.py` is 4.8's, so 1.6 builds
+`run/snapshot.py`, the read that `cycle.py` will call.
+- **It is the one place the adapters meet.** The 1.4 and 1.5 proofs composed
+  them inside their own `prove()` functions, and stay as those units' proofs.
+- **It makes the adapters' verdicts** with their own functions: freshness in
+  open-session time, and tradeability. `core/` receives them as data.
+- **It reads the quotes last,** so they are as young as they can be when
+  judged.
+- **`make snapshot` still prints "not built yet".** The Makefile was outside
+  1.6's paths, so the command is `python -m fund.run.snapshot`.
+**Affects:** 4.8; CODEBASE §2 and §5; the Makefile.
+
+## 2026-09-18 — 1.6 retires 1.1's `Snapshot` type: the snapshot is a document written to be read
+1.1 defined `Snapshot` and `SnapshotEntry` as types whose canonical encoding
+was the snapshot. That encoding tags every object and repeats full provenance on
+every series point: 831 bytes a point, against 37 for a `[time, price]` pair.
+That is about 3.9 MB for a real snapshot's 4,753 rounds, and no analyst can read
+it. So `core/snapshot.py` builds a document from the typed objects:
+- exact decimal text, UTC times, and null for unknown;
+- each asset's four admission rules as separate fields;
+- a named status, the first rule that did not pass;
+- the series as pairs, with coverage stated.
+
+The bytes on disk are the hashed bytes. They use a canonical form of their own:
+sorted keys, one space of indent, and arrays of scalars on one line. Chain
+values carry their block and not their fetch time, so a re-read at the same
+block hashes the same. Offchain values carry their fetch time.
+
+Three statuses were added for one snapshot: `no_mark`, `uncorroborated` and
+`divergence_veto`. 1.1's measured cases now coexist in `tests/test_snapshot.py`.
+**Affects:** 1.1, 1.7 (the byte count it prices), 1.9, 2.x, 3.7; CODEBASE §2 and §4.
+
+## 2026-09-18 — 1.6 live: 348 KB, 20 tradeable, and three liquid names past 100 bps inside the closed session
+`python -m fund.run.snapshot --prove`, block 66716733, Sat 2026-09-19 02:13Z:
+- **Size.** 347,648 bytes, 4,753 rounds of history, all 35 series covering
+  their window. The timeline dominates. Tokens are not measured; that is 1.7's.
+- **Statuses.** 20 tradeable, 15 below the corroborator line, and nothing
+  undetermined.
+- **Findings.** 20 closed-session findings, one per name above the line.
+  Three are past 100 bps and would have been vetoed in an open session: AMZN
+  −423.69, PLTR +190.73 and MSTR −168.55. AMZN was −4.01 at 1.4's run 45
+  minutes earlier. On a weekend, a pool's divergence swings far and fast.
+- **Holdings.** USDG and ETH, valued at their own marks. Nothing registry-listed
+  is held outside the universe.
+- **Rebuilt at the same block.** A fresh re-read of the chain gave identical
+  values and an identical hash. One GeckoTerminal price moved by one unit gave
+  a different hash.
+- **Timing.** The chain read took 58 s, mostly 35 paced beacon slots and the
+  series walks. The oldest quote was 29.1 s old at `built_at`, half the 60 s
+  budget, because 35 quotes are read one after another.
+
+A fully live second build would differ, because GeckoTerminal and the quotes
+are not pinned to a block. Recording them is 1.9's.
+**Affects:** 1.7, 1.9, 3.7, 3.8; the quote-age budget as the universe grows.
