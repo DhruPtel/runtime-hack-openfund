@@ -918,3 +918,102 @@ registry and directory fetch has **no unit that owns it**; 1.2's initial pin
 used a one-off fetch standing in for it. This is a finding about the layout,
 not a workaround.
 **Affects:** 1.2, 1.3; the refresh path; `planning/PHASE-0-1.md` 1.2.
+
+## 2026-09-18 — Every equity feed goes quiet for about 52 hours each weekend, so the decided staleness rule marks them all stale for a day or more
+1.3 read seven days of rounds for every mapped feed, up to block 66642089
+(Sat 2026-09-19 00:08Z). All 35 `us_equities_24/5` feeds went quiet on Friday
+2026-09-11: their last rounds fell between 12:49Z Friday and 00:01Z Saturday.
+None published again until Monday 00:00Z, which is Sunday 20:00 ET. That is a
+gap of **48.0–59.2 h**, against the decided limit of 25 h (heartbeat 86,400 s
++ margin 3,600 s). So from Saturday afternoon UTC until Monday 00:00Z, about
+23–35 h each weekend, the rule as decided judges every equity feed's newest
+point stale.
+- **Weekdays stay inside the limit.** The largest weekday gap was 24.0 h (SPY,
+  QQQ, SGOV), which update on the heartbeat alone, so the 1 h margin is what
+  keeps them fresh.
+- **The crypto feeds are different.** ETH/USD's largest gap was 12.9 h and
+  USDG/USD's 24.0 h.
+
+The rule is not changed. This is the measurement behind the question left for
+1.11, not a contradiction of the decision, which recorded weekend behaviour as
+unmeasured. Only one weekend was observed, and holidays are unmeasured. Whether
+a feed that is stale over the weekend should block valuation, trading or
+neither is the operator's call.
+**Affects:** 1.8, 1.11; `config/thresholds.json`; the weekend cycle.
+
+## 2026-09-18 — DECISION: the price series is Chainlink's own rounds, read at the pinned block over seven days
+*Decided in 1.3, as delegated.* The candidates were a feed's stored rounds and
+GeckoTerminal's OHLCV, and neither had been measured. Rounds won:
+- they are read at the same pinned block as everything else, so the one-block
+  rule holds for history too;
+- they need no archive, because past rounds are current state: all 645 of
+  AAPL's rounds were readable at a recent block;
+- each carries its own `updatedAt`.
+
+The window is 7 days, capped at 1,000 rounds. The walk keeps one anchor round
+at or before the window start, and `Series.coverage` says whether the window
+was reached. At block 66651154 all 37 feeds covered it, with 7 (SGOV) to 361
+(CLSK) points. GeckoTerminal OHLCV was not measured and is not ruled out for
+1.4. A feed publishes on a 0.5% deviation or on the heartbeat, so the series is
+an irregular step function: SPY published 13 rounds that week. Anything that
+treats it as evenly spaced is wrong.
+**Affects:** 1.6, 1.9, 2.x (analysts); `config/chain.json`.
+
+## 2026-09-18 — 32 of 37 feeds began life reporting answers about 1e8 too large
+Measured while choosing the series: AAPL's rounds 1–17, for example, answer
+around 1e8 times the price their 8 decimals imply, and 32 of the 37 mapped
+feeds show the same early regime. A raw walk of round history would therefore
+read a launch-week price 100,000,000× too high as if it were real. The walk
+treats any 10,000× step between consecutive answers as a **scale break**. It
+stops there, leaves the older rounds out, and reports coverage False with the
+round named. No 7-day window reaches back to a launch today, so the guard has
+not fired live. Any longer window, or a backfill, will hit it.
+**Affects:** 1.3; any longer series window; 1.9's fixtures.
+
+## 2026-09-18 — The public 4663 RPC, measured: batching refused, Multicall3 accepted, one endpoint, no Retry-After
+Measured in 1.3 against `RPC_4663_MAINNET`:
+- **Batching.** A JSON-RPC batch of 100 `eth_call`s drew an immediate 429,
+  returned as JSON-RPC error 429 through Cloudflare with no `Retry-After`. One
+  Multicall3 `aggregate3` of 215 reads was accepted. So reads go through
+  Multicall3 with 500 ms pacing and a doubling backoff. No proof run failed on
+  a 429, but retries are not logged, so how many the backoff absorbed is
+  unknown.
+- **Storage.** Storage cannot be read through Multicall3, so the 35 beacon
+  slots are 35 paced calls, about 18 s. That is a real cost for 1.6's snapshot.
+- **Missing state.** A pinned block stayed readable for 9 minutes (326 of 326
+  reads). Once, though, a read at a block a minute old got `-32000: historical
+  state … is not available` while the next read at the same block succeeded.
+  It is now retried, which is safe because reads are by block hash. The first
+  proof run also left 2 of 35 beacon slots unread, and their cause was not
+  captured. They came back undetermined, as they must.
+- **Failover.** It is built over an ordered endpoint list and advances on a
+  hang: the proof put a silent local socket ahead of the real RPC and got the
+  same round in 3.2 s. But there is still one real endpoint, so PLAN §13's
+  "fail loudly" is still what happens. The Alchemy note remains unverified.
+**Affects:** 1.6, 1.10; PLAN §13; `config/chain.json`.
+
+## 2026-09-18 — 1.3 leaves two layout questions open, and two listed feed checks unbuilt
+**Where the staleness comparison lives.** CODEBASE §3 says `core/gates.py` is
+"the only module defining a threshold comparison". The record puts the
+staleness rule in 1.3: PHASE-0-1 1.3, `config/thresholds.json`, and the
+`Series` docstring. So `chain_4663.freshness()` compares age against heartbeat
+plus margin. Either 1.8 moves the comparison into `gates.py` and the adapter
+reports only age and heartbeat, or the rule gets a named exception. This pass
+does not decide which.
+
+**Where the HTTP client lives.** CODEBASE lists `adapters/http.py`, "one HTTP
+client: timeouts, retries, Retry-After, redaction", as 1.3's. This pass was
+scoped to `chain_4663.py`, so the deadline, failover and backoff live there,
+and `http.py` is still the stub. `gecko.py` (1.4) and `bankr_quote.py` (1.5)
+need the same behaviour. Either it is lifted into `http.py` or they import it
+from the chain adapter.
+
+**The two unbuilt checks.** PHASE-0-1 1.3 lists "paused-oracle detection" and
+"market-session awareness".
+- **Paused oracles.** Neither is built as a separate check. A paused feed
+  shows up only as a stale newest point, plus Chainlink's round sanity rules.
+  Whether these proxies expose a pause flag was not probed.
+- **Market sessions.** The freshness verdict names the feed's `market_hours`,
+  but it does not vary by session. Making it vary would change the decided rule
+  (the weekend entry above).
+**Affects:** 1.4, 1.5, 1.8; `planning/CODEBASE.md`.
