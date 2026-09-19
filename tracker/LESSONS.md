@@ -2346,3 +2346,90 @@ measured first, as before (`research/findings.md` §2.6, continued).
 - a true label on, or a different, brief example.
 **Affects:** 2.3 (the example), 2.4 (the gateway limit against the 600 s
 timeout), 2.7, 3.x (the aggregator meets MSTR twice).
+
+## 2026-09-19 — DECISIONS for Phase 3, in the operator's batch brief
+*The operator's, before 3.1 to 3.7 were built as one offline pass.*
+- **A target starts at the weight held.** A buy raises it, a sell cuts it, and
+  hold and silence leave it where it is; a new position comes only from a buy.
+  - **What it contradicts:** SIMPLIFICATION's 3.1 row, where positive scores
+    became weights and everything else went to cash. That would have given a
+    held asset on hold a weight of 0, and the planner would have sold it.
+  - It does not bite on cycle one, because paper holdings start empty. It
+    bites from cycle two, including 8.3's unattended cycles.
+- **Config set, all provisional,** as SIMPLIFICATION proposed:
+  - quorum 3;
+  - maximum weight 0.25;
+  - cash floor $20;
+  - minimum order $1;
+  - turnover 10,000 bps.
+
+  The confidence mapping was left to the build: low 0.25, medium 0.5, high
+  0.75. It is shown at 3.2, to be tuned after a real cycle.
+- **The mandate, populated provisionally.** It holds the capture's 20
+  tradeable assets, with placeholders in the approval fields. Otherwise every
+  order would fail the mandate gate and bury 3.8's divergence story. 4.1
+  replaces all of it.
+- **The live leg leaves 3.3.** It is Phase 5's, not the planner's. This
+  contradicts SIMPLIFICATION's 3.3 row.
+- **3.6 before 3.5.** The risk call needs the budget checked before it is sent.
+  This departs from the unit order.
+- **Three files outside the batch's paths, approved when asked:**
+  - `run/decide.py`, the one command;
+  - `briefs/risk.v1.md`, because prompts are files (CODEBASE §6);
+  - the `cryptography` pin in `pyproject.toml`.
+
+Folded into SIMPLIFICATION's rows and config table, ROADMAP's Phase 3 table and
+PLAN §8.
+**Affects:** 3.1, 3.3, 3.5, 3.6, 4.1, 5.x, 8.3; `config/thresholds.json`,
+`config/analysts.json`, `config/mandate.json`.
+
+## 2026-09-19 — Phase 3 built offline: what building it found
+- **`core/` cannot call the three older comparisons.** It cannot import
+  `adapters/` (CODEBASE §3), and staleness and quote age live there. So
+  `gates.py` reads the verdicts they produced:
+  - the snapshot's status holds staleness and the divergence tier;
+  - each fresh quote is judged by `bankr_quote.tradeability` where it is
+    fetched, and the plan records that verdict.
+
+  Each limit is still defined once. "In one module" still does not hold, as
+  PLAN §2 invariant 4 already says.
+- **The one-signer rule shaped the command.** Nothing outside `treasurer/`
+  may import `sign.py`. So `run/decide.py` runs the signer as its own process,
+  from an empty environment, and that process reads `SIGNING_KEY` itself. The
+  command never holds the key. This is a first step toward 4.12's separate
+  treasurer, not the whole of it.
+- **Limits the aggregator and the planner apply are defined in `gates.py`.**
+  These are the position cap, the cash floor, quorum, and the order split.
+  The boundary test now counts every `gates.Limits` field as a threshold, and
+  a comparison planted in `plan.py` was refused.
+  - `min_order_usd` is decimal text, not the integer 1. As an integer, the test
+    would read every `x < 1` in the code as that threshold.
+- **Two defects, found by tests before any use:**
+  - rounding every change toward zero left a millionth of a position that had
+    been cut to zero, so it was never fully sold. Fixed: a cut to zero is
+    exact;
+  - the planner's guard against selling more than is held was never reached
+    through the aggregator, and breaking it failed no test. A test that gives
+    the planner a proposal made on a different book now catches it.
+- **The weights, judged at 3.2.** The four approved reports give:
+  - META 12.5%;
+  - AMD, INTC and USO 6.25% each;
+  - 68.75% cash.
+
+  That is a small, cautious trend tilt a person could hold over a closed
+  weekend. But three of the four positions are price-trend's calls with
+  haircuts, and much of the cash comes from the confidence mapping, not from a
+  view. Nothing weighs co-movement: AMD and INTC are two positions, though
+  cross-asset-macro's report puts their correlation at 0.78. AMD,
+  price-trend's strongest call, ends level with INTC, its weakest, because
+  price-integrity's caution halves it.
+- **No real model has seen `risk.v1.md`.** The reply format, the veto
+  judgement and the budget's margin are proven on scripted replies only. The
+  offline bundle for four orders is about 32,400 tokens, including the 12,000
+  reserved for the reply.
+- **The record carries no call timings,** so the same recorded inputs rebuild
+  the same bytes. Two offline runs gave the same decision id. 3.9 will make
+  that its test.
+
+**Affects:** 3.4, 3.8, 3.9, 4.4, 4.12; PLAN §2 invariant 4; the confidence
+mapping.
