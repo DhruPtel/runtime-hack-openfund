@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "_about": "When each feed schedule is closed, inferred from the feeds' own rounds and never from a pinned calendar (DECISION, tracker/LESSONS.md 2026-09-18). Time inside a closed span does not count toward a feed's age: a gap that matches it is expected, and the last round stands as the mark. Any other gap past heartbeat + margin is stale and blocks. That includes a market holiday, which this file does not model (planning/PLAN.md section 13). Proposed by `python -m fund.adapters.chain_4663 --sessions`, reviewed, and written here by hand; nothing derives it at cycle time.",
+
+  "derivation": {
+    "labels": ["us_equities_24/5"],
+    "_labels_note": "The schedules a closed span is inferred for. Crypto feeds run every day, so none is proposed for them.",
+    "history_window_seconds": 31536000,
+    "history_max_rounds": 100000,
+    "_history_note": "Every round back to the feed's first: a year is longer than any feed has existed, and the walk stops at a scale break (the launch regime, in other units) or at the phase start.",
+    "guard_seconds": 60,
+    "grid_seconds": 300,
+    "_guard_note": "The never-observed span is shrunk by the guard on each side, then to whole grid marks, so a round seconds past an observed extreme does not contradict it. Shrinking counts less time as closed, which fails closed.",
+    "min_weekends": 4,
+    "_min_weekends_note": "The decision asked for a pattern, not one weekend: fewer complete weeks showing the span and the proposal is refused."
+  },
+
+  "closed": {
+    "us_equities_24/5": {
+      "start_seconds_after_monday_utc": 432300,
+      "end_seconds_after_monday_utc": 604500,
+      "_reads": "Sat 00:05Z to Sun 23:55Z, every week.",
+      "_evidence": "Proposed by --sessions at block 66681376 from 86,606 rounds of all 35 us_equities_24/5 feeds, 2026-06-23 to 2026-09-19. Pooled over 12 complete weeks, no round was ever published between Sat 00:01:45Z and Mon 00:00:16Z. Replayed over that history, heartbeat + margin of open session is never stale except on the two holidays in range, 2026-07-03 and 2026-09-07, which closed a whole session each (tracker/LESSONS.md 2026-09-18).",
+      "_unmeasured": "Every week observed was daylight time. If the schedule follows New York time, both edges move an hour later on 2026-11-01; a round inside this span then makes freshness undetermined until the span is re-derived. Holidays are not modelled and read as stale.",
+      "_rederive_on": "2026-11-09 (Monday). DECISION, tracker/LESSONS.md 2026-09-18. US clocks go back on Sunday 2026-11-01; if the feeds follow New York time, Friday's close lands at Sat 01:00Z from 2026-11-07, inside this span, and every equity price is undetermined until the span is re-derived. Run `python -m fund.adapters.chain_4663 --sessions`, review what it proposes, and write it here by hand."
+    }
+  }
+}

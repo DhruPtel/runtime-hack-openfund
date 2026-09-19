@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "_status": "provisional (unit 1.3). Every value here was chosen against a measurement taken on 2026-09-18, and each note says which.",
+
+  "chain_id": 4663,
+
+  "rpc_endpoints": ["RPC_4663_MAINNET"],
+  "_rpc_endpoints_note": "Credential names, in failover order; the URLs themselves are secrets in .env. There is ONE mainnet endpoint, the public robinhood.com RPC, and it carries no archive data (research/agent-os.md §8). The adapter's failover advances on a hang as well as a rejection, but with one entry it has nowhere to go, so in practice this is still timeout plus fail loudly (PLAN §13). RPC_4663_TESTNET is chain 46630 and is never a failover for 4663.",
+
+  "block_tag": "latest",
+  "_block_tag_note": "The block a snapshot pins to. Every read after that addresses the block by hash (EIP-1898, measured working), so a reorg fails with 'header not found' rather than reading another block. 'safe' ran ~11 min behind latest and 'finalized' ~17 min, both measured.",
+
+  "request_timeout_seconds": 20,
+  "_request_timeout_note": "A whole-request deadline, not just a socket timeout: a hang advances to the next attempt. Measured reads take 140-300 ms; a 215-read Multicall3 took ~290 ms.",
+  "attempts_per_endpoint": 3,
+  "backoff_seconds": 2,
+  "_backoff_note": "Doubles per retry: 2, 4 s. The RPC's 429 is a JSON-RPC error via Cloudflare with NO Retry-After, so there is no server hint to honour (measured). A '-32000 historical state ... not available' for the pinned block is retried the same way: seen once, never in 326 reads of one block over 9 minutes, and safe because every read is by block hash.",
+  "min_request_interval_ms": 500,
+  "_min_request_interval_note": "A batch of 100 eth_calls drew an immediate 429; single Multicall3 calls one second apart never did (measured).",
+
+  "multicall3": "0xca11bde05977b3631167028862be2a173976ca11",
+  "multicall_chunk": 200,
+  "_multicall_note": "Multicall3 is deployed on 4663 (3,808 bytes of code). One aggregate3 call of 215 getRoundData reads was accepted where a JSON-RPC batch of 100 was refused (measured).",
+
+  "series_window_seconds": 2592000,
+  "series_max_rounds": 5000,
+  "_series_note": "Daily closes over 30 days since 1.8 (DECISION after 1.7, adopted on measurement): one analyst call against snapshot 2e95fab1... (189,357 bytes, 763 points) took 94,716 input tokens and $0.264, against 185,168 and $0.454 for seven days of every round, and its reports used history as much as 1.7's did (research/findings.md §1.8a). 5,000 rounds cover 30 days of the densest feed (~80 a day). Every-round sampling over 7 days had 7 (SGOV) to 361 (CLSK) points at block 66651154 (1.3).",
+  "series_sampling": "daily_close",
+  "series_daily_cut_utc_seconds": 72000,
+  "_series_sampling_note": "every_round: each round over the window, as 1.3 chose. daily_close: the round in effect at the cut each day, 20:00Z (16:00 New York in daylight time, 15:00 in standard time), with no close on a day whose cut falls in the closed session or whose round is the previous close's, and the latest round last (DECISION 2026-09-18: adopted only if measurement supports it).",
+  "series_scale_break_ratio": 10000,
+  "_scale_break_note": "Consecutive answers differing by this factor or more are a scale break, not a price move. 32 of 37 mapped feeds began life reporting answers ~1e8 larger than their 8 decimals (measured); a series stops at the break and says so.",
+
+  "user_agent": "openfund-chain/1.3",
+  "_user_agent_note": "The 4663 RPC returns 403 without a User-Agent, and that 403 looks like an auth failure (probe 0.3)."
+}

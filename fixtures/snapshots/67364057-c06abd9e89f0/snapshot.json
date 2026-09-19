@@ -1,0 +1,4922 @@
+{
+ "about": "One frozen snapshot of what the fund knows, pinned to one block of Robinhood Chain (4663). Every chain value was read at `block`; GeckoTerminal prices and venue quotes are live offchain reads, stamped with when they were fetched. Prices and amounts are exact decimal text, times are UTC, and null means unknown, never zero. Each verdict is true, false or null, and null is undetermined, which blocks. `assets` holds one entry per stock with a pinned Chainlink feed; `summary` gives every asset's status in one line; `rules` says what each status means. `holdings` is everything the wallet holds, whatever its status, with a `universe_status` (can it be bought) and a `holding_status` (is it owned, what is it worth, can it be exited); a holding with no mark is carried without a value, never at zero. A quote is a price, not a fill.",
+ "assets": [
+  {
+   "asset": {
+    "address": "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US0378331005",
+    "kind": "stock",
+    "name": "Apple • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "AAPL"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-14.31",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "335.8653350061",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence -14.31 bps on $5273006.66633785 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "5273006.66633785"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood AAPL / USD",
+    "feed_proxy": "0x6b22a786baa607d76728168703a39ea9c99f2cd0",
+    "fresh": {
+     "reason": "age 104944s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 32012s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "335.3847472",
+    "read": "ok",
+    "round_id": "18446744073709552261",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T15:11:28Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood AAPL / USD at 0x6b22a786baa607d76728168703a39ea9c99f2cd0",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "8.638",
+    "buy_amount": "0.074459857040457257",
+    "buy_token": "AAPL",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:26.765Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.070736864188434394",
+    "price_impact_bps": "7",
+    "quote_id": "fe466e07-177b-41a3-9bf1-a742c18242c6",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "7",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 8.6s within 60s; swapImpactBps 7 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "335.511573313267",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "151 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T18:22:30Z", "308.93973568"],
+     ["2026-08-24", "2026-08-24T13:37:04Z", "311.92647545"],
+     ["2026-08-25", "2026-08-25T19:55:15Z", "310.11044802"],
+     ["2026-08-26", "2026-08-26T18:53:12Z", "315.09836998"],
+     ["2026-08-27", "2026-08-27T15:06:02Z", "314.70995023"],
+     ["2026-08-28", "2026-08-28T17:37:31Z", "319.71273059"],
+     ["2026-08-31", "2026-08-31T19:59:49Z", "317.47461437"],
+     ["2026-09-01", "2026-09-01T17:26:47Z", "324.97885996"],
+     ["2026-09-02", "2026-09-02T16:54:43Z", "326.31961852"],
+     ["2026-09-03", "2026-09-03T19:54:43Z", "328.80102239"],
+     ["2026-09-04", "2026-09-04T19:51:26Z", "320.51633525"],
+     ["2026-09-08", "2026-09-08T14:10:56Z", "315.97066349"],
+     ["2026-09-09", "2026-09-09T19:10:03Z", "315.69360675"],
+     ["2026-09-10", "2026-09-10T19:56:31Z", "326.41467229"],
+     ["2026-09-11", "2026-09-11T19:51:28Z", "332.52277801"],
+     ["2026-09-14", "2026-09-14T19:55:30Z", "333.43364334"],
+     ["2026-09-15", "2026-09-15T19:55:55Z", "331.81617825"],
+     ["2026-09-16", "2026-09-16T19:09:37Z", "332.11919969"],
+     ["2026-09-17", "2026-09-17T19:04:49Z", "337.05904445"],
+     ["2026-09-18", "2026-09-18T15:11:28Z", "335.3847472"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x86923f96303d656e4aa86d9d42d1e57ad2023fdc",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US0079031078",
+    "kind": "stock",
+    "name": "AMD • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "AMD"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "64.25",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "555.8531531128",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $638777.851413591 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 64.25 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "638777.851413591"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood AMD / USD",
+    "feed_proxy": "0x943a29e7ae51a4798823ca9eed2ed533b2a22c72",
+    "fresh": {
+     "reason": "age 87757s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14825s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "559.42445",
+    "read": "ok",
+    "round_id": "18446744073709554467",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:57:55Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood AMD / USD at 0x943a29e7ae51a4798823ca9eed2ed533b2a22c72",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "13.478",
+    "buy_amount": "0.045048588377394916",
+    "buy_token": "AMD",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:21.925Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.04279615895852517",
+    "price_impact_bps": "-1",
+    "quote_id": "5f25c6b3-6fd2-45ac-ba71-6b6fbece1d95",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "-1",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 13.5s within 60s; swapImpactBps -1 (negative: price improvement, admitted) within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "554.9954784545234",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $638777.851413591 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 64.25 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "461 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T18:01:17Z", "472.0832"],
+     ["2026-08-24", "2026-08-24T19:15:17Z", "456.77715"],
+     ["2026-08-25", "2026-08-25T19:45:44Z", "478.63"],
+     ["2026-08-26", "2026-08-26T19:44:17Z", "480.2166"],
+     ["2026-08-27", "2026-08-27T19:57:41Z", "476.25"],
+     ["2026-08-28", "2026-08-28T19:58:07Z", "465.92925"],
+     ["2026-08-31", "2026-08-31T19:50:35Z", "470.94825"],
+     ["2026-09-01", "2026-09-01T19:29:54Z", "460.085"],
+     ["2026-09-02", "2026-09-02T16:40:08Z", "456.63145"],
+     ["2026-09-03", "2026-09-03T19:51:54Z", "454.99465"],
+     ["2026-09-04", "2026-09-04T19:56:16Z", "477.70045"],
+     ["2026-09-08", "2026-09-08T19:39:21Z", "505.045"],
+     ["2026-09-09", "2026-09-09T19:30:18Z", "518.8"],
+     ["2026-09-10", "2026-09-10T19:53:02Z", "503.13275"],
+     ["2026-09-11", "2026-09-11T19:08:57Z", "515.94225"],
+     ["2026-09-14", "2026-09-14T19:36:14Z", "494.73"],
+     ["2026-09-15", "2026-09-15T17:28:24Z", "504.4827"],
+     ["2026-09-16", "2026-09-16T19:47:44Z", "513.31"],
+     ["2026-09-17", "2026-09-17T19:16:57Z", "546.62095"],
+     ["2026-09-18", "2026-09-18T19:57:55Z", "559.42445"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x12f190a9f9d7d37a250758b26824b97ce941bf54",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US0231351067",
+    "kind": "stock",
+    "name": "Amazon • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "AMZN"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-428.73",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "265.2342975081",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence -428.73 bps on $1263904.95709845 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "1263904.95709845"
+   },
+   "findings": [
+    {
+     "beyond_open_session_limit": true,
+     "divergence_bps": "-428.73",
+     "kind": "closed-session divergence",
+     "reason": "the feed is frozen at its round of 2026-09-18T16:19:12Z while the pools trade on: the mark is -428.73 bps from GeckoTerminal, past the 100 bps an open session would veto at; judged expected in a closed session, not vetoed (DECISION 2026-09-18)"
+    }
+   ],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood AMZN / USD",
+    "feed_proxy": "0xd5a1508ced74c084ebf3cbe853e2c968fb2a651c",
+    "fresh": {
+     "reason": "age 100880s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 27948s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "253.863",
+    "read": "ok",
+    "round_id": "18446744073709552408",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T16:19:12Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood AMZN / USD at 0xd5a1508ced74c084ebf3cbe853e2c968fb2a651c",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "24.322",
+    "buy_amount": "0.098020759874977281",
+    "buy_token": "AMZN",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:11.081Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.093119721881228417",
+    "price_impact_bps": "19",
+    "quote_id": "6e55b0fb-e405-475a-ab36-262b614ed30e",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "19",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 24.3s within 60s; swapImpactBps 19 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "254.5649498937818",
+    "venue_sell_token_price_usd": "0.9999401533451477"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "156 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:03:04Z", "259.445"],
+     ["2026-08-24", "2026-08-24T14:40:39Z", "262.5649"],
+     ["2026-08-25", "2026-08-25T19:55:13Z", "261.31735"],
+     ["2026-08-26", "2026-08-26T15:35:08Z", "259.4659"],
+     ["2026-08-27", "2026-08-27T19:42:08Z", "256.4"],
+     ["2026-08-28", "2026-08-28T19:30:33Z", "266.085"],
+     ["2026-08-31", "2026-08-31T19:50:34Z", "260.5"],
+     ["2026-09-01", "2026-09-01T14:40:01Z", "255.12"],
+     ["2026-09-02", "2026-09-02T13:47:26Z", "254.96"],
+     ["2026-09-03", "2026-09-03T15:33:23Z", "259.03"],
+     ["2026-09-04", "2026-09-04T19:46:08Z", "258.725"],
+     ["2026-09-08", "2026-09-08T16:07:10Z", "257.515"],
+     ["2026-09-09", "2026-09-09T15:02:15Z", "251.52499999"],
+     ["2026-09-10", "2026-09-10T19:02:32Z", "251.613"],
+     ["2026-09-11", "2026-09-11T17:34:44Z", "257.13"],
+     ["2026-09-14", "2026-09-14T19:00:16Z", "253.73145"],
+     ["2026-09-15", "2026-09-15T19:58:19Z", "248.54795"],
+     ["2026-09-16", "2026-09-16T19:51:36Z", "245.74465"],
+     ["2026-09-17", "2026-09-17T14:55:28Z", "251.37"],
+     ["2026-09-18", "2026-09-18T16:19:12Z", "253.863"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x47f93d52cbec7c6d2cfc080e154002370a60daea",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "USN070592100",
+    "kind": "stock",
+    "name": "ASML Holding NV • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "ASML"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "160.4",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "1650.1587431643",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $21706.7706387348 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 160.4 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "21706.7706387348"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood ASML / USD",
+    "feed_proxy": "0xb4106147e8cce40b7d46124090d373a71b70f87d",
+    "fresh": {
+     "reason": "age 87507s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14575s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "1676.62606399",
+    "read": "ok",
+    "round_id": "18446744073709553432",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T20:02:05Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood ASML / USD at 0xb4106147e8cce40b7d46124090d373a71b70f87d",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "18.879",
+    "buy_amount": "0.014930877434702386",
+    "buy_token": "ASML",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:16.524Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.014184333562967267",
+    "price_impact_bps": "59",
+    "quote_id": "31162aaa-012d-40a3-bc5c-d105bc956c9e",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "59",
+    "tradeable": {
+     "reason": "[impact] swapImpactBps 59 exceeds 50, compared signed",
+     "verdict": false
+    },
+    "venue_price_usd": "1664.5221495419664",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $21706.7706387348 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 160.4 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "311 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:42:33Z", "1760.68838059"],
+     ["2026-08-24", "2026-08-24T19:53:15Z", "1739.61474556"],
+     ["2026-08-25", "2026-08-25T19:23:27Z", "1738.28611095"],
+     ["2026-08-26", "2026-08-26T19:05:22Z", "1749.25722247"],
+     ["2026-08-27", "2026-08-27T19:57:48Z", "1731.81545539"],
+     ["2026-08-28", "2026-08-28T16:02:10Z", "1701.92942755"],
+     ["2026-08-31", "2026-08-31T19:50:59Z", "1696.62188982"],
+     ["2026-09-01", "2026-09-01T19:55:49Z", "1665.10919718"],
+     ["2026-09-02", "2026-09-02T18:57:01Z", "1682.04756326"],
+     ["2026-09-03", "2026-09-03T17:50:55Z", "1645.88359938"],
+     ["2026-09-04", "2026-09-04T19:50:52Z", "1711.80267784"],
+     ["2026-09-08", "2026-09-08T19:44:46Z", "1764.92400972"],
+     ["2026-09-09", "2026-09-09T19:01:54Z", "1727.24679253"],
+     ["2026-09-10", "2026-09-10T19:15:51Z", "1695.02837838"],
+     ["2026-09-11", "2026-09-11T19:24:09Z", "1700.57229005"],
+     ["2026-09-14", "2026-09-14T19:34:32Z", "1580.86516217"],
+     ["2026-09-15", "2026-09-15T15:35:24Z", "1590.32112017"],
+     ["2026-09-16", "2026-09-16T19:32:41Z", "1595.7816734"],
+     ["2026-09-17", "2026-09-17T18:19:36Z", "1629.1850576"],
+     ["2026-09-18", "2026-09-18T19:55:35Z", "1676.39874096"],
+     ["latest", "2026-09-18T20:02:05Z", "1676.62606399"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xad25ac6c84d497db898fa1e8387bf6af3532a1c4",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US01609W1027",
+    "kind": "stock",
+    "name": "Alibaba • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "BABA"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-46",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "114.2976976928",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $211909.313001947 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -46 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "211909.313001947"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood BABA / USD",
+    "feed_proxy": "0x62cc8f9b5f56a33c9c8a60c8b92779f523c4e984",
+    "fresh": {
+     "reason": "age 84587s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 11655s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "113.772",
+    "read": "ok",
+    "round_id": "18446744073709553294",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T20:50:45Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood BABA / USD at 0x62cc8f9b5f56a33c9c8a60c8b92779f523c4e984",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "9.504",
+    "buy_amount": "0.217842040037662105",
+    "buy_token": "BABA",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:25.899Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.206949938035779",
+    "price_impact_bps": "33",
+    "quote_id": "3f5682ea-ae4a-40bc-a9be-4892e72d4ba1",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "33",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 9.5s within 60s; swapImpactBps 33 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "114.38458057753192",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $211909.313001947 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -46 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "292 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T18:39:02Z", "119.66"],
+     ["2026-08-24", "2026-08-24T19:16:18Z", "119.0043"],
+     ["2026-08-25", "2026-08-25T17:41:45Z", "119.0854"],
+     ["2026-08-26", "2026-08-26T17:47:12Z", "120.12545"],
+     ["2026-08-27", "2026-08-27T19:44:09Z", "116.0603"],
+     ["2026-08-28", "2026-08-28T16:05:31Z", "118.5025"],
+     ["2026-08-31", "2026-08-31T18:59:03Z", "114.205"],
+     ["2026-09-01", "2026-09-01T18:39:56Z", "112.8"],
+     ["2026-09-02", "2026-09-02T17:20:52Z", "111.63265"],
+     ["2026-09-03", "2026-09-03T16:35:03Z", "111.6318"],
+     ["2026-09-04", "2026-09-04T15:11:57Z", "112.835"],
+     ["2026-09-08", "2026-09-08T18:45:50Z", "112.8355"],
+     ["2026-09-09", "2026-09-09T15:03:27Z", "109.84095"],
+     ["2026-09-10", "2026-09-10T14:45:53Z", "108.74"],
+     ["2026-09-11", "2026-09-11T14:33:49Z", "109.395"],
+     ["2026-09-14", "2026-09-14T19:10:10Z", "109.433"],
+     ["2026-09-15", "2026-09-15T19:11:46Z", "109.595"],
+     ["2026-09-16", "2026-09-16T19:16:29Z", "107.113"],
+     ["2026-09-17", "2026-09-17T15:56:51Z", "108.55"],
+     ["2026-09-18", "2026-09-18T17:56:12Z", "113.1688"],
+     ["latest", "2026-09-18T20:50:45Z", "113.772"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xcbb95bbf36099d34da091dc6fa6f49efa257cee3",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US18452B2097",
+    "kind": "stock",
+    "name": "CleanSpark • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "CLSK"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "268.8",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "13.989561485",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $0 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 268.8 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "0"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood CLSK / USD",
+    "feed_proxy": "0x810c12d3a554bc47fd39597fe3b3aac4941f50ef",
+    "fresh": {
+     "reason": "age 74391s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 1459s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "14.3656",
+    "read": "ok",
+    "round_id": "18446744073709556481",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T23:40:41Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood CLSK / USD at 0x810c12d3a554bc47fd39597fe3b3aac4941f50ef",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "4.688",
+    "buy_amount": "1.68905363933888576",
+    "buy_token": "CLSK",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:30.715Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "1.604600957371941472",
+    "price_impact_bps": "914",
+    "quote_id": "c7b1f071-d986-469c-9236-846ebd870ec9",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "914",
+    "tradeable": {
+     "reason": "[impact] swapImpactBps 914 exceeds 50, compared signed",
+     "verdict": false
+    },
+    "venue_price_usd": "13.448422109982351",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $0 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 268.8 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "1169 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:55:15Z", "12.035"],
+     ["2026-08-24", "2026-08-24T19:59:04Z", "11.8958"],
+     ["2026-08-25", "2026-08-25T19:16:47Z", "12.7448"],
+     ["2026-08-26", "2026-08-26T19:45:47Z", "12.2251"],
+     ["2026-08-27", "2026-08-27T19:55:44Z", "12.94"],
+     ["2026-08-28", "2026-08-28T19:56:40Z", "11.665"],
+     ["2026-08-31", "2026-08-31T19:52:57Z", "11.635"],
+     ["2026-09-01", "2026-09-01T19:57:57Z", "11.085"],
+     ["2026-09-02", "2026-09-02T19:54:52Z", "11.285"],
+     ["2026-09-03", "2026-09-03T19:47:47Z", "12.555"],
+     ["2026-09-04", "2026-09-04T19:50:50Z", "12.685"],
+     ["2026-09-08", "2026-09-08T19:56:42Z", "13.425"],
+     ["2026-09-09", "2026-09-09T19:30:53Z", "13.25649999"],
+     ["2026-09-10", "2026-09-10T19:58:50Z", "12.815"],
+     ["2026-09-11", "2026-09-11T19:50:32Z", "13.705"],
+     ["2026-09-14", "2026-09-14T19:58:40Z", "13.21745"],
+     ["2026-09-15", "2026-09-15T19:59:26Z", "12.5965"],
+     ["2026-09-16", "2026-09-16T19:57:52Z", "12.795"],
+     ["2026-09-17", "2026-09-17T19:56:24Z", "13.354"],
+     ["2026-09-18", "2026-09-18T19:59:37Z", "14.454"],
+     ["latest", "2026-09-18T23:40:41Z", "14.3656"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x6330d8c3178a418788df01a47479c0ce7ccf450b",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US19260Q1076",
+    "kind": "stock",
+    "name": "Coinbase • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "COIN"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-44.27",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "194.772155078",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $345410.801400459 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -44.27 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "345410.801400459"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood COIN / USD",
+    "feed_proxy": "0xa3a468a452940b7d6b69991207b508c609a98ef2",
+    "fresh": {
+     "reason": "age 87766s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14834s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "193.91",
+    "read": "ok",
+    "round_id": "18446744073709554509",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:57:46Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood COIN / USD at 0xa3a468a452940b7d6b69991207b508c609a98ef2",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "15.635",
+    "buy_amount": "0.128086981926288904",
+    "buy_token": "COIN",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:19.768Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.121682632829974459",
+    "price_impact_bps": "10",
+    "quote_id": "5c83dfa5-5047-4e12-857a-723bcca515ec",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "10",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 15.6s within 60s; swapImpactBps 10 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "194.9748794684581",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $345410.801400459 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -44.27 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "857 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:57:06Z", "186.91905"],
+     ["2026-08-24", "2026-08-24T19:41:20Z", "179.39775"],
+     ["2026-08-25", "2026-08-25T19:40:10Z", "187.0302"],
+     ["2026-08-26", "2026-08-26T18:08:56Z", "182.20825"],
+     ["2026-08-27", "2026-08-27T19:53:54Z", "190.41205"],
+     ["2026-08-28", "2026-08-28T19:32:50Z", "178.87"],
+     ["2026-08-31", "2026-08-31T19:57:08Z", "187.9533"],
+     ["2026-09-01", "2026-09-01T19:57:41Z", "176.60225"],
+     ["2026-09-02", "2026-09-02T19:58:54Z", "174.91585"],
+     ["2026-09-03", "2026-09-03T19:19:51Z", "192.6108"],
+     ["2026-09-04", "2026-09-04T19:58:31Z", "184.5271"],
+     ["2026-09-08", "2026-09-08T18:49:26Z", "179.2"],
+     ["2026-09-09", "2026-09-09T19:56:57Z", "175.2"],
+     ["2026-09-10", "2026-09-10T18:51:52Z", "173.08999999"],
+     ["2026-09-11", "2026-09-11T19:40:30Z", "174.97"],
+     ["2026-09-14", "2026-09-14T19:50:59Z", "191.983"],
+     ["2026-09-15", "2026-09-15T19:44:14Z", "171.965"],
+     ["2026-09-16", "2026-09-16T19:47:50Z", "164.39"],
+     ["2026-09-17", "2026-09-17T19:50:33Z", "173.495"],
+     ["2026-09-18", "2026-09-18T19:57:46Z", "193.91"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xdf0992e440dd0be65bd8439b609d6d4366bf1cb5",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US1725731079",
+    "kind": "stock",
+    "name": "Circle Internet Group • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "CRCL"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-19.7",
+    "fetched_at": "2026-09-19T20:22:08.908Z",
+    "independent_of_venue": true,
+    "price_usd": "91.9411083415",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence -19.7 bps on $2871654.32754991 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "2871654.32754991"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood CRCL / USD",
+    "feed_proxy": "0x6652edf64ba3731c4f2d3ce821a0fb1f1f6b482a",
+    "fresh": {
+     "reason": "age 85898s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 12966s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "91.75999999",
+    "read": "ok",
+    "round_id": "18446744073709555837",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T20:28:54Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood CRCL / USD at 0x6652edf64ba3731c4f2d3ce821a0fb1f1f6b482a",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "2.137",
+    "buy_amount": "0.272222117631721815",
+    "buy_token": "CRCL",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:33.266Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.258611011750135724",
+    "price_impact_bps": "-2",
+    "quote_id": "d67acf6c-8a95-40d8-87ac-0e6dbf047e9e",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "-2",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 2.1s within 60s; swapImpactBps -2 (negative: price improvement, admitted) within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "91.85628133981854",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "1227 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:55:27Z", "88.2259"],
+     ["2026-08-24", "2026-08-24T19:56:42Z", "87.59075"],
+     ["2026-08-25", "2026-08-25T19:44:12Z", "91.89935"],
+     ["2026-08-26", "2026-08-26T19:00:24Z", "90.0555"],
+     ["2026-08-27", "2026-08-27T19:27:51Z", "94.24035"],
+     ["2026-08-28", "2026-08-28T19:46:48Z", "87.11"],
+     ["2026-08-31", "2026-08-31T19:56:23Z", "95.3653"],
+     ["2026-09-01", "2026-09-01T19:24:32Z", "89.47"],
+     ["2026-09-02", "2026-09-02T19:54:59Z", "88.8"],
+     ["2026-09-03", "2026-09-03T19:34:56Z", "102.71095"],
+     ["2026-09-04", "2026-09-04T18:35:59Z", "101.455"],
+     ["2026-09-08", "2026-09-08T19:37:05Z", "96.2"],
+     ["2026-09-09", "2026-09-09T19:58:06Z", "93.015"],
+     ["2026-09-10", "2026-09-10T19:59:33Z", "90.36035"],
+     ["2026-09-11", "2026-09-11T19:51:21Z", "91.0839"],
+     ["2026-09-14", "2026-09-14T19:52:19Z", "97.5466"],
+     ["2026-09-15", "2026-09-15T19:52:15Z", "86.085"],
+     ["2026-09-16", "2026-09-16T19:51:30Z", "80.6096"],
+     ["2026-09-17", "2026-09-17T18:39:34Z", "84.98095"],
+     ["2026-09-18", "2026-09-18T19:58:24Z", "92.18"],
+     ["latest", "2026-09-18T20:28:54Z", "91.75999999"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x5f10a1c971b69e47e059e1dc91901b59b3fb49c3",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US21873S1087",
+    "kind": "stock",
+    "name": "CoreWeave • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "CRWV"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "195.06",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "79.7788082574",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $2063.9750365587 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 195.06 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "2063.9750365587"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood CRWV / USD",
+    "feed_proxy": "0xe1b3aabcafad1c94708dc1367dcff8aa4407487c",
+    "fresh": {
+     "reason": "age 89012s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 16080s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "81.3349",
+    "read": "ok",
+    "round_id": "18446744073709555779",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:37:00Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood CRWV / USD at 0xe1b3aabcafad1c94708dc1367dcff8aa4407487c",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "16.329",
+    "buy_amount": "0.306936930296454042",
+    "buy_token": "CRWV",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:19.074Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.29159008378163134",
+    "price_impact_bps": "31",
+    "quote_id": "e100ac02-8504-461e-8d14-56d1cb284317",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "31",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 16.3s within 60s; swapImpactBps 31 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "81.19834231115296",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $2063.9750365587 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 195.06 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "892 rounds reach back to the window start; 21 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 0 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:59:49Z", "87.9236"],
+     ["2026-08-24", "2026-08-24T19:53:42Z", "85.90815"],
+     ["2026-08-25", "2026-08-25T19:27:25Z", "87.8275"],
+     ["2026-08-26", "2026-08-26T19:32:53Z", "88.29955"],
+     ["2026-08-27", "2026-08-27T19:55:50Z", "87.33"],
+     ["2026-08-28", "2026-08-28T19:44:16Z", "84.051"],
+     ["2026-08-31", "2026-08-31T19:52:50Z", "84.80885"],
+     ["2026-09-01", "2026-09-01T19:55:51Z", "81.59375"],
+     ["2026-09-02", "2026-09-02T19:26:34Z", "81.13605"],
+     ["2026-09-03", "2026-09-03T19:22:12Z", "84.565"],
+     ["2026-09-04", "2026-09-04T19:34:52Z", "89.5199"],
+     ["2026-09-07", "2026-09-04T20:43:53Z", "89.0519"],
+     ["2026-09-08", "2026-09-08T19:37:31Z", "99.8141"],
+     ["2026-09-09", "2026-09-09T19:38:31Z", "94.7951"],
+     ["2026-09-10", "2026-09-10T19:14:33Z", "89.455"],
+     ["2026-09-11", "2026-09-11T19:57:26Z", "88.83"],
+     ["2026-09-14", "2026-09-14T19:31:01Z", "83.325"],
+     ["2026-09-15", "2026-09-15T19:00:54Z", "81.02985"],
+     ["2026-09-16", "2026-09-16T19:46:51Z", "83.20205"],
+     ["2026-09-17", "2026-09-17T19:49:48Z", "80.11"],
+     ["2026-09-18", "2026-09-18T19:37:00Z", "81.3349"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x941ae714ec6d8130c7b75d67160ca08f1e7d11dd",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US24703L2025",
+    "kind": "stock",
+    "name": "Dell • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "DELL"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "72.41",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "566.6215281134",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $65608.9132508854 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 72.41 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "65608.9132508854"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood DELL-USD",
+    "feed_proxy": "0x1c6c8cadbe02e19129c39ddb92281ce4c0bf206b",
+    "fresh": {
+     "reason": "age 87790s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14858s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "570.72415773",
+    "read": "ok",
+    "round_id": "18446744073709553931",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:57:22Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood DELL-USD at 0x1c6c8cadbe02e19129c39ddb92281ce4c0bf206b",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "11.431",
+    "buy_amount": "0.043284941860743407",
+    "buy_token": "DELL",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:23.972Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.041120694767706237",
+    "price_impact_bps": "73",
+    "quote_id": "c23d6cfe-8de4-49d2-9a9d-d1d2bcba886f",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "73",
+    "tradeable": {
+     "reason": "[impact] swapImpactBps 73 exceeds 50, compared signed",
+     "verdict": false
+    },
+    "venue_price_usd": "573.3336446074047",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $65608.9132508854 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 72.41 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "858 rounds reach back to the window start; 21 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 0 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:58:56Z", "440.69317416"],
+     ["2026-08-24", "2026-08-24T19:25:19Z", "431.88251288"],
+     ["2026-08-25", "2026-08-25T19:59:23Z", "451.45040945"],
+     ["2026-08-26", "2026-08-26T19:55:19Z", "464.17917033"],
+     ["2026-08-27", "2026-08-27T19:57:15Z", "471.0103555"],
+     ["2026-08-28", "2026-08-28T19:15:40Z", "454.37029546"],
+     ["2026-08-31", "2026-08-31T19:47:09Z", "459.9168988"],
+     ["2026-09-01", "2026-09-01T19:53:23Z", "422.57852017"],
+     ["2026-09-02", "2026-09-02T19:52:39Z", "491.28129685"],
+     ["2026-09-03", "2026-09-03T19:57:07Z", "512.43764461"],
+     ["2026-09-04", "2026-09-04T19:53:18Z", "524.8714367"],
+     ["2026-09-07", "2026-09-04T20:26:19Z", "521.97195199"],
+     ["2026-09-08", "2026-09-08T19:39:30Z", "532.70593579"],
+     ["2026-09-09", "2026-09-09T18:40:00Z", "534.89407519"],
+     ["2026-09-10", "2026-09-10T19:57:57Z", "508.38838665"],
+     ["2026-09-11", "2026-09-11T19:55:54Z", "565.21500677"],
+     ["2026-09-14", "2026-09-14T19:53:53Z", "535.25439814"],
+     ["2026-09-15", "2026-09-15T19:38:04Z", "543.26715859"],
+     ["2026-09-16", "2026-09-16T19:47:40Z", "562.24911783"],
+     ["2026-09-17", "2026-09-17T19:58:07Z", "590.20349865"],
+     ["2026-09-18", "2026-09-18T19:57:22Z", "570.72415773"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x7f0abef0c07280f82c6a08ead09ded6bae2c13fc",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US4642867729",
+    "kind": "stock",
+    "name": "iShares MSCI South Korea fund • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "EWY"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-1090.46",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "203.0686895143",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $4862.7507622988 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -1090.46 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "4862.7507622988"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood EWY / USD",
+    "feed_proxy": "0xefdf54610b62a7753ec30bdc380847c12d32e1d1",
+    "fresh": {
+     "reason": "age 90506s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 17574s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "180.925",
+    "read": "ok",
+    "round_id": "18446744073709554855",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:12:06Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood EWY / USD at 0xefdf54610b62a7753ec30bdc380847c12d32e1d1",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "15.065",
+    "buy_amount": "0.138296625235446114",
+    "buy_token": "EWY",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:20.338Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.131381793973673808",
+    "price_impact_bps": "71",
+    "quote_id": "05e20ba4-d152-452e-b586-0e16e81ea50e",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "71",
+    "tradeable": {
+     "reason": "[impact] swapImpactBps 71 exceeds 50, compared signed",
+     "verdict": false
+    },
+    "venue_price_usd": "179.48940435951184",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $4862.7507622988 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -1090.46 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "389 rounds reach back to the window start; 21 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 0 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:36:43Z", "178.2095"],
+     ["2026-08-24", "2026-08-24T19:38:30Z", "173.9243"],
+     ["2026-08-25", "2026-08-25T18:43:12Z", "179.7906"],
+     ["2026-08-26", "2026-08-26T15:37:04Z", "180.0838"],
+     ["2026-08-27", "2026-08-27T19:56:04Z", "181.3696"],
+     ["2026-08-28", "2026-08-28T19:10:29Z", "180.61965"],
+     ["2026-08-31", "2026-08-31T19:50:47Z", "180.47"],
+     ["2026-09-01", "2026-09-01T18:58:43Z", "175.875"],
+     ["2026-09-02", "2026-09-02T17:51:39Z", "178.7464"],
+     ["2026-09-03", "2026-09-03T18:50:04Z", "180.63265"],
+     ["2026-09-04", "2026-09-04T19:59:33Z", "188.8062"],
+     ["2026-09-07", "2026-09-04T22:05:05Z", "187.4797"],
+     ["2026-09-08", "2026-09-08T18:53:25Z", "190.2864"],
+     ["2026-09-09", "2026-09-09T19:53:02Z", "190.96499999"],
+     ["2026-09-10", "2026-09-10T19:58:58Z", "182.5975"],
+     ["2026-09-11", "2026-09-11T18:46:15Z", "188.64045"],
+     ["2026-09-14", "2026-09-14T19:55:45Z", "176.51"],
+     ["2026-09-15", "2026-09-15T16:53:13Z", "176.51535"],
+     ["2026-09-16", "2026-09-16T19:51:28Z", "175.67"],
+     ["2026-09-17", "2026-09-17T16:24:36Z", "182.92"],
+     ["2026-09-18", "2026-09-18T19:12:06Z", "180.925"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US36467W1099",
+    "kind": "stock",
+    "name": "GameStop • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "GME"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "27.75",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "22.4893535444",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence 27.75 bps on $1545121.65825304 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "1545121.65825304"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood GME / USD",
+    "feed_proxy": "0x27c71df6a64fb476468edf256cf72c038bab5b67",
+    "fresh": {
+     "reason": "age 86506s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 13574s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "22.55175",
+    "read": "ok",
+    "round_id": "18446744073709552466",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T20:18:46Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood GME / USD at 0x27c71df6a64fb476468edf256cf72c038bab5b67",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "23.594",
+    "buy_amount": "1.110915044165906301",
+    "buy_token": "GME",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:11.809Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "1.055369291957610986",
+    "price_impact_bps": "-6",
+    "quote_id": "b91afa99-d2ce-4926-917a-3bc0053d1ee0",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "-6",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 23.6s within 60s; swapImpactBps -6 (negative: price improvement, admitted) within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "22.517058558433618",
+    "venue_sell_token_price_usd": "0.9999401533451477"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "333 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T18:38:19Z", "18.225"],
+     ["2026-08-24", "2026-08-24T15:17:30Z", "18.00445"],
+     ["2026-08-25", "2026-08-25T19:59:49Z", "18.08"],
+     ["2026-08-26", "2026-08-26T19:32:31Z", "17.9449"],
+     ["2026-08-27", "2026-08-27T19:20:28Z", "18.205"],
+     ["2026-08-28", "2026-08-28T19:51:54Z", "17.925"],
+     ["2026-08-31", "2026-08-31T19:45:30Z", "18.345"],
+     ["2026-09-01", "2026-09-01T19:36:05Z", "18.785"],
+     ["2026-09-02", "2026-09-02T19:00:30Z", "18.915"],
+     ["2026-09-03", "2026-09-03T19:59:14Z", "19.235"],
+     ["2026-09-04", "2026-09-04T19:11:08Z", "19.195"],
+     ["2026-09-08", "2026-09-08T18:33:24Z", "18.925"],
+     ["2026-09-09", "2026-09-09T19:58:05Z", "19.987"],
+     ["2026-09-10", "2026-09-10T19:42:19Z", "20.445"],
+     ["2026-09-11", "2026-09-11T19:50:45Z", "21.115"],
+     ["2026-09-14", "2026-09-14T19:49:02Z", "21.705"],
+     ["2026-09-15", "2026-09-15T19:46:43Z", "21.42499999"],
+     ["2026-09-16", "2026-09-16T19:56:36Z", "22.042"],
+     ["2026-09-17", "2026-09-17T19:55:19Z", "22.713"],
+     ["2026-09-18", "2026-09-18T19:51:16Z", "22.68305"],
+     ["latest", "2026-09-18T20:18:46Z", "22.55175"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US02079K3059",
+    "kind": "stock",
+    "name": "Alphabet Class A • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "GOOGL"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "89.86",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "347.350279854",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence 89.86 bps on $5414286.30268013 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "5414286.30268013"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood GOOGL / USD",
+    "feed_proxy": "0xf6f373a037c30f0e5010d854385ca89185ae638b",
+    "fresh": {
+     "reason": "age 86924s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 13992s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "350.47135177",
+    "read": "ok",
+    "round_id": "18446744073709552414",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T20:11:48Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood GOOGL / USD at 0xf6f373a037c30f0e5010d854385ca89185ae638b",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "21.923",
+    "buy_amount": "0.071167459680992499",
+    "buy_token": "GOOGL",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:13.480Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.067609086696942874",
+    "price_impact_bps": "-9",
+    "quote_id": "f1ef0bdc-1864-4138-82fb-cedbdd265355",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "-9",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 21.9s within 60s; swapImpactBps -9 (negative: price improvement, admitted) within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "351.620584612801",
+    "venue_sell_token_price_usd": "0.9999319161924451"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "164 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T14:55:47Z", "344.51"],
+     ["2026-08-24", "2026-08-24T17:53:14Z", "348.54499999"],
+     ["2026-08-25", "2026-08-25T14:31:11Z", "346.275"],
+     ["2026-08-26", "2026-08-26T19:47:30Z", "342.375"],
+     ["2026-08-27", "2026-08-27T13:44:19Z", "340.37975"],
+     ["2026-08-28", "2026-08-28T19:07:22Z", "347.585"],
+     ["2026-08-31", "2026-08-31T15:24:52Z", "339.03499999"],
+     ["2026-09-01", "2026-09-01T18:40:20Z", "333.869"],
+     ["2026-09-02", "2026-09-02T15:28:43Z", "337.5562"],
+     ["2026-09-03", "2026-09-03T14:01:37Z", "342.115"],
+     ["2026-09-04", "2026-09-04T14:27:21Z", "338.275"],
+     ["2026-09-08", "2026-09-08T18:49:35Z", "337.4795"],
+     ["2026-09-09", "2026-09-09T18:32:28Z", "329.985"],
+     ["2026-09-10", "2026-09-10T17:01:23Z", "332.00375"],
+     ["2026-09-11", "2026-09-11T18:45:21Z", "339.045"],
+     ["2026-09-14", "2026-09-14T19:30:21Z", "348.55385"],
+     ["2026-09-15", "2026-09-15T19:49:09Z", "344.79685156"],
+     ["2026-09-16", "2026-09-16T19:09:51Z", "342.4740512"],
+     ["2026-09-17", "2026-09-17T19:39:35Z", "347.39235479"],
+     ["2026-09-18", "2026-09-18T19:55:48Z", "348.67605368"],
+     ["latest", "2026-09-18T20:11:48Z", "350.47135177"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xc72b96e0e48ecd4dc75e1e45396e26300bc39681",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US4581401001",
+    "kind": "stock",
+    "name": "Intel • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "INTC"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-31.64",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "109.3960930024",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence -31.64 bps on $2834727.05429141 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "2834727.05429141"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood INTC / USD",
+    "feed_proxy": "0x3f390c5c24628ac7c489515402235fead71d1913",
+    "fresh": {
+     "reason": "age 86971s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14039s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "109.05",
+    "read": "ok",
+    "round_id": "18446744073709555596",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T20:11:01Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood INTC / USD at 0x3f390c5c24628ac7c489515402235fead71d1913",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "5.818",
+    "buy_amount": "0.228013871212795643",
+    "buy_token": "INTC",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:29.585Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.216613177652155861",
+    "price_impact_bps": "7",
+    "quote_id": "778f1b68-a663-4422-95cd-b9aa36a41671",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "7",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 5.8s within 60s; swapImpactBps 7 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "109.56256613191492",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "699 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:42:28Z", "89.95465"],
+     ["2026-08-24", "2026-08-24T19:42:31Z", "87.16499999"],
+     ["2026-08-25", "2026-08-25T19:18:26Z", "87.555"],
+     ["2026-08-26", "2026-08-26T19:37:09Z", "87.885"],
+     ["2026-08-27", "2026-08-27T19:56:05Z", "91.7433"],
+     ["2026-08-28", "2026-08-28T19:55:30Z", "89.535"],
+     ["2026-08-31", "2026-08-31T16:11:53Z", "89.49195"],
+     ["2026-09-01", "2026-09-01T19:25:08Z", "88.735"],
+     ["2026-09-02", "2026-09-02T17:40:19Z", "89.795"],
+     ["2026-09-03", "2026-09-03T19:49:06Z", "91.53"],
+     ["2026-09-04", "2026-09-04T19:51:50Z", "95.47605"],
+     ["2026-09-08", "2026-09-08T19:56:26Z", "104.22005"],
+     ["2026-09-09", "2026-09-09T18:06:38Z", "105.95435"],
+     ["2026-09-10", "2026-09-10T19:55:37Z", "100.475"],
+     ["2026-09-11", "2026-09-11T19:02:41Z", "103.03"],
+     ["2026-09-14", "2026-09-14T19:39:55Z", "97.485"],
+     ["2026-09-15", "2026-09-15T19:19:49Z", "97.225"],
+     ["2026-09-16", "2026-09-16T19:47:52Z", "100.91"],
+     ["2026-09-17", "2026-09-17T19:44:47Z", "109.205"],
+     ["2026-09-18", "2026-09-18T19:54:00Z", "108.49"],
+     ["latest", "2026-09-18T20:11:01Z", "109.05"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x558378e000d634a36593e338ebacdd6207640efe",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US46222L1089",
+    "kind": "stock",
+    "name": "IonQ • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "IONQ"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-532.03",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "41.2831066302",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $2656.88410716032 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -532.03 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "2656.88410716032"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood IONQ / USD",
+    "feed_proxy": "0x22efec4919baf55f360e0edee4abeb26de4971eb",
+    "fresh": {
+     "reason": "age 86651s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 13719s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "39.08675",
+    "read": "ok",
+    "round_id": "18446744073709555629",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T20:16:21Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood IONQ / USD at 0x22efec4919baf55f360e0edee4abeb26de4971eb",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "17.685",
+    "buy_amount": "0.601101733327942309",
+    "buy_token": "IONQ",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:17.718Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.571046646661545194",
+    "price_impact_bps": "192",
+    "quote_id": "e2c48172-4575-4b33-9c95-4fb389372f8c",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "192",
+    "tradeable": {
+     "reason": "[impact] swapImpactBps 192 exceeds 50, compared signed",
+     "verdict": false
+    },
+    "venue_price_usd": "40.79310467846481",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $2656.88410716032 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -532.03 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "809 rounds reach back to the window start; 21 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 0 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:45:26Z", "44.87"],
+     ["2026-08-24", "2026-08-24T19:52:45Z", "41.13945"],
+     ["2026-08-25", "2026-08-25T19:45:11Z", "42.09"],
+     ["2026-08-26", "2026-08-26T19:54:11Z", "40.185"],
+     ["2026-08-27", "2026-08-27T19:27:53Z", "42.3429"],
+     ["2026-08-28", "2026-08-28T19:51:21Z", "39.13085"],
+     ["2026-08-31", "2026-08-31T19:51:37Z", "39.39"],
+     ["2026-09-01", "2026-09-01T19:59:34Z", "37.805"],
+     ["2026-09-02", "2026-09-02T19:55:46Z", "37.565"],
+     ["2026-09-03", "2026-09-03T19:35:12Z", "39.01"],
+     ["2026-09-04", "2026-09-04T19:58:47Z", "39.465"],
+     ["2026-09-07", "2026-09-04T20:04:17Z", "39.6894"],
+     ["2026-09-08", "2026-09-08T19:57:36Z", "40.34"],
+     ["2026-09-09", "2026-09-09T19:54:09Z", "38.25"],
+     ["2026-09-10", "2026-09-10T19:58:52Z", "36.825"],
+     ["2026-09-11", "2026-09-11T19:33:35Z", "36.87345"],
+     ["2026-09-14", "2026-09-14T19:31:51Z", "37.65125"],
+     ["2026-09-15", "2026-09-15T19:45:10Z", "37.0751"],
+     ["2026-09-16", "2026-09-16T19:46:24Z", "36.7054"],
+     ["2026-09-17", "2026-09-17T19:57:20Z", "40.54"],
+     ["2026-09-18", "2026-09-18T19:57:21Z", "39.0553"],
+     ["latest", "2026-09-18T20:16:21Z", "39.08675"]
+    ],
+    "read": "ok",
+    "rounds": 22,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xc0d6457c16cc70d6790dd43521c899c87ce02f35",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US30303M1027",
+    "kind": "stock",
+    "name": "Meta Platforms • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "META"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "6.25",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "666.3452990086",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence 6.25 bps on $7323409.98283913 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "7323409.98283913"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood META / USD",
+    "feed_proxy": "0x7c38c00c30bee9378381e7b6135d7283356d71b1",
+    "fresh": {
+     "reason": "age 88016s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 15084s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "666.7615",
+    "read": "ok",
+    "round_id": "18446744073709552837",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:53:36Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood META / USD at 0x7c38c00c30bee9378381e7b6135d7283356d71b1",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "6.59",
+    "buy_amount": "0.037263451239528711",
+    "buy_token": "META",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:28.813Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.035400278677552275",
+    "price_impact_bps": "3",
+    "quote_id": "4a988714-ea86-4c8a-9b23-1eea10bc60bc",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "3",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 6.6s within 60s; swapImpactBps 3 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "670.6825171528252",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "364 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T18:08:10Z", "549.15"],
+     ["2026-08-24", "2026-08-24T17:18:11Z", "558.9229"],
+     ["2026-08-25", "2026-08-25T19:42:28Z", "570.48255"],
+     ["2026-08-26", "2026-08-26T19:17:24Z", "577.575"],
+     ["2026-08-27", "2026-08-27T16:42:17Z", "570.49885"],
+     ["2026-08-28", "2026-08-28T17:28:50Z", "576.5713"],
+     ["2026-08-31", "2026-08-31T19:20:43Z", "572.71"],
+     ["2026-09-01", "2026-09-01T19:55:50Z", "577.87"],
+     ["2026-09-02", "2026-09-02T19:55:15Z", "591.9985"],
+     ["2026-09-03", "2026-09-03T19:48:28Z", "612.18855"],
+     ["2026-09-04", "2026-09-04T19:11:51Z", "615.64"],
+     ["2026-09-08", "2026-09-08T19:32:39Z", "615.1764"],
+     ["2026-09-09", "2026-09-09T19:07:55Z", "655.1346"],
+     ["2026-09-10", "2026-09-10T19:02:21Z", "643.99515"],
+     ["2026-09-11", "2026-09-11T19:50:22Z", "646.9696"],
+     ["2026-09-14", "2026-09-14T18:06:23Z", "667.6834"],
+     ["2026-09-15", "2026-09-15T18:19:33Z", "670.2387"],
+     ["2026-09-16", "2026-09-16T19:14:18Z", "675.115"],
+     ["2026-09-17", "2026-09-17T19:55:17Z", "682.42815"],
+     ["2026-09-18", "2026-09-18T19:53:36Z", "666.7615"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xe93237c50d904957cf27e7b1133b510c669c2e74",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US5949181045",
+    "kind": "stock",
+    "name": "Microsoft • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "MSFT"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "15.84",
+    "fetched_at": "2026-09-19T20:22:08.908Z",
+    "independent_of_venue": true,
+    "price_usd": "495.0388857387",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $819638.830008439 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 15.84 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "819638.830008439"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood MSFT / USD",
+    "feed_proxy": "0x45c3c877c15e6ba2ebb19ea114ea508d14c1af2e",
+    "fresh": {
+     "reason": "age 85119s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 12187s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "495.82266672",
+    "read": "ok",
+    "round_id": "18446744073709552378",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T20:41:53Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood MSFT / USD at 0x45c3c877c15e6ba2ebb19ea114ea508d14c1af2e",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "1.391",
+    "buy_amount": "0.0504674628033023",
+    "buy_token": "MSFT",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:34.012Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.047944089663137185",
+    "price_impact_bps": "12",
+    "quote_id": "db83edb2-dd4d-45e2-a926-3a8aa843714b",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "12",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 1.4s within 60s; swapImpactBps 12 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "494.7564621166479",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $819638.830008439 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 15.84 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "129 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:37:16Z", "483.485"],
+     ["2026-08-24", "2026-08-24T15:10:17Z", "489.39605"],
+     ["2026-08-25", "2026-08-25T15:12:14Z", "490.265"],
+     ["2026-08-26", "2026-08-26T13:42:38Z", "494.83"],
+     ["2026-08-27", "2026-08-27T16:38:25Z", "503.855"],
+     ["2026-08-28", "2026-08-28T19:32:53Z", "512.96"],
+     ["2026-08-31", "2026-08-31T19:40:53Z", "509.019"],
+     ["2026-09-01", "2026-09-01T15:05:14Z", "500.71"],
+     ["2026-09-02", "2026-09-02T15:43:10Z", "495.48"],
+     ["2026-09-03", "2026-09-03T19:14:41Z", "511.26"],
+     ["2026-09-04", "2026-09-04T15:17:02Z", "500.5322"],
+     ["2026-09-08", "2026-09-08T13:47:50Z", "491.67"],
+     ["2026-09-09", "2026-09-09T13:58:57Z", "491.615"],
+     ["2026-09-10", "2026-09-10T18:06:58Z", "491.724"],
+     ["2026-09-11", "2026-09-11T15:27:21Z", "496.66186313"],
+     ["2026-09-14", "2026-09-14T19:03:26Z", "505.95735014"],
+     ["2026-09-15", "2026-09-15T18:09:26Z", "497.94119121"],
+     ["2026-09-16", "2026-09-16T19:54:11Z", "490.13822029"],
+     ["2026-09-17", "2026-09-17T19:52:09Z", "498.66584034"],
+     ["2026-09-18", "2026-09-18T19:50:22Z", "493.01350715"],
+     ["latest", "2026-09-18T20:41:53Z", "495.82266672"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xec262a75e413fafd0df80480274532c79d42da09",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US5949724083",
+    "kind": "stock",
+    "name": "Strategy Inc. • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "MSTR"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-384.05",
+    "fetched_at": "2026-09-19T20:22:08.908Z",
+    "independent_of_venue": true,
+    "price_usd": "158.7392617361",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence -384.05 bps on $2654918.43426273 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "2654918.43426273"
+   },
+   "findings": [
+    {
+     "beyond_open_session_limit": true,
+     "divergence_bps": "-384.05",
+     "kind": "closed-session divergence",
+     "reason": "the feed is frozen at its round of 2026-09-18T23:41:26Z while the pools trade on: the mark is -384.05 bps from GeckoTerminal, past the 100 bps an open session would veto at; judged expected in a closed session, not vetoed (DECISION 2026-09-18)"
+    }
+   ],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood MSTR / USD",
+    "feed_proxy": "0x396118bdfb181e6240e74d243f266b061c0edc3d",
+    "fresh": {
+     "reason": "age 74346s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 1414s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "152.643",
+    "read": "ok",
+    "round_id": "18446744073709555623",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T23:41:26Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood MSTR / USD at 0x396118bdfb181e6240e74d243f266b061c0edc3d",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "0.735",
+    "buy_amount": "0.15788949929631585",
+    "buy_token": "MSTR",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:34.668Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.149995024331500057",
+    "price_impact_bps": "10",
+    "quote_id": "fbfa46d6-9040-4f95-b2ad-e794ba2fd195",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "10",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 0.7s within 60s; swapImpactBps 10 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "158.172427417523",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "1153 rounds reach back to the window start; 21 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 0 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:51:52Z", "119.4185"],
+     ["2026-08-24", "2026-08-24T19:26:37Z", "122.62405"],
+     ["2026-08-25", "2026-08-25T19:28:08Z", "127.0082"],
+     ["2026-08-26", "2026-08-26T19:56:51Z", "123.775"],
+     ["2026-08-27", "2026-08-27T19:50:47Z", "137.58195"],
+     ["2026-08-28", "2026-08-28T19:54:13Z", "127.145"],
+     ["2026-08-31", "2026-08-31T19:57:00Z", "132.40775"],
+     ["2026-09-01", "2026-09-01T19:57:45Z", "124.815"],
+     ["2026-09-02", "2026-09-02T19:59:10Z", "123.05705"],
+     ["2026-09-03", "2026-09-03T19:55:52Z", "144.415"],
+     ["2026-09-04", "2026-09-04T19:56:09Z", "143.07"],
+     ["2026-09-07", "2026-09-04T21:57:41Z", "142.2965"],
+     ["2026-09-08", "2026-09-08T18:48:43Z", "136.675"],
+     ["2026-09-09", "2026-09-09T19:56:02Z", "133.04"],
+     ["2026-09-10", "2026-09-10T19:46:58Z", "128.92"],
+     ["2026-09-11", "2026-09-11T19:55:55Z", "130.825"],
+     ["2026-09-14", "2026-09-14T19:51:37Z", "137.15499999"],
+     ["2026-09-15", "2026-09-15T19:42:47Z", "129.66"],
+     ["2026-09-16", "2026-09-16T19:59:15Z", "126.025"],
+     ["2026-09-17", "2026-09-17T19:54:57Z", "132.185"],
+     ["2026-09-18", "2026-09-18T19:40:51Z", "153.44"],
+     ["latest", "2026-09-18T23:41:26Z", "152.643"]
+    ],
+    "read": "ok",
+    "rounds": 22,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xff080c8ce2e5feadaca0da81314ae59d232d4afd",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US5951121038",
+    "kind": "stock",
+    "name": "Micron Technology • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "MU"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "170.59",
+    "fetched_at": "2026-09-19T20:22:08.908Z",
+    "independent_of_venue": true,
+    "price_usd": "997.4118039747",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence 170.59 bps on $1343580.1110269 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "1343580.1110269"
+   },
+   "findings": [
+    {
+     "beyond_open_session_limit": true,
+     "divergence_bps": "170.59",
+     "kind": "closed-session divergence",
+     "reason": "the feed is frozen at its round of 2026-09-18T19:55:34Z while the pools trade on: the mark is 170.59 bps from GeckoTerminal, past the 100 bps an open session would veto at; judged expected in a closed session, not vetoed (DECISION 2026-09-18)"
+    }
+   ],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood MU / USD",
+    "feed_proxy": "0x425eefdcf05ed6526c3ce61af99429a228a6d596",
+    "fresh": {
+     "reason": "age 87898s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14966s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "1014.42589693",
+    "read": "ok",
+    "round_id": "18446744073709556519",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:55:34Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood MU / USD at 0x425eefdcf05ed6526c3ce61af99429a228a6d596",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "0",
+    "buy_amount": "0.024727267771935541",
+    "buy_token": "MU",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:35.403Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.023490904383338764",
+    "price_impact_bps": "9",
+    "quote_id": "1a41cc11-267b-4dc0-9f5c-3099b568e4e4",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "9",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 0.0s within 60s; swapImpactBps 9 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "1010.0912233694492",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "578 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:55:31Z", "967.91741727"],
+     ["2026-08-24", "2026-08-24T19:16:47Z", "912.68328479"],
+     ["2026-08-25", "2026-08-25T19:58:31Z", "933.86686969"],
+     ["2026-08-26", "2026-08-26T16:01:24Z", "938.42771092"],
+     ["2026-08-27", "2026-08-27T19:58:25Z", "936.94009962"],
+     ["2026-08-28", "2026-08-28T19:55:51Z", "934.06428446"],
+     ["2026-08-31", "2026-08-31T19:55:08Z", "956.07793147"],
+     ["2026-09-01", "2026-09-01T19:47:47Z", "934.3174534"],
+     ["2026-09-02", "2026-09-02T18:49:17Z", "952.55681803"],
+     ["2026-09-03", "2026-09-03T19:49:42Z", "954.53141576"],
+     ["2026-09-04", "2026-09-04T19:56:56Z", "1014.79197432"],
+     ["2026-09-08", "2026-09-08T19:52:19Z", "1003.73509707"],
+     ["2026-09-09", "2026-09-09T19:34:14Z", "1028.59695717"],
+     ["2026-09-10", "2026-09-10T17:03:08Z", "981.58844011"],
+     ["2026-09-11", "2026-09-11T16:59:51Z", "976.6830731"],
+     ["2026-09-14", "2026-09-14T19:54:58Z", "924.43916433"],
+     ["2026-09-15", "2026-09-15T19:33:41Z", "925.2192227"],
+     ["2026-09-16", "2026-09-16T19:32:41Z", "925.81426722"],
+     ["2026-09-17", "2026-09-17T15:36:03Z", "976.82033337"],
+     ["2026-09-18", "2026-09-18T19:55:34Z", "1014.42589693"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x9d9c6684f596f66a64c030b93a886d51fd4d7931",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "NL0009805522",
+    "kind": "stock",
+    "name": "Nebius Group • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "NBIS"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "154.46",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "219.3258720237",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $12953.499532944 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 154.46 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "12953.499532944"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood NBIS / USD",
+    "feed_proxy": "0xe1d87b116ba0fe898998f1d140339d1fa1e09705",
+    "fresh": {
+     "reason": "age 85447s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 12515s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "222.7135",
+    "read": "ok",
+    "round_id": "18446744073709558176",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T20:36:25Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood NBIS / USD at 0xe1d87b116ba0fe898998f1d140339d1fa1e09705",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "10.59",
+    "buy_amount": "0.112849423608980352",
+    "buy_token": "NBIS",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:24.813Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.107206952428531334",
+    "price_impact_bps": "76",
+    "quote_id": "a5b1b27c-ee2f-49dd-9786-92c2db9acbfd",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "76",
+    "tradeable": {
+     "reason": "[impact] swapImpactBps 76 exceeds 50, compared signed",
+     "verdict": false
+    },
+    "venue_price_usd": "219.84853142413436",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $12953.499532944 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 154.46 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "1067 rounds reach back to the window start; 21 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 0 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:10:20Z", "218.86"],
+     ["2026-08-24", "2026-08-24T19:55:22Z", "210.155"],
+     ["2026-08-25", "2026-08-25T19:36:35Z", "221.65885"],
+     ["2026-08-26", "2026-08-26T19:58:31Z", "215.02765"],
+     ["2026-08-27", "2026-08-27T19:52:57Z", "217.71425"],
+     ["2026-08-28", "2026-08-28T19:53:53Z", "208.83775"],
+     ["2026-08-31", "2026-08-31T19:55:14Z", "206.8533"],
+     ["2026-09-01", "2026-09-01T19:14:19Z", "200.505"],
+     ["2026-09-02", "2026-09-02T18:43:14Z", "204.15985"],
+     ["2026-09-03", "2026-09-03T19:24:58Z", "210.97095"],
+     ["2026-09-04", "2026-09-04T19:57:28Z", "226.06695"],
+     ["2026-09-07", "2026-09-04T20:15:58Z", "224.8248"],
+     ["2026-09-08", "2026-09-08T19:56:22Z", "243.735"],
+     ["2026-09-09", "2026-09-09T19:50:38Z", "240.33005"],
+     ["2026-09-10", "2026-09-10T19:06:25Z", "228.2014"],
+     ["2026-09-11", "2026-09-11T18:53:30Z", "224.7796"],
+     ["2026-09-14", "2026-09-14T19:55:12Z", "211.57225"],
+     ["2026-09-15", "2026-09-15T19:53:23Z", "207.24205"],
+     ["2026-09-16", "2026-09-16T19:59:19Z", "208.90445"],
+     ["2026-09-17", "2026-09-17T19:55:28Z", "217.1282"],
+     ["2026-09-18", "2026-09-18T19:52:24Z", "222.8145"],
+     ["latest", "2026-09-18T20:36:25Z", "222.7135"]
+    ],
+    "read": "ok",
+    "rounds": 22,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US67066G1040",
+    "kind": "stock",
+    "name": "NVIDIA • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "NVDA"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "1.33",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "222.4177596133",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence 1.33 bps on $45319200.1189568 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "45319200.1189568"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood NVDA / USD",
+    "feed_proxy": "0x379ec4f7c378f34a1b47e4f3cbebcbac3e8e9f15",
+    "fresh": {
+     "reason": "age 87900s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14968s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "222.44729849",
+    "read": "ok",
+    "round_id": "18446744073709552677",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:55:32Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood NVDA / USD at 0x379ec4f7c378f34a1b47e4f3cbebcbac3e8e9f15",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "3.926",
+    "buy_amount": "0.112354688440103992",
+    "buy_token": "NVDA",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:31.477Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.106736954018098792",
+    "price_impact_bps": "2",
+    "quote_id": "8f5d4bf8-9e2e-4c8e-819f-c0d18c59b2d2",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "2",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 3.9s within 60s; swapImpactBps 2 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "222.45840565572152",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "256 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:57:46Z", "214.705"],
+     ["2026-08-24", "2026-08-24T19:52:50Z", "207.91"],
+     ["2026-08-25", "2026-08-25T19:54:52Z", "212.8887"],
+     ["2026-08-26", "2026-08-26T19:42:35Z", "209.875"],
+     ["2026-08-27", "2026-08-27T19:36:02Z", "228.4325"],
+     ["2026-08-28", "2026-08-28T19:56:29Z", "218.15545"],
+     ["2026-08-31", "2026-08-31T19:59:46Z", "221.085"],
+     ["2026-09-01", "2026-09-01T19:54:54Z", "216.72"],
+     ["2026-09-02", "2026-09-02T19:36:20Z", "224.0136"],
+     ["2026-09-03", "2026-09-03T19:39:03Z", "229.11705"],
+     ["2026-09-04", "2026-09-04T17:46:24Z", "230.23665"],
+     ["2026-09-08", "2026-09-08T16:19:29Z", "225.89"],
+     ["2026-09-09", "2026-09-09T19:04:43Z", "223.4848"],
+     ["2026-09-10", "2026-09-10T13:49:05Z", "218.34206876"],
+     ["2026-09-11", "2026-09-11T16:19:09Z", "219.48000015"],
+     ["2026-09-14", "2026-09-14T15:32:54Z", "211.93915933"],
+     ["2026-09-15", "2026-09-15T14:52:35Z", "211.92474816"],
+     ["2026-09-16", "2026-09-16T19:41:41Z", "214.17088793"],
+     ["2026-09-17", "2026-09-17T14:15:01Z", "219.67214898"],
+     ["2026-09-18", "2026-09-18T19:55:32Z", "222.44729849"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xb0992820e760d836549ba69bc7598b4af75dee03",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US68389X1054",
+    "kind": "stock",
+    "name": "Oracle • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "ORCL"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "0.85",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "147.9487744003",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $34128.2761010297 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 0.85 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "34128.2761010297"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood ORCL / USD",
+    "feed_proxy": "0x0e6a64a2b58a6693a531e6c555f3a5d042eea844",
+    "fresh": {
+     "reason": "age 87838s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14906s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "147.96120798",
+    "read": "ok",
+    "round_id": "18446744073709553692",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:56:34Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood ORCL / USD at 0x0e6a64a2b58a6693a531e6c555f3a5d042eea844",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "8.012",
+    "buy_amount": "0.169232233574322646",
+    "buy_token": "ORCL",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:27.391Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.160770621895606514",
+    "price_impact_bps": "40",
+    "quote_id": "27553a5f-7bc9-4308-a356-cb41fd996aa4",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "40",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 8.0s within 60s; swapImpactBps 40 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "147.1337431867191",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $34128.2761010297 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 0.85 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "573 rounds reach back to the window start; 21 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 0 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:33:54Z", "146.90197127"],
+     ["2026-08-24", "2026-08-24T19:46:26Z", "142.89473115"],
+     ["2026-08-25", "2026-08-25T19:55:30Z", "144.84954354"],
+     ["2026-08-26", "2026-08-26T19:16:12Z", "149.26929367"],
+     ["2026-08-27", "2026-08-27T19:38:26Z", "151.86667359"],
+     ["2026-08-28", "2026-08-28T19:19:40Z", "151.7698099"],
+     ["2026-08-31", "2026-08-31T19:32:21Z", "150.16627244"],
+     ["2026-09-01", "2026-09-01T19:18:36Z", "141.61746345"],
+     ["2026-09-02", "2026-09-02T18:09:10Z", "146.36288202"],
+     ["2026-09-03", "2026-09-03T19:47:03Z", "154.8945532"],
+     ["2026-09-04", "2026-09-04T19:56:21Z", "158.48647712"],
+     ["2026-09-07", "2026-09-04T20:19:51Z", "159.34246547"],
+     ["2026-09-08", "2026-09-08T18:35:55Z", "162.14118956"],
+     ["2026-09-09", "2026-09-09T19:48:02Z", "162.13267076"],
+     ["2026-09-10", "2026-09-10T19:57:59Z", "153.53264879"],
+     ["2026-09-11", "2026-09-11T19:43:42Z", "150.99294611"],
+     ["2026-09-14", "2026-09-14T19:57:54Z", "144.56391342"],
+     ["2026-09-15", "2026-09-15T19:30:29Z", "140.48922451"],
+     ["2026-09-16", "2026-09-16T19:50:48Z", "143.24871204"],
+     ["2026-09-17", "2026-09-17T19:33:45Z", "150.39818405"],
+     ["2026-09-18", "2026-09-18T19:56:34Z", "147.96120798"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x894e1ec2d74ffe5aef8dc8a9e84686accb964f2a",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US69608A1088",
+    "kind": "stock",
+    "name": "Palantir Technologies • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "PLTR"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "160.91",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "174.7906936484",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence 160.91 bps on $3073114.72350002 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "3073114.72350002"
+   },
+   "findings": [
+    {
+     "beyond_open_session_limit": true,
+     "divergence_bps": "160.91",
+     "kind": "closed-session divergence",
+     "reason": "the feed is frozen at its round of 2026-09-18T19:58:14Z while the pools trade on: the mark is 160.91 bps from GeckoTerminal, past the 100 bps an open session would veto at; judged expected in a closed session, not vetoed (DECISION 2026-09-18)"
+    }
+   ],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood PLTR / USD",
+    "feed_proxy": "0x820abedff239034956b7a9d2f0a331f9f075eb4c",
+    "fresh": {
+     "reason": "age 87738s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14806s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "177.6031",
+    "read": "ok",
+    "round_id": "18446744073709553580",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:58:14Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood PLTR / USD at 0x820abedff239034956b7a9d2f0a331f9f075eb4c",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "12.795",
+    "buy_amount": "0.141426306918166483",
+    "buy_token": "PLTR",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:22.608Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.134354991572258159",
+    "price_impact_bps": "7",
+    "quote_id": "9540db0f-e5a0-4d2e-8e39-87274879fad7",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "7",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 12.8s within 60s; swapImpactBps 7 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "176.64144579270487",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "413 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:42:17Z", "179.8303"],
+     ["2026-08-24", "2026-08-24T19:03:01Z", "176.7188"],
+     ["2026-08-25", "2026-08-25T19:42:14Z", "173.195"],
+     ["2026-08-26", "2026-08-26T18:45:26Z", "177.541"],
+     ["2026-08-27", "2026-08-27T16:34:49Z", "186.09"],
+     ["2026-08-28", "2026-08-28T15:59:45Z", "186.30235"],
+     ["2026-08-31", "2026-08-31T19:55:40Z", "186.1649"],
+     ["2026-09-01", "2026-09-01T19:56:38Z", "180.045"],
+     ["2026-09-02", "2026-09-02T19:35:50Z", "169.315"],
+     ["2026-09-03", "2026-09-03T19:55:46Z", "182.24835"],
+     ["2026-09-04", "2026-09-04T19:05:33Z", "173.9498"],
+     ["2026-09-08", "2026-09-08T19:44:17Z", "170.27499999"],
+     ["2026-09-09", "2026-09-09T19:23:47Z", "169.82165"],
+     ["2026-09-10", "2026-09-10T17:26:58Z", "166.125"],
+     ["2026-09-11", "2026-09-11T18:33:12Z", "167.44"],
+     ["2026-09-14", "2026-09-14T19:27:38Z", "173.48615"],
+     ["2026-09-15", "2026-09-15T19:52:33Z", "171.7566"],
+     ["2026-09-16", "2026-09-16T19:49:03Z", "173.5458"],
+     ["2026-09-17", "2026-09-17T19:55:01Z", "177.05865"],
+     ["2026-09-18", "2026-09-18T19:58:14Z", "177.6031"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xd5f3879160bc7c32ebb4dc785f8a4f505888de68",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US46090E1038",
+    "kind": "stock",
+    "name": "Invesco QQQ • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "QQQ"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "28.24",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "718.3369159335",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence 28.24 bps on $1685019.86274546 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "1685019.86274546"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood QQQ / USD",
+    "feed_proxy": "0x80901d846d5d7b030f26b480776ee3b29374c2ae",
+    "fresh": {
+     "reason": "age 88206s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 15274s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "720.3651",
+    "read": "ok",
+    "round_id": "18446744073709551975",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:50:26Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood QQQ / USD at 0x80901d846d5d7b030f26b480776ee3b29374c2ae",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "3.295",
+    "buy_amount": "0.034620231713625662",
+    "buy_token": "QQQ",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:32.108Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.032889220127944379",
+    "price_impact_bps": "1",
+    "quote_id": "59101efa-fe4b-4f1e-afa1-b201120d019b",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "1",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 3.3s within 60s; swapImpactBps 1 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "722.0398786251177",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "63 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T15:37:14Z", "713.7894"],
+     ["2026-08-24", "2026-08-24T15:37:53Z", "707.5935"],
+     ["2026-08-25", "2026-08-25T08:25:11Z", "711.6245"],
+     ["2026-08-26", "2026-08-26T13:56:13Z", "711.8193"],
+     ["2026-08-27", "2026-08-27T14:27:39Z", "719.12135"],
+     ["2026-08-28", "2026-08-28T16:24:37Z", "715.9"],
+     ["2026-08-31", "2026-08-31T05:15:41Z", "715.37"],
+     ["2026-09-01", "2026-09-01T18:46:12Z", "704.725"],
+     ["2026-09-02", "2026-09-02T14:18:50Z", "708.355"],
+     ["2026-09-03", "2026-09-03T15:12:08Z", "715.96"],
+     ["2026-09-04", "2026-09-04T04:31:52Z", "719.58999999"],
+     ["2026-09-08", "2026-09-08T06:19:09Z", "719.155"],
+     ["2026-09-09", "2026-09-09T09:41:57Z", "716.90015"],
+     ["2026-09-10", "2026-09-10T14:25:20Z", "711.12315"],
+     ["2026-09-11", "2026-09-11T12:49:02Z", "714.92435"],
+     ["2026-09-14", "2026-09-14T15:42:12Z", "710.245"],
+     ["2026-09-15", "2026-09-15T05:10:14Z", "706.68"],
+     ["2026-09-16", "2026-09-16T19:12:03Z", "702.1937"],
+     ["2026-09-17", "2026-09-17T12:32:51Z", "716.61965"],
+     ["2026-09-18", "2026-09-18T19:50:26Z", "720.3651"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x284358abc07f9359f19f4b5b4ac91901be2597ba",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US76655K1034",
+    "kind": "stock",
+    "name": "Rigetti Computing • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "RGTI"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-192.48",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "16.0493061385",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $0 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -192.48 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "0"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood RGTI / USD",
+    "feed_proxy": "0x2a045cf1c49c61c166c036d2f06fa2d2d984f765",
+    "fresh": {
+     "reason": "age 85426s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 12494s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "15.7404",
+    "read": "ok",
+    "round_id": "18446744073709555454",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T20:36:46Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood RGTI / USD at 0x2a045cf1c49c61c166c036d2f06fa2d2d984f765",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "22.894",
+    "buy_amount": "1.472098921629341732",
+    "buy_token": "RGTI",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:12.509Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "1.398493975547874645",
+    "price_impact_bps": "799",
+    "quote_id": "e5fbcf65-1277-463d-9595-f00c2acea0d5",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "799",
+    "tradeable": {
+     "reason": "[impact] swapImpactBps 799 exceeds 50, compared signed",
+     "verdict": false
+    },
+    "venue_price_usd": "15.626401194207814",
+    "venue_sell_token_price_usd": "0.9999319161924451"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $0 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -192.48 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "813 rounds reach back to the window start; 21 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 0 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:57:48Z", "17.875"],
+     ["2026-08-24", "2026-08-24T19:55:39Z", "16.335"],
+     ["2026-08-25", "2026-08-25T19:53:26Z", "16.915"],
+     ["2026-08-26", "2026-08-26T19:55:16Z", "15.975"],
+     ["2026-08-27", "2026-08-27T19:52:41Z", "16.50485"],
+     ["2026-08-28", "2026-08-28T19:57:38Z", "15.61499999"],
+     ["2026-08-31", "2026-08-31T19:55:31Z", "15.6556"],
+     ["2026-09-01", "2026-09-01T19:43:31Z", "14.945"],
+     ["2026-09-02", "2026-09-02T19:55:31Z", "14.845"],
+     ["2026-09-03", "2026-09-03T19:20:00Z", "15.155"],
+     ["2026-09-04", "2026-09-04T19:56:05Z", "15.175"],
+     ["2026-09-07", "2026-09-04T21:34:37Z", "15.25385"],
+     ["2026-09-08", "2026-09-08T19:51:05Z", "15.785"],
+     ["2026-09-09", "2026-09-09T19:59:53Z", "15.245"],
+     ["2026-09-10", "2026-09-10T19:53:36Z", "15.165"],
+     ["2026-09-11", "2026-09-11T19:58:50Z", "15.2829"],
+     ["2026-09-14", "2026-09-14T19:23:22Z", "15.235"],
+     ["2026-09-15", "2026-09-15T19:30:48Z", "15.07755"],
+     ["2026-09-16", "2026-09-16T19:56:51Z", "14.7951"],
+     ["2026-09-17", "2026-09-17T18:35:55Z", "16.035"],
+     ["2026-09-18", "2026-09-18T19:55:45Z", "15.725"],
+     ["latest", "2026-09-18T20:36:46Z", "15.7404"]
+    ],
+    "read": "ok",
+    "rounds": 22,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x3b14c39e89d60d627b42a1a4ca45b5bb45fc12e2",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US7731211089",
+    "kind": "stock",
+    "name": "Rocket Lab Corporation • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "RKLB"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-44.64",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "64.8996903057",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $1736.3736341026 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -44.64 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "1736.3736341026"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood RKLB / USD",
+    "feed_proxy": "0x045477bf65aef6f4f2386ad0164579e48381cc74",
+    "fresh": {
+     "reason": "age 87904s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14972s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "64.61",
+    "read": "ok",
+    "round_id": "18446744073709555893",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:55:28Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood RKLB / USD at 0x045477bf65aef6f4f2386ad0164579e48381cc74",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "20.455",
+    "buy_amount": "0.38530322786585699",
+    "buy_token": "RKLB",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:14.948Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.36603806647256414",
+    "price_impact_bps": "81",
+    "quote_id": "ef565516-c9e6-4671-91d0-cd792d59147e",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "81",
+    "tradeable": {
+     "reason": "[impact] swapImpactBps 81 exceeds 50, compared signed",
+     "verdict": false
+    },
+    "venue_price_usd": "64.35978514230851",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $1736.3736341026 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -44.64 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "721 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:56:30Z", "72.5951"],
+     ["2026-08-24", "2026-08-24T19:56:14Z", "68.22"],
+     ["2026-08-25", "2026-08-25T19:35:32Z", "66.9266"],
+     ["2026-08-26", "2026-08-26T17:49:56Z", "66.4"],
+     ["2026-08-27", "2026-08-27T19:55:25Z", "67.3328"],
+     ["2026-08-28", "2026-08-28T19:26:55Z", "64.375"],
+     ["2026-08-31", "2026-08-31T19:50:43Z", "64.02"],
+     ["2026-09-01", "2026-09-01T19:23:08Z", "62.6701"],
+     ["2026-09-02", "2026-09-02T19:08:55Z", "63.025"],
+     ["2026-09-03", "2026-09-03T19:45:55Z", "63.7243"],
+     ["2026-09-04", "2026-09-04T19:24:21Z", "64.225"],
+     ["2026-09-08", "2026-09-08T19:22:26Z", "65.86625"],
+     ["2026-09-09", "2026-09-09T19:54:22Z", "63.26"],
+     ["2026-09-10", "2026-09-10T19:53:18Z", "62.1157"],
+     ["2026-09-11", "2026-09-11T19:57:44Z", "62.93975"],
+     ["2026-09-14", "2026-09-14T19:32:55Z", "62.37"],
+     ["2026-09-15", "2026-09-15T19:42:24Z", "63.6645"],
+     ["2026-09-16", "2026-09-16T19:56:12Z", "63.54"],
+     ["2026-09-17", "2026-09-17T19:41:38Z", "67.74545"],
+     ["2026-09-18", "2026-09-18T19:55:28Z", "64.61"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x92fd66527192e3e61d4ddd13322aa222de86f9b5",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US46436E7186",
+    "kind": "stock",
+    "name": "iShares 0-3 Month Treasury Bond • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "SGOV"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "111.97",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "99.9886955829",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence 111.97 bps on $1216488.02684274 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "1216488.02684274"
+   },
+   "findings": [
+    {
+     "beyond_open_session_limit": true,
+     "divergence_bps": "111.97",
+     "kind": "closed-session divergence",
+     "reason": "the feed is frozen at its round of 2026-09-19T00:01:45Z while the pools trade on: the mark is 111.97 bps from GeckoTerminal, past the 100 bps an open session would veto at; judged expected in a closed session, not vetoed (DECISION 2026-09-18)"
+    }
+   ],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood SGOV-USD",
+    "feed_proxy": "0xa0df4ee0fff975306345875e3548fcc519577a11",
+    "fresh": {
+     "reason": "age 73127s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 195s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "101.10821255",
+    "read": "ok",
+    "round_id": "18446744073709551678",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-19T00:01:45Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood SGOV-USD at 0xa0df4ee0fff975306345875e3548fcc519577a11",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "12.057",
+    "buy_amount": "0.247403497172447653",
+    "buy_token": "SGOV",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:23.346Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.23503332231382527",
+    "price_impact_bps": "2",
+    "quote_id": "e5045c8a-ed7e-4913-a283-a3155a8e347f",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "2",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 12.1s within 60s; swapImpactBps 2 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "101.02841109470803",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "22 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T00:02:05Z", "100.92501538"],
+     ["2026-08-24", "2026-08-24T00:00:32Z", "100.94507501"],
+     ["2026-08-25", "2026-08-25T00:00:46Z", "100.95393208"],
+     ["2026-08-26", "2026-08-26T00:01:03Z", "100.95506975"],
+     ["2026-08-27", "2026-08-27T00:01:28Z", "100.97516446"],
+     ["2026-08-28", "2026-08-28T00:01:54Z", "100.98519427"],
+     ["2026-08-31", "2026-08-31T00:00:41Z", "100.98519427"],
+     ["2026-09-01", "2026-09-01T00:00:59Z", "100.95459352"],
+     ["2026-09-02", "2026-09-02T00:01:11Z", "100.92226805"],
+     ["2026-09-03", "2026-09-03T00:01:24Z", "100.91724321"],
+     ["2026-09-04", "2026-09-04T00:01:54Z", "100.97754932"],
+     ["2026-09-08", "2026-09-08T00:00:37Z", "100.98760034"],
+     ["2026-09-09", "2026-09-09T00:00:37Z", "100.98760034"],
+     ["2026-09-10", "2026-09-10T00:00:46Z", "101.00703801"],
+     ["2026-09-11", "2026-09-11T00:01:12Z", "101.04790644"],
+     ["2026-09-14", "2026-09-14T00:00:42Z", "101.04790644"],
+     ["2026-09-15", "2026-09-15T00:00:50Z", "101.03785542"],
+     ["2026-09-16", "2026-09-16T00:01:06Z", "101.04790643"],
+     ["2026-09-17", "2026-09-17T00:01:20Z", "101.05795746"],
+     ["2026-09-18", "2026-09-18T00:01:22Z", "101.10821255"],
+     ["latest", "2026-09-19T00:01:45Z", "101.10821255"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x411efb0e7f985935daec3d4c3ebaea0d0ad7d89f",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US46428Q1094",
+    "kind": "stock",
+    "name": "iShares Silver Trust • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "SLV"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-2.71",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "59.8712014104",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $233294.848116044 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -2.71 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "233294.848116044"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood SLV / USD",
+    "feed_proxy": "0x209b73908e92ae021826ed79609845451ecba2ce",
+    "fresh": {
+     "reason": "age 87837s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14905s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "59.855",
+    "read": "ok",
+    "round_id": "18446744073709553038",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:56:35Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood SLV / USD at 0x209b73908e92ae021826ed79609845451ecba2ce",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "19.66",
+    "buy_amount": "0.415951927658505707",
+    "buy_token": "SLV",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:15.743Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.395154331275580422",
+    "price_impact_bps": "7",
+    "quote_id": "c8e9178d-9f0d-4d89-9c83-01f15e2562e1",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "7",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 19.7s within 60s; swapImpactBps 7 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "60.06297123436885",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $233294.848116044 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -2.71 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "379 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T17:24:10Z", "62.735"],
+     ["2026-08-24", "2026-08-24T19:45:40Z", "62.125"],
+     ["2026-08-25", "2026-08-25T19:10:56Z", "62.48"],
+     ["2026-08-26", "2026-08-26T15:49:06Z", "61.565"],
+     ["2026-08-27", "2026-08-27T18:01:34Z", "62.515"],
+     ["2026-08-28", "2026-08-28T19:27:32Z", "60.085"],
+     ["2026-08-31", "2026-08-31T19:28:11Z", "60.035"],
+     ["2026-09-01", "2026-09-01T18:39:18Z", "58.035"],
+     ["2026-09-02", "2026-09-02T19:13:04Z", "58.915"],
+     ["2026-09-03", "2026-09-03T15:47:57Z", "60.535"],
+     ["2026-09-04", "2026-09-04T19:27:46Z", "59.855"],
+     ["2026-09-08", "2026-09-08T19:53:58Z", "59.355"],
+     ["2026-09-09", "2026-09-09T19:02:38Z", "60.795"],
+     ["2026-09-10", "2026-09-10T18:47:38Z", "57.575"],
+     ["2026-09-11", "2026-09-11T18:14:34Z", "58.095"],
+     ["2026-09-14", "2026-09-14T19:47:22Z", "57.135"],
+     ["2026-09-15", "2026-09-15T18:13:03Z", "57.475"],
+     ["2026-09-16", "2026-09-16T19:41:18Z", "56.8349"],
+     ["2026-09-17", "2026-09-17T19:24:15Z", "58.905"],
+     ["2026-09-18", "2026-09-18T19:56:35Z", "59.855"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xb90a19ff0af67f7779aff50a882a9cff42446400",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US80004C2008",
+    "kind": "stock",
+    "name": "Sandisk Corporation • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "SNDK"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-72.41",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "1805.3919949327",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $486286.077466574 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -72.41 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "486286.077466574"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood SNDK / USD",
+    "feed_proxy": "0xfb133fa4b7b385802b693a293606682df47109a3",
+    "fresh": {
+     "reason": "age 87430s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14498s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "1792.3206",
+    "read": "ok",
+    "round_id": "18446744073709558707",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T20:03:22Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood SNDK / USD at 0xfb133fa4b7b385802b693a293606682df47109a3",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "7.186",
+    "buy_amount": "0.014008717795589926",
+    "buy_token": "SNDK",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:28.217Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.01330828190581043",
+    "price_impact_bps": "10",
+    "quote_id": "5984d5ba-b6f8-4778-adb3-a1518660f560",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "10",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 7.2s within 60s; swapImpactBps 10 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "1782.8016555342438",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $486286.077466574 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence -72.41 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "900 rounds reach back to the window start; 21 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 0 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:45:18Z", "1593.26"],
+     ["2026-08-24", "2026-08-24T19:56:37Z", "1492.865"],
+     ["2026-08-25", "2026-08-25T19:52:42Z", "1479.3972"],
+     ["2026-08-26", "2026-08-26T18:25:45Z", "1495.96025"],
+     ["2026-08-27", "2026-08-27T19:48:13Z", "1482.545"],
+     ["2026-08-28", "2026-08-28T19:41:26Z", "1483.37"],
+     ["2026-08-31", "2026-08-31T19:57:06Z", "1561.5589"],
+     ["2026-09-01", "2026-09-01T19:58:56Z", "1539.13"],
+     ["2026-09-02", "2026-09-02T19:55:38Z", "1559.0944"],
+     ["2026-09-03", "2026-09-03T19:55:31Z", "1556.0029"],
+     ["2026-09-04", "2026-09-04T19:55:34Z", "1738.355"],
+     ["2026-09-07", "2026-09-04T20:36:35Z", "1729.64645"],
+     ["2026-09-08", "2026-09-08T19:46:18Z", "1742.3004"],
+     ["2026-09-09", "2026-09-09T19:44:37Z", "1761.615"],
+     ["2026-09-10", "2026-09-10T19:53:04Z", "1698.30925"],
+     ["2026-09-11", "2026-09-11T17:07:44Z", "1635.11"],
+     ["2026-09-14", "2026-09-14T19:13:21Z", "1559.4955"],
+     ["2026-09-15", "2026-09-15T19:45:29Z", "1534.53499999"],
+     ["2026-09-16", "2026-09-16T19:31:42Z", "1521.42999999"],
+     ["2026-09-17", "2026-09-17T19:54:55Z", "1614.82"],
+     ["2026-09-18", "2026-09-18T19:58:22Z", "1793.75225"],
+     ["latest", "2026-09-18T20:03:22Z", "1792.3206"]
+    ],
+    "read": "ok",
+    "rounds": 22,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US84615Q1031",
+    "kind": "stock",
+    "name": "Space Exploration Technologies Corp. Class A Common Stock • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "SPCX"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "6.57",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "152.7245338273",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence 6.57 bps on $38395212.6555113 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "38395212.6555113"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood SPCX / USD",
+    "feed_proxy": "0xb265810950ba6c5c0ff821c9963014a56fd8bffb",
+    "fresh": {
+     "reason": "age 76357s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 3425s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "152.82485",
+    "read": "ok",
+    "round_id": "18446744073709554894",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T23:07:55Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood SPCX / USD at 0xb265810950ba6c5c0ff821c9963014a56fd8bffb",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "18.355",
+    "buy_amount": "0.163596225623596444",
+    "buy_token": "SPCX",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:17.048Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.155416414342416622",
+    "price_impact_bps": "4",
+    "quote_id": "f025c0be-e36b-421d-ab40-b246f62357f8",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "4",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 18.4s within 60s; swapImpactBps 4 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "152.75355150216953",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "488 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:48:34Z", "136.935"],
+     ["2026-08-24", "2026-08-24T19:04:31Z", "135.39025"],
+     ["2026-08-25", "2026-08-25T15:49:11Z", "138.4"],
+     ["2026-08-26", "2026-08-26T19:56:12Z", "139.1509"],
+     ["2026-08-27", "2026-08-27T19:52:39Z", "140.93695"],
+     ["2026-08-28", "2026-08-28T19:29:04Z", "141.04"],
+     ["2026-08-31", "2026-08-31T19:55:44Z", "143.7558"],
+     ["2026-09-01", "2026-09-01T17:24:59Z", "142.8218"],
+     ["2026-09-02", "2026-09-02T19:50:45Z", "140.59195"],
+     ["2026-09-03", "2026-09-03T19:57:27Z", "150.00015"],
+     ["2026-09-04", "2026-09-04T19:54:14Z", "147.9597"],
+     ["2026-09-08", "2026-09-08T19:52:47Z", "153.1263"],
+     ["2026-09-09", "2026-09-09T19:47:04Z", "147.6297"],
+     ["2026-09-10", "2026-09-10T19:19:59Z", "147.75755"],
+     ["2026-09-11", "2026-09-11T19:49:18Z", "150.8888"],
+     ["2026-09-14", "2026-09-14T19:53:17Z", "148.3"],
+     ["2026-09-15", "2026-09-15T19:43:09Z", "143.875"],
+     ["2026-09-16", "2026-09-16T19:49:19Z", "150.905"],
+     ["2026-09-17", "2026-09-17T19:55:46Z", "155.13"],
+     ["2026-09-18", "2026-09-18T19:51:52Z", "152.89499999"],
+     ["latest", "2026-09-18T23:07:55Z", "152.82485"]
+    ],
+    "read": "ok",
+    "rounds": 21,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x117cc2133c37b721f49de2a7a74833232b3b4c0c",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US78462F1030",
+    "kind": "stock",
+    "name": "SPDR S&P 500 ETF Trust • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "SPY"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-32.65",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "764.0448877143",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence -32.65 bps on $18162077.2934753 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "18162077.2934753"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood SPY / USD",
+    "feed_proxy": "0x319724394d3a0e3669269846abe664cd621f9f6a",
+    "fresh": {
+     "reason": "age 115111s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 42179s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "761.55079369",
+    "read": "ok",
+    "round_id": "18446744073709551754",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T12:22:01Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood SPY / USD at 0x319724394d3a0e3669269846abe664cd621f9f6a",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "25.411",
+    "buy_amount": "0.032697253991756485",
+    "buy_token": "SPY",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:09.992Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.031062391292168661",
+    "price_impact_bps": "-5",
+    "quote_id": "dd6619ee-17d2-44fb-a638-cb53b6f42555",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "-5",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 25.4s within 60s; swapImpactBps -5 (negative: price improvement, admitted) within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "764.9810055915113",
+    "venue_sell_token_price_usd": "0.9999401533451477"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "35 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T11:25:52Z", "766.1254"],
+     ["2026-08-24", "2026-08-24T13:43:34Z", "762.81835"],
+     ["2026-08-25", "2026-08-25T09:14:13Z", "766.69665"],
+     ["2026-08-26", "2026-08-26T09:14:39Z", "765.4365"],
+     ["2026-08-27", "2026-08-26T21:15:23Z", "769.52125"],
+     ["2026-08-28", "2026-08-28T16:18:39Z", "770.26515"],
+     ["2026-08-31", "2026-08-31T00:00:33Z", "766.14"],
+     ["2026-09-01", "2026-09-01T18:46:04Z", "759.615"],
+     ["2026-09-02", "2026-09-02T14:01:59Z", "763.49135"],
+     ["2026-09-03", "2026-09-03T15:12:12Z", "771.185"],
+     ["2026-09-04", "2026-09-04T15:12:39Z", "769.59"],
+     ["2026-09-08", "2026-09-08T00:00:51Z", "768.966807"],
+     ["2026-09-09", "2026-09-09T15:11:42Z", "761.55135"],
+     ["2026-09-10", "2026-09-10T13:52:07Z", "757.55"],
+     ["2026-09-11", "2026-09-11T12:56:02Z", "765.26375"],
+     ["2026-09-14", "2026-09-14T00:00:26Z", "760.04"],
+     ["2026-09-15", "2026-09-15T14:22:30Z", "757.505"],
+     ["2026-09-16", "2026-09-16T19:15:24Z", "751.28"],
+     ["2026-09-17", "2026-09-17T12:21:43Z", "762.85845"],
+     ["2026-09-18", "2026-09-18T12:22:01Z", "761.55079369"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x322f0929c4625ed5bad873c95208d54e1c003b2d",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US88160R1014",
+    "kind": "stock",
+    "name": "Tesla • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "TSLA"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "-60",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "365.9958156754",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence -60 bps on $2055876.94387719 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "2055876.94387719"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood TSLA / USD",
+    "feed_proxy": "0x4a1166a659a55625345e9515b32adecea5547c38",
+    "fresh": {
+     "reason": "age 88305s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 15373s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "363.79999999",
+    "read": "ok",
+    "round_id": "18446744073709552895",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:48:47Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood TSLA / USD at 0x4a1166a659a55625345e9515b32adecea5547c38",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "21.104",
+    "buy_amount": "0.068485765930878265",
+    "buy_token": "TSLA",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:14.299Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.065061477634334352",
+    "price_impact_bps": "3",
+    "quote_id": "98da3a4d-85a4-4a34-8eb5-0cc69dd9ac8e",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "3",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 21.1s within 60s; swapImpactBps 3 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "364.9205646159519",
+    "venue_sell_token_price_usd": "0.9999319161924451"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "338 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:56:19Z", "362.2649"],
+     ["2026-08-24", "2026-08-24T19:45:34Z", "348.75355"],
+     ["2026-08-25", "2026-08-25T19:55:31Z", "350.23635"],
+     ["2026-08-26", "2026-08-26T19:01:56Z", "346.695"],
+     ["2026-08-27", "2026-08-27T16:54:49Z", "354.24"],
+     ["2026-08-28", "2026-08-28T19:54:49Z", "348.36125"],
+     ["2026-08-31", "2026-08-31T17:16:33Z", "366.975"],
+     ["2026-09-01", "2026-09-01T19:11:06Z", "355.93"],
+     ["2026-09-02", "2026-09-02T19:57:25Z", "357.1423"],
+     ["2026-09-03", "2026-09-03T19:54:37Z", "378.13"],
+     ["2026-09-04", "2026-09-04T18:14:36Z", "353.98495"],
+     ["2026-09-08", "2026-09-08T19:51:15Z", "368.565"],
+     ["2026-09-09", "2026-09-09T18:52:49Z", "368.21"],
+     ["2026-09-10", "2026-09-10T19:24:34Z", "363.855"],
+     ["2026-09-11", "2026-09-11T14:50:12Z", "365.91499999"],
+     ["2026-09-14", "2026-09-14T19:09:04Z", "360.4168"],
+     ["2026-09-15", "2026-09-15T19:56:44Z", "356.216"],
+     ["2026-09-16", "2026-09-16T19:46:08Z", "358.54645"],
+     ["2026-09-17", "2026-09-17T18:24:21Z", "366.84"],
+     ["2026-09-18", "2026-09-18T19:48:47Z", "363.79999999"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0x58ffe4a942d3885baa22d7520691f611ef09e7aa",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US8740391003",
+    "kind": "stock",
+    "name": "Taiwan Semiconductor Manufacturing • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "TSM"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "27.11",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "433.0904730346",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $450664.104591916 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 27.11 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "450664.104591916"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood TSM / USD",
+    "feed_proxy": "0x874cf94aa8ec88fd9560094dd065f2fb3e41fc2f",
+    "fresh": {
+     "reason": "age 87766s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 14834s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "434.26441116",
+    "read": "ok",
+    "round_id": "18446744073709553017",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T19:57:46Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood TSM / USD at 0x874cf94aa8ec88fd9560094dd065f2fb3e41fc2f",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "17.062",
+    "buy_amount": "0.057631525458706945",
+    "buy_token": "TSM",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:18.341Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.054749949185771598",
+    "price_impact_bps": "10",
+    "quote_id": "fba96f96-02f1-4134-9cbb-6102d7af10a5",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "10",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 17.1s within 60s; swapImpactBps 10 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "433.3435686722443",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $450664.104591916 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 27.11 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "184 rounds reach back to the window start; 20 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 1 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T14:12:04Z", "418.835"],
+     ["2026-08-24", "2026-08-24T19:53:53Z", "408.32"],
+     ["2026-08-25", "2026-08-25T13:54:31Z", "416.4435"],
+     ["2026-08-26", "2026-08-26T18:19:01Z", "418.58"],
+     ["2026-08-27", "2026-08-27T19:58:59Z", "427.9154"],
+     ["2026-08-28", "2026-08-28T18:45:53Z", "418.62"],
+     ["2026-08-31", "2026-08-31T18:36:16Z", "415.81185"],
+     ["2026-09-01", "2026-09-01T16:27:30Z", "414.02075"],
+     ["2026-09-02", "2026-09-02T18:49:19Z", "414.13755"],
+     ["2026-09-03", "2026-09-03T17:33:44Z", "415.245"],
+     ["2026-09-04", "2026-09-04T16:56:09Z", "428.475"],
+     ["2026-09-08", "2026-09-08T15:40:26Z", "440.2991"],
+     ["2026-09-09", "2026-09-09T15:51:33Z", "435.2637"],
+     ["2026-09-10", "2026-09-10T19:59:20Z", "427.9489"],
+     ["2026-09-11", "2026-09-11T16:37:00Z", "432.58055"],
+     ["2026-09-14", "2026-09-14T19:36:15Z", "420.39395"],
+     ["2026-09-15", "2026-09-15T14:59:21Z", "413.75"],
+     ["2026-09-16", "2026-09-16T19:46:31Z", "417.73025663"],
+     ["2026-09-17", "2026-09-17T17:01:25Z", "428.79467049"],
+     ["2026-09-18", "2026-09-18T19:57:46Z", "434.26441116"]
+    ],
+    "read": "ok",
+    "rounds": 20,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xd917b029c761d264c6a312bbbcda868658ef86a6",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US91733P1075",
+    "kind": "stock",
+    "name": "USA Rare Earth • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "USAR"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "67.23",
+    "fetched_at": "2026-09-19T20:22:08.908Z",
+    "independent_of_venue": true,
+    "price_usd": "15.5022380783",
+    "read": "ok",
+    "session": "closed",
+    "tier": "below-line",
+    "verdict": {
+     "reason": "[corroborator-line] 24h volume $145855.545189363 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 67.23 bps recorded",
+     "verdict": false
+    },
+    "volume_24h_usd": "145855.545189363"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood USAR-USD",
+    "feed_proxy": "0xa994d3684e8400a6c8078226925779fdee682dd9",
+    "fresh": {
+     "reason": "age 77763s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 4831s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "15.60645",
+    "read": "ok",
+    "round_id": "18446744073709554616",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T22:44:29Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood USAR-USD at 0xa994d3684e8400a6c8078226925779fdee682dd9",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "2.707",
+    "buy_amount": "1.603052834760724633",
+    "buy_token": "USAR",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:32.696Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "1.522900193022688401",
+    "price_impact_bps": "-6",
+    "quote_id": "44faf6e9-ddb9-45a9-ac7b-149a4ea8ae86",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "-6",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 2.7s within 60s; swapImpactBps -6 (negative: price improvement, admitted) within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "15.603828671949717",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "[corroborator-line] 24h volume $145855.545189363 is below the $1000000 line: excluded from the universe, not vetoed each cycle (0.4 decision); divergence 67.23 bps recorded",
+    "rule": "corroborator-line",
+    "value": "below_corroborator_line",
+    "verdict": false
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "831 rounds reach back to the window start; 21 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 0 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T19:56:13Z", "19.265"],
+     ["2026-08-24", "2026-08-24T19:57:57Z", "18.335"],
+     ["2026-08-25", "2026-08-25T19:46:34Z", "19.315"],
+     ["2026-08-26", "2026-08-26T19:03:29Z", "18.88495"],
+     ["2026-08-27", "2026-08-27T19:20:26Z", "19.2991"],
+     ["2026-08-28", "2026-08-28T19:39:23Z", "17.97485"],
+     ["2026-08-31", "2026-08-31T19:55:23Z", "17.875"],
+     ["2026-09-01", "2026-09-01T19:55:50Z", "17.307"],
+     ["2026-09-02", "2026-09-02T19:57:45Z", "17.852"],
+     ["2026-09-03", "2026-09-03T19:56:13Z", "17.682"],
+     ["2026-09-04", "2026-09-04T19:54:46Z", "17.615"],
+     ["2026-09-07", "2026-09-04T23:27:20Z", "17.4378"],
+     ["2026-09-08", "2026-09-08T19:56:34Z", "17.685"],
+     ["2026-09-09", "2026-09-09T19:43:26Z", "17.085"],
+     ["2026-09-10", "2026-09-10T18:29:38Z", "16.095"],
+     ["2026-09-11", "2026-09-11T19:37:06Z", "15.556"],
+     ["2026-09-14", "2026-09-14T19:57:22Z", "15.695"],
+     ["2026-09-15", "2026-09-15T17:07:07Z", "15.409"],
+     ["2026-09-16", "2026-09-16T19:46:05Z", "15.0748"],
+     ["2026-09-17", "2026-09-17T19:38:32Z", "15.675"],
+     ["2026-09-18", "2026-09-18T19:55:26Z", "15.359"],
+     ["latest", "2026-09-18T22:44:29Z", "15.60645"]
+    ],
+    "read": "ok",
+    "rounds": 22,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  },
+  {
+   "asset": {
+    "address": "0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344",
+    "chain_id": 4663,
+    "decimals": 18,
+    "isin": "US91232N2071",
+    "kind": "stock",
+    "name": "United States Oil Fund • Robinhood Token",
+    "registry_status": "ASSET_STATUS_ACTIVE",
+    "symbol": "USO"
+   },
+   "beacon": {
+    "reason": "resolves to the issuer beacon 0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "verdict": true
+   },
+   "corroboration": {
+    "divergence_bps": "67.46",
+    "fetched_at": "2026-09-19T20:22:06.880Z",
+    "independent_of_venue": true,
+    "price_usd": "153.5072322941",
+    "read": "ok",
+    "session": "closed",
+    "tier": "above-line",
+    "verdict": {
+     "reason": "closed session: divergence 67.46 bps on $1669316.5436835 of 24h volume is a finding, not a veto",
+     "verdict": true
+    },
+    "volume_24h_usd": "1669316.5436835"
+   },
+   "findings": [],
+   "identity": {
+    "reason": "listed in rhj_assets 442718b5843e…",
+    "verdict": true
+   },
+   "mark": {
+    "feed": "Robinhood USO / USD",
+    "feed_proxy": "0x75a9c76ef439e2c7c2e5a34ab105ecfe3766431c",
+    "fresh": {
+     "reason": "age 73800s, of which 72932s in the closed session inferred for us_equities_24/5 (Sat 00:05:00Z to Sun 23:55:00Z every week): 868s of open session against heartbeat 86400s + margin 3600s",
+     "verdict": true
+    },
+    "price_usd": "154.54265",
+    "read": "ok",
+    "round_id": "18446744073709553123",
+    "unpaused": {
+     "reason": "the token's oraclePaused() is false at block 67364057",
+     "verdict": true
+    },
+    "updated_at": "2026-09-18T23:50:32Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "markability": {
+    "reason": "Robinhood USO / USD at 0x75a9c76ef439e2c7c2e5a34ab105ecfe3766431c",
+    "verdict": true
+   },
+   "quote": {
+    "age_s": "10.014",
+    "buy_amount": "0.163392860370290926",
+    "buy_token": "USO",
+    "executable": {
+     "reason": "a quote is a price, not a fill: quotes are not balance-checked (F0.3.3) and not location-gated, and a stock quote succeeded while its execution was refused 403 (F0.5.1)",
+     "verdict": null
+    },
+    "fee_bps": "0",
+    "fee_waived": false,
+    "fetched_at": "2026-09-19T20:22:25.389Z",
+    "max_price_impact_bps": "1500",
+    "min_buy_amount": "0.15522321735177638",
+    "price_impact_bps": "12",
+    "quote_id": "48f4fad4-eb3f-4dfc-9da6-954213120082",
+    "read": "ok",
+    "sell_amount": "25.00193",
+    "sell_token": "USDG",
+    "slippage_bps": "500",
+    "swap_impact_bps": "12",
+    "tradeable": {
+     "reason": "quoted at the size asked; age 10.0s within 60s; swapImpactBps 12 within 50, compared signed",
+     "verdict": true
+    },
+    "venue_price_usd": "152.82654076484644",
+    "venue_sell_token_price_usd": "0.9999133282631453"
+   },
+   "standing": {
+    "reason": "ASSET_STATUS_ACTIVE",
+    "verdict": true
+   },
+   "status": {
+    "reason": "every rule passed: identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+    "rule": null,
+    "value": "tradeable",
+    "verdict": true
+   },
+   "timeline": {
+    "columns": ["close_of", "updated_at", "price_usd"],
+    "coverage": {
+     "reason": "386 rounds reach back to the window start; 21 daily closes at 20:00Z over 30 days, then the latest round; 9 days fell in the closed session and have no close; 0 had no new round since the previous close (a holiday or a silent feed), so no close",
+     "verdict": true
+    },
+    "points": [
+     ["2026-08-21", "2026-08-21T17:08:31Z", "135.255"],
+     ["2026-08-24", "2026-08-24T16:16:10Z", "132.2548"],
+     ["2026-08-25", "2026-08-25T19:58:42Z", "126.33345"],
+     ["2026-08-26", "2026-08-26T19:04:07Z", "127.37405"],
+     ["2026-08-27", "2026-08-27T18:17:02Z", "130.1056"],
+     ["2026-08-28", "2026-08-28T15:21:25Z", "129.39999999"],
+     ["2026-08-31", "2026-08-31T19:58:48Z", "133.76"],
+     ["2026-09-01", "2026-09-01T18:38:26Z", "140.7156"],
+     ["2026-09-02", "2026-09-02T18:31:39Z", "141.12045"],
+     ["2026-09-03", "2026-09-03T18:58:35Z", "141.995"],
+     ["2026-09-04", "2026-09-04T18:42:17Z", "142.5"],
+     ["2026-09-07", "2026-09-04T20:35:19Z", "141.77675"],
+     ["2026-09-08", "2026-09-08T18:49:06Z", "145.46"],
+     ["2026-09-09", "2026-09-09T18:10:58Z", "149.36"],
+     ["2026-09-10", "2026-09-10T19:35:56Z", "158.4"],
+     ["2026-09-11", "2026-09-11T18:21:36Z", "154.53055"],
+     ["2026-09-14", "2026-09-14T19:37:44Z", "156.11"],
+     ["2026-09-15", "2026-09-15T19:03:30Z", "161.405"],
+     ["2026-09-16", "2026-09-16T19:37:01Z", "155.99"],
+     ["2026-09-17", "2026-09-17T19:03:13Z", "155.7907"],
+     ["2026-09-18", "2026-09-18T19:03:26Z", "153.38275"],
+     ["latest", "2026-09-18T23:50:32Z", "154.54265"]
+    ],
+    "read": "ok",
+    "rounds": 22,
+    "window_start": "2026-08-21T20:00:00Z"
+   }
+  }
+ ],
+ "block": {
+  "chain_id": 4663,
+  "closed_sessions": ["us_equities_24/5"],
+  "hash": "0xf2df623d9d9a01f9efa8593378f84af91d90b8ff193049adce23c12e1d051216",
+  "number": 67364057,
+  "time": "2026-09-19T20:20:32Z"
+ },
+ "built_at": "2026-09-19T20:22:35.403Z",
+ "holdings": [
+  {
+   "asset": {
+    "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "chain_id": 4663,
+    "decimals": 18,
+    "kind": "gas",
+    "symbol": "ETH"
+   },
+   "balance": "0.000460162486507929",
+   "holding_status": {
+    "exit": {
+     "reason": "not assessed: ETH to USDG is the live leg and sold once (F0.10.2), but no sell quote is read in Phase 1",
+     "verdict": null
+    },
+    "owned": {
+     "reason": "0.000460162486507929 ETH at the pinned block",
+     "verdict": true
+    },
+    "valued": {
+     "reason": "at its own Chainlink mark",
+     "verdict": true
+    }
+   },
+   "mark": {
+    "feed": "ETH / USD",
+    "feed_proxy": "0x78f3556b67e17df817d51ef5a990cdaf09e8d3a9",
+    "fresh": {
+     "reason": "age 7675s against heartbeat 86400s + margin 3600s; market hours Crypto",
+     "verdict": true
+    },
+    "price_usd": "2637.20423511",
+    "read": "ok",
+    "round_id": "18446744073709553911",
+    "updated_at": "2026-09-19T18:12:37Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "read": "ok",
+   "universe_status": {
+    "reason": "the gas asset",
+    "rule": null,
+    "value": "not_a_stock",
+    "verdict": true
+   },
+   "value_reason": null,
+   "value_usd": "1.21354245825745859339518719"
+  },
+  {
+   "asset": {
+    "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+    "chain_id": 4663,
+    "decimals": 6,
+    "kind": "cash",
+    "symbol": "USDG"
+   },
+   "balance": "0.078742",
+   "holding_status": {
+    "exit": {
+     "reason": "the cash leg: a sale settles into it",
+     "verdict": true
+    },
+    "owned": {
+     "reason": "0.078742 USDG at the pinned block",
+     "verdict": true
+    },
+    "valued": {
+     "reason": "at its own Chainlink mark",
+     "verdict": true
+    }
+   },
+   "mark": {
+    "feed": "USDG / USD",
+    "feed_proxy": "0x61b7e5650328764b076a108eff5fa7282a1b9ad2",
+    "fresh": {
+     "reason": "age 17083s against heartbeat 86400s + margin 3600s; market hours Crypto",
+     "verdict": true
+    },
+    "price_usd": "0.99992279",
+    "read": "ok",
+    "round_id": "18446744073709551723",
+    "updated_at": "2026-09-19T15:35:49Z",
+    "verdict": {
+     "reason": "the fresh answer of the feed pinned to this address",
+     "verdict": true
+    }
+   },
+   "read": "ok",
+   "universe_status": {
+    "reason": "the cash leg",
+    "rule": null,
+    "value": "not_a_stock",
+    "verdict": true
+   },
+   "value_reason": null,
+   "value_usd": "0.07873592033018"
+  }
+ ],
+ "inputs": {
+  "capture": {
+   "files": {
+    "chain.jsonl.gz": "f775f46eb0e4b4fe36bb2106429468f49be0fe6882d9e77a7ca358be4eb87d4f",
+    "clock.json.gz": "a3e8e67aed9d38fe66ebcd13b03163602821ef531e1777daef6045d55ecac02d",
+    "gecko.jsonl.gz": "d6fed88cc92d19d8d1a8f56ef1cd9afa55947d9c37e2b0083ea2a97eae2a9332",
+    "venue.jsonl.gz": "f8c70f67c8eef4075798d673eaff1dff90e9840ba8facd1086422f04c7f95379"
+   },
+   "sha256": "bdf667ff250d8ebf9bddd9effa381731b64a216e40455a28fa3a0c1765f07b0e"
+  },
+  "config_sha256": {
+   "chain.json": "9a0dd26ca9458ba0e85ddb6e66fdcd0b2a51ac3d7e0356c82aec7061a091898a",
+   "gecko.json": "af1aca97f02f9f0cb38b9d62c2dfd8d1a7f8f32d61d94b19a07179e228a8ef4c",
+   "mandate.json": "11ed7a13bb77815d3d04e6d861bc59d9b17ecb84d1fc09ad076d51056907d563",
+   "quote.json": "2fdb8b8341f3fd4fa3f360984a84e4adf3d9e6c1f09f467ad0409607e728a482",
+   "registry/feed_map.json": "07bf5cde173a81309b7365ba708f7496e010aa8d38dafdd32d36fc8d2cf52ed9",
+   "registry/pins.json": "ba9167449f7f021f4910e177fc89b6a158031dd10c7fb1120ff7ba19728b5291",
+   "sessions.json": "14df13665148bf94d088ac74b38b8c05e1c3c094b69daaf5bc35739c9ccb1a92",
+   "thresholds.json": "04bfb1be07f840a95ea453de5b16c29b12b0b9019ed9192ac7b497416c52e978"
+  },
+  "feed_directory": {
+   "fetched_at": "2026-09-18T23:33:17.453Z",
+   "locator": "reference-data-directory.vercel.app/feeds-robinhood-mainnet.json",
+   "sha256": "2ae1ea5f432cab06904134759033d7c6434c323171f954120c4933fdde42e85d"
+  },
+  "issuer_registry": {
+   "fetched_at": "2026-09-18T23:33:17.060Z",
+   "locator": "api.robinhood.com/rhj/assets",
+   "sha256": "442718b5843e448e46a3deceab9f2d92f8719c0a4b1a77942d5d6da8098c8b4b"
+  }
+ },
+ "outside_universe": {
+  "assets": [
+   ["AAOI", "0x521cf887e6531c6f667b5bc4d896e5d9bfe8eb2e"],
+   ["ABCL", "0x3139d77ace0cbaa5bdfd38bd1f1911a794af0b0e"],
+   ["ADBE", "0x232b8ed6377be97813853b0ac104c4cda8378d1b"],
+   ["AEHR", "0x5f604fba1162193a4388a5dfa56f556f3e133cc2"],
+   ["AEIS", "0xfaf9cb261b5fcc1f404bb10cd39c5c6c1974e612"],
+   ["ALAB", "0x748c32c3ca24edf31ea597db1f3d330a7a6da3dc"],
+   ["AMAT", "0x36046893810a7e7fce501229d57dc3fc8c8716d0"],
+   ["AMBA", "0x99d9d8663545151603863c5acbd6fc3218899009"],
+   ["AMC", "0x05a3d1cd21d0c88145e82600e62e7e496e0f222b"],
+   ["AMKR", "0xdd356aa38f40a7b7076755ac854b6fbb1f0d305b"],
+   ["ANET", "0x28babd556b60e53663b8615036479a29c2cdd1bf"],
+   ["APLD", "0xb8dbf92f9741c9ac1c32115e78581f23509916fd"],
+   ["APP", "0xa249baf1063af884807c1e1400aef7784836917e"],
+   ["ASTS", "0x1af6446f07eb1d97c546afc8c9544cbdf3ad5137"],
+   ["AUR", "0x373c06c4f7bde527d7dae4ba169e42b55e393ced"],
+   ["AVAV", "0xf6290b5e7c26502e2da514c31509849718ea76a5"],
+   ["AVGO", "0x156e175dd063a8ce274c50654ef40e0032b3fbcf"],
+   ["AXON", "0xc27dbd474af5181c5a8777903690d8d262d12648"],
+   ["AXTI", "0x141eea040c2250eec0314e336975e81f85f6585e"],
+   ["BA", "0x4d21483a44bf67a86b77e3da301411880797d452"],
+   ["BB", "0x48e39e56acdba37b09020c0b734a613c9a2f100a"],
+   ["BE", "0x822cc93ffd030293e9842c30bbd678f530701867"],
+   ["BND", "0x2f62fc9fabb470c690f141c28340ed832bb27020"],
+   ["BULL", "0xcef9027c7d6985b85f0ba431125073529a947a68"],
+   ["CBRS", "0x5c90450bbb4273d7b2f17cf6917aeb237a569679"],
+   ["CCL", "0x9651342cea770ae9a2969ba2a52611523146aef9"],
+   ["CEG", "0xae517a2903e68bd929dfd15be875f8369d53e94a"],
+   ["CELH", "0x8cf07c5a878945185d327aaa6e33faa95f95e7bf"],
+   ["CIEN", "0x44f6d488021f8233b9416294d1fe9b1fee28382d"],
+   ["CLOV", "0x62200915e7deab1ec7f79fb246dadbb80eacddd0"],
+   ["CLS", "0xbf449977089c718c004a66c554b26b94ef3ad4de"],
+   ["COHR", "0x92f9f459f1a9a5ad266b182be7bffd1c6c666894"],
+   ["COST", "0x4ea005168d7f09a7a0ba9d1def21a479950e44c2"],
+   ["CRDO", "0x4d67253bc223e6b0e104f1084c1fb2b669ddc41b"],
+   ["CRM", "0xd95b44124e475743a7589e68f3d74008a5536d44"],
+   ["CRWD", "0xea72ecca2d0f6bfa1394dbbcff85b52cd4233931"],
+   ["CSCO", "0xf543967eebb6f1917992ef0e68de63ab07a5a0da"],
+   ["CTSH", "0x63d5a3b6939a33f1e75d8bcd85759858239600db"],
+   ["CVNA", "0xa4f319104089fe321dc8093c6e707d4fe190a988"],
+   ["DDOG", "0x27c99fbde9d0d2aa4f4bfb4943f237843ddf6958"],
+   ["DJT", "0x1d11f0496982706c5e14a514d4e79f2e6bde4516"],
+   ["DOCN", "0xc02f12b9fe9e707079ec0d546f3050d3f6c1f8bd"],
+   ["ELF", "0x39ec44bee4f6a116c6f9b8de566848a985c53c60"],
+   ["EWT", "0x1c690498150252222c275a5ced69d3a6b1f52d5e"],
+   ["F", "0x25c288e6d899b9bc30160965ad9644c67e73be0c"],
+   ["FICO", "0xa48f22a46c0f1c46ca7d111cb6c137c271987180"],
+   ["FIG", "0x41f4267525a8aff329540ef24fd83d9044758b33"],
+   ["FISV", "0x9ece29a4a2397c0a35fb5fa8ee2b9509130a98cc"],
+   ["FIX", "0x93dbb1d2dc5d63f4abacff30485273f538df68ac"],
+   ["FLNC", "0x282e87451e10fa6679bc7d76c69be44cd3fc777c"],
+   ["FLY", "0x03bc731ffb162cdd7b98d3c6542bfc291126075d"],
+   ["FTNT", "0x3fb8976980d486084b2eb4a404bd12e72823958f"],
+   ["FUTU", "0xeb30663bdff0622ef4e4e5cbb4e975f19f33f51d"],
+   ["GE", "0x63b814ddbd6bf339f25fed8c36158a008d5b373e"],
+   ["GEV", "0x94b8aae43a1ccc08aa64b7d1f29b4d920af4a0c9"],
+   ["GLD", "0xc9a981fee1f9dec688bb123ccdecc63d0debfc4e"],
+   ["GLW", "0x7c04e6a3368f2a1de3874f0e80d2e0a1a9915da6"],
+   ["GLXY", "0x2d427692e928fa156ec22acfabafa0447c5805b7"],
+   ["HII", "0xeb61c0ed490a367d4e3631ccf8a74b3bfc7e775d"],
+   ["HIMS", "0xccee82fe024c36fa15e1005ede3e9e4787e23d09"],
+   ["HPE", "0x59dd09d4900c2e4b5f75b7c0d4e6796fcc234cb1"],
+   ["HWM", "0xaea445c5f3db1a462998ccc422a875a361ee5d99"],
+   ["IBM", "0x980dcf6766fa79f5cf0c4aadb3ab477ff15a9619"],
+   ["IBRX", "0x7c148f74ac7445d1f28366b7fcdc6792a9fcd0cf"],
+   ["INDA", "0xacef2e09adb47ad6abebad9ff06689e60615c2b6"],
+   ["INFQ", "0xb853bc83a753342a4f8320ea680b4b1e84118d21"],
+   ["INOD", "0xf1953dab6fad537488d5a022361ffaa8b4c95ec6"],
+   ["INTU", "0x56d23bee5f41a7120170b0c603dae30128e460e9"],
+   ["IREN", "0xf0ab0c93be6f41369d302e55db1a96b3c430212d"],
+   ["JBL", "0xeaf2512dfc1beac608f8794b3793cd4e02894aa6"],
+   ["JNJ", "0x03dfbbe0ac4e7bcdafd08ed41a400326b77d8c80"],
+   ["JOBY", "0xb334c5ce741b80b5b671f47f5c269cb193fe8e24"],
+   ["KLAC", "0x96b933c74ecb4a0926b9210cef7b743ef46be2e9"],
+   ["KSS", "0x12e3c047bf9aecaf9ddc98c05c31bfd1dd043993"],
+   ["KTOS", "0x7fd06a4d81ccfa3f351394e144d5191874c31313"],
+   ["LHX", "0x48d60243c66437c6ac3c2495be94747aed5dfe25"],
+   ["LITE", "0x8ef20885f94e3d9bc7eb3080279188bd5ed7c08c"],
+   ["LLY", "0x8005d266423c7ea827372c9c864491e5786600ea"],
+   ["LMT", "0x329fcaceb9ad6f9580dd5f643fed0646900d043c"],
+   ["LRCX", "0x57b0030166db0c31690d1a5aa167e2e26e2c29a4"],
+   ["LULU", "0x4e62068525ab11fe768e29dfd00ef909b9803016"],
+   ["LUNR", "0xa5d4968421ba94814be3b136b15cf422101ac1a3"],
+   ["MDB", "0xddf2266b79abf0b48898959b0ed6e6adf512be74"],
+   ["MOD", "0xc6cbad1016b38b797610c25e1dc7d95988b1f362"],
+   ["MPWR", "0x52d50d0280ad1054b43f052bd70a49a212a1b128"],
+   ["MRNA", "0x43b07d15ce533bec5476d70c22a78a1b2b662155"],
+   ["MRVL", "0x62fd0668e10d8b72339be2dcf7643001688ff13b"],
+   ["MTSI", "0xc93f4d80e268ab922e871bd169156c3cc41894e6"],
+   ["MXL", "0x48961813349333209994750ffa89b3c5c22ec969"],
+   ["NAVN", "0xf7181b63fdb858558a74ba96bc42732684cd7965"],
+   ["NET", "0x116f00968269b7bfbad4109ce591d6e74c0601d4"],
+   ["NFLX", "0xe0444ef8bf4ed74f74fd73686e2ddf4c1c5591e8"],
+   ["NNE", "0xbef75684c43c4ea7bd18dd532a2244674ee8b926"],
+   ["NOW", "0x0c3260af4b8f13a69c4c2dfb84fd667890cdfa14"],
+   ["NU", "0x408c14038a04f7bd235329e26d2bf569ee20e250"],
+   ["NVTS", "0xbe6702d7b70315376dc48a3293f24f0982f86386"],
+   ["OKLO", "0x8b2f88497f15a18e9d4ffa1a8ffb8538399ae774"],
+   ["ON", "0xbbd09f72b025360fee5c928053dca6248d35be54"],
+   ["ONTO", "0x8ff63eaeee3fe54ba450c4f5538064ec5a893aef"],
+   ["OUST", "0x40e7a279850e443f582059ae5dc1c3b6563e6395"],
+   ["P", "0x1cdad396db64bda184d5182a97dd9b3c62100b7d"],
+   ["PANW", "0xb039597ed45cba7b6e2fb9e8be51802969cee5be"],
+   ["PATH", "0xfb2664f07b6aadd29ea7a59d8859b1aeb8645cda"],
+   ["PENG", "0x9b23573b156b52565012f5ce02cdf60afbaa70be"],
+   ["PFE", "0x7066a64c24e4206cd62e83bf198c1e7eb361f51e"],
+   ["PL", "0xaa4d64474c172010ab57719cb9951e6142a100d3"],
+   ["POET", "0xcf6b2d875361be807eafa57458c80f28521f9333"],
+   ["POWL", "0x237c16d66590f67b886d978acd362eaead8b18c7"],
+   ["PR", "0x4189f0c66ebbb0bfef1c31f763131361ef32f77c"],
+   ["PWR", "0x9ab02ead789b6903c3c44d0ed32f9c707cdf12fd"],
+   ["QBTS", "0xc583c60aef9dc401da72cec1b404743a93cea1cc"],
+   ["QCOM", "0x0f17206447090e464c277571124dd2688e48aea9"],
+   ["QUBT", "0x59818904ab4ce163b3ce4ffb64f2d6ca02c434b4"],
+   ["RBLX", "0xf0c4bf4c582cb3836e98394b1d4e7b7281101be8"],
+   ["RCAT", "0xfde6b5d9bb419b10c23268c74e369abff39c0460"],
+   ["RDDT", "0x05b37fb53a299a1b874a619e1c4c404d52c36f4c"],
+   ["RDW", "0x92ef19e82bd8ff36661de838d5eae7e5cef0effe"],
+   ["RIVN", "0xb1bf26c1d20ff267a4f93550d1e0d06ac40a114b"],
+   ["RUN", "0x756bc80af765c82da966a788858d65adf14f3793"],
+   ["SATS", "0x95052ddcd5dc25641657424a8cf04834997e1730"],
+   ["SCHD", "0xd63abb2c13d7a8421a8017a712802053568e3c1d"],
+   ["SHOP", "0xf53f66751b1eff985311b693531e3290f600c410"],
+   ["SHY", "0xbe274710bf3d9567e1b290ef6a5f9f90ca016fd8"],
+   ["SIMO", "0x77e655e37f4d913fb9540e0d541d824171a60e81"],
+   ["SKHY", "0x84cab63bc87912e71ad199ff14a0ba45de68fef8"],
+   ["SLS", "0x285b231728c7e4333799183df1094d775246a535"],
+   ["SMCI", "0xc01aa1fecec0605b13bc84874ff7256c0f5f562a"],
+   ["SMH", "0x072f979c2cac8e1391b0162a87fee094bf8744a0"],
+   ["SMR", "0x1eebee7f74517e0279dfb09d25b0407beec3fdd6"],
+   ["SNAP", "0xf6589f11bc40b669e584073f428b05562f568733"],
+   ["SNOW", "0xba0cab75495255d0cb58e22b648bfed4ecd1f47e"],
+   ["SOFI", "0x98e75885157c80992a8d41b696d8c9c6fb30a926"],
+   ["SOUN", "0x6e3dfd9f7e1649baa14d25cac18c94d62db10a54"],
+   ["SOXX", "0x75742c18bc1f1c5c5f448f4c9d9c6f66dafaaa38"],
+   ["SPMO", "0xad622320e520de39e72d41ef07438c3fd3354875"],
+   ["TE", "0xb1969f6604ca1ae7a2cd3f1827876e914594ca2d"],
+   ["TEAM", "0x5b97476b922f3305131b8f0b9d333172e87f4aae"],
+   ["TEM", "0xb1cc0ec7db69cf43539119814df40071b9d61793"],
+   ["TER", "0x2778c5024d5ca2cdb0f8ead671ffc69963adcd9c"],
+   ["TSEM", "0x89776d4cd68193597a2fc132cfac1fde36ccea8a"],
+   ["TTD", "0x0b5fb4031cae9163db10b169ee72685f0edc8545"],
+   ["TTWO", "0x5e81213613b6b86eab4c6c50d718d34359459786"],
+   ["UMC", "0x0e6e67ba88e7b5d9b67636a215c76779b948de79"],
+   ["UNH", "0xcf364ea52787e289de6f32077834056e3e70d6a8"],
+   ["UPS", "0xf23250dac154d05bb671cb0d0ebef3c635c79ce2"],
+   ["VICR", "0x6006ed4b2f94110851ff7509d97d034f0eed9226"],
+   ["VRT", "0xfa78c12e6488814a0262e4e802749a4a737d5fb7"],
+   ["VSAT", "0x26dcbfb34fc83cabd6990f449674efdc6097ff85"],
+   ["VST", "0x561e2a49212b7ccf47f2744ccb83e200722fadbc"],
+   ["VTI", "0x0594134df3f171a354d9c85ebd65b7a6148f6d09"],
+   ["WDAY", "0x82da4646242e1d962e96e932269dc644c94a9caa"],
+   ["WDC", "0xf52597345a8edf418bc4071b4a35112472277d3e"],
+   ["WULF", "0x348be1a8663f15edde5cdf8a96bb69078f7ab6fd"],
+   ["WYFI", "0x9e7abd3c9139d14e4c86dce0e455aab7a0c2fb3e"],
+   ["XLK", "0x15cd20759ce7f3285c29a319de2d1a2e098c6f43"],
+   ["XNDU", "0xa8eb3bccbf2017ee7cbfb652eb51cf2e1b153289"],
+   ["XOM", "0xf9b46d3d1b22199d4d1025a9cedb540a33f1a2d5"],
+   ["ZM", "0x44c4f142009036cf477ed2d09932051843137cf1"],
+   ["ZS", "0x7dc013eb55e436f30d7ed1afe4e36d6e45e3c3f7"]
+  ],
+  "columns": ["symbol", "address"],
+  "count": 159,
+  "reason": "registry-listed, so identity holds, but no Chainlink feed is pinned, so there is no mark independent of the venue and the asset is not bought (0.4 decision). Beacons are not read for these; any one held appears under holdings, carried without a value.",
+  "status": "unmarkable"
+ },
+ "rules": {
+  "corroboration": "GeckoTerminal's token-level price and 24h volume, independent of the venue. Below $1000000 of 24h volume the asset is excluded. Above it, a divergence past 100 bps is vetoed in an open session and recorded as a finding in a closed one. A missing corroboration is undetermined, never agreement.",
+  "freshness": "A mark is fresh while its newest round is at most the feed's heartbeat + 3600 s old, counting only open-session time. Closed sessions, inferred from the feeds' own rounds: us_equities_24/5: Sat 00:05:00Z to Sun 23:55:00Z every week. A market holiday is not modelled and reads as stale. A round dated inside a closed span leaves freshness undetermined.",
+  "mark": "Chainlink's answer for the feed pinned to the asset's address, never matched by ticker. uiMultiplier() is not applied again: the documentation says the answer already incorporates it, which is documented, not measured (F0.4.4).",
+  "order": "identity, standing, beacon, markability, mark, history, corroboration, corroborator-line, divergence, tradeability",
+  "paused": "A stock has no mark while its token's oraclePaused() is true at the pinned block: Chainlink holds the feed at its last value while a corporate action is applied, which the rounds cannot tell from a closed market. A flag that could not be read is undetermined, and blocks.",
+  "timeline": "One close a day over 30 days to the pinned block: the round in effect at 20:00Z, then the latest round. A day whose cut falls in a closed session has no close, and neither has a day with no new round since the previous close, such as a holiday: nothing is carried forward or interpolated. At most 5000 rounds are read. A series that falls short says so in its coverage, and its asset is not tradeable that snapshot.",
+  "tradeability": "A venue quote for 25.00193 USDG ($25 at USDG's own mark) succeeded, is at most 60 s old at built_at, and its swapImpactBps is known and at most 50, compared signed. A quote is a price, not a fill.",
+  "value": "Raw units times the mark, exact. No mark, no value, and never zero."
+ },
+ "schema": "openfund.snapshot/4",
+ "summary": {
+  "assets": [
+   ["AAPL", "tradeable", null],
+   ["AMD", "below_corroborator_line", "corroborator-line"],
+   ["AMZN", "tradeable", null],
+   ["ASML", "below_corroborator_line", "corroborator-line"],
+   ["BABA", "below_corroborator_line", "corroborator-line"],
+   ["CLSK", "below_corroborator_line", "corroborator-line"],
+   ["COIN", "below_corroborator_line", "corroborator-line"],
+   ["CRCL", "tradeable", null],
+   ["CRWV", "below_corroborator_line", "corroborator-line"],
+   ["DELL", "below_corroborator_line", "corroborator-line"],
+   ["EWY", "below_corroborator_line", "corroborator-line"],
+   ["GME", "tradeable", null],
+   ["GOOGL", "tradeable", null],
+   ["INTC", "tradeable", null],
+   ["IONQ", "below_corroborator_line", "corroborator-line"],
+   ["META", "tradeable", null],
+   ["MSFT", "below_corroborator_line", "corroborator-line"],
+   ["MSTR", "tradeable", null],
+   ["MU", "tradeable", null],
+   ["NBIS", "below_corroborator_line", "corroborator-line"],
+   ["NVDA", "tradeable", null],
+   ["ORCL", "below_corroborator_line", "corroborator-line"],
+   ["PLTR", "tradeable", null],
+   ["QQQ", "tradeable", null],
+   ["RGTI", "below_corroborator_line", "corroborator-line"],
+   ["RKLB", "below_corroborator_line", "corroborator-line"],
+   ["SGOV", "tradeable", null],
+   ["SLV", "below_corroborator_line", "corroborator-line"],
+   ["SNDK", "below_corroborator_line", "corroborator-line"],
+   ["SPCX", "tradeable", null],
+   ["SPY", "tradeable", null],
+   ["TSLA", "tradeable", null],
+   ["TSM", "below_corroborator_line", "corroborator-line"],
+   ["USAR", "below_corroborator_line", "corroborator-line"],
+   ["USO", "tradeable", null]
+  ],
+  "columns": ["symbol", "status", "rule"],
+  "counts": {
+   "below_corroborator_line": 18,
+   "tradeable": 17
+  },
+  "findings": [
+   ["AMZN", "closed-session divergence", "-428.73"],
+   ["MSTR", "closed-session divergence", "-384.05"],
+   ["MU", "closed-session divergence", "170.59"],
+   ["PLTR", "closed-session divergence", "160.91"],
+   ["SGOV", "closed-session divergence", "111.97"]
+  ],
+  "holding_columns": ["symbol", "universe_status", "valued", "value_usd"],
+  "holdings": [
+   ["ETH", "not_a_stock", true, "1.21354245825745859339518719"],
+   ["USDG", "not_a_stock", true, "0.07873592033018"]
+  ]
+ },
+ "wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da"
+}
