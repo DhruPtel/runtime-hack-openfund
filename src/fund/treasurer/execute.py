@@ -40,6 +40,14 @@ and the order's new state in one transaction, so a crash can never leave a fill
 without its order or an order confirmed without its fill. An order already finished
 is not sent again and books nothing; one left `submitted` or `unknown` is 4.9's to
 resolve, and `run_order` leaves it alone.
+
+**The treasurer is its own process** (4.12). `python -m fund.treasurer.execute` reads
+the decision's approved orders from SQLite and runs them. It is started from an empty
+environment, so nothing is handed to it, and it loads its own credentials itself —
+`SIGNING_KEY` and `BANKR_KEY_EXEC`, which only the treasurer role may hold, from the
+treasurer's own file where the operator has split them (`config.env_file_for`). It
+reports the names it was given and the names it holds, and never a value. So spend
+authority lives in one process, and the cycle that starts it has none.
 """
 
 from __future__ import annotations
@@ -47,7 +55,9 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 from dataclasses import dataclass
+from pathlib import Path
 from decimal import Decimal
 from typing import Any, Collection, Mapping, Protocol, Sequence
 
@@ -301,3 +311,73 @@ def run_order(order_id: str, *, decision: Decision, public_key: str | None,
         order = store.move(order_id, outcome.state, reason=outcome.reason,
                            execution=outcome.execution)
     return Done(order, admission, outcome)
+
+
+# --- the treasurer's own process (4.12) ------------------------------------------------------------
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """The treasurer, alone:
+
+        python -m fund.treasurer.execute --db FUND.sqlite --decision DIR --snapshot PATH
+            --at EPOCH_MS --config-dir DIR [--env-file PATH] [--venue-fetched-at EPOCH_MS]
+
+    It reads the decision's approved orders from the database, admits or refuses each,
+    fills the paper ones and books them, and prints what it did as JSON. The live
+    executor is 5.1's; until then every order is a stock leg, which is paper."""
+    import argparse
+
+    from fund import config
+    from fund.adapters import fake_venue
+    from fund.credentials import Role
+    from fund.store import db
+    from fund.store.journal import Journal
+    from fund.store.orders import OrderStore
+    from fund.treasurer import keys as published
+    from fund.treasurer import mandate as mandates
+
+    inherited = sorted(os.environ)  # what the caller handed us, before we load anything
+    parser = argparse.ArgumentParser(prog="fund.treasurer.execute")
+    parser.add_argument("--db", required=True, type=Path)
+    parser.add_argument("--decision", required=True, type=Path,
+                        help="the decision's directory: record.json and envelope.json")
+    parser.add_argument("--snapshot", required=True, type=Path)
+    parser.add_argument("--at", required=True, type=int, help="the cycle's clock, epoch ms")
+    parser.add_argument("--config-dir", type=Path, default=None)
+    parser.add_argument("--env-file", type=Path, default=None, help="the treasurer's own")
+    parser.add_argument("--venue-fetched-at", type=int, default=None,
+                        help="when the fake venue answers; the default is 5s before --at")
+    args = parser.parse_args(argv)
+
+    held = config.load(Role.TREASURER, require=False, env_file=args.env_file)
+    at = Instant(args.at)
+    fetched = Instant(args.venue_fetched_at if args.venue_fetched_at else at.epoch_ms - 5_000)
+    snapshot_bytes = args.snapshot.read_bytes()
+    decision = Decision((args.decision / "record.json").read_bytes(),
+                        json.loads((args.decision / "envelope.json").read_text()), snapshot_bytes)
+    snapshot = decision.snapshot
+    conn = db.connect(args.db)
+    store, journal = OrderStore(conn), Journal(conn)
+    mandate = mandates.load(args.config_dir)
+    limits = gates.Limits.from_config(config.load_json("thresholds.json", args.config_dir),
+                                      mandate, config.load_json("models.json", args.config_dir))
+    venue = fake_venue.FakeVenue(snapshot, lambda: fetched)
+    executor = PaperExecutor(snapshot)
+    decision_id = decision.envelope["decision_id"]
+
+    ran = []
+    for order in store.all():
+        if order.order_id.rpartition("/")[0] != decision_id:
+            continue
+        done = run_order(order.order_id, decision=decision, public_key=published.published_key(
+            args.config_dir), mandate=mandate, limits=limits,
+            thresholds=config.load_json("thresholds.json", args.config_dir), venue=venue,
+            executor=executor, store=store, journal=journal, at=at)
+        ran.append({"order_id": done.order.order_id, "state": done.order.state.value,
+                    "reason": done.order.state_reason, "booked": done.booked})
+    print(json.dumps({"orders": ran, "environment_given": inherited,
+                      "credentials_held": sorted(held.credentials)}))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -77,7 +77,10 @@ def test_a_whole_paper_cycle_runs_from_the_capture_to_a_book(tmp_path):
     assert ran.decision["record"]["schema"] == "openfund.decision/3"
     assert ran.decision["authorizes"]["authorizes"] is True
     assert len(ran.orders) == 8 and len(ran.filled) == 8 and ran.refused == []
-    assert all(d.order.state is OrderState.CONFIRMED for d in ran.orders)
+    assert all(r.state is OrderState.CONFIRMED for r in ran.orders)
+    # the treasurer ran alone: this process handed it nothing, and it held its own key
+    assert set(ran.treasurer["environment_given"]) <= {"PATH", "PYTHONPATH", "LC_CTYPE"}
+    assert ran.treasurer["credentials_held"] == ["SIGNING_KEY"]
 
     events = Journal(db.connect(tmp_path / "fund.sqlite")).events()
     assert [type(e).__name__ for e in events] == ["Opening"] + ["Fill"] * 8
@@ -152,31 +155,21 @@ def test_an_order_the_chokepoint_refuses_is_written_refused_and_books_nothing(tm
     """Quotes two minutes old when the treasurer judges them: every order is refused at
     quote-age, written refused with that reason, and nothing is booked."""
     config_dir, env_file = paper(tmp_path)
-    fresh = fake_venue.FakeVenue(SNAPSHOT, lambda: Instant(clock(4).epoch_ms - 5_000))
-
-    class Stale(fake_venue.FakeVenue):
-        """Fresh while the plan is quoted; two minutes old when the treasurer re-quotes."""
-
-        def __init__(self):
-            super().__init__(SNAPSHOT, lambda: Instant(clock(4).epoch_ms - 120_000))
-            self.for_the_plan = 0
-
-        def quote(self, request):
-            self.for_the_plan += 1
-            return fresh.quote(request) if self.for_the_plan <= 8 else super().quote(request)
-
-    ran = run(tmp_path, config_dir=config_dir, env_file=env_file, venue=Stale())
+    # the plan is quoted fresh; the treasurer's re-quotes come back two minutes old
+    ran = run(tmp_path, config_dir=config_dir, env_file=env_file,
+              venue_fetched_at=Instant(clock(4).epoch_ms - 120_000))
     assert len(ran.orders) == 8 and ran.filled == [] and len(ran.refused) == 8
-    assert all(d.order.state is OrderState.REFUSED for d in ran.orders)
-    assert all("quote-age" in d.order.state_reason for d in ran.orders)
+    assert all(r.state is OrderState.REFUSED for r in ran.orders)
+    assert all("quote-age" in r.reason for r in ran.orders)
     assert [type(e).__name__ for e in Journal(db.connect(tmp_path / "fund.sqlite")).events()] == [
         "Opening"]
 
 
-def test_an_order_left_in_flight_by_a_killed_run_is_resolved_at_the_next_startup(tmp_path):
-    """The run is killed the moment the first order is written `submitted`, before the
-    executor answers. The next cycle's startup settles it — nothing was booked, so it
-    never filled — and then decides again."""
+def test_the_orders_a_killed_run_left_are_settled_at_the_next_startup(tmp_path):
+    """The run is killed once its orders are written and before any is attempted. The
+    next cycle's startup settles them — nothing was sent, so they are stale — and then
+    decides again. An order left `submitted` is settled by the same call, from the
+    journal: tests/test_startup.py."""
     config_dir, env_file = paper(tmp_path)
     script = textwrap.dedent(f"""
         import os, signal, sys
@@ -186,29 +179,24 @@ def test_an_order_left_in_flight_by_a_killed_run_is_resolved_at_the_next_startup
         from fund.run import cycle, decide
         from fund.store import db
 
-        def kill_on_submit(step, what):
-            if step == "submitted":
-                os.kill(os.getpid(), signal.SIGKILL)
-
         cycle.cycle(snapshot_path=Path({str(CAPTURE)!r}),
                     offered=decide.cycle_reports(Path({str(REPORTS)!r})),
                     conn=db.connect({str(tmp_path / 'fund.sqlite')!r}),
                     out_dir=Path({str(tmp_path / 'killed')!r}), at=Instant({clock(4).epoch_ms}),
                     config_dir=Path({str(config_dir)!r}), env_file=Path({str(env_file)!r}),
-                    checkpoint=kill_on_submit)
+                    checkpoint=lambda step, what: os.kill(os.getpid(), signal.SIGKILL))
     """)
     done = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
     assert done.returncode == -signal.SIGKILL, done.stderr[-2000:]
     conn = db.connect(tmp_path / "fund.sqlite")
     left = {o.state for o in OrderStore(conn).all()}
-    assert OrderState.SUBMITTED in left and [
+    assert left == {OrderState.PREPARED} and [
         type(e).__name__ for e in Journal(conn).events()] == ["Opening"]
 
     ran = run(tmp_path, minutes=8, conn=conn, config_dir=config_dir, env_file=env_file,
               out="after")
-    settled = {r.state for r in ran.resolved}
-    assert settled == {OrderState.FAILED, OrderState.REFUSED}  # the one sent, and those not
-    assert all(o.state is not OrderState.SUBMITTED for o in OrderStore(conn).all())
+    assert {r.state for r in ran.resolved} == {OrderState.REFUSED}
+    assert all("never sent" in r.why for r in ran.resolved)
     assert ran.filled and ran.book.nav_usd > 0  # and the cycle went on to trade
 
 

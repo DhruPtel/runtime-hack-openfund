@@ -18,8 +18,10 @@ From a capture to a book:
 4. **the intents** are the record's approved orders, refused unless the record
    verifies against the published key and the mandate is in force (4.2). Each is
    written `prepared` before anything is attempted (4.3);
-5. **each order** passes the chokepoint, is sent, and its fill and state are written
-   in one act (4.4, 4.5, 4.6);
+5. **the treasurer**, in its own process with its own credentials (4.12), reads
+   those orders from the database and takes each through the chokepoint, the fill
+   and the books in one act (4.4, 4.5, 4.6). This process starts it from an empty
+   environment and holds no key itself;
 6. **the book** is read back from the journal and reconciled exactly (4.7).
 
 **Nothing here touches the chain.** Stock legs are paper (PLAN §13). The venue is the
@@ -36,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -49,7 +52,7 @@ from fund import config
 from fund.adapters import bankr_quote
 from fund.agents import risk
 from fund.core import cash, gates, ledger, plan
-from fund.core.types import Amount, Instant, document_id
+from fund.core.types import Amount, Instant, OrderState
 from fund.adapters import fake_venue
 from fund.run import decide, startup
 from fund.store import db, positions
@@ -66,22 +69,33 @@ DEMO = ROOT / "fixtures" / "live" / "cycle-demo"  # gitignored
 
 
 @dataclass(frozen=True)
+class Ran:
+    """One order, as the treasurer's process reported it."""
+
+    order_id: str
+    state: OrderState
+    reason: str | None
+    booked: bool
+
+
+@dataclass(frozen=True)
 class Cycle:
     """What one cycle did."""
 
     decision: Mapping[str, Any]
-    orders: list[execute.Done]
+    orders: list[Ran]
     book: Any | None
     statement: str
     resolved: list[startup.Resolved] = ()
+    treasurer: Mapping[str, Any] | None = None
 
     @property
-    def filled(self) -> list[execute.Done]:
-        return [d for d in self.orders if d.booked]
+    def filled(self) -> list[Ran]:
+        return [r for r in self.orders if r.booked]
 
     @property
-    def refused(self) -> list[execute.Done]:
-        return [d for d in self.orders if d.admission is not None and not d.admission.admitted]
+    def refused(self) -> list[Ran]:
+        return [r for r in self.orders if r.state is OrderState.REFUSED]
 
 
 def scripted(vote: str = "approve") -> Callable[[Mapping[str, Any], str], str]:
@@ -107,9 +121,28 @@ def open_paper_book(journal: Journal, snapshot: Mapping[str, Any], units: Decima
                                   cash.mark_of(snapshot, asset.address)))
 
 
+def treasurer(*, db_path: Path, decision_dir: Path, snapshot_path: Path, at: Instant,
+              config_dir: Path, env_file: Path | None, venue_fetched_at: Instant | None,
+              python: str = sys.executable) -> Mapping[str, Any]:
+    """Start the treasurer in its own process, from an empty environment, and read back
+    what it did. This process hands it no credential: it loads its own (4.12)."""
+    command = [python, "-m", "fund.treasurer.execute", "--db", str(db_path),
+               "--decision", str(decision_dir), "--snapshot", str(snapshot_path),
+               "--at", str(at.epoch_ms), "--config-dir", str(config_dir)]
+    if env_file is not None:
+        command += ["--env-file", str(env_file)]
+    if venue_fetched_at is not None:
+        command += ["--venue-fetched-at", str(venue_fetched_at.epoch_ms)]
+    empty = {"PATH": os.environ.get("PATH", os.defpath), "PYTHONPATH": str(ROOT / "src")}
+    done = subprocess.run(command, env=empty, capture_output=True, text=True, timeout=600)
+    if done.returncode != 0:
+        raise RuntimeError(f"the treasurer refused to run: {done.stderr[-2000:]}")
+    return json.loads(done.stdout)
+
+
 def cycle(*, snapshot_path: Path, offered: Sequence[decide.Offered], conn: Any, out_dir: Path,
           at: Instant, config_dir: Path, env_file: Path | None,
-          venue: execute.Venue | None = None, executor: execute.Executor | None = None,
+          venue: execute.Venue | None = None, venue_fetched_at: Instant | None = None,
           vote: str = "approve", checkpoint: Callable[..., None] | None = None) -> Cycle:
     """One paper cycle: reports to a signed decision to fills to a book.
 
@@ -120,7 +153,6 @@ def cycle(*, snapshot_path: Path, offered: Sequence[decide.Offered], conn: Any, 
     thresholds = config.load_json("thresholds.json", config_dir)
     open_paper_book(journal, snapshot, Decimal(str(thresholds["capital_usd"])))
     venue = venue or fake_venue.FakeVenue(snapshot, lambda: Instant(at.epoch_ms - 5_000))
-    executor = executor or execute.PaperExecutor(snapshot)
 
     try:  # the book the planner plans from, out of the ledger (4.0 P10)
         the_book = ledger.planner_book(journal.events(), snapshot)
@@ -161,17 +193,17 @@ def cycle(*, snapshot_path: Path, offered: Sequence[decide.Offered], conn: Any, 
     if checkpoint is not None:
         checkpoint("prepared", orders)
 
-    ran = [execute.run_order(order.order_id, decision=decision, public_key=public_key,
-                             mandate=the_mandate, limits=limits, thresholds=thresholds,
-                             venue=venue, executor=executor, store=store, journal=journal,
-                             at=at, checkpoint=checkpoint) for order in orders]
+    reported = treasurer(db_path=Path(conn.execute("PRAGMA database_list").fetchone()[2]),
+                         decision_dir=out_dir, snapshot_path=snapshot_path, at=at,
+                         config_dir=config_dir, env_file=env_file,
+                         venue_fetched_at=venue_fetched_at)
+    ran = [Ran(o["order_id"], OrderState(o["state"]), o["reason"], o["booked"])
+           for o in reported["orders"]]
     book = positions.read(journal, book=ledger.PAPER, snapshot=snapshot)
     statement = positions.statement(book, snapshot)
     (out_dir / "book.txt").write_text(statement + "\n")
-    decide._write(out_dir / "orders.json", [
-        {"order_id": d.order.order_id, "state": d.order.state.value,
-         "reason": d.order.state_reason, "booked": d.booked} for d in ran])
-    return Cycle(done, ran, book, statement, resolved)
+    decide._write(out_dir / "orders.json", reported["orders"])
+    return Cycle(done, ran, book, statement, resolved, reported)
 
 
 def summary(ran: Cycle) -> str:
@@ -179,11 +211,14 @@ def summary(ran: Cycle) -> str:
              for r in ran.resolved]
     lines += [decide.summary(ran.decision), "",
              "--- the treasurer: the decision above executed nothing; these orders did ---", ""]
-    for done in ran.orders:
-        lines.append(f"order {done.order.order_id.rpartition('/')[2]:>2}  "
-                     f"{done.order.state.value:<9} {done.order.state_reason or ''}"[:160])
+    for order in ran.orders:
+        lines.append(f"order {order.order_id.rpartition('/')[2]:>2}  "
+                     f"{order.state.value:<9} {order.reason or ''}"[:160])
     if not ran.orders:
         lines.append("no order was written")
+    if ran.treasurer is not None:
+        lines.append(f"treasurer  its own process, given {ran.treasurer['environment_given']}, "
+                     f"holding {ran.treasurer['credentials_held'] or 'no credential'}")
     return "\n".join([*lines, "", ran.statement])
 
 

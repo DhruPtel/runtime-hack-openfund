@@ -34,6 +34,19 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = REPO_ROOT / "config"
 ENV_FILE = REPO_ROOT / ".env"
 
+#: The treasurer's own credentials file, if the operator has split them (4.12). The
+#: analyst side reads `.env` and never this one, so a process without spend authority
+#: cannot read a key that has it even by accident. Absent, both roles read `.env`, as
+#: they did before the split: the code supports it, the operator does it on disk.
+TREASURER_ENV_FILE = REPO_ROOT / ".env.treasurer"
+
+
+def env_file_for(role: Role) -> Path:
+    """The credentials file this role reads."""
+    if role is Role.TREASURER and TREASURER_ENV_FILE.exists():
+        return TREASURER_ENV_FILE
+    return ENV_FILE
+
 
 class MissingCredentialError(RuntimeError):
     """A credential required by this role is absent from the environment."""
@@ -142,8 +155,11 @@ def load(
 
     Redaction is installed by default and derives its denylist from the whole
     credential table, not just this role's subset. See ``redaction`` for why.
+
+    Without an ``env_file``, the role's own file is read (``env_file_for``): the
+    treasurer's, where the operator has split them, and ``.env`` otherwise.
     """
-    load_environment(env_file)
+    load_environment(env_file_for(role) if env_file is None else env_file)
 
     if install_redaction:
         redaction.install()
