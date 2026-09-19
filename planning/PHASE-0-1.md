@@ -604,11 +604,13 @@ included.
 - **Feeds:** `latestRoundData`, `decimals` (8 on every equity feed, F0.4.7),
   paused-oracle detection, and market-session awareness — the equity feeds are
   `us_equities_24/5` (F0.4.1). **Built:** `latestRoundData` and each proxy's
-  own `decimals()`, which agreed with the directory on all 37 feeds. Neither
-  paused-oracle detection nor market-session awareness is a separate check:
-  a paused feed shows up only as a stale newest point, and the session is named
-  in the verdict but does not change it (LESSONS 2026-09-18, "1.3 leaves two
-  layout questions open").
+  own `decimals()`, which agreed with the directory on all 37 feeds.
+  Paused-oracle detection is not a separate check: a paused feed shows up only
+  as a stale newest point, and whether these proxies expose a pause flag was
+  not probed. Market-session awareness arrived at 1.4, in the staleness rule
+  below. The directory's `marketHours` names a schedule, not when it is open,
+  so the closed session is inferred from the feeds' own rounds (LESSONS
+  2026-09-18, "schedule, not a session", and the DECISION that follows it).
 - **Staleness binds the newest point only** (staleness decision). A newest
   observation is stale when its age exceeds its own feed's documented
   heartbeat, read from the pinned directory (86,400 s for equities), plus
@@ -616,11 +618,21 @@ included.
   newest point is stale past 90,000 s. An `updatedAt` 3.6 h old is normal in
   market hours (F0.4.7).
   **Measured in 1.3.** The largest weekday gap was 24.0 h, inside the limit.
-  Over one weekend, every equity feed was silent for 48–59 h, so the rule
-  judges them all stale for about 23–35 h each weekend. The rule stands, and
-  what to do about it is 1.11's question (LESSONS 2026-09-18). The comparison
-  is in the adapter, while CODEBASE says only `gates.py` makes one; that is
-  open.
+  Over one weekend, every equity feed was silent for 48–59 h, so the rule as
+  it then stood judged them all stale for about 23–35 h each weekend.
+  **Settled at 1.4** (DECISION, LESSONS 2026-09-18): the age counts only
+  open-session time. The closed session is inferred from the feeds' own
+  rounds, not from a calendar. Twelve weeks of every equity feed's rounds
+  never once landed between Sat 00:01:45Z and Mon 00:00:16Z, so
+  `config/sessions.json` holds Sat 00:05Z to Sun 23:55Z. A weekend is
+  expected, and the last round stands as the mark. A holiday is not modelled
+  and reads as stale: both in range, 3 July and 7 September, would have been
+  refused. A round dated inside the span contradicts it, and the verdict is
+  undetermined. Daylight saving is unmeasured.
+  **Where the comparison lives.** It stays in the adapter, as the named
+  exception to "gates exist once" (DECISION, LESSONS 2026-09-18; CODEBASE §3;
+  PLAN §2 invariant 4). Whether it moves into `gates.py` is open, and the
+  decision's "1.8" is wrong, since `gates.py` is 3.4's.
 - **The price series** (invariant 2). This unit chose the series and its
   window, under the no-archive rule. **Chosen:** the feed's own rounds, read
   at the pinned block via `getRoundData` (DECISION, LESSONS 2026-09-18). They
@@ -679,11 +691,13 @@ Offline, 39 tests in `tests/test_chain_4663.py` assert each refusal at its own
 rule; every rule was mutated and its test failed.
 
 **Risk:** a public RPC with no timeout is the exact failure `aero-stock-lp` has,
-so set timeouts first. The weekend is the other risk: a 24/5 feed may
-legitimately go longer than its heartbeat while markets are shut. That is
-measured on one weekend in 1.3 (48–59 h), and remains 1.11's checkpoint
-question. Historical reproducibility comes
-from 1.9's fixtures, not from re-reading the chain.
+so set timeouts first. The weekend was the other risk: a 24/5 feed goes
+longer than its heartbeat while markets are shut. It was measured on one
+weekend in 1.3 (48–59 h), then over twelve at 1.4, and the closed-session
+decision settles it; holidays remain, and fail closed. Historical
+reproducibility comes from 1.9's fixtures, not from re-reading the chain.
+The transport built here moved to `adapters/http.py` at 1.4 (DECISION), and
+`--prove` passed unchanged after the move.
 
 **Changed by:** the price-history and staleness decisions; the staleness config
 decision; probe 0.3's User-Agent note; F0.4.1, F0.4.7; F0.7b.8; F0.10.3–F0.10.5;
@@ -1059,21 +1073,25 @@ series' newest point only) and invariant 2:
    time is old relative to its fetch time is refused.
 5. **From the future.** An observation dated after the pinned block is refused.
 6. **Paused feed.** It is refused, excluded and labelled.
-7. **Market-closed feed.** A `us_equities_24/5` feed outside market hours
-   (F0.4.1) is labelled; whether it is also refused is the checkpoint's
-   question.
+7. **Closed session and holiday.** A `us_equities_24/5` feed whose gap lies in
+   the closed session inferred at 1.4 is **accepted**, and its last round is
+   the mark. A gap that runs past the limit in open-session time is refused as
+   stale, and a holiday is exactly that case. A round dated inside the closed
+   span is undetermined, because it contradicts the inference.
 
-**Artifact:** six named refusals and one named acceptance.
+**Artifact:** six named refusals, the holiday among them, and two named
+acceptances: old history with a fresh newest point, and a weekend gap.
 
 **Done when:** each refusal is named and reaches the caller rather than being
 logged and swallowed, and the acceptance case passes.
 
-**Checkpoint:** you see the refusals. Judge whether the strictness is right, or
-whether it will block every cycle on a weekend. That question is now measured.
-1.3 read one weekend: every `us_equities_24/5` feed was silent for 48–59 h, from
-Friday's close to Monday 00:00Z. So the rule as decided (heartbeat + 3,600 s)
-judges them all stale for about 23–35 h each weekend (LESSONS 2026-09-18). The
-margin is a lever, but no margin short of about 35 h clears a weekend.
+**Checkpoint:** you see the refusals. Judge whether the strictness is right.
+The weekend question this checkpoint carried was settled before it, at 1.4:
+the age counts only open-session time, with the closed session inferred from
+twelve weeks of rounds (LESSONS 2026-09-18). What is left to judge is the cost
+the decision accepted. A holiday refuses to value, for up to two and a half
+days around a Friday holiday (3 July replayed), and daylight saving is
+unmeasured.
 
 **Changed by:** the staleness decision, which closes the gap this unit carried;
 the price-history decision; the staleness config decision; F0.4.1, F0.4.7.
@@ -1101,9 +1119,11 @@ Stated before the code, so that no unit's done-condition quietly assumes it:
 - **Measure whether the feed already includes the multiplier** (F0.4.4). No
   asset's multiplier clears the noise, and there is no archive to read across a
   change, so 1.4 runs on documentation.
-- **Say what every weekend or holiday does to a 24/5 feed.** 1.3 measured one
-  weekend (48–59 h silent, LESSONS 2026-09-18). Holidays and other weekends are
-  unmeasured.
+- **Value a 24/5 feed on a market holiday.** Twelve weekends and two holidays
+  were measured at 1.4. A weekend is an expected gap. A holiday is not
+  modelled, reads as a stale open session, and is refused: that fails closed
+  (PLAN §13). Daylight saving is unmeasured, since every week observed was
+  daylight time.
 - **Settle Phase 2's model settings.** `risk_model`, `max_output_tokens`,
   `context_budget_tokens` and `cycle_deadline_seconds` are still null. They
   block Phase 2, not Phase 1. The transport timeout (180 s) is longer than the

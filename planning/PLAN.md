@@ -282,7 +282,10 @@ what each finding changed, is in `PHASE-0-1.md`.*
   registry **fails the cycle loudly**. `uiMultiplier()` and the name marker are
   not identity signals (0.8 decisions). USDG, the cash leg, is pinned separately.
 - **1.3** Chain adapter: block-pinned reads, feed staleness and pause rules,
-  source time separate from fetch time. Explicit request timeouts and fail
+  source time separate from fetch time. Since 1.4, staleness counts only
+  open-session time, with the closed session inferred from the feeds' own
+  rounds rather than a calendar (LESSONS 2026-09-18), and the transport is
+  the shared `adapters/http.py`. Explicit request timeouts and fail
   loudly; no archive read is assumed. Failover over an endpoint list is built,
   but with one endpoint it is not claimed. Reads a **price series** ending at
   the pinned block (invariant 2): 1.3 chose the feed's own rounds over 7 days,
@@ -321,8 +324,9 @@ what each finding changed, is in `PHASE-0-1.md`.*
   delegation on 4663.
 - **1.11** ▶ **Skew rejection:** *Show: six named refusals — mixed blocks, a
   stale newest point, a replayed body, an observation from after the pinned
-  block, a paused feed, a market-closed feed — and one acceptance: old history
-  with a fresh newest point.*
+  block, a paused feed, a holiday gap in an open session — and two
+  acceptances: old history with a fresh newest point, and a weekend gap inside
+  the inferred closed session.*
 
 **Exit:** hashed snapshot from live data, with history up to its pinned block;
 identical replay from fixture; bad inputs rejected, not absorbed, and old
@@ -685,6 +689,17 @@ Published with the project, not hidden.
   correction.
 - No archive RPC and no sequencer-uptime attestation. We require demonstrated
   chain progress and halt on uncertainty.
+- **A market holiday stops valuation.** When the equity feeds' schedule is
+  closed is inferred from their own rounds, not from a pinned calendar. Twelve
+  weeks show them silent from Saturday 00:02Z to Monday 00:00Z, and that span
+  is expected. A holiday is not modelled. It reads as an unexpected gap in an
+  open session, so the fund judges every such feed stale and refuses to value
+  it until the feeds publish again. On 3 July 2026 that would have been from
+  Friday afternoon to Monday's open, and on 7 September the last hours of
+  Monday. It fails closed, not open, and it is the honest cost of not pinning
+  a calendar. Daylight saving is unmeasured, because every week observed was
+  daylight time; if the schedule moves, a round inside the span stops
+  valuation until the span is re-derived.
 - Single runner, single SQLite file, no high availability, no automated backup.
 - One signing key, published, rotated manually. No trust chain.
 - Refunds for paid-but-undelivered records are manual, though retrieval by
