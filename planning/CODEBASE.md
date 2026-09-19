@@ -28,7 +28,9 @@ its own process with its own credentials.
 
 **3. One rule, one location.** A limit is defined once in `core/gates.py` and
 called by both risk and treasurer. Two interpretations of the same limit is how
-a fund trades outside its own policy.
+a fund trades outside its own policy. **Open (1.3):** the feed staleness
+comparison is in `adapters/chain_4663.py`, because the record placed the rule in
+1.3. Whether 1.8 moves it here is undecided (LESSONS 2026-09-18).
 
 **4. Nothing important happens in an agent.** Models produce opinions and prose.
 Arithmetic, ranking, thresholding, sizing and accounting are deterministic code.
@@ -85,6 +87,7 @@ fund/
 │   │   ├── bankr_llm.py        gateway client: backoff, deadlines, token accounting
 │   │   ├── bankr_usage.py      /v1/credits, /v1/usage — cost reconciliation evidence
 │   │   ├── http.py             one HTTP client: timeouts, retries, Retry-After, redaction
+│   │   │                       (open: 1.3's client is in chain_4663.py; LESSONS 2026-09-18)
 │   │   └── cache.py            raw source responses to disk, timestamped by code
 │   │
 │   ├── core/                   PURE. No network, no keys, no clock reads outside inputs.
@@ -162,7 +165,7 @@ thirty seconds to understand the safety model.
 | `core/` is pure | no module under `core/` imports `adapters/`, `agents/`, `store/` |
 | Analysts cannot spend | no module under `agents/` or `core/` imports `bankr_exec` or `sign` |
 | One signer | `sign.py` is imported only by `treasurer/` |
-| One gate definition | `gates.py` is the only module defining a threshold comparison |
+| One gate definition | `gates.py` is the only module defining a threshold comparison (open: 1.3's staleness comparison, LESSONS 2026-09-18) |
 | Deployed isolation | from the analyst process environment, execution credentials are unreadable and a raw HTTP swap fails (unit 4.12) |
 | No credential in logs | every declared credential value is masked in captured log output |
 

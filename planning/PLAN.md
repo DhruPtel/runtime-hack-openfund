@@ -280,9 +280,10 @@ what each finding changed, is in `PHASE-0-1.md`.*
   not identity signals (0.8 decisions). USDG, the cash leg, is pinned separately.
 - **1.3** Chain adapter: block-pinned reads, feed staleness and pause rules,
   source time separate from fetch time. Explicit request timeouts and fail
-  loudly; no failover is claimed and no archive read is assumed. Reads a
-  **price series** ending at the pinned block (invariant 2); which series and
-  what window are this unit's to decide. Staleness binds the newest point:
+  loudly; no archive read is assumed. Failover over an endpoint list is built,
+  but with one endpoint it is not claimed. Reads a **price series** ending at
+  the pinned block (invariant 2): 1.3 chose the feed's own rounds over 7 days,
+  with coverage stated (LESSONS 2026-09-18). Staleness binds the newest point:
   each feed's own heartbeat plus a configured margin. Balances are read over
   RPC, and the wallet is not an EOA on 4663.
 - **1.4** Price cross-check: Chainlink as the accounting mark, corroboration from
