@@ -11,6 +11,7 @@ from __future__ import annotations
 import ast
 import dataclasses
 import json
+import os
 import pathlib
 
 from fund.adapters import bankr_quote, chain_4663
@@ -303,3 +304,20 @@ def test_the_worker_deadline_outlasts_the_transport_timeout():
     transport, worker = models["transport_timeout_seconds"], models["worker_deadline_seconds"]
     assert type(transport) is int and type(worker) is int
     assert worker > transport
+
+
+def test_nothing_calls_the_agent_api():
+    """No call to `/agent/prompt` anywhere in the system (0.2's done-condition): the
+    code, its config, the probes and the Makefile."""
+    needle = "/agent/" + "prompt"  # spelled apart, so this file does not match itself
+    places = [REPO / "Makefile", REPO / "pyproject.toml"]
+    for top in ("src", "config", "probes"):
+        for folder, dirs, files in os.walk(REPO / top):
+            dirs[:] = [d for d in dirs if d not in ("node_modules", "__pycache__", "out")]
+            places += [pathlib.Path(folder) / f for f in files]
+    assert len(places) > 50
+    assert [str(p.relative_to(REPO)) for p in places
+            if needle in p.read_text(errors="replace")] == []
+
+
+#: PHASE-0-1 1.6: an asset's status is the first of these rules that does not pass.
