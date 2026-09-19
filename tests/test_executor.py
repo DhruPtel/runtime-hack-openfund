@@ -13,7 +13,7 @@ import pytest
 
 from fund.core import orders
 from fund.core.types import Amount, ExecutionMode, Instant, OrderState
-from fund.run.fake_venue import FakeVenue
+from fund.adapters.fake_venue import FakeVenue
 from fund.treasurer import execute
 from test_chokepoint import AT, SIX, SNAPSHOT, THRESHOLDS, USDG
 

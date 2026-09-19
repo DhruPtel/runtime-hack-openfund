@@ -10,8 +10,10 @@ It has the venue's interface: `quote(QuoteRequest) -> Observation`, as the live
 adapter's (`adapters/bankr_quote`). So the decision and the chokepoint take either,
 and nothing that calls them knows which it has.
 
-Built for 3.3's tests; moved here at 4.4 so the paper cycle (4.8) can run from the
-command line. The tests' `phase3.fake_quote` calls `observe`, so there is one.
+Built for 3.3's tests; moved into the fund at 4.4 so the paper cycle (4.8) can run
+from the command line, and into `adapters/` at 4.12, where the venue is, so the
+treasurer's own process reaches it without importing the layer above it. The tests'
+`phase3.fake_quote` calls `observe`, so there is one.
 """
 
 from __future__ import annotations

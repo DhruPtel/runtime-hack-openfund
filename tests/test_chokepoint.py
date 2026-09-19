@@ -20,7 +20,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fund import config
 from fund.core import cash, gates, ledger, orders
 from fund.core.types import USD, Amount, Instant, Price
-from fund.run.fake_venue import FakeVenue
+from fund.adapters.fake_venue import FakeVenue
 from fund.treasurer import execute, intent, keys, mandate, sign
 
 REPO = Path(__file__).resolve().parents[1]

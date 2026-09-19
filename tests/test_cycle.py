@@ -28,7 +28,8 @@ from fund import config
 from fund.core import cash, ledger
 from fund.core.types import Instant, OrderState
 from fund.run import cycle as run_cycle
-from fund.run import decide, fake_venue
+from fund.adapters import fake_venue
+from fund.run import decide
 from fund.store import db, positions
 from fund.store.journal import Journal
 from fund.store.orders import OrderStore

@@ -18,7 +18,7 @@ from decimal import localcontext
 
 from fund.core import cash, ledger, orders as moves
 from fund.core.types import OrderState
-from fund.run.fake_venue import FakeVenue
+from fund.adapters.fake_venue import FakeVenue
 from fund.store import db
 from fund.store.journal import Journal
 from fund.store.orders import OrderStore

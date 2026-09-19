@@ -20,7 +20,7 @@ from fund import config
 from fund.adapters import bankr_quote
 from fund.agents import schema
 from fund.core import aggregate, gates, plan
-from fund.run import fake_venue
+from fund.adapters import fake_venue
 from fund.core.types import (
     BPS, USD, Amount, AssetId, FetchStatus, Fixed, Instant, Observation, Price, Quote,
 )
