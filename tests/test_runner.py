@@ -112,11 +112,12 @@ def gateway():
 def settings(url, **changes):
     base = dict(model="claude-sonnet-5", max_tokens=12000, transport_timeout_s=2.5,
                 worker_deadline_s=3.5, cycle_deadline_s=30, retry_budget=1, width=4,
-                gateway_url=url)
+                pricing=PRICE, gateway_url=url)
     return runner.Settings(**{**base, **changes})
 
 
 SHARED = {"BANKR_LLM_KEY": "bk_fake_shared_gateway_key_0000000001"}
+PRICE = {"input": "2", "output": "10", "currency": "usd"}  # config/models.json, claude-sonnet-5
 
 
 def shared_keys():
@@ -154,6 +155,9 @@ def test_four_workers_one_malformed_one_timed_out_one_abstaining_and_the_cycle_c
 
     assert cycle["partial"] is True
     assert set(cycle["failed"]) == {"execution-quality", "price-integrity"}
+    # 2.5: four calls came back with a usage block, one timed out and has none.
+    assert cycle["cost"]["usd"] == "1.057088" and cycle["cost"]["calls"] == 5
+    assert cycle["cost"]["calls_of_unknown_cost"] == 1 and cycle["cost"]["is_estimate"] is True
     assert cycle["counts"] == {"ok": 1, "no_call": 1, "failed": 2}
     assert took < 8, "the four ran together, not one after another"
     firsts = [min(r["at"] for r in g.requests if r["seat"] == s) for s in SEATS]
@@ -249,7 +253,7 @@ def job(tmp_path, seat="price-trend", agent="0x…"):
             "snapshot_sha256": hashlib.sha256(SNAPSHOT.read_bytes()).hexdigest(),
             "model": "claude-sonnet-5", "max_tokens": 12000, "transport_timeout_s": 600,
             "worker_deadline_s": 630, "retry_budget": 1, "gateway_url": "http://unused",
-            "result_path": str(tmp_path / "result.json")}
+            "pricing": PRICE, "result_path": str(tmp_path / "result.json")}
 
 
 def scripted(*answers):

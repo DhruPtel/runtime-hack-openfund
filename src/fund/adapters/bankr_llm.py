@@ -28,6 +28,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Any, Callable, Mapping
 
 from fund.adapters import http as shared_http
@@ -118,3 +119,38 @@ def complete(key: str, *, model: str, system: str, user: str, max_tokens: int,
                  usage=parsed.get("usage") or {}, request_id=parsed.get("id"),
                  model=parsed.get("model"), elapsed_ms=elapsed(), error=None,
                  provider={k: v for k, v in parsed.items() if k not in ("choices", "usage")})
+
+
+# --- what a call cost (unit 2.5) -----------------------------------------------------------------
+#
+# From the reply's own usage block, at the listed price in config/models.json.
+# Every figure here is an estimate, and says so. The provider attributes spend
+# only per key, model and day window. It returns no per-request row, so nothing
+# the provider publishes can confirm one call's cost (F0.6.4). A per-analyst total
+# is a sum of these, and is an estimate too. The aggregate is checked against a
+# settled /v1/usage window instead (adapters/bankr_usage.py).
+
+ESTIMATE = {
+    "is_estimate": True,
+    "basis": "the reply's own usage block times the listed price (config/models.json)",
+    "attribution": "ours, per call; the provider attributes spend only per key, model and "
+                   "day window, with no per-request row (F0.6.4)",
+}
+
+
+def cost(usage: Mapping[str, Any], price: Mapping[str, Any]) -> dict[str, Any]:
+    """One call's cost in USD as exact decimal text, labelled an estimate. A call
+    with no usage block (a timeout, a refusal) has a cost nothing here can know."""
+    prompt, completion = usage.get("prompt_tokens"), usage.get("completion_tokens")
+    if not price.get("input") or not price.get("output"):
+        return {"usd": None, **ESTIMATE, "input_tokens": prompt, "output_tokens": completion,
+                "basis": "no listed price for this model in config/models.json"}
+    if prompt is None or completion is None:
+        return {"usd": None, **ESTIMATE,
+                "basis": "no usage block. A call cut off by our own timeout is still billed "
+                         "(F0.9.3), and a refused one may not be; either way the cost is "
+                         "not known here"}
+    usd = (Decimal(prompt) * Decimal(price["input"])
+           + Decimal(completion) * Decimal(price["output"])) / Decimal(1_000_000)
+    return {"usd": f"{usd.normalize():f}", "input_tokens": prompt,
+            "output_tokens": completion, "price_per_million": dict(price), **ESTIMATE}

@@ -26,6 +26,8 @@ import os
 import sys
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -100,11 +102,26 @@ def render(seat: str, snapshot: bytes, agent: str, *, analysts: Mapping[str, Any
 KEY_VARIABLE = "OPENFUND_GATEWAY_KEY"
 
 
-def _attempt_record(number: int, reply: bankr_llm.Reply, refusals: tuple = ()) -> dict:
-    return {"attempt": number, "elapsed_ms": reply.elapsed_ms, "http_status": reply.status,
-            "error": reply.error, "finish_reason": reply.finish_reason, "usage": dict(reply.usage),
-            "request_id": reply.request_id, "refusals": [str(r) for r in refusals],
-            "body": reply.body}
+def _attempt_record(number: int, at: str, reply: bankr_llm.Reply, price: Mapping[str, Any],
+                    refusals: tuple = ()) -> dict:
+    """One call, as the record keeps it. Its cost is an estimate from its own usage
+    block (2.5). `at` is when it was sent, which is what places it in a usage window."""
+    return {"attempt": number, "at": at, "elapsed_ms": reply.elapsed_ms,
+            "http_status": reply.status, "error": reply.error,
+            "finish_reason": reply.finish_reason, "usage": dict(reply.usage),
+            "request_id": reply.request_id, "cost": bankr_llm.cost(reply.usage, price),
+            "refusals": [str(r) for r in refusals], "body": reply.body}
+
+
+def seat_cost(attempts: list[dict]) -> dict[str, Any]:
+    """What one analyst's turn cost: the sum of its calls' estimates. A per-analyst
+    figure is an estimate, and says so. The provider never splits spend by analyst
+    (F0.6.4)."""
+    known = [a["cost"]["usd"] for a in attempts if a["cost"]["usd"] is not None]
+    usd = sum((Decimal(u) for u in known), Decimal(0))
+    return {"usd": f"{usd.normalize():f}", "calls": len(attempts),
+            "calls_of_unknown_cost": len(attempts) - len(known), **bankr_llm.ESTIMATE,
+            "basis": "the sum of this analyst's calls, each from its own usage block"}
 
 
 def run(job: Mapping[str, Any], key: str, *, send: Any = None,
@@ -136,16 +153,17 @@ def run(job: Mapping[str, Any], key: str, *, send: Any = None,
             result.update(reason="no time", detail="no time left in the worker deadline "
                           "for another attempt")
             break
+        at = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
         reply = bankr_llm.complete(key, model=job["model"], system=brief.system, user=user,
                                    max_tokens=job["max_tokens"], timeout_s=timeout_s,
                                    base_url=job["gateway_url"], send=send)
         if reply.error == "timeout" or (reply.error or "").startswith("transport"):
-            result["attempts"].append(_attempt_record(number, reply))
+            result["attempts"].append(_attempt_record(number, at, reply, job["pricing"]))
             result.update(reason="timeout" if reply.error == "timeout" else "transport",
                           detail=reply.error)
             break  # billed or not, a lost call is never retried
         if reply.status != 200:
-            result["attempts"].append(_attempt_record(number, reply))
+            result["attempts"].append(_attempt_record(number, at, reply, job["pricing"]))
             result.update(reason="refused", detail=f"HTTP {reply.status}: {reply.body[:300]}")
             break
         if reply.error or reply.finish_reason == "length":
@@ -157,7 +175,7 @@ def run(job: Mapping[str, Any], key: str, *, send: Any = None,
             verdict = schema.validate(reply.text, document, contract=contract,
                                       agent=job["agent"], snapshot_sha256=brief.snapshot_sha256)
             refusals = verdict.refusals
-        result["attempts"].append(_attempt_record(number, reply, refusals))
+        result["attempts"].append(_attempt_record(number, at, reply, job["pricing"], refusals))
         if verdict is not None and verdict.ok:
             result.update(status="no_call" if verdict.report.no_calls else "ok", reason=None,
                           detail=None, report=verdict.report.as_dict(),
@@ -168,6 +186,7 @@ def run(job: Mapping[str, Any], key: str, *, send: Any = None,
         user = (brief.user + "\n\nYour previous reply was refused: "
                 + "; ".join(str(r) for r in refusals)
                 + "\nWrite the whole report again, in the required format.\n")
+    result["cost"] = seat_cost(result["attempts"])
     return result
 
 

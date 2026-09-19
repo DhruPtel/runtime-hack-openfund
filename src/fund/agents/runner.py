@@ -139,6 +139,7 @@ class Settings:
     cycle_deadline_s: float
     retry_budget: int
     width: int
+    pricing: Mapping[str, str] = field(default_factory=dict)  # the model's listed price
     gateway_url: str = bankr_llm.GATEWAY
 
     @classmethod
@@ -149,7 +150,8 @@ class Settings:
                    worker_deadline_s=models["worker_deadline_seconds"],
                    cycle_deadline_s=cadence["cycle_deadline_seconds"],
                    retry_budget=cadence["retry_budget_per_worker"],
-                   width=cadence["max_parallel_workers"])
+                   width=cadence["max_parallel_workers"],
+                   pricing=models["pricing_per_million"][models["analyst_model"]])
 
 
 def _now() -> str:
@@ -229,6 +231,7 @@ def run_cycle(snapshot_path: Path, key_source: KeySource, *, cycle_dir: Path,
                    "transport_timeout_s": settings.transport_timeout_s,
                    "worker_deadline_s": settings.worker_deadline_s,
                    "retry_budget": settings.retry_budget, "gateway_url": settings.gateway_url,
+                   "pricing": dict(settings.pricing),
                    "result_path": str(cycle_dir / "results" / f"{seat}.json")}
             job_path = cycle_dir / "jobs" / f"{seat}.json"
             job_path.write_text(json.dumps(job, indent=1) + "\n")
@@ -255,10 +258,15 @@ def run_cycle(snapshot_path: Path, key_source: KeySource, *, cycle_dir: Path,
         time.sleep(0.05)
 
     failed = [seat for seat, slot in slots.items() if slot["status"] == "failed"]
+    attempts = [a for slot in slots.values() for a in slot.get("attempts") or ()]
     cycle = {"cycle": cycle_id, "snapshot_sha256": hashlib.sha256(snapshot).hexdigest(),
              "seats": slots, "partial": bool(failed), "failed": failed,
              "counts": {status: sum(s["status"] == status for s in slots.values())
-                        for status in ("ok", "no_call", "failed")}}
+                        for status in ("ok", "no_call", "failed")},
+             "cost": {**analyst.seat_cost(attempts),
+                      "basis": "the sum of every analyst call in the cycle, each from its own "
+                               "usage block; a seat killed at its deadline adds calls of "
+                               "unknown cost that are not counted here"}}
     (cycle_dir / "cycle.json").write_text(json.dumps(cycle, indent=1, sort_keys=True) + "\n")
     events.write(event="cycle finished", cycle=cycle_id, partial=cycle["partial"],
                  counts=cycle["counts"])
