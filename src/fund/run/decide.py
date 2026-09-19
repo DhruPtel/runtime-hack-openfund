@@ -99,14 +99,16 @@ def cycle_reports(cycle_dir: Path) -> list[Offered]:
     return out
 
 
-def check(offered: Sequence[Offered], snapshot: Mapping[str, Any], snapshot_sha256: str
+def check(offered: Sequence[Offered], snapshot: Mapping[str, Any], snapshot_sha256: str,
+          analysts: Mapping[str, Any] | None = None
           ) -> tuple[list[tuple[Offered, schema.Verdict]], list[tuple[Offered, str]]]:
-    """Every report checked again against this snapshot. Only accepted ones count,
-    each with its verdict, which records any citation that was loose."""
+    """Every report checked again against this snapshot, under the decision's own
+    `analysts.json` (`config/` without one). Only accepted ones count, each with its
+    verdict, which records any citation that was loose."""
     accepted, refused = [], []
     for report in offered:
         verdict = schema.validate(report.text, snapshot,
-                                  contract=schema.Contract.load(report.seat),
+                                  contract=schema.Contract.load(report.seat, analysts),
                                   agent=report.agent, snapshot_sha256=snapshot_sha256)
         if verdict.ok:
             accepted.append((report, verdict))
@@ -239,7 +241,6 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
     snapshot_sha256 = hashlib.sha256(snapshot_bytes).hexdigest()
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    accepted, refused = check(offered, snapshot, snapshot_sha256)
     config_bytes = read_config(config.CONFIG_DIR if config_dir is None else config_dir)
     thresholds, mandate, models, analysts = (json.loads(config_bytes[name]) for name in (
         "thresholds.json", "mandate.json", "models.json", "analysts.json"))
@@ -247,6 +248,7 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
     carried.mkdir(exist_ok=True)
     for name, data in config_bytes.items():
         (carried / name).write_bytes(data)
+    accepted, refused = check(offered, snapshot, snapshot_sha256, analysts)
     limits = gates.Limits.from_config(thresholds, mandate, models)
 
     the_book = plan.book(holdings, cash_usd, snapshot)
@@ -299,6 +301,59 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
             "plan": written, "plan_sha256": plan_sha256, "review": outcome,
             "record": the_record, "decision_id": record.decision_id(the_record),
             "envelope": envelope, "authorizes": check_, "out_dir": str(out_dir)}
+
+
+# --- replay: a recorded cycle, rebuilt from what it recorded (3.9) ------------------------------
+
+class ReplayError(ValueError):
+    """A recorded cycle cannot be rebuilt as recorded: an input it names is absent or
+    is not the one its record names."""
+
+
+def replay(cycle_dir: Path, snapshot_path: Path, out_dir: Path, *,
+           layout: int | None = None) -> bytes:
+    """A recorded cycle's decision record, rebuilt from the cycle's own recorded inputs
+    alone: the snapshot, the reports, the quotes and their judging instant, the risk
+    reply, and the config it was decided under, which the cycle carries in
+    `decision/config/`. Nothing is read from the working tree's `config/`, so config
+    tuned later never changes an earlier record's rebuild. The snapshot and each
+    carried file must hash to what the record names, or the replay refuses. A replay
+    never signs.
+
+    `layout` writes the plan in another layout than the record names, to show that
+    the layout matters."""
+    decision = cycle_dir / "decision"
+    recorded = json.loads((decision / "record.json").read_text())
+    snapshot_bytes = snapshot_path.read_bytes()
+    if hashlib.sha256(snapshot_bytes).hexdigest() != recorded["snapshot"]["sha256"]:
+        raise ReplayError(f"{snapshot_path} is not the snapshot the record names")
+    carried = decision / "config"
+    for name, sha256 in recorded["config"].items():
+        if not (carried / name).exists():
+            raise ReplayError(f"the cycle carries no {name}, so it cannot be replayed")
+        if hashlib.sha256((carried / name).read_bytes()).hexdigest() != sha256:
+            raise ReplayError(f"the carried {name} is not the config the record names")
+    snapshot = json.loads(snapshot_bytes)
+    decimals = {a["asset"]["address"]: a["asset"]["decimals"] for a in snapshot["assets"]}
+    book = recorded["plan"]["book"]
+    holdings = {address: Amount.from_units(p["amount"], decimals[address],
+                                           AssetId(snapshot["block"]["chain_id"], address))
+                for address, p in book["positions"].items()}
+    done = decide(
+        snapshot_path=snapshot_path, offered=cycle_reports(cycle_dir / "cycle"),
+        holdings=holdings, cash_usd=Decimal(book["cash_usd"]), out_dir=out_dir,
+        quotes=lambda intents: recorded_quotes(decision / "quotes.json"),
+        quote_label="replayed", risk_settings=risk.Settings.from_config(carried),
+        risk_credential=None, risk_agent=recorded["risk"]["agent"], environ={},
+        recorded_reply=recorded["risk"]["reply_text"],
+        store=report_store.ReportStore(out_dir / "store"),
+        env_file=out_dir / "absent.env",  # no key file: a replay never signs
+        layout=layout or next(n for n, name in record.SCHEMAS.items()
+                              if name == recorded["schema"]),
+        config_dir=carried)
+    if done["envelope"]["signed"]:
+        raise ReplayError("a replay signed its record")
+    return (out_dir / "record.json").read_bytes()
 
 
 def summary(done: Mapping[str, Any]) -> str:

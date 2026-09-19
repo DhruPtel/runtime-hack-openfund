@@ -5,10 +5,15 @@ four real analyst reports, live quotes and one live risk call, signed with the
 fund's key. Replay comes from recorded outputs, the risk agent's included (PLAN §2
 invariant 7). Nothing is asked of a model and nothing touches the network.
 - **The inputs:** the capture's snapshot, the recorded reports, the quotes and
-  the instant they were judged at, and the risk reply.
+  the instant they were judged at, the risk reply, and the config the decision
+  was made under, which the cycle carries in `decision/config/`.
 - **The layout:** the plan is written in the layout the record's schema names
   (`core/plan.py` LAYOUTS). So the record rebuilds by its own layout after the
   plan's presentation changed (F3.8.12).
+- **The config:** the record names each config file's sha256. A replay reads the
+  cycle's copy, never the working tree, so tuning config later (4.1's mandate,
+  S11's limit, the confidence weights) cannot change this rebuild. Until then the
+  replay read the working tree, and its first edit would have broken the test.
 
 An H unit: the signed record is what the fund sells.
 """
@@ -18,20 +23,18 @@ from __future__ import annotations
 import json
 import shutil
 import socket
-from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
-from fund.agents import risk
+from fund import config
 from fund.core import plan, record
-from fund.core.types import AssetId, Amount
 from fund.run import decide
-from fund.store import reports
 from fund.treasurer import sign
 
 REPO = Path(__file__).resolve().parents[1]
 CYCLE = REPO / "fixtures" / "cycles" / "20260919T202259Z"
+SNAPSHOT = REPO / "fixtures" / "snapshots" / "67364057-c06abd9e89f0" / "snapshot.json"
 RECORDED = (CYCLE / "decision" / "record.json").read_bytes()
 ENVELOPE = json.loads((CYCLE / "decision" / "envelope.json").read_text())
 
@@ -47,28 +50,13 @@ def no_network(monkeypatch):
 
 def rebuild(tmp_path: Path, *, cycle: Path = CYCLE, layout: int | None = None) -> bytes:
     """The record, rebuilt from the cycle's own recorded inputs alone."""
-    recorded = json.loads((cycle / "decision" / "record.json").read_text())
-    layout = layout or next(n for n, name in record.SCHEMAS.items() if name == recorded["schema"])
-    snapshot_path = REPO / "fixtures" / "snapshots" / "67364057-c06abd9e89f0" / "snapshot.json"
-    snapshot = json.loads(snapshot_path.read_text())
-    assert recorded["snapshot"]["sha256"] == __import__("hashlib").sha256(
-        snapshot_path.read_bytes()).hexdigest()
-    book = recorded["plan"]["book"]
-    decimals = {a["asset"]["address"]: a["asset"]["decimals"] for a in snapshot["assets"]}
-    holdings = {address: Amount.from_units(p["amount"], decimals[address],
-                                           AssetId(snapshot["block"]["chain_id"], address))
-                for address, p in book["positions"].items()}
-    done = decide.decide(
-        snapshot_path=snapshot_path, offered=decide.cycle_reports(cycle / "cycle"),
-        holdings=holdings, cash_usd=Decimal(book["cash_usd"]), out_dir=tmp_path / "out",
-        quotes=lambda intents: decide.recorded_quotes(cycle / "decision" / "quotes.json"),
-        quote_label="replayed", risk_settings=risk.Settings.from_config(),
-        risk_credential=None, risk_agent=recorded["risk"]["agent"], environ={},
-        recorded_reply=recorded["risk"]["reply_text"],
-        store=reports.ReportStore(tmp_path / "store"), env_file=tmp_path / "absent.env",
-        layout=layout)
-    assert done["envelope"]["signed"] is False  # a replay never signs
-    return (tmp_path / "out" / "record.json").read_bytes()
+    return decide.replay(cycle, SNAPSHOT, tmp_path / "out", layout=layout)
+
+
+def copied(tmp_path: Path) -> Path:
+    copy = tmp_path / "cycle"
+    shutil.copytree(CYCLE, copy)
+    return copy
 
 
 def test_the_recorded_cycles_decision_record_rebuilds_byte_for_byte(tmp_path):
@@ -89,12 +77,57 @@ def test_its_signature_holds_over_those_bytes_and_no_others():
 
 def test_a_changed_recorded_input_changes_the_rebuilt_record(tmp_path):
     """The rebuild reads what was recorded, not a copy of the answer."""
-    copy = tmp_path / "cycle"
-    shutil.copytree(CYCLE, copy)
+    copy = copied(tmp_path)
     quotes = json.loads((copy / "decision" / "quotes.json").read_text())
     quotes["judged_at_ms"] += 1
     (copy / "decision" / "quotes.json").write_text(json.dumps(quotes))
     assert rebuild(tmp_path / "a", cycle=copy) != RECORDED
+
+
+def test_the_working_trees_config_does_not_reach_the_replay(tmp_path, monkeypatch):
+    """Every config file the record names, changed in the working tree the way a later
+    unit will change it: the rebuild is still byte for byte. A replay that read one of
+    them from `config/` would differ here."""
+    tree = tmp_path / "tree"
+    shutil.copytree(config.CONFIG_DIR, tree)
+
+    def edit(name, change):
+        document = json.loads((tree / name).read_text())
+        change(document)
+        (tree / name).write_text(json.dumps(document))
+
+    edit("mandate.json", lambda m: m.update(allowed_assets=[], max_trade_usd=5,
+                                            approved_by="the operator"))  # 4.1
+    edit("thresholds.json", lambda t: t.update(cash_floor_usd="150", max_position_weight="0.1",
+                                               quote_max_age_seconds=1, impact_max_bps=1,
+                                               snapshot_max_age_seconds=900))  # S11
+    edit("models.json", lambda m: m.update(context_bytes_per_token="3", max_output_tokens=4000,
+                                           context_budget_tokens=1000))
+    edit("analysts.json", lambda a: a.update(
+        confidence_weights={w: "0.9" for w in a["confidence_weights"]}, confidence=["certain"]))
+    monkeypatch.setattr(config, "CONFIG_DIR", tree)
+    assert config.load_json("mandate.json")["allowed_assets"] == []  # the tree is changed
+
+    assert rebuild(tmp_path) == RECORDED
+
+
+@pytest.mark.parametrize("name", record.CONFIG_FILES)
+def test_a_changed_carried_config_file_refuses_the_replay(tmp_path, name):
+    """The carried copy is a recorded input like any other. Altered, it is not the
+    config the record names, and the replay refuses by name rather than rebuild a
+    different record."""
+    copy = copied(tmp_path)
+    carried = copy / "decision" / "config" / name
+    carried.write_bytes(carried.read_bytes() + b"\n")  # one byte: the same JSON, other bytes
+    with pytest.raises(decide.ReplayError, match=name):
+        rebuild(tmp_path / "a", cycle=copy)
+
+
+def test_a_cycle_without_its_config_cannot_be_replayed(tmp_path):
+    copy = copied(tmp_path)
+    shutil.rmtree(copy / "decision" / "config")
+    with pytest.raises(decide.ReplayError, match="carries no"):
+        rebuild(tmp_path / "a", cycle=copy)
 
 
 def test_the_current_layout_is_not_the_recorded_one(tmp_path):
