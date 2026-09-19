@@ -214,6 +214,29 @@ it never enters an agent process. The SIWE private key can mint one.
 permissions verified live, a refused write included, and keys rotated on a
 schedule.
 
+**Ran 2026-09-19. Three requirements pass, one fails** (`research/findings.md`
+§2.0).
+
+| Requirement | Result |
+|---|---|
+| Its own address | Pass. `0x42a9…3d27`, a new Bankr wallet that is neither the fund's nor the signer's. |
+| Read-only | Pass. A signature and a swap were both refused 403 "Read-only API key". |
+| Agent API off | Pass. `/agent/prompt` was refused 403 "Agent API access not enabled". |
+| LLM gateway | **Fail.** Every gateway call was refused 403 "does not have LLM Gateway access enabled". That is the same body as `BANKR_KEY_READ`'s. |
+| Buying its own credits | Refused too, at the gateway toggle. |
+
+The fund's CLI session was untouched, and $0 was spent.
+
+**The five-wallet plan cannot proceed as designed through SIWE alone.** The
+options are in §2.0's verdict:
+- (a) email sign-ups with `--llm`, untested;
+- (b) the dashboard, unknown for a SIWE account;
+- (c) own wallets with inference on the fund's key, available now.
+
+One shared wallet stays ruled out. **2.4's credential rows and every live run
+wait on the operator's choice.** 2.1, a stop, and the offline work in 2.2–2.4
+do not.
+
 ### 2.1 ▶ The report format · L · **a stop**
 
 **Goal:** a report the operator would pay for, written by hand before any code.
