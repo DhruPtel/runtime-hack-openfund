@@ -143,3 +143,116 @@ Checked read-only on 2026-09-19. **Documented by code, not measured.**
 
 2.0 → **2.1 ▶ stop** → 2.2 → 2.3 → 2.4 → *(7.6, first slice, if approved)* →
 2.5 → 2.6 → 2.7 → 2.8 → the exit run.
+
+### 2.0 SIWE agent wallet, proven once · H
+
+**Added by this plan.** It is a probe, in the manner of 0.x, placed before any
+unit that assumes five wallets. It is owed into ROADMAP.
+
+**Goal:** show that `bankr login siwe` can produce one agent account whose key is
+read-only, can reach the LLM gateway, and has the Agent API off.
+
+**Build:**
+1. **Protect the fund's session first.** Run every agent login with
+   `--config <a per-agent file>`, outside the repository, so
+   `~/.bankr/config.json` is never touched. Check it afterwards: `bankr whoami`
+   under the default config still answers as `0x93fa…a3da`.
+2. **Generate one private key** for `price-integrity`. Store it outside the
+   repository, mode 0600.
+   - **It is setup material, never an agent credential.** It can mint a new key
+     for the account, including a read-write one, so it is treated like
+     `SIGNING_KEY`.
+   - Keep it off the command line where possible. If the CLI's
+     `--private-key` flag is the only way, the exposure is a few seconds in the
+     process list on a single-user machine, with shell history off. That is
+     stated, not hidden.
+3. **Log in:**
+   `bankr login siwe --private-key … --key-name openfund-price-integrity --no-agent-api --no-token-launch --config …`.
+   Leave read-only at its default. Leave the Wallet API on, so the agent can
+   read its own address.
+4. **Measure the key as probe 0.2 did,** with a never-issued key as the
+   control:
+   - `GET /wallet/portfolio` returns an `evmAddress`. Record whether it
+     differs from the fund's and whether it equals the signer's address.
+   - `GET /v1/models`: a **402** `insufficient_credits` means the gateway is
+     on. A **403** that names the gateway toggle means it is off. This is
+     F0.2.4's discriminator.
+   - `GET /v1/credits` shows the balance.
+   - The Agent API's state cannot be read (F0.2.5). It is set off by flag and
+     asserted in code: no call to `/agent/*`.
+5. **Record it** in `research/findings.md` §2.0: measured, documented or
+   inferred for each item.
+
+**Artifact:** `research/findings.md` §2.0, and one agent account with its key
+in `.env` under a new name.
+
+**Done when:**
+- one agent key is measured reaching the gateway (402 or 200, never 403);
+- its wallet address is its own;
+- it was created with Agent API and Token Launch off;
+- the fund's CLI session is unchanged.
+
+**Then:**
+- create the other four the same way: three analysts and risk;
+- the operator buys each account its credits. That is a spend. Whether
+  `bankr llm credits add` works under a read-only key is measured on the first
+  purchase.
+
+**If it fails.** No gateway access is the likely way. These are the options, and
+the operator chooses:
+- **(a) Email sign-ups.** `bankr login email … --llm` is the CLI path that sends
+  the gateway toggle. It keeps everything that was decided. It costs five email
+  identities and five one-time codes. Whether plus-addressing works is unknown.
+- **(b) Enable the gateway on the SIWE account another way.** The dashboard at
+  `bankr.bot/api-keys` is one. Whether a SIWE-made account can sign in there is
+  unknown.
+- **(c) Own wallets, but inference on the fund's key.** Each agent keeps its
+  own account and address. It **gives up** "each agent pays for its own
+  inference", and per-agent cost goes back to F0.6.4's aggregate. This is a
+  stated reduction, not a fallback.
+- **Ruled out: one shared wallet.** It collapses what is being demonstrated.
+
+**If credits cannot be bought under a read-only key,** the operator buys them
+with a second, read-write key for that account. The operator holds that key and
+it never enters an agent process. The SIWE private key can mint one.
+
+**Full version:** a scripted onboarding for N agents, with each key's
+permissions verified live, a refused write included, and keys rotated on a
+schedule.
+
+### 2.1 ▶ The report format · L · **a stop**
+
+**Goal:** a report the operator would pay for, written by hand before any code.
+
+**Build:** by hand, against the committed capture `253315c0…`:
+- **four example reports, one per seat.** Each is in its seat's vocabulary and
+  covers what that seat would really say about that snapshot;
+- **every number checked against the snapshot;**
+- **one short note** on how a reader tells evidence, which is snapshot values,
+  from opinion, which is the model's prose.
+
+The starting point is what the record settles (above) and the sketch in
+SIMPLIFICATION.md, "The report format". **The stop decides the format. This
+plan does not.** Questions the stop answers:
+- how many calls a report makes;
+- how a condition seat's caution attaches to an asset;
+- whether key values are field paths that code resolves or numbers the model
+  writes;
+- what a whole-report `NO_CALL` looks like beside a per-asset one;
+- what confidence means.
+
+**Artifact:** `planning/REPORT-FORMAT.md`, the four hand-written reports.
+
+**Done when:** the operator approves or amends it. The approval is recorded in
+LESSONS, and 2.2 and 2.3 are built from what was approved.
+
+**Could change:**
+- the schema (2.2);
+- the brief (2.3);
+- the model;
+- the price;
+- whether four seats is right.
+
+**Full version:** sections, depth, evidence citation and conviction told from
+speculation, approved at its own stop (PLAN §8 2.1). The minimal version keeps
+the stop and shortens the report: a summary and key values, not research.
