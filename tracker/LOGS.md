@@ -621,7 +621,23 @@ operator.**
 
 ---
 
-## State at close — 2026-09-18, after 1.9
+## 1.10 — Address selftest, after 1.9's checkpoint changes
+**Date:** 2026-09-18 · **Commit:** 6c58156
+
+At the operator's request the snapshot now names its capture's raw answers by
+hash (schema /3, null with a reason when nothing was recorded), and the
+committed fixture's snapshot was rebuilt from its unchanged answers as
+`daafd945…`; the weekday capture waits for the feeds to reopen at Mon 00:00Z.
+`make selftest` attests 235 addresses at one block (194 tokens by decimals,
+symbol and beacon, 37 feeds by decimals and their own description, USDG, the
+issuer beacon, Multicall3 and the wallet's 7702 delegate) and was green in
+102 s over 204 requests, all HTTP 200, with no 429. With GME's address pointed
+at the GameStop counterfeit it fails one row, named, at the beacon after passing
+decimals and symbol, and each check, broken in a copy, failed a test.
+
+---
+
+## State at close — 2026-09-18, after 1.10
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -630,19 +646,21 @@ it. Where this note and git disagree, git is right.
 
 **Check it in a minute.** Nothing here spends.
 - `git log --oneline -15` and `git status -sb`.
-- `make test`: 330 passed when this was written.
+- `make test`: 347 passed when this was written.
 - `make replay`: rebuilds the committed capture offline, byte for byte, in
   under a second. Needs no credential.
 - `make check-env`: which credentials are present, by name only.
+- `make selftest` attests every address in config against the chain in about
+  100 s. It needs the RPC URL and spends nothing.
 - `make snapshot` builds a live snapshot in about 2.5 minutes, captures it
   under `fixtures/live/captures/`, and replays it; `python3 -m
   fund.run.snapshot --prove` also re-reads the chain at the same block.
 - `probes/analyst_cost.py` **spends** with `--confirm`, in its default,
   `--one` or `--cache` mode.
 
-### Done, through 1.9
-- **Phase 0, the Phase 1 replan, units 1.1-1.8 and the test audit, and 1.9,**
-  shown at its checkpoint and not yet judged.
+### Done, through 1.10
+- **Phase 0, the Phase 1 replan, units 1.1-1.8, the test audit, 1.9 with the
+  operator's changes from its checkpoint, and 1.10.**
 - **Decisions this far into Phase 1:**
   - staleness in open-session time, with sessions inferred from rounds;
   - the shared `adapters/http.py`;
@@ -653,27 +671,37 @@ it. Where this note and git disagree, git is right.
   - the timeouts are 600 s and 630 s, with a 12,000-token output cap;
   - the series is daily closes over 30 days, adopted on measurement;
   - captures are recorded at the transport, and the repository keeps them in
-    `fixtures/snapshots/`.
+    `fixtures/snapshots/`;
+  - the snapshot names its capture's answers by hash.
 - **The whole of what is built.** Under `src/fund/`: `config.py`,
   `credentials.py`, `redaction.py`, `core/types.py`, `core/universe.py`,
   `core/valuation.py`, `core/snapshot.py`, `adapters/http.py`,
   `adapters/chain_4663.py`, `adapters/gecko.py`, `adapters/bankr_quote.py`,
-  `adapters/cache.py` and `run/snapshot.py`. Every other module is a stub;
-  `grep -l "Not yet built" -r src/` lists 28.
+  `adapters/cache.py`, `run/snapshot.py` and `run/selftest.py`. Every other
+  module is a stub; `grep -l "Not yet built" -r src/` lists 28.
 
 ### The numbers that stand
-- **Snapshot:** schema `openfund.snapshot/2`, about 189 KB with 763 daily
-  closes. The committed one is `8afe38a3…` at block 66812461, with its
-  capture in `fixtures/snapshots/`.
+- **Snapshot:** schema `openfund.snapshot/3`, about 189 KB with 763 daily
+  closes. The committed one is `daafd945…` at block 66812461, rebuilt from the
+  capture whose live build was `8afe38a3…`, in `fixtures/snapshots/`.
+- **Selftest:** 235 addresses, about 102 s and 204 requests, set by 500 ms
+  pacing. No 429.
 - **Analyst call:** $0.264 at Sonnet 5, uncached (§1.8a).
 - **Cycle:** about $1.11, $33 over 30 days, covered by 4.4 records at $0.25.
 - **Caching:** not honoured by the gateway, measured.
 - **LLM credits:** $0.937148 left, after 1.7 and 1.8 spent $1.862828.
 
-### Next: the 1.9 checkpoint, then unit 1.10
-- **1.9 waits on the operator:** how much of the demo runs from fixtures and
-  how much live.
-- **1.10, the address selftest,** is not started.
+### Next: the weekday capture, then unit 1.11
+- **The weekday capture is owed** (1.9's checkpoint). It waits for the equity
+  feeds to reopen at Mon 2026-09-21 00:00Z, ideally 13:30–20:00Z. To take it:
+  - run `PYTHONPATH=src python3 -m fund.run.snapshot --capture
+    fixtures/snapshots`;
+  - scan the capture for every declared credential value, `set-cookie`,
+    `X-API-Key` and `Authorization`;
+  - commit it beside the weekend capture, which stays.
+- **Not answered from 1.9's checkpoint:** how much of the demo runs from
+  fixtures and how much live.
+- **1.11, skew rejection,** is not started.
 
 ### Open items, none resolved
 1. **Owed in code:** two `http.py` changes (LESSONS preamble).
@@ -690,13 +718,16 @@ it. Where this note and git disagree, git is right.
 8. **AMZN's GeckoTerminal price alternates** between two levels; unresolved.
 9. **$25 is sized at USDG's Chainlink mark,** a 1.5 choice for the operator.
 10. **The quote-age budget.** The oldest quote was 21–25 s old at `built_at`.
-11. **The snapshot does not name its capture by hash,** so a changed byte it
-    does not carry fails a replay only through the manifest (1.9, open).
+11. **Nine feeds describe themselves `RH<ticker> / USD` on chain,** against
+    F0.4.1's `Robinhood <TICKER> / USD`. `research/findings.md` is not
+    updated (LESSONS).
 12. **Unchanged:** paused-oracle detection; the unowned registry refresh fetch;
     six types waiting for 2.1-6.1; one RPC endpoint; which impact field gates;
     the stale README line 9.
 
 ### Config
+- **Changed in 1.10's pass:** `mandate.json` pins
+  `execution_wallet_delegate_4663`, the wallet's 7702 delegate.
 - **Changed in 1.8's pass:**
   - `models.json`: `max_output_tokens` 12000, transport 600 s, worker
     deadline 630 s;
@@ -713,9 +744,9 @@ it. Where this note and git disagree, git is right.
     `expires_at`, and an empty `allowed_assets`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `991347d`, the end of the
-test audit; this session did not push it. Every commit after it, 1.9's from
-`2758b4c` to the one that adds this note, is committed and **not pushed**. To
+Checked locally, with no fetch. `origin/main` is `9e734fa`, 1.9 as shown at its
+checkpoint; this session did not push it. Every commit after it, from
+`8df6d7b` to the one that adds this note, is committed and **not pushed**. To
 re-check, run `git fetch` and then `git log origin/main..HEAD`.
 
 ### What this note does not cover
