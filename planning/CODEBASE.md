@@ -78,7 +78,9 @@ fund/
 │   ├── thresholds.json         staleness, divergence, quote age, impact, turnover, cash floor, quorum
 │   ├── models.json             pinned model ids, token caps, deadlines, context budget
 │   ├── cadence.json            schedule, confirmation depth, retry budgets
-│   └── analysts.json           the roster and its scope partition
+│   ├── analysts.json           the roster and its scope partition
+│   ├── chain.json              the 4663 RPC: endpoints, deadlines, pacing, series window (1.3)
+│   └── sessions.json           closed sessions inferred from feed rounds, with evidence (1.4)
 │
 ├── src/fund/
 │   │
@@ -90,7 +92,7 @@ fund/
 │   │   ├── bankr_llm.py        gateway client: backoff, deadlines, token accounting
 │   │   ├── bankr_usage.py      /v1/credits, /v1/usage — cost reconciliation evidence
 │   │   ├── http.py             one HTTP client: timeouts, retries, Retry-After, redaction
-│   │   │                       (open: 1.3's client is in chain_4663.py; LESSONS 2026-09-18)
+│   │   │                       (1.3's, moved here at 1.4; every adapter uses it)
 │   │   └── cache.py            raw source responses to disk, timestamped by code
 │   │
 │   ├── core/                   PURE. No network, no keys, no clock reads outside inputs.
