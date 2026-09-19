@@ -50,7 +50,9 @@ Each is structural where possible, and tested where not.
    two interpretations of the same limit. *(One recorded exception, 2026-09-18:
    feed staleness is compared in the chain adapter, where 1.3 built it, and is
    still defined once. Whether it moves into the gate module (3.4) is open —
-   `planning/CODEBASE.md` §3, `tracker/LESSONS.md`.)*
+   `planning/CODEBASE.md` §3, `tracker/LESSONS.md`. **Open, not decided:**
+   1.4 compares the divergence tier in `core/valuation.py`, because it was told
+   to gate by the tier and the gate module does not exist yet.)*
 5. **Unknown blocks execution.** Every check is true / false / null. Null is not
    false. A required check must be explicitly true.
 6. **`NO_CALL` is valid**, and the aggregator is a total function that handles
@@ -296,7 +298,9 @@ what each finding changed, is in `PHASE-0-1.md`.*
   GeckoTerminal (probe 0.4: 32 of 32 covered, independent of the venue),
   divergence recorded with its independence stated and gated by the tiered rule
   in `config/thresholds.json`, on the volume measure the tier was set on. Cash
-  and gas are marked by their own feeds.
+  and gas are marked by their own feeds. *Built:* `adapters/gecko.py` and
+  `core/valuation.py`; the veto fired live on MSTR, a liquid name (LESSONS
+  2026-09-18).
 - **1.5** Quote adapter (read-only): quotes at the $25 intended size, with quote
   age, fees, and impact as a three-valued field. Impact is **signed** — negative
   is price improvement — so a gate compares `impact > limit`, never

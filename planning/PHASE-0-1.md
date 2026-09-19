@@ -751,6 +751,33 @@ its mark.
 alike; divergence and volume are populated for every markable asset; and the
 tier comes from config.
 
+**Built:**
+- `adapters/gecko.py` on the shared `adapters/http.py`. The move of 1.3's
+  client there is a DECISION (LESSONS 2026-09-18). GeckoTerminal's 429 carries
+  `Retry-After: 0`, which is read as no hint.
+- `core/valuation.py`: `mark()` by pinned proxy, `value()`,
+  `value_holding()`, and `cross_check()` using F0.4.5's own divergence formula.
+- The weekend question 1.4 depended on is settled by the closed-session
+  decision (1.3 above).
+- **Open:** the tier's two comparisons sit in `valuation.py`, outside
+  `gates.py`, and are recorded as open (LESSONS 2026-09-18).
+
+**Met**, by `python -m fund.adapters.gecko --prove`, live at block 66689567
+(Sat 01:28Z, inside the closed session):
+- all 35 markable stocks carry a mark, a corroboration, a divergence, a 24h
+  volume and a tier verdict;
+- 19 pass, 15 fall below the line, and MSTR is vetoed at −122.87 bps on
+  $4.76M, a liquid name;
+- the recorded AMZN case is vetoed at −499.47 bps;
+- USDG is marked at $0.99995 and ETH by its own feed, through the same
+  `value()`;
+- CRM is carried with no value, not zero;
+- a GeckoTerminal entry removed from the live response is undetermined at
+  `corroboration`.
+
+Offline, 32 tests in `tests/test_valuation.py` and 14 in `tests/test_gecko.py`
+assert each refusal at its own rule.
+
 **Risk:** applying `uiMultiplier` twice (F0.4.4). The tail is the other risk.
 Every divergence number is one block during US market hours; overnight and at
 weekends, when 24/5 feeds and 24/7 pools drift furthest apart, nothing bounds it

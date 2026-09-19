@@ -34,6 +34,10 @@ LESSONS 2026-09-18): the feed staleness comparison lives in
 1.3 and this module does not exist until 3.4. It is still defined once, with its
 margin read from `config/thresholds.json`. Whether a later unit moves it here is
 open. So is the decision's naming of 1.8 for that, since this module is 3.4's.
+**Open, not decided** (LESSONS 2026-09-18): 1.4 compares the divergence tier,
+the 24h volume line and the veto limit, in `core/valuation.py`
+(`cross_check()`). The plan told it to gate by the tier before this module
+exists. Both thresholds are read from config as arguments.
 
 **4. Nothing important happens in an agent.** Models produce opinions and prose.
 Arithmetic, ranking, thresholding, sizing and accounting are deterministic code.
@@ -80,7 +84,8 @@ fund/
 │   ├── cadence.json            schedule, confirmation depth, retry budgets
 │   ├── analysts.json           the roster and its scope partition
 │   ├── chain.json              the 4663 RPC: endpoints, deadlines, pacing, series window (1.3)
-│   └── sessions.json           closed sessions inferred from feed rounds, with evidence (1.4)
+│   ├── sessions.json           closed sessions inferred from feed rounds, with evidence (1.4)
+│   └── gecko.json              GeckoTerminal: network slug, batch size, pacing (1.4)
 │
 ├── src/fund/
 │   │
@@ -171,7 +176,7 @@ thirty seconds to understand the safety model.
 | `core/` is pure | no module under `core/` imports `adapters/`, `agents/`, `store/` |
 | Analysts cannot spend | no module under `agents/` or `core/` imports `bankr_exec` or `sign` |
 | One signer | `sign.py` is imported only by `treasurer/` |
-| One gate definition | `gates.py` is the only module defining a threshold comparison, except the recorded feed-staleness exception in `adapters/chain_4663.py` (§3), which the test must name |
+| One gate definition | `gates.py` is the only module defining a threshold comparison, except the recorded feed-staleness exception in `adapters/chain_4663.py` (§3), which the test must name, and the divergence tier in `core/valuation.py`, open (§3) |
 | Deployed isolation | from the analyst process environment, execution credentials are unreadable and a raw HTTP swap fails (unit 4.12) |
 | No credential in logs | every declared credential value is masked in captured log output |
 
