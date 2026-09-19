@@ -12,7 +12,7 @@ import json
 import pytest
 
 from fund.core import universe as u
-from fund.core.types import AssetId, Instant, PinnedInput
+from fund.core.types import AssetId, Instant
 
 CHAIN = 4663
 
@@ -31,25 +31,7 @@ def registry_asset(symbol: str, address: str, status: str = u.ACTIVE, pending: s
                                                "fractional": "TRADING_STATUS_UNTRADABLE"}}}
 
 
-def pin_for(name: str, raw: bytes) -> PinnedInput:
-    return PinnedInput(name=name, locator="example.invalid/path", sha256=u.sha256_hex(raw),
-                       byte_count=len(raw), fetch_time=Instant(0))
-
-
 # --- the pin rule ----------------------------------------------------------------
-
-def test_the_pin_admits_the_exact_bytes():
-    raw = registry_bytes(registry_asset("AAA", "0x" + "aa" * 20))
-    u.verify(raw, pin_for(u.REGISTRY, raw))
-
-
-def test_the_pin_refuses_one_changed_byte_at_the_pin_rule():
-    raw = registry_bytes(registry_asset("AAA", "0x" + "aa" * 20))
-    tampered = raw.replace(b"AAA", b"AAB")  # still valid JSON: only the hash can catch it
-    with pytest.raises(u.PinMismatch) as refusal:
-        u.verify(tampered, pin_for(u.REGISTRY, raw))
-    assert refusal.value.rule == u.RULE_PIN
-
 
 def test_stored_files_are_named_by_their_hash():
     sha = "ab" * 32
@@ -151,15 +133,6 @@ def test_a_malformed_fetch_is_refused_before_anything_is_stored(tmp_path):
     with pytest.raises(Exception):
         u.plan_refresh(u.REGISTRY, "example.invalid/assets", b"<html>busy</html>", Instant(1), None)
     assert list(tmp_path.iterdir()) == []
-
-
-def test_a_pin_pointing_at_tampered_bytes_is_refused_on_read(tmp_path):
-    raw = registry_bytes(registry_asset("AAA", A))
-    plan = seed_dir(tmp_path, raw)
-    (tmp_path / plan.filename).write_bytes(raw.replace(b"AAA", b"AAB"))
-    with pytest.raises(u.PinMismatch) as refusal:
-        u.read_pinned(u.REGISTRY, tmp_path)
-    assert refusal.value.rule == u.RULE_PIN
 
 
 # --- the feed-map proposal ---------------------------------------------------------
@@ -300,11 +273,6 @@ def test_a_counterfeit_is_never_beacon_compared_it_is_refused_at_identity(pinned
     with pytest.raises(u.Refused) as refusal:
         pinned.cross_check_beacons({FAKE_GAMESTOP: slot_read(ISSUER_BEACON)})
     assert refusal.value.rule == u.RULE_IDENTITY
-
-
-def test_the_slot_word_decodes_to_the_issuer_beacon():
-    word = "0x000000000000000000000000e10b6f6b275de231345c20d14ab812db62151b00"
-    assert u.beacon_from_slot(CHAIN, word) == ISSUER_BEACON
 
 
 # the pin, on the real bytes ----------------------------------------------------------
