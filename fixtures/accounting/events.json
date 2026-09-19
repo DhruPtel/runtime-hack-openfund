@@ -1,0 +1,407 @@
+{
+ "_about": "Unit 4.11's known-answer fixture. Constructed: these events did not happen. Every figure the ledger derives from them is worked out by hand in answer.md and kept in expected.json, and the test holds the two to each other.",
+ "events": [
+  {
+   "amount": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 6,
+    "raw": "200000000"
+   },
+   "book": "paper",
+   "kind": "opening",
+   "mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 5,
+    "quote_unit": "USD",
+    "raw": "99995"
+   }
+  },
+  {
+   "cash_asset": {
+    "_type": "AssetId",
+    "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+    "chain_id": 4663
+   },
+   "gave": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 6,
+    "raw": "45000000"
+   },
+   "gave_mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 5,
+    "quote_unit": "USD",
+    "raw": "99995"
+   },
+   "got": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+     "chain_id": 4663
+    },
+    "decimals": 18,
+    "raw": "2000000000000000000"
+   },
+   "got_mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+     "chain_id": 4663
+    },
+    "decimals": 2,
+    "quote_unit": "USD",
+    "raw": "2260"
+   },
+   "kind": "fill",
+   "mode": "paper",
+   "order_id": "fixture/paper-1"
+  },
+  {
+   "cash_asset": {
+    "_type": "AssetId",
+    "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+    "chain_id": 4663
+   },
+   "gave": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 6,
+    "raw": "62000000"
+   },
+   "gave_mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 5,
+    "quote_unit": "USD",
+    "raw": "99990"
+   },
+   "got": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+     "chain_id": 4663
+    },
+    "decimals": 18,
+    "raw": "2000000000000000000"
+   },
+   "got_mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+     "chain_id": 4663
+    },
+    "decimals": 2,
+    "quote_unit": "USD",
+    "raw": "2240"
+   },
+   "kind": "fill",
+   "mode": "paper",
+   "order_id": "fixture/paper-2"
+  },
+  {
+   "cash_asset": {
+    "_type": "AssetId",
+    "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+    "chain_id": 4663
+   },
+   "gave": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+     "chain_id": 4663
+    },
+    "decimals": 18,
+    "raw": "1000000000000000000"
+   },
+   "gave_mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+     "chain_id": 4663
+    },
+    "decimals": 2,
+    "quote_unit": "USD",
+    "raw": "2300"
+   },
+   "got": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 6,
+    "raw": "23000000"
+   },
+   "got_mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 5,
+    "quote_unit": "USD",
+    "raw": "99992"
+   },
+   "kind": "fill",
+   "mode": "paper",
+   "order_id": "fixture/paper-3"
+  },
+  {
+   "amount": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "chain_id": 4663
+    },
+    "decimals": 18,
+    "raw": "460000000000000"
+   },
+   "book": "real",
+   "kind": "opening",
+   "mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "chain_id": 4663
+    },
+    "decimals": 2,
+    "quote_unit": "USD",
+    "raw": "260000"
+   }
+  },
+  {
+   "amount": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 6,
+    "raw": "78742"
+   },
+   "book": "real",
+   "kind": "opening",
+   "mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 5,
+    "quote_unit": "USD",
+    "raw": "99995"
+   }
+  },
+  {
+   "amount": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 6,
+    "raw": "5000000"
+   },
+   "book": "real",
+   "direction": "in",
+   "kind": "transfer",
+   "mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 5,
+    "quote_unit": "USD",
+    "raw": "99995"
+   },
+   "what": "a contribution"
+  },
+  {
+   "cash_asset": {
+    "_type": "AssetId",
+    "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+    "chain_id": 4663
+   },
+   "gave": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "chain_id": 4663
+    },
+    "decimals": 18,
+    "raw": "200000000000000"
+   },
+   "gave_mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "chain_id": 4663
+    },
+    "decimals": 2,
+    "quote_unit": "USD",
+    "raw": "263700"
+   },
+   "got": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 6,
+    "raw": "520000"
+   },
+   "got_mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 5,
+    "quote_unit": "USD",
+    "raw": "99992"
+   },
+   "kind": "fill",
+   "mode": "live",
+   "order_id": "fixture/live-1"
+  },
+  {
+   "amount": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "chain_id": 4663
+    },
+    "decimals": 18,
+    "raw": "3000000000000"
+   },
+   "book": "real",
+   "kind": "fee",
+   "mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "chain_id": 4663
+    },
+    "decimals": 2,
+    "quote_unit": "USD",
+    "raw": "263700"
+   },
+   "order_id": "fixture/live-1",
+   "what": "gas on the swap above"
+  },
+  {
+   "amount": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "chain_id": 4663
+    },
+    "decimals": 18,
+    "raw": "4000000000000"
+   },
+   "book": "real",
+   "kind": "fee",
+   "mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "chain_id": 4663
+    },
+    "decimals": 2,
+    "quote_unit": "USD",
+    "raw": "263700"
+   },
+   "order_id": "fixture/reverted",
+   "what": "gas on a transaction that reverted: no fill"
+  },
+  {
+   "amount": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 6,
+    "raw": "2000000"
+   },
+   "book": "real",
+   "direction": "out",
+   "kind": "transfer",
+   "mark": {
+    "_type": "Price",
+    "base": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    },
+    "decimals": 5,
+    "quote_unit": "USD",
+    "raw": "99992"
+   },
+   "what": "a withdrawal"
+  },
+  {
+   "kind": "inference",
+   "seat": "risk",
+   "usd": "0.099454"
+  },
+  {
+   "kind": "inference",
+   "seat": "price-trend",
+   "usd": "0.260564"
+  }
+ ],
+ "snapshot": "67364057-c06abd9e89f0"
+}

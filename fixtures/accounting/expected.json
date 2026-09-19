@@ -1,0 +1,50 @@
+{
+ "_about": "Unit 4.11's hand-computed answer for fixtures/accounting/events.json, derived from the event list and the rules in core/ledger.py's table, in exact rationals, without running the ledger. answer.md shows the working. tests/test_accounting.py holds the ledger to these figures exactly.",
+ "books": {
+  "paper": {
+   "costs_usd": "0",
+   "expenses_usd": "0",
+   "nav_usd": "183.64629364",
+   "opened_usd": "199.99",
+   "positions": {
+    "GME": {
+     "basis_usd": "80.2436625",
+     "units": "3",
+     "unrealised_usd": "-12.5884125",
+     "value_usd": "67.65525"
+    },
+    "USDG": {
+     "basis_usd": "115.99351",
+     "units": "116",
+     "unrealised_usd": "-0.00246636",
+     "value_usd": "115.99104364"
+    }
+   },
+   "realised_usd": "-3.7528275",
+   "unrealised_usd": "-12.59087886"
+  },
+  "real": {
+   "costs_usd": "0.018459",
+   "expenses_usd": "0.360018",
+   "nav_usd": "4.26567681261301",
+   "opened_usd": "4.2745936355804342832729209526",
+   "positions": {
+    "ETH": {
+     "basis_usd": "0.6578",
+     "units": "0.000253",
+     "unrealised_usd": "0.00941267148283",
+     "value_usd": "0.66721267148283"
+    },
+    "USDG": {
+     "basis_usd": "3.5985520355804342832729209526",
+     "units": "3.598742",
+     "unrealised_usd": "-0.0000878944502542832729209526",
+     "value_usd": "3.59846414113018"
+    }
+   },
+   "realised_usd": "0.0002174",
+   "unrealised_usd": "0.0093247770325757167270790474"
+  }
+ },
+ "snapshot": "67364057-c06abd9e89f0"
+}
