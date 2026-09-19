@@ -1283,7 +1283,7 @@ caught, among them the treasurer's key being sent and a request that went throug
 counted as refused.
 
 ## 4.11 ▶ — The known answer, shown at the stop
-**Date:** 2026-09-19 · **Commits:** 22fcfa0, 5b0e57b
+**Date:** 2026-09-19 · **Commits:** 22fcfa0, 8620b5a
 
 `fixtures/accounting/` holds thirteen constructed events — opening capital, two paper
 buys and a partial sale, a contribution in, a live fill with its gas, gas on a
