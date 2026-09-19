@@ -128,3 +128,9 @@ def test_the_real_transport_sends_a_user_agent():
     finally:
         server.server_close()
     assert seen["ua"] == "openfund-chain/1.3"
+
+
+def test_a_reply_with_neither_result_nor_error_is_an_error_not_a_crash():
+    rpc = client("ONLY", transport=lambda *a: (200, b'{"jsonrpc": "2.0", "id": 1}'))
+    with pytest.raises(chain.RpcError, match="neither result nor error"):
+        rpc.call("eth_chainId", [])

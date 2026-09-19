@@ -213,6 +213,8 @@ class RpcClient:
         request_id, self._next_id = self._next_id, self._next_id + 1
         response = self._post({"jsonrpc": "2.0", "id": request_id, "method": method,
                                "params": params})
+        if not isinstance(response, dict) or ("error" not in response and "result" not in response):
+            raise RpcError(None, "a reply with neither result nor error")
         if "error" in response:
             error = response["error"] or {}
             raise RpcError(error.get("code"), self._scrub(str(error.get("message"))))
