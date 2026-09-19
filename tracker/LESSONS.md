@@ -9,12 +9,11 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds into the plan docs: none, as of 2026-09-18, after 1.11.** The
-three 1.11 entries were folded in 1.11's pass, into PHASE-0-1 1.11 and its list
-of what Phase 1 cannot do, and into PLAN §8 and §9. F0.4.1 in
-`research/findings.md` still says every equity feed is named
-`Robinhood <TICKER> / USD`. That file is research, not plan, and was outside
-1.10's pass.
+**Pending folds into the plan docs: none, as of 2026-09-18, after 1.11's
+checkpoint.** Its entries and the two decisions were folded into PHASE-0-1
+1.11, PLAN §8, §9 and §13, `config/sessions.json` and `CLAUDE.md`. F0.4.1 in
+`research/findings.md` still says every equity feed is named `Robinhood <TICKER> /
+USD`. That file is research, not plan, and was outside 1.10's pass.
 
 **Owed in code, outside the paths of the passes that found them:**
 1. **`adapters/http.py`, two changes** (found by 1.5): return a caller-named
@@ -1764,6 +1763,7 @@ order and schema, and `run/snapshot.py`, which was outside 1.11's paths. No
 paused answer has been observed, so none could be recorded as a case. The
 operator's call.
 **Affects:** 1.3, 1.6, 1.8 (a held asset's value), 1.11; PLAN §9; F0.4.4.
+*Built at 1.11's checkpoint: see the last entry below.*
 
 ## 2026-09-18 — DECISION: GeckoTerminal's `Date` header is not checked
 *The operator's, at 1.11's checkpoint.* No offchain body carries a source time,
@@ -1797,3 +1797,33 @@ from Sat 7 Nov 00:05Z to Monday's first round. That weekend fails closed. The
 prediction is not a measurement. The date is where it will be seen: in
 `CLAUDE.md`, in `config/sessions.json` (`_rederive_on`) and in PLAN §13.
 **Affects:** `config/sessions.json`, PLAN §13, every weekend cycle from 7 November.
+
+## 2026-09-18 — 1.11's checkpoint: a paused feed is refused at its own rule, and the committed capture could not be rebuilt
+*The operator's change.* Every stock token's `oraclePaused()` is read at the
+pinned block, and a true flag makes the asset `no_mark` at rule `paused`.
+- **Ordering.** The pause is judged before freshness, because a paused feed is
+  often stale too, and the pause says why it is silent.
+- **Unknown blocks.** A flag that reverts, is not a bool, cannot be reached, or
+  was never read for a stock is undetermined, and blocks.
+- **The document.** The snapshot's `mark` carries `unpaused`, and the schema is
+  `/4`.
+- **Checked.** Eight breaks, each caught by a test.
+
+**What we believed.** The brief said the committed fixture would need
+rebuilding, as the capture-hash change did. It could not be rebuilt. That
+change moved only how the snapshot was built from the same answers. This one
+asks the chain a new question, and the capture never recorded an answer to it,
+so its replay stops with `ReplayMiss` at the pause read. It must not guess.
+
+**What we did.**
+- **A new capture,** `66852293-253315c0e691`, taken at Sat 06:01Z inside the
+  closed session by the committed code. It was checked for every declared
+  credential value, and it replays byte for byte.
+- **1.9's capture is retired** to `fixtures/retired/`, not deleted. It replays
+  at `ee9077c`. The operator had called it the only weekend evidence; the new
+  capture is a weekend capture too.
+- **A retried 429 is kept.** The new capture holds one RPC 429 that was retried
+  to a 200. The replay test had assumed every exchange was a 200, which was
+  true of the old capture only.
+
+**Affects:** 1.3, 1.6, 1.9 (fixtures), the demo's fixture; `fixtures/README.md`.

@@ -349,9 +349,10 @@ what each finding changed, is in `PHASE-0-1.md`.*
   the inferred closed session.* *Built:* mixed blocks, a future observation, a
   stale newest point and a holiday are each refused at their rule, and both
   acceptances hold. A replayed body cannot be built from a real source,
-  because no offchain body carries a source time. A paused feed is not
-  refused: the fund cannot tell it from a closed market, though the token's
-  `oraclePaused()` can. Both are open, at the checkpoint.
+  because no offchain body carries a source time; GeckoTerminal's `Date` is
+  deliberately not checked (§13). After the checkpoint, a paused feed is
+  refused at its own rule, `paused`, read from the token's `oraclePaused()` at
+  the pinned block.
 
 **Exit:** hashed snapshot from live data, with history up to its pinned block;
 identical replay from fixture; bad inputs rejected, not absorbed, and old
@@ -562,9 +563,10 @@ Written alongside the code they cover, runnable offline.
 **Snapshot:** identical inputs produce an identical hash; mixed blocks rejected;
 stale or paused feeds excluded and labelled; a replayed old HTTP body with a
 fresh fetch timestamp rejected; a held asset excluded from trading remains in the
-book; no observation dated after the pinned block enters the snapshot. *Open at
-1.11:* a paused feed is excluded only once it is stale, and no offchain body
-carries a source time that a replay rule could compare (`PHASE-0-1.md` 1.11). **The
+book; no observation dated after the pinned block enters the snapshot. *At
+1.11's checkpoint:* a paused feed is refused at its own rule, read from the
+token's `oraclePaused()`. No offchain body carries a source time, and
+GeckoTerminal's `Date` header is deliberately not checked (§13). **The
 staleness and replay rules bind a series' newest point only** (decision
 2026-09-18, `tracker/LESSONS.md`). Historical points carry their own timestamps,
 and being old is what makes them history. So a series with a fresh newest point

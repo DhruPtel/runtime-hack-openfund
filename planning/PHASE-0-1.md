@@ -1405,16 +1405,28 @@ of the code to see which test caught it.
   - our own replay, which never mints a fresh fetch time
     (`test_cache.py::test_a_clock_read_past_the_tape_never_falls_back_to_today`).
 
-  **Open.**
-- **Paused feed: not refused, because the fund cannot tell it from a closed
-  market.** It reads only `latestRoundData`, and a pause is silence, as a
-  closure is.
-  - A feed frozen during an open session is judged fresh for heartbeat plus
-    margin, 25 h of open-session time.
-  - One frozen from Friday afternoon stays fresh until Monday about 20:00Z.
+  **Decided at the checkpoint:** GeckoTerminal's `Date` is not checked, and
+  the exposure is stated in PLAN §13 (LESSONS 2026-09-18).
+- **Paused feed: refused at its own rule, since the checkpoint.** Before it,
+  the fund could not tell a pause from a closed market, because it read only
+  `latestRoundData` and a pause is silence, as a closure is:
+  - a feed frozen during an open session was judged fresh for heartbeat plus
+    margin, 25 h of open-session time;
+  - one frozen from Friday afternoon stayed fresh until Monday about 20:00Z.
 
-  The chain can tell them apart: each stock token answers `oraclePaused()`
-  (LESSONS 2026-09-18). **Open.**
+  Now every stock token's `oraclePaused()` is read at the pinned block
+  (`ChainReader.unpaused`). A true flag makes the asset `no_mark` at rule
+  `paused`. That rule is judged before freshness, so a paused feed that has
+  also gone stale is named paused. An unreadable flag, or a stock with none, is
+  undetermined, and blocks. The snapshot's `mark` carries `unpaused`, and the
+  schema is `/4`.
+
+  Eight breaks, each failing a test: the flag not refused, no flag passing,
+  freshness judged first, a revert, a true flag, a non-bool answer and an
+  unreachable RPC each read as unpaused, and the live path dropping the
+  verdict. The committed capture never asked for the flag, so it could not be
+  rebuilt. It is retired to `fixtures/retired/`, and a new weekend capture,
+  `66852293-253315c0e691`, replaces it (LESSONS 2026-09-18).
 - **Closed session and holiday: already tested, each at its rule.**
   - The weekend is accepted (`test_chain_4663.py::test_a_weekend_gap_is_expected_and_the_last_round_stands`).
   - An open-session gap is stale and names the holiday it may be (`::test_a_gap_in_an_open_session_is_stale_and_names_the_holiday_it_may_be`).
@@ -1496,11 +1508,12 @@ Stated before the code, so that no unit's done-condition quietly assumes it:
 - **Catch a counterfeit that is inside the registry, or one that clones the
   proxy with its own beacon, except via the registry** (F0.8.5). Neither is
   testable.
-- **Tell a paused feed from a closed market** (1.11). Both are silence in the
-  rounds. The token's `oraclePaused()` would tell them apart, but nothing reads
-  it, so a pause is refused only once it is stale.
 - **Detect a stale offchain body** (1.11). Neither GeckoTerminal's body nor the
-  venue's carries a source time. A quote's age runs from our own fetch.
+  venue's carries a source time. A quote's age runs from our own fetch, and
+  GeckoTerminal's `Date` header is deliberately not checked (PLAN §13).
+- **Know the closed session after 1 November 2026.** Daylight saving is
+  unmeasured. The span is re-derived on Monday 9 November, after the first
+  Saturday on US standard time (PLAN §13).
 - **Know Bankr's or the RPC's rate limit.** Bankr returned no limit headers
   (F0.10.5). The RPC refused a batch of 100 with a bare 429 and no
   `Retry-After` (1.3), but its actual limit is unknown. So 1.3 and 1.5 back off
