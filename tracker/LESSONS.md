@@ -2755,3 +2755,30 @@ Each primitive was attacked as it was built: 60 rules broken in a copy across
   - 4.8 cannot replay the exit run's risk reply, which names the layout-1 plan's
     hash. It needs the fake venue and a scripted reply, as 3.7 did.
 **Affects:** 4.4, 4.6, 4.8, 4.9, 4.11; `core/cash.py`.
+
+## 2026-09-19 — Batch B built: what the fund acting on paper found
+61 rules broken in a copy across 4.1 to 4.8, each caught by the test written for it
+(LOGS). What that turned up, apart from the units themselves:
+- **A real bug, caught by an old invariant.** `run/cycle.py` imported
+  `treasurer/sign.py`, which nothing outside `treasurer/` may import (CODEBASE §3):
+  the boundary test refused it. The published key it wanted holds nothing secret, so
+  it moved to `treasurer/keys.py`. The one-signer rule earned its test.
+- **A name-shaped false alarm, twice.** The P9 boundary reads `.book` as an event's
+  book, so `BookValue.book` and `positions.book` both tripped it. Renamed
+  `book_name` and `positions.read`. A boundary test that reads names needs names kept
+  clear; neither was a money bug.
+- **S11 refused every Phase 3 fixture,** because their clock was two days after their
+  capture. The fixtures now quote two minutes after the block, as a live cycle would.
+  That is what S11 is for, and it found the fixtures first.
+- **Strict, not wrong.** The planner funds buys down to the floor, so the demo's
+  second cycle left $20.04 against a $20 floor. Any sell that books below its mark
+  then drops the last buy at the chokepoint (P11). And with the same four reports
+  each cycle, a target starts at the weight held and the same buy calls raise it
+  again: the demo's second cycle bought more of the same six names. Both follow the
+  operator's Phase 3 decisions; neither is a defect. The confidence mapping is still
+  provisional, and this is what it does over repeated cycles.
+- **Left open:** the snapshot's age is checked at decision, not at submission (the
+  operator scoped S11 to decision time), so an order found at startup later is 4.9's
+  to re-admit or refuse; the paper book opens with `capital_usd` of USDG, 200 USDG
+  worth $199.98, which 4.11 will use and the operator may change.
+**Affects:** 4.9, 4.11, 4.12, 6.1; `CLAUDE.md`, still owed 4.11's stop.
