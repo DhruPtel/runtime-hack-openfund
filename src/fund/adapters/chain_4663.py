@@ -453,20 +453,28 @@ class ChainReader:
 
     # tokens, balances, beacon ------------------------------------------------------
 
-    def decimals(self, tokens: Sequence[AssetId]) -> dict[AssetId, Observation]:
-        calls = [(t.address, bytes.fromhex(SEL_DECIMALS)) for t in tokens]
+    def _decimals(self, targets: dict[AssetId, str], system: str) -> dict[AssetId, Observation]:
+        calls = [(address, bytes.fromhex(SEL_DECIMALS)) for address in targets.values()]
         try:
             results = self.multicall(calls)
         except ChainError as error:
-            return {t: self._failed(Source("erc20", t.address), error) for t in tokens}
+            return {k: self._failed(Source(system, v), error) for k, v in targets.items()}
         out = {}
-        for token, (ok, data) in zip(tokens, results):
-            source = Source("erc20", token.address)
-            out[token] = (self._observe(source, value=Fixed(_uint(data, 0), 0, "decimals"))
-                          if ok and len(data) >= 32 else
-                          self._observe(source, status=FetchStatus.REFUSED,
-                                        detail="decimals() reverted or returned nothing"))
+        for (key, address), (ok, data) in zip(targets.items(), results):
+            source = Source(system, address)
+            out[key] = (self._observe(source, value=Fixed(_uint(data, 0), 0, "decimals"))
+                        if ok and len(data) >= 32 else
+                        self._observe(source, status=FetchStatus.REFUSED,
+                                      detail="decimals() reverted or returned nothing"))
         return out
+
+    def decimals(self, tokens: Sequence[AssetId]) -> dict[AssetId, Observation]:
+        """A token's own `decimals()`: USDG 6, stock tokens 18 (F0.3.1)."""
+        return self._decimals({t: t.address for t in tokens}, "erc20")
+
+    def feed_decimals(self, feeds: dict[AssetId, FeedRef]) -> dict[AssetId, Observation]:
+        """A feed proxy's own `decimals()`, to set beside the pinned directory's."""
+        return self._decimals({a: f.proxy.address for a, f in feeds.items()}, "chainlink-feed")
 
     def balances(self, holder: ChainAddress, tokens: dict[AssetId, int]) -> dict[AssetId, Observation]:
         """Balances over RPC; `/wallet/portfolio` omits every token (F0.7b.8).
@@ -684,3 +692,176 @@ class Settings:
 
 def wall_clock() -> Instant:
     return Instant(time.time_ns() // 1_000_000)
+
+
+# --- the live proof: `python -m fund.adapters.chain_4663 --prove` ---------------------------
+
+def _iso(instant: Instant | None) -> str:
+    if instant is None:
+        return "-"
+    return time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime(instant.epoch_ms // 1000))
+
+
+def _dur(ms: int) -> str:
+    s = ms // 1000
+    return f"{s // 86400}d{s % 86400 // 3600:02d}h{s % 3600 // 60:02d}m" if s >= 86400 else \
+        f"{s // 3600}h{s % 3600 // 60:02d}m{s % 60:02d}s"
+
+
+def prove(series_asset: str = "AAPL") -> int:
+    """One live read of every claim 1.3 makes, printed. Read-only; spends nothing."""
+    import socket
+
+    from fund import config
+    from fund.credentials import Role
+
+    cfg = config.load(Role.ANALYST, require=False)
+    settings = Settings.load()
+    missing = [name for name in settings.endpoints if not cfg.has(name)]
+    if missing:
+        print(f"missing credentials: {', '.join(missing)}")
+        return 2
+    u = universe.load()
+    with open(CHAIN_CONFIG.parent / "mandate.json") as handle:
+        wallet = ChainAddress(settings.chain_id, json.load(handle)["execution_wallet"])
+    symbol = {a: (u.records[a].symbol if a in u.records else f.name.split(" / ")[0])
+              for a, f in u.feeds.items()}  # display only
+    by_symbol = {v: k for k, v in symbol.items()}
+    feeds = dict(sorted(u.feeds.items(), key=lambda item: symbol[item[0]]))
+    margin = settings.staleness_margin_s
+
+    rpc = settings.client(cfg.secret)
+    block = pin_block(rpc, settings.chain_id, settings.block_tag)
+    read = settings.reader(rpc, block)
+    print(f"== pinned block {block.number} at {_iso(block.timestamp)}, hash {block.hash}")
+    print(f"   endpoints {', '.join(e.name for e in rpc.endpoints)}; every read below is at this hash\n")
+
+    print(f"== 1. {len(feeds)} feeds at one block: latestRoundData, decimals, freshness "
+          f"(heartbeat + {margin}s, judged at block time)")
+    rounds = read.latest_rounds(feeds)
+    chain_decimals = read.feed_decimals(feeds)
+    print(f"   {'asset':6} {'proxy':12} {'dec dir/chain':13} {'round id (exact)':24} "
+          f"{'phase/round':11} {'updatedAt':20} {'age':10} {'hb':6} fresh")
+    counts: dict[Any, int] = {}
+    for asset, f in feeds.items():
+        o, d = rounds[asset], chain_decimals[asset]
+        verdict = freshness(o, f, block.timestamp, margin)
+        counts[verdict.value] = counts.get(verdict.value, 0) + 1
+        on_chain = d.value.raw if d.ok else d.status.value
+        if o.ok:
+            rid = int(o.source_ref)
+            print(f"   {symbol[asset]:6} {f.proxy.address[:12]} {f.decimals:>5} / {on_chain!s:<5} "
+                  f"{o.source_ref:24} {rid >> 64:>3}/{rid & _U64:<7} {_iso(o.source_time):20} "
+                  f"{_dur(block.timestamp.epoch_ms - o.source_time.epoch_ms):10} "
+                  f"{f.heartbeat.raw:<6} {verdict.value}")
+        else:
+            print(f"   {symbol[asset]:6} {f.proxy.address[:12]} {o.status.value}: {o.detail}  "
+                  f"fresh={verdict.value}")
+    mismatched = [symbol[a] for a in feeds
+                  if chain_decimals[a].ok and chain_decimals[a].value.raw != feeds[a].decimals]
+    print(f"   verdicts: {counts}; directory decimals disagreeing with chain: {mismatched or 'none'}")
+    sample = rounds[by_symbol["GME"]]
+    print(f"   GME price {sample.value.raw} / 10**{sample.value.decimals} USD; label: {sample.detail}\n")
+
+    print("== 2. token metadata, the fund wallet's balances, and the beacon slots")
+    stock = by_symbol["GME"]
+    for token, o in read.decimals([u.cash_leg, stock]).items():
+        print(f"   decimals() {symbol.get(token, 'USDG'):5} {token.address}: {o.value.raw if o.ok else o.detail}")
+    held = read.balances(wallet, {u.gas_asset: u.gas_decimals, u.cash_leg: u.cash_decimals,
+                                  stock: 18})
+    for token, o in held.items():
+        name = "ETH" if token.is_native else symbol.get(token, "USDG")
+        print(f"   {wallet.address} holds {name:5}: raw {o.value.raw} ({o.value.decimals} dp)"
+              if o.ok else f"   {name}: {o.status.value}: {o.detail}")
+    slots = read.beacon_slots([a for a in feeds if a in u.records])  # stock tokens only
+    checks = u.cross_check_beacons(slots)
+    agree = sum(1 for c in checks.values() if c.value is True)
+    print(f"   beacon slots read: {sum(o.ok for o in slots.values())}/{len(slots)}; agree with the "
+          f"issuer beacon {u.issuer_beacon.address}: {agree}/{len(checks)}")
+    for asset, o in slots.items():
+        if not o.ok:
+            print(f"   unread, so undetermined ({checks[asset].value}): {symbol[asset]}: "
+                  f"{o.status.value}: {o.detail}")
+    print()
+
+    target = by_symbol[series_asset]
+    print(f"== 3. price series for {series_asset}: {settings.window_s}s window back from the block")
+    s = read.price_series(target, feeds[target], window_s=settings.window_s,
+                          max_rounds=settings.max_rounds, scale_break_ratio=settings.scale_break_ratio)
+    print(f"   {s.detail}; window start {_iso(s.window_start)}; coverage {s.coverage.value}: "
+          f"{s.coverage.reason}")
+    for label, point in (("oldest", s.oldest), ("2nd", s.points[1] if len(s.points) > 1 else None),
+                         ("newest", s.newest)):
+        if point is None:
+            continue
+        alone = freshness(point, feeds[target], block.timestamp, margin)
+        print(f"   {label:6} round {point.source_ref} at {_iso(point.source_time)}, "
+              f"age {_dur(block.timestamp.epoch_ms - point.source_time.epoch_ms):10} "
+              f"price {point.value.raw}; judged alone it would be fresh={alone.value}")
+    verdict = series_freshness(s, feeds[target], block.timestamp, margin)
+    print(f"   the series' verdict judges the newest point only: fresh={verdict.value} ({verdict.reason})")
+    print("   every point at the pinned block:", all(p.block == block for p in s.points), "\n")
+
+    print(f"== 4. the same walk for every feed, to see which real series come back short")
+    short = 0
+    for asset, f in feeds.items():
+        s = read.price_series(asset, f, window_s=settings.window_s, max_rounds=settings.max_rounds,
+                              scale_break_ratio=settings.scale_break_ratio)
+        if s.coverage.value is not True:
+            short += 1
+        print(f"   {symbol[asset]:6} {len(s.points):>4} points  coverage {s.coverage.value!s:5} "
+              f"{'' if s.coverage.value is True else s.coverage.reason}")
+    print(f"   {short} of {len(feeds)} short or undetermined\n")
+
+    print("== 5. a constructed mixed-block read")
+    earlier = pin_block(rpc, settings.chain_id, hex(block.number - 1))
+    one = by_symbol["AAPL"]
+    here = rounds[one]
+    there = settings.reader(rpc, earlier).latest_rounds({one: feeds[one]})[one]
+    print(f"   AAPL read at {block.number} and at {earlier.number} ({earlier.hash[:18]}…)")
+    try:
+        require_one_block([here, there], block)
+        print("   NOT REFUSED — this is a failure of the proof")
+        return 1
+    except MixedBlocks as refused:
+        print(f"   refused: {type(refused).__name__}: {refused}\n")
+
+    print("== 6. unreachable, and a hang that the failover moves past")
+    closed = socket.socket()
+    closed.bind(("127.0.0.1", 0))
+    port = closed.getsockname()[1]
+    closed.close()  # nothing listens here now: a real connection refusal
+    dead = RpcClient([Endpoint("DEAD_LOCAL", f"http://127.0.0.1:{port}")], timeout_s=3,
+                     attempts=1, backoff_s=0, min_interval_s=0,
+                     transport=urllib_transport(settings.user_agent))
+    gone = ChainReader(dead, block, multicall3=settings.multicall3, chunk=settings.chunk,
+                       clock=wall_clock).latest_rounds({one: feeds[one]})[one]
+    verdict = freshness(gone, feeds[one], block.timestamp, margin)
+    print(f"   AAPL via a refused endpoint: status {gone.status.value}; freshness {verdict.value} "
+          f"(is False: {verdict.value is False}); {verdict.reason}")
+    silent = socket.socket()
+    silent.bind(("127.0.0.1", 0))
+    silent.listen(8)  # accepts at the kernel, never answers
+    try:
+        hung = RpcClient([Endpoint("HANGS_LOCAL", f"http://127.0.0.1:{silent.getsockname()[1]}"),
+                          *rpc.endpoints], timeout_s=3, attempts=1, backoff_s=0,
+                         min_interval_s=settings.min_interval_s,
+                         transport=urllib_transport(settings.user_agent))
+        started = time.monotonic()
+        reading = ChainReader(hung, block, multicall3=settings.multicall3, chunk=settings.chunk,
+                              clock=wall_clock).latest_rounds({one: feeds[one]})[one]
+        print(f"   AAPL via [HANGS_LOCAL, {rpc.endpoints[0].name}]: status {reading.status.value}, "
+              f"round {reading.source_ref}, same as the direct read: "
+              f"{reading.source_ref == here.source_ref}; took {time.monotonic() - started:.1f}s")
+    finally:
+        silent.close()
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+
+    if sys.argv[1:] != ["--prove"]:
+        print("usage: python -m fund.adapters.chain_4663 --prove")
+        sys.exit(2)
+    sys.exit(prove())

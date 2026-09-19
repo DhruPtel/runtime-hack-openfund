@@ -541,6 +541,14 @@ def test_a_round_dated_after_its_successor_stops_the_walk():
 
 # --- tokens, balances, the beacon --------------------------------------------------------
 
+def test_a_feeds_own_decimals_are_read_from_its_proxy():
+    fake = FakeChain()
+    fake.decimals[addr(1)] = 8
+    asset = AssetId(CHAIN, addr(11))
+    got = reader(rpc_for(fake)).feed_decimals({asset: feed(addr(1))})[asset]
+    assert got.value == Fixed(8, 0, "decimals")
+    assert got.source == Source("chainlink-feed", addr(1)) and got.block == BLOCK
+
 def test_decimals_and_balances_are_read_at_the_pinned_block():
     fake = FakeChain()
     usdg, stock, eth = (AssetId(CHAIN, addr(2)), AssetId(CHAIN, addr(4)), AssetId.native(CHAIN))
