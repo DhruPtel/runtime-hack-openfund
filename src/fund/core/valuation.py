@@ -28,10 +28,20 @@ means what it meant when it was decided. The result is rounded away from zero at
 volume, as `config/thresholds.json` sets it:
 - below the line, the asset is excluded from the universe rather than vetoed
   each cycle (0.4 decision);
-- above it, the veto fires past `divergence_max_bps` on either side.
+- above it, in an open session, the veto fires past `divergence_max_bps` on
+  either side.
 
 A liquid name is not safe on that account. AMZN diverged 499.5 bps on $2.19M of
 volume while feed and quote agreed to 20 bps (F0.4.5), and the veto fires there.
+
+**In a closed session, divergence is a finding, not a veto** (DECISION,
+LESSONS 2026-09-18). The feed is frozen at its last round while the pools trade
+on, so divergence then measures market movement since the close. 1.4's proof
+vetoed MSTR at -122.87 bps on a Saturday, and MSTR tracks bitcoin. So the mark
+stays at the last round, and the divergence is returned as a `Finding` that the
+snapshot entry carries and the decision record (3.7) must carry onward. The
+caller says whether the mark's feed is inside its inferred closed span, because
+the span is config that `core/` is handed, never read.
 
 **Absent corroboration is undetermined, not agreement.** A corroborator that
 did not answer blocks. It never becomes a divergence of zero.
@@ -48,6 +58,7 @@ arrives as an argument.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from typing import Any, Mapping
 
@@ -193,10 +204,25 @@ def divergence_bps(the_mark: Price, corroborator: Price) -> Fixed:
 
 
 @dataclass(frozen=True)
+class Finding:
+    """Something the fund saw and judged rather than acted on. It is carried in
+    the snapshot entry and onward to the decision record (3.7), so a reader sees
+    it was seen."""
+
+    kind: str
+    divergence: Fixed
+    beyond_open_session_limit: bool
+    reason: str
+
+
+CLOSED_SESSION_DIVERGENCE = "closed-session divergence"
+
+
+@dataclass(frozen=True)
 class CrossCheck:
     """One asset's mark against its corroborator, with everything the verdict
-    read: the divergence, the volume and tier, and whether the corroborator is
-    independent of the execution venue."""
+    read: the divergence, the volume and tier, the session, and whether the
+    corroborator is independent of the execution venue."""
 
     asset: AssetId
     mark: Mark
@@ -207,6 +233,8 @@ class CrossCheck:
     tier: str | None           # "above-line", "below-line", or None when undetermined
     verdict: Check
     rule: str | None
+    closed_session: bool = False
+    finding: Finding | None = None
 
     @property
     def universe_status(self) -> UniverseStatus | None:
@@ -215,14 +243,18 @@ class CrossCheck:
 
 
 def cross_check(the_mark: Mark, corroboration: Observation, volume: Observation,
-                rule: DivergenceRule, *, independent: bool) -> CrossCheck:
+                rule: DivergenceRule, *, independent: bool,
+                closed_session: bool = False) -> CrossCheck:
     """The tiered divergence verdict. The first rule that does not pass is
     named: the mark, the corroboration, the volume, the corroborator line, then
-    the divergence."""
+    the divergence. `closed_session` says the mark's feed is inside its inferred
+    closed span at the snapshot's block: the veto then gives way to a finding.
+    It defaults to False, an open session, where the veto fires."""
     def verdict(value: bool | None, name: str | None, reason: str, *, divergence=None,
-                tier=None) -> CrossCheck:
+                tier=None, finding=None) -> CrossCheck:
         return CrossCheck(the_mark.asset, the_mark, corroboration, volume, divergence, independent,
-                          tier, Check(value, f"[{name}] {reason}" if name else reason), name)
+                          tier, Check(value, f"[{name}] {reason}" if name else reason), name,
+                          closed_session, finding)
 
     if not the_mark.check.passes:
         return verdict(the_mark.check.value, the_mark.rule, f"no mark to corroborate: "
@@ -248,6 +280,20 @@ def cross_check(the_mark: Mark, corroboration: Observation, volume: Observation,
                        f"24h volume ${_text(traded)} is below the ${_text(rule.min_volume_usd)} line: "
                        f"excluded from the universe, not vetoed each cycle (0.4 decision); "
                        f"divergence {_text(d)} bps recorded", divergence=d, tier="below-line")
+    if closed_session:
+        beyond = magnitude > rule.max_bps
+        since = time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                              time.gmtime(the_mark.reading.source_time.epoch_ms // 1000))
+        finding = Finding(
+            kind=CLOSED_SESSION_DIVERGENCE, divergence=d, beyond_open_session_limit=beyond,
+            reason=(f"the feed is frozen at its round of {since} while the pools trade on: the "
+                    f"mark is {_text(d)} bps from GeckoTerminal, "
+                    f"{'past' if beyond else 'within'} the {_text(rule.max_bps)} bps an open "
+                    f"session would veto at; judged expected in a closed session, not vetoed "
+                    f"(DECISION 2026-09-18)"))
+        return verdict(True, None, f"closed session: divergence {_text(d)} bps on "
+                                   f"${_text(traded)} of 24h volume is a finding, not a veto",
+                       divergence=d, tier="above-line", finding=finding)
     if magnitude > rule.max_bps:
         return verdict(False, RULE_DIVERGENCE,
                        f"veto: divergence {_text(d)} bps exceeds {_text(rule.max_bps)} bps on "

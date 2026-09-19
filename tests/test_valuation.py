@@ -264,3 +264,42 @@ def test_valuation_imports_nothing_from_adapters():
     modules = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
     modules |= {a.name for node in ast.walk(tree) if isinstance(node, ast.Import) for a in node.names}
     assert not any("adapters" in m for m in modules)
+
+
+# --- in a closed session, divergence is a finding, not a veto (DECISION 2026-09-18) --------------
+
+def amzn_check(corroborator: str, *, closed: bool, volume: str = "2193251.17210313"):
+    price, traded = gecko(AMZN, corroborator, volume=volume)
+    return valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
+                                 price, traded, RULE, independent=True, closed_session=closed)
+
+
+def test_in_a_closed_session_the_recorded_amzn_divergence_is_a_finding_not_a_veto():
+    check = amzn_check("265.87982073", closed=True)
+    assert check.verdict.passes and check.rule is None and check.closed_session
+    assert check.divergence == Fixed(-49947, 2, "bps")
+    f = check.finding
+    assert f.kind == valuation.CLOSED_SESSION_DIVERGENCE and f.beyond_open_session_limit
+    assert f.divergence == check.divergence and "not vetoed" in f.reason
+    assert "2026-09-18T" in f.reason  # names the round the feed is frozen at
+
+
+def test_the_same_divergence_in_an_open_session_is_still_vetoed():
+    check = amzn_check("265.87982073", closed=False)
+    assert check.rule == valuation.RULE_DIVERGENCE and check.finding is None
+
+
+def test_a_small_closed_session_divergence_is_still_recorded_and_says_it_is_within():
+    check = amzn_check("252.60", closed=True)
+    assert check.verdict.passes and not check.finding.beyond_open_session_limit
+
+
+def test_a_closed_session_changes_nothing_below_the_line_or_without_corroboration():
+    thin = amzn_check("265.87982073", closed=True, volume="3502.1")
+    assert thin.rule == valuation.RULE_CORROBORATOR_LINE and thin.finding is None
+    source = Source("geckoterminal", f"networks/robinhood/tokens/{AMZN.id.address}")
+    missing = Observation(value=None, source=source, source_time=None, fetch_time=FETCHED,
+                          block=None, status=FetchStatus.ABSENT, detail="not listed")
+    absent = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
+                                   missing, missing, RULE, independent=True, closed_session=True)
+    assert absent.rule == valuation.RULE_CORROBORATION and absent.verdict.value is None
