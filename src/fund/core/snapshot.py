@@ -225,8 +225,10 @@ def _asset(asset: Asset) -> dict:
 
 
 def _mark(asset: Asset, reading: Observation, fresh: Check, the_mark: valuation.Mark) -> dict:
-    out = {"price_usd": _q(the_mark.price), "fresh": _check(fresh),
-           "verdict": _check(the_mark.check)}
+    # A passing mark's own reason repeats the fields beside it; a failing one says why.
+    verdict = ({"verdict": True, "reason": "the fresh answer of the feed pinned to this address"}
+               if the_mark.check.passes else _check(the_mark.check))
+    out = {"price_usd": _q(the_mark.price), "fresh": _check(fresh), "verdict": verdict}
     if asset.feed is not None:
         out |= {"feed": asset.feed.name, "feed_proxy": asset.feed.proxy.address}
     if reading is not None:
