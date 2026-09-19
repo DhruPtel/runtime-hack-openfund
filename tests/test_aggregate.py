@@ -147,3 +147,19 @@ def test_the_order_reports_arrive_in_changes_nothing():
     shuffled = FOUR[:]
     random.Random(7).shuffle(shuffled)
     assert run(shuffled).as_dict() == run(FOUR).as_dict()
+
+
+# --- 3.2: the table ------------------------------------------------------------------------------
+
+def test_the_table_shows_each_seat_the_weights_cash_and_residual():
+    shown = aggregate.table(run(FOUR), SEATS, Decimal("200"))
+    lines = shown.splitlines()
+    assert lines[0] == "4 of 4 seats reported · 4 seat(s) reported, at least the quorum of 3"
+    assert "confidence: low 0.25, medium 0.5, high 0.75" in shown
+    amd = next(line for line in lines if line.startswith("AMD "))
+    assert "buy med +0.5" in amd and "caution med 0.5" in amd and amd.endswith("+12.50")
+    assert next(line for line in lines if line.startswith("cash")).split()[-3:] == [
+        "1", "0.6875", "-62.50"]
+    assert lines[-1].startswith("residual 0:") and "funded 100%" in lines[-1]
+    held = aggregate.table(run(FOUR[:2], current={"NVDA": "0.1"}), SEATS)
+    assert "NO REBALANCE" in held

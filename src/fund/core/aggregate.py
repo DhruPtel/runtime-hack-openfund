@@ -240,3 +240,54 @@ def aggregate(reports: Sequence[Mapping[str, Any]], *, kinds: Mapping[str, str],
     moved = sum((r.target - r.current for r in final), Decimal(0))
     return Proposal(True, "quorum met: targets from the calls", reported, quorum, tuple(final),
                     cash_weight, cash_weight - moved, residual, share, confidence_weights)
+
+
+# --- the table (unit 3.2) ------------------------------------------------------------------------
+
+def _signed(value: Decimal | None) -> str:
+    if value is None:
+        return "·"
+    return ("+" if value > 0 else "") + _text(value)
+
+
+def _money(value: Decimal) -> str:
+    cents = value.quantize(Decimal("0.01"))
+    return "·" if not cents else ("+" if cents > 0 else "") + format(cents, "f")
+
+
+def table(proposal: Proposal, seats: Sequence[str], nav_usd: Decimal | None = None) -> str:
+    """The aggregation as a reader checks it: each seat's word on each asset and
+    what it adds, the direction, caution and score that follow, and the weight
+    each asset moves from and to. Cash and the rounding residual close it. With
+    `nav_usd`, each move is also shown in dollars of the paper book."""
+    short = {"low": "low", "medium": "med", "high": "high"}
+    words = ", ".join(f"{w} {_text(v)}" for w, v in proposal.confidence_weights.items())
+    head = ("rebalance" if proposal.rebalance else "NO REBALANCE") + f": {proposal.reason}"
+    lines = [f"{len(proposal.reported)} of {len(seats)} seats reported · {proposal.quorum.reason}",
+             head, f"confidence: {words} · a score moves a weight by score x the position limit",
+             ""]
+    columns = ["asset", *seats, "direction", "caution", "score", "now", "target"]
+    if nav_usd is not None:
+        columns.append("change $")
+    rows = []
+    for row in proposal.rows:
+        said = {c.seat: f"{c.word} {short[c.confidence]} "
+                        f"{(_signed if c.kind == 'direction' else _text)(c.value)}"
+                for c in row.contributions}
+        cells = [row.symbol, *(said.get(seat, "·") for seat in seats), _signed(row.direction),
+                 _text(row.caution) if row.caution else "·", _signed(row.score),
+                 _text(row.current), _text(row.target)]
+        if nav_usd is not None:
+            cells.append(_money((row.target - row.current) * nav_usd))
+        rows.append(cells)
+    cash = ["cash", *("" for _ in seats), "", "", "", _text(proposal.cash_current),
+            _text(proposal.cash_target)]
+    if nav_usd is not None:
+        cash.append(_money((proposal.cash_target - proposal.cash_current) * nav_usd))
+    rows.append(cash)
+    widths = [max(len(str(r[i])) for r in [columns, *rows]) for i in range(len(columns))]
+    for cells in [columns, *rows]:
+        lines.append("  ".join(str(c).ljust(w) for c, w in zip(cells, widths)).rstrip())
+    lines += ["", f"residual {_text(proposal.residual)}: what rounding each change toward zero "
+              f"left in cash · raises funded {_text((proposal.funded * 100).normalize())}%"]
+    return "\n".join(lines)
