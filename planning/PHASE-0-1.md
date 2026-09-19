@@ -590,7 +590,10 @@ included.
   public `robinhood.com` RPC (checked 2026-09-18). The record says it is the only
   documented endpoint and carries no archive data (`research/agent-os.md` §8;
   LESSONS 2026-09-17). So: explicit timeouts on every call, fail loudly, no
-  failover claimed, no archive read assumed. 0.10 read balances one block back
+  archive read assumed. **Built:** every request has a whole-request deadline.
+  Failover runs over an ordered endpoint list and advances on a hang, shown
+  live against a silent socket. With one endpoint it has nowhere to go, so
+  this is still fail loudly (LESSONS 2026-09-18, the public RPC). 0.10 read balances one block back
   (F0.10.4); that is recent state, not archive, and nothing relies on it.
   **Unverified:** the operator's note of a failover endpoint (Alchemy) with
   archive access. It is neither configured nor measured, so it is not built on.
@@ -600,23 +603,38 @@ included.
   failure (probe 0.3).
 - **Feeds:** `latestRoundData`, `decimals` (8 on every equity feed, F0.4.7),
   paused-oracle detection, and market-session awareness — the equity feeds are
-  `us_equities_24/5` (F0.4.1).
+  `us_equities_24/5` (F0.4.1). **Built:** `latestRoundData` and each proxy's
+  own `decimals()`, which agreed with the directory on all 37 feeds. Neither
+  paused-oracle detection nor market-session awareness is a separate check:
+  a paused feed shows up only as a stale newest point, and the session is named
+  in the verdict but does not change it (LESSONS 2026-09-18, "1.3 leaves two
+  layout questions open").
 - **Staleness binds the newest point only** (staleness decision). A newest
   observation is stale when its age exceeds its own feed's documented
   heartbeat, read from the pinned directory (86,400 s for equities), plus
   `feed_staleness_margin_seconds` (3,600 s, provisional) — so an equity feed's
   newest point is stale past 90,000 s. An `updatedAt` 3.6 h old is normal in
   market hours (F0.4.7).
-  Overnight and weekend behaviour is unmeasured.
-- **The price series** (invariant 2). This unit chooses the series and its
-  window, under the no-archive rule. Two candidates, neither measured:
-  - a feed's stored rounds, read at the pinned block via `getRoundData`;
-  - GeckoTerminal's OHLCV, which is offchain, carries its own source times, and
-    would sit beside 1.4's adapter.
+  **Measured in 1.3.** The largest weekday gap was 24.0 h, inside the limit.
+  Over one weekend, every equity feed was silent for 48–59 h, so the rule
+  judges them all stale for about 23–35 h each weekend. The rule stands, and
+  what to do about it is 1.11's question (LESSONS 2026-09-18). The comparison
+  is in the adapter, while CODEBASE says only `gates.py` makes one; that is
+  open.
+- **The price series** (invariant 2). This unit chose the series and its
+  window, under the no-archive rule. **Chosen:** the feed's own rounds, read
+  at the pinned block via `getRoundData` (DECISION, LESSONS 2026-09-18). They
+  need no archive (all 645 of AAPL's rounds were readable at a recent block),
+  and they hold the one-block rule.
+  - **Window.** 7 days, capped at 1,000 rounds, with one anchor round at or
+    before the window start.
+  - **Coverage.** `Series.coverage` says whether the window was reached: all
+    37 feeds did, with 7–361 points.
+  - **Scale breaks.** A 10,000× step between consecutive answers stops the
+    walk. 32 of 37 feeds began life about 1e8 too large.
+  - **GeckoTerminal OHLCV** was not measured and is not ruled out for 1.4.
 
-  Choosing needs a small read-only measurement inside this unit: how many past
-  rounds a feed keeps readable, or what the OHLCV endpoint returns for these
-  tokens. Historical points are not staleness-checked; they are history.
+  Historical points are not staleness-checked; they are history.
 - **Balances over RPC only.** `/wallet/portfolio` returned an empty
   `tokenBalances` for every ERC-20 the wallet has held (F0.7b.8). Its native
   balances were exact, but the adapter reads the chain.
@@ -627,8 +645,13 @@ included.
   cross-check.
 - **Rate limits.** The public RPC is documented as rate-limited
   (`research/agent-os.md`), and the 46630 endpoint returned 429 under batching
-  (Testnet limitations). The mainnet limit is unmeasured, so treat 429 as the
-  only signal and back off. Bankr's API showed no rate-limit headers at all
+  (Testnet limitations). **Measured in 1.3:**
+  - a JSON-RPC batch of 100 drew an immediate 429 with no `Retry-After`;
+  - one Multicall3 `aggregate3` of 215 reads was accepted, so reads go through
+    it, paced at 500 ms with a doubling backoff;
+  - storage reads cannot be multicalled, so 35 beacon slots take about 18 s;
+  - a rare "historical state not available" at the pinned block is retried,
+    which is safe because every read is by block hash. Bankr's API showed no rate-limit headers at all
   (F0.10.5).
 
 **Artifact:** a module that, given a block, returns prices, a price series per
@@ -642,14 +665,29 @@ asset, balances and beacon slots, each with full provenance.
 - a series whose historical points are old but whose newest point is fresh is
   accepted.
 
+**Met**, by `python -m fund.adapters.chain_4663 --prove`, live at block
+66652203:
+- all 37 feeds and the AAPL series read identically twice;
+- AAPL's oldest point, 7 days old, would judge stale alone, while the series
+  judges fresh on its newest;
+- a staleness verdict is a `Check` with its age, heartbeat and margin in the
+  reason, never a bare number;
+- a real two-block read is refused at `block-pin`;
+- a refused socket yields undetermined, not false.
+
+Offline, 39 tests in `tests/test_chain_4663.py` assert each refusal at its own
+rule; every rule was mutated and its test failed.
+
 **Risk:** a public RPC with no timeout is the exact failure `aero-stock-lp` has,
 so set timeouts first. The weekend is the other risk: a 24/5 feed may
 legitimately go longer than its heartbeat while markets are shut. That is
-unmeasured and is 1.11's checkpoint question. Historical reproducibility comes
+measured on one weekend in 1.3 (48–59 h), and remains 1.11's checkpoint
+question. Historical reproducibility comes
 from 1.9's fixtures, not from re-reading the chain.
 
 **Changed by:** the price-history and staleness decisions; the staleness config
-decision; probe 0.3's User-Agent note; F0.4.1, F0.4.7; F0.7b.8; F0.10.3–F0.10.5.
+decision; probe 0.3's User-Agent note; F0.4.1, F0.4.7; F0.7b.8; F0.10.3–F0.10.5;
+and 1.3's own measurements (LESSONS 2026-09-18).
 **Size:** bigger than drafted — the series, and the measurement to choose it.
 
 ---
@@ -1031,10 +1069,11 @@ series' newest point only) and invariant 2:
 logged and swallowed, and the acceptance case passes.
 
 **Checkpoint:** you see the refusals. Judge whether the strictness is right, or
-whether it will block every cycle on a weekend. That question is now concrete: a
-24/5 feed may legitimately go longer than its 86,400 s heartbeat while markets
-are shut, and weekend behaviour is unmeasured (F0.4.7). The margin in config,
-3,600 s and provisional, is the lever.
+whether it will block every cycle on a weekend. That question is now measured.
+1.3 read one weekend: every `us_equities_24/5` feed was silent for 48–59 h, from
+Friday's close to Monday 00:00Z. So the rule as decided (heartbeat + 3,600 s)
+judges them all stale for about 23–35 h each weekend (LESSONS 2026-09-18). The
+margin is a lever, but no margin short of about 35 h clears a weekend.
 
 **Changed by:** the staleness decision, which closes the gap this unit carried;
 the price-history decision; the staleness config decision; F0.4.1, F0.4.7.
@@ -1062,22 +1101,27 @@ Stated before the code, so that no unit's done-condition quietly assumes it:
 - **Measure whether the feed already includes the multiplier** (F0.4.4). No
   asset's multiplier clears the noise, and there is no archive to read across a
   change, so 1.4 runs on documentation.
-- **Say what a weekend does to a 24/5 feed.** It is unmeasured (F0.4.7), so
-  1.11's checkpoint judges it without data unless 1.3 measures it.
+- **Say what every weekend or holiday does to a 24/5 feed.** 1.3 measured one
+  weekend (48–59 h silent, LESSONS 2026-09-18). Holidays and other weekends are
+  unmeasured.
 - **Settle Phase 2's model settings.** `risk_model`, `max_output_tokens`,
   `context_budget_tokens` and `cycle_deadline_seconds` are still null. They
   block Phase 2, not Phase 1. The transport timeout (180 s) is longer than the
   worker deadline (120 s), which 2.4 has to resolve.
-- **Read history from the chain beyond recent state, or fail over.** There is
-  one configured endpoint, the public one, and it has no archive on the record.
-  A failover endpoint with archive access is unverified (1.3). The series has
-  to come from what is readable at the pinned block, or from an offchain
-  source, and which of the two is unmeasured until 1.3.
+- **Read an old block, or fail over to anything.** There is one configured
+  endpoint, the public one, and it has no archive on the record. Past feed
+  rounds are current state, so the series needs no archive: it is read at the
+  pinned block (1.3). But a pinned block was re-read for only 9 minutes, and
+  whether it can be re-read later is unmeasured. Failover is built (1.3) with
+  nothing to fail over to. A failover endpoint with archive access is
+  unverified.
 - **Catch a counterfeit that is inside the registry, or one that clones the
   proxy with its own beacon, except via the registry** (F0.8.5). Neither is
   testable.
-- **Know Bankr's or the RPC's rate limit.** No limit was reached and no headers
-  were returned (F0.10.5), so 1.3 and 1.5 back off on a bare 429.
+- **Know Bankr's or the RPC's rate limit.** Bankr returned no limit headers
+  (F0.10.5). The RPC refused a batch of 100 with a bare 429 and no
+  `Retry-After` (1.3), but its actual limit is unknown. So 1.3 and 1.5 back off
+  on a bare 429.
 - **Book the 6 bps that left the 0.10 sale unaccounted for** (F0.10.4). It is not
   a Phase 1 input, but it is the first thing 5.3's reconciliation will meet.
 
