@@ -602,8 +602,9 @@ the history needs thinning is 1.7's question, and the operator's.
 10. **Unexplained:** two beacon-slot reads failed once in 1.3's first proof run.
 11. **Failover has one endpoint.** The Alchemy note is unverified.
 12. **GeckoTerminal's limits are observed, not published**, and its price has no
-    source time. A pool's divergence swung from −4 to −424 bps on AMZN within
-    45 minutes on a Saturday.
+    source time. **AMZN's GeckoTerminal price alternates between about $254
+    and $265** (LESSONS). Its −424 bps "finding" may be the corroborator
+    switching pools, not the market moving. That is unresolved.
 13. **Which impact field gates is documented only.** The two were measured
     equal up to 7,084 bps.
 14. **`run/snapshot.py` has no offline test.** Its proof is the live build.
