@@ -38,10 +38,12 @@ limit sits in this one module; that is 3.4's full version, the sweep.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Iterable, Mapping, Sequence
 
 from . import cash
+from .types import Instant
 
 RULE_QUORUM = "quorum"
 RULE_TRADEABLE = "tradeable"        # the snapshot's status: staleness, divergence tier, quote at build
@@ -53,6 +55,9 @@ RULE_POSITION = "position-weight"   # a buy leaves the position at most the posi
 RULE_CASH_FLOOR = "cash-floor"      # the plan leaves at least the cash floor
 RULE_TURNOVER = "turnover"          # the plan trades at most turnover_max_bps of the NAV
 RULE_CONTEXT_BUDGET = "context-budget"  # risk's whole bundle fits the budget (invariant 3)
+RULE_MANDATE_TERM = "mandate-term"  # approved, not revoked, not expired (4.1)
+RULE_MANDATE_LEGS = "mandate-legs"  # every leg an order trades is allowed (4.1, S10)
+RULE_LIVE_BUDGET = "live-budget"    # a live order stays within the cumulative live budget (4.1)
 
 #: The gate sets a decision can be judged by. A record's schema names the set it was
 #: judged by (`core/record.py`), as it names its plan's layout, and a replay judges by
@@ -253,6 +258,84 @@ def mandate_allows(order: Mapping[str, Any], mandate: Mapping[str, Any]) -> Gate
         return Gate(RULE_MANDATE, False, f"{asset['symbol']} {asset['address']} is not an asset "
                                          "the mandate allows")
     return Gate(RULE_MANDATE, True, f"{asset['symbol']} is allowed by the mandate")
+
+
+# --- the mandate, as the treasurer holds it (4.1) --------------------------------------------------
+
+#: The mandate's fields that record the operator's approval.
+APPROVAL = ("approved_by", "approved_at", "expires_at")
+
+
+def _epoch_ms(text: Any) -> int | None:
+    """An ISO 8601 UTC time as epoch milliseconds, or None if it is not one."""
+    if not isinstance(text, str) or not text.endswith("Z"):
+        return None
+    try:
+        return int(datetime.fromisoformat(text.replace("Z", "+00:00")).timestamp() * 1000)
+    except ValueError:
+        return None
+
+
+def mandate_approved(mandate: Mapping[str, Any]) -> Gate:
+    """The operator approved this mandate: each approval field is filled in, not null
+    and not a placeholder, and it expires after it was approved."""
+    for name in APPROVAL:
+        value = mandate.get(name)
+        if not isinstance(value, str) or not value.strip() or value.startswith("PROVISIONAL"):
+            return Gate(RULE_MANDATE_TERM, None, f"the mandate's {name} is not an approval: "
+                                                 f"{value!r}, and it blocks")
+    approved, expires = _epoch_ms(mandate["approved_at"]), _epoch_ms(mandate["expires_at"])
+    if approved is None or expires is None:
+        return Gate(RULE_MANDATE_TERM, None, "the mandate's approval times are not UTC times")
+    if expires <= approved:
+        return Gate(RULE_MANDATE_TERM, False, "the mandate expires before it was approved")
+    return Gate(RULE_MANDATE_TERM, True, f"approved by {mandate['approved_by']} at "
+                                         f"{mandate['approved_at']}")
+
+
+def mandate_term(mandate: Mapping[str, Any], at: Instant) -> Gate:
+    """The mandate is in force at `at`: approved, not revoked, and not yet expired. It
+    is in force until it expires or is revoked; its approval starts the clock."""
+    approved = mandate_approved(mandate)
+    if not approved.passes:
+        return approved
+    if mandate.get("revoked") is not False:
+        return Gate(RULE_MANDATE_TERM, False if mandate.get("revoked") is True else None,
+                    f"the mandate's revoked flag is {mandate.get('revoked')!r}")
+    if at.epoch_ms >= _epoch_ms(mandate["expires_at"]):
+        return Gate(RULE_MANDATE_TERM, False, f"the mandate expired at {mandate['expires_at']}")
+    return Gate(RULE_MANDATE_TERM, True, f"in force until {mandate['expires_at']}")
+
+
+def mandate_legs(order: Mapping[str, Any], mandate: Mapping[str, Any]) -> Gate:
+    """S10: every leg the order trades is an asset the mandate allows, not only the
+    asset its label names. A buy gives USDG and gets the stock: both are checked. A
+    sell gets USDG, which is checked; the stock it gives may be outside the mandate,
+    because a held position is always sellable (S8)."""
+    allowed = {a["address"].lower() for a in mandate.get("allowed_assets") or ()}
+    if not allowed:
+        return Gate(RULE_MANDATE_LEGS, None, "the mandate names no allowed assets: unresolved, "
+                                             "and it blocks")
+    legs = ([order["sell"]["address"], order["buy"]["address"]] if order["side"] == "buy"
+            else [order["buy"]["address"]])
+    outside = [leg.lower() for leg in legs if leg.lower() not in allowed]
+    if outside:
+        return Gate(RULE_MANDATE_LEGS, False, f"the order trades {', '.join(outside)}, which the "
+                                              "mandate does not allow")
+    return Gate(RULE_MANDATE_LEGS, True, "every leg it trades is allowed by the mandate")
+
+
+def live_budget(mandate: Mapping[str, Any], spent_usd: Decimal, order_usd: Decimal) -> Gate:
+    """A live order stays within the mandate's cumulative live budget. Null until
+    Phase 5 sets it, and null blocks: no live order until then. A paper order never
+    asks."""
+    budget = _number(mandate, "cumulative_budget_usd")
+    if budget is None:
+        return _unresolved(RULE_LIVE_BUDGET, "cumulative_budget_usd")
+    if spent_usd + order_usd > budget:
+        return Gate(RULE_LIVE_BUDGET, False, f"${spent_usd + order_usd} would pass the live "
+                                             f"budget of ${budget}")
+    return Gate(RULE_LIVE_BUDGET, True, f"${spent_usd + order_usd} of ${budget} live")
 
 
 def order_size(usd: Decimal, limits: Limits) -> Gate:
