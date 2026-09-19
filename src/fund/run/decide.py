@@ -224,7 +224,8 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
            quote_label: str, risk_settings: risk.Settings,
            risk_credential: runner.SeatCredential | None, risk_agent: str,
            environ: Mapping[str, str],
-           recorded_reply: str | None, store: report_store.ReportStore,
+           recorded_reply: str | Callable[[Mapping[str, Any], str], str] | None,
+           store: report_store.ReportStore,
            env_file: Path | None, schema: str = record.SCHEMA,
            config_dir: Path | None = None) -> dict[str, Any]:
     """The whole path from calls to a signed record. Returns what it wrote.
@@ -236,6 +237,10 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
 
     `schema` fixes the plan's layout and the gate set the plan is judged by. A new
     decision takes today's; a replay takes the one its record names.
+
+    `recorded_reply` is the risk agent's reply, read from a recording; a callable is
+    given the written plan and its sha256 and returns one, which is how a paper cycle
+    scripts a vote it never asks a model for.
 
     `risk_agent` is the risk seat's identity from its key source, the same whether
     the vote is asked live or read from a recording. Until the 3.8 sweep it was
@@ -275,11 +280,12 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
                          snapshot_sha256=snapshot_sha256, judged_at=judged_at, layout=fixed.layout)
     plan_sha256 = document_id(written)
 
+    reply = recorded_reply(written, plan_sha256) if callable(recorded_reply) else recorded_reply
     outcome = risk.review(written, plan_sha256, snapshot=snapshot, mandate=mandate,
                           limits=limits, settings=risk_settings, work_dir=out_dir / "risk",
                           reports=[risk.ReportText(o.seat, o.text) for o, _ in accepted],
                           credential=risk_credential, environ=environ,
-                          recorded_reply=recorded_reply, store=store)
+                          recorded_reply=reply, store=store)
 
     config_sha256 = {name: hashlib.sha256(data).hexdigest() for name, data in config_bytes.items()}
     the_record = record.build(
@@ -360,6 +366,67 @@ def replay(cycle_dir: Path, snapshot_path: Path, out_dir: Path, *,
     if done["envelope"]["signed"]:
         raise ReplayError("a replay signed its record")
     return (out_dir / "record.json").read_bytes()
+
+
+def no_rebalance(*, snapshot_path: Path, offered: Sequence[Offered], out_dir: Path, why: str,
+                 at: Instant, env_file: Path | None, config_dir: Path | None = None,
+                 schema: str = record.SCHEMA) -> dict[str, Any]:
+    """A signed record when the book cannot be valued: no rebalance, and why (S12).
+
+    One holding the snapshot cannot mark leaves the fund unable to size anything, and
+    3.7's rule is that a cycle says what it decided even when it decided nothing. So
+    the record carries the snapshot, the reports, the config and the reason, with no
+    orders, and is signed like any other. Nothing is quoted and no model is asked."""
+    snapshot_bytes = snapshot_path.read_bytes()
+    snapshot = json.loads(snapshot_bytes)
+    snapshot_sha256 = hashlib.sha256(snapshot_bytes).hexdigest()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    config_bytes = read_config(config.CONFIG_DIR if config_dir is None else config_dir)
+    carried = out_dir / "config"
+    carried.mkdir(exist_ok=True)
+    for name, data in config_bytes.items():
+        (carried / name).write_bytes(data)
+    analysts = json.loads(config_bytes["analysts.json"])
+    accepted, refused = check(offered, snapshot, snapshot_sha256, analysts)
+
+    unvalued = {"rule": "book-unvalued", "value": None, "reason": why}
+    plan_document = {
+        "snapshot_sha256": snapshot_sha256, "judged_at_ms": at.epoch_ms, "rebalance": False,
+        "book": {"unvalued": why, "label": "the paper book could not be valued, so it was not "
+                                           "sized: no value is never a value of zero"},
+        "orders": [], "funding": {"share_funded": None, "rule": "nothing was funded"},
+        "cash_after_usd": None, "turnover_usd": "0",
+        "not_planned": "everything: a holding the snapshot cannot mark stops valuation (S12)"}
+    review = {
+        "gates": {"plan": [unvalued], "plan_clear": False, "orders": [], "turnover_usd": "0"},
+        "budget": {"tokens": 0, "gate": {"rule": "context-budget", "value": None,
+                                         "reason": "no call was made: " + why}},
+        "brief": {"files": [], "sha256": None}, "reply": None, "reply_text": None,
+        "decision": {"orders": [], "approved": [], "vetoed": [], "cash_floor": None,
+                     "overall": None, "reply_notes": [], "no_votes": unvalued}}
+    the_record = record.build(
+        snapshot=snapshot, snapshot_sha256=snapshot_sha256,
+        reports=[{"seat": o.seat, "agent": o.agent, "text": o.text,
+                  "imprecise_citations": [i.as_dict() for i in v.imprecisions]}
+                 for o, v in accepted],
+        config_sha256={name: hashlib.sha256(data).hexdigest()
+                       for name, data in config_bytes.items()},
+        proposal={"rebalance": False, "rows": [], "reason": why}, plan=plan_document,
+        review=review, risk_agent=None, risk_reply=None, schema=schema)
+    record_path = out_dir / "record.json"
+    record_path.write_bytes(record.encode(the_record))
+    envelope = signed(record_path, out_dir / "envelope.json", env_file)
+    check_ = verified(record_path, out_dir / "envelope.json",
+                      config.CONFIG_DIR if config_dir is None else config_dir)
+    _write(out_dir / "plan.json", plan_document)
+    _write(out_dir / "reports.json", {
+        "accepted": [{"seat": o.seat, "agent": o.agent, "source": o.source} for o, _ in accepted],
+        "refused": [{"seat": o.seat, "why": text} for o, text in refused]})
+    return {"snapshot_sha256": snapshot_sha256, "accepted": [o.seat for o, _ in accepted],
+            "refused": [(o.seat, text) for o, text in refused], "table": why,
+            "plan": plan_document, "plan_sha256": document_id(plan_document), "review": review,
+            "record": the_record, "decision_id": record.decision_id(the_record),
+            "envelope": envelope, "authorizes": check_, "out_dir": str(out_dir)}
 
 
 def summary(done: Mapping[str, Any]) -> str:
