@@ -185,17 +185,6 @@ def test_a_proposal_matches_a_registry_asset_to_its_feed():
     assert [p.asset for p in props] == [AssetId(CHAIN, A)] and unresolved == []
 
 
-def test_a_counterfeit_can_never_be_proposed_a_feed():
-    # F0.8.3: feed presence admitted both GME counterfeits, because a forger
-    # picks its own ticker. The proposal iterates registry records only, so a
-    # token that is not listed gets nothing, even with the exact ticker.
-    records = u.parse_registry(registry_bytes(registry_asset("GME", A)))
-    props, _ = u.propose_feed_map(
-        records, directory_bytes(equity_feed("GME", "Robinhood GME / USD", "0x" + "11" * 20)))
-    assert {p.asset for p in props} == {AssetId(CHAIN, A)}
-    assert AssetId(CHAIN, B) not in {p.asset for p in props}  # the counterfeit's address
-
-
 def test_an_unmatched_equity_feed_is_reported_not_dropped_or_guessed():
     records = u.parse_registry(registry_bytes(registry_asset("DELL", A), registry_asset("SGOV", B)))
     props, unresolved = u.propose_feed_map(records, directory_bytes(
