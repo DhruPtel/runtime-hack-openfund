@@ -9,14 +9,14 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds into the plan docs, as of 2026-09-19, after the Phase 2 plan:**
-- **2.1 is a stop** again. `CLAUDE.md`, PLAN §8, ROADMAP and SIMPLIFICATION's
-  2.1 row still say it was spent (DECISION below).
-- **Unit 2.0,** the SIWE proof, and the 7.6 slice if approved, go into ROADMAP.
-- **The context budget** in SIMPLIFICATION.md becomes 70,000, not 60,000.
+**Pending folds into the plan docs: the 7.6 page slice into ROADMAP, if the
+operator approves it.**
 
-These three sit outside that pass's paths, which were `planning/PHASE-2.md` and
-`tracker/`.
+**Folded on 2026-09-19, before 2.0 ran:** into `CLAUDE.md`, PLAN §8, ROADMAP,
+SIMPLIFICATION.md and the gate report's marker:
+- 2.1 as a stop;
+- unit 2.0;
+- the 70,000 context budget.
 
 **Folded before that, after the scope pivot:** The 2026-09-19 decisions are folded into PLAN §8, where the phase list
 begins, with markers in §1, §2, §5, §6, §11, §12 and §13. They also sit in the

@@ -29,15 +29,9 @@ Nothing yet combines what they say. That is Phase 3.
   not a formality. If it fails, the options are below. One shared wallet is not
   among them.
 - **2.1 is a stop:** a hand-written example report that the operator reads and
-  approves before any code.
-  - **This contradicts what the pivot recorded.** `CLAUDE.md`, PLAN §8, ROADMAP
-    and SIMPLIFICATION.md say 2.1's stop was spent when the analysis was
-    approved.
-  - This plan follows the operator's instruction. The contradiction is recorded
-    in LESSONS 2026-09-19. The fix to those four files is owed, outside this
-    pass's paths.
-  - Until it is fixed, `CLAUDE.md`'s "Stop only at…" line would let a session
-    walk past 2.1.
+  approves before any code. The pivot pass had recorded this stop as spent.
+  That was corrected on 2026-09-19 in `CLAUDE.md`, PLAN §8, ROADMAP and
+  SIMPLIFICATION.md (LESSONS 2026-09-19).
 - **Risk levels:**
   - **2.4 is H:** the runner, and the separation of keys between processes.
   - **2.0 is H,** because it is about keys (`CLAUDE.md`: spend authority means
@@ -623,15 +617,13 @@ fresh calls.
 
 ---
 
-## Owed outside this plan's paths
+## Owed outside this plan's paths, and what has been folded
 
-- **The 2.1 stop:**
-  - `CLAUDE.md` ("Stop only at…"), PLAN §8, ROADMAP and SIMPLIFICATION's 2.1
-    row still say 2.1's stop was spent;
-  - the operator's instruction makes it a stop;
+- **Folded 2026-09-19:**
+  - the 2.1 stop, unit 2.0 and the 70,000 budget, into `CLAUDE.md`, PLAN §8,
+    ROADMAP and SIMPLIFICATION.md;
   - the stops from Phase 2 are 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5.
-- **ROADMAP:** unit 2.0, and the 7.6 slice if approved.
-- **SIMPLIFICATION.md:** the context budget, 70,000 rather than 60,000.
+- **ROADMAP, still owed:** the 7.6 slice, if approved.
 - **Built by the units themselves:**
   - `config/analysts.json` (2.3);
   - `credentials.py` and `.env.example` (2.4);
