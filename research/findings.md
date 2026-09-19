@@ -4363,3 +4363,39 @@ still owed.
    agent's judgement, most plausibly on AMD, the one order a condition seat
    cautions.
 3. **A risk agent that says so.** It has not yet run on real input.
+
+## 3.8, revisited — The four replies re-validated after the operator's rule on citations
+
+**Run offline, 2026-09-19,** on the stored text of the four 3.8 replies
+(`fixtures/cycles/20260919T171351Z/`). No new call was made.
+
+**What changed in the validator** (LESSONS 2026-09-19; `agents/schema.py`):
+- a figure written with thousands separators is read as one number;
+- a bracket that is not a field reference is prose, not a citation;
+- a real value cited under a loose reference is accepted, and the imprecision
+  is recorded in the parsed result and in the signed record;
+- a figure that matches no value of the assets its line is about still refuses
+  the report.
+
+The search covers the call's own asset and the assets the line names, not the
+whole snapshot.
+
+| Seat | At 3.8 | Now | Imprecisions recorded | What still refuses |
+|---|---|---|---|---|
+| price-trend | refused (1) | **accepted** | 1: INTC's 109.05, cited to two closes, is its mark | — |
+| execution-quality | refused (5) | **accepted** | 5: `swap_impact_bps`, `fee_bps` and `slippage_bps` resolve to `quote.…` | — |
+| price-integrity | refused (4) | **accepted** | 0: the separators are read, and its bracket was prose | — |
+| cross-asset-macro | refused (7) | **refused (1)** | 9: META's, INTC's, NVDA's and SPY's figures, each found under the asset the line names, and USO's mark | `-0.09`, written `+(-0.09)%`: a percentage the parser does not read as one, so it is checked as a figure and found nowhere |
+
+**Three of four now pass: a quorum.** The one refusal left is a parser gap on
+our side, listed in the sweep and not fixed.
+
+**The fabrication check still holds** (`tests/test_schema.py`):
+- six figures from these replies, each changed to a value the snapshot does not
+  hold, all refuse. They include figures on loose lines, a figure written with
+  separators, and a figure that belongs to another asset;
+- a real value of an asset the line does not name refuses;
+- a figure behind a bracket of prose is checked.
+
+Four ways of weakening the check were each broken in a copy, and each was
+caught.
