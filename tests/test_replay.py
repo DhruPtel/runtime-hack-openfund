@@ -5,6 +5,7 @@ answers or clock changes the rebuilt hash, and a missing answer stops the replay
 from __future__ import annotations
 
 import gzip
+import json
 import shutil
 
 import pytest
@@ -76,6 +77,29 @@ def test_a_missing_answer_stops_the_replay_rather_than_reading_as_unreachable(tm
     (copy / "venue.jsonl.gz").write_bytes(gzip.compress(b"".join(lines[:-1])))
     with pytest.raises(cache.ReplayMiss, match="does not hold"):
         run.replay(copy)
+
+
+def test_an_answer_the_replay_never_asked_for_fails_it(tmp_path):
+    # A replay that asks for less than the live build did has diverged from it,
+    # even if the snapshot happens to come out the same.
+    copy = tmp_path / CAPTURE.name
+    shutil.copytree(CAPTURE, copy)
+    lines = gzip.decompress((copy / "venue.jsonl.gz").read_bytes()).splitlines(keepends=True)
+    (copy / "venue.jsonl.gz").write_bytes(gzip.compress(b"".join(lines + lines[-1:])))
+    replayed = run.replay(copy)
+    assert replayed.unused["venue"] == (1, 0) and not replayed.all_used and not replayed.identical
+
+
+def test_a_replay_reads_the_captures_config_not_todays(tmp_path, monkeypatch):
+    # Months later config/ will have moved on. Here today's divergence limit is
+    # halved; the replay must still build with the thresholds the capture was built with.
+    today = tmp_path / "config"
+    shutil.copytree(run.CONFIG, today)
+    thresholds = json.loads((today / "thresholds.json").read_text())
+    thresholds["divergence_max_bps"] = 50
+    (today / "thresholds.json").write_text(json.dumps(thresholds))
+    monkeypatch.setattr(run, "CONFIG", today)
+    assert run.replay(CAPTURE).identical
 
 
 def test_a_capture_carries_its_provenance_and_names_the_rpc_only_by_name():
