@@ -203,6 +203,14 @@ def test_in_a_closed_session_divergence_is_a_finding_carried_in_the_entry():
     assert snap.document["summary"]["findings"] == [["AMZN", "closed-session divergence", "-499.47"]]
 
 
+def test_a_closed_session_divergence_within_the_limit_is_no_finding_but_stays_visible():
+    snap = snapshot.build(inputs(stock("AMZN", corroborator="252.70", closed=True)), U)
+    e = entry(snap, "AMZN")
+    assert e["findings"] == [] and snap.document["summary"]["findings"] == []
+    assert e["corroboration"]["session"] == "closed" and e["corroboration"]["divergence_bps"] == "-3.96"
+    assert e["status"]["value"] == "tradeable"
+
+
 def test_in_an_open_session_the_same_divergence_is_vetoed():
     e = entry(snapshot.build(inputs(stock("AMZN", corroborator="265.87982073", closed=False)), U), "AMZN")
     assert e["status"]["value"] == "divergence_veto" and e["status"]["rule"] == "divergence"

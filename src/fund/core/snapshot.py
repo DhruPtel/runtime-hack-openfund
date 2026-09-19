@@ -27,8 +27,10 @@ document is its output (LESSONS 2026-09-18).
   and the session;
 - `quote`: the venue's price at the nominal size, its age and impact,
   `tradeable`, and `executable`, which is always undetermined;
-- `findings`: what was seen and judged rather than acted on, such as a
-  closed-session divergence;
+- `findings`: what was seen and judged rather than acted on. Today that is a
+  closed-session divergence past the limit an open session would veto at.
+  Smaller divergences are not findings: the `corroboration` block already
+  carries every divergence and its session (DECISION, LESSONS 2026-09-18);
 - `status`: the first rule that did not pass, or `tradeable`;
 - `timeline`: the price series, oldest first, as `[updated_at, price_usd]`,
   with its coverage stated. A short series says so; nothing is truncated
@@ -390,7 +392,8 @@ def build(inputs: Inputs, universe: Universe) -> Snapshot:
             "mark": _mark(s.asset, s.reading, s.fresh, the_mark),
             "corroboration": _corroboration(s, cross),
             "quote": _quote(s, inputs.built_at, cash_symbol),
-            "findings": [_finding(cross.finding)] if cross.finding else [],
+            "findings": ([_finding(cross.finding)]
+                         if cross.finding and cross.finding.beyond_open_session_limit else []),
             "status": _status(status, rule_name, check),
             "timeline": _timeline(s.series),
         })
