@@ -454,33 +454,167 @@ at 1.3's close.
 
 ---
 
-## State at close — 2026-09-18 (1.3 done)
+## State at close — 2026-09-18, after 1.3's close-out
 
-**Done.** All of Phase 0, the Phase 1 replan, 1.1 (types), 1.2 (universe) and
-**1.3 (chain adapter)**. 168 tests, offline, plus one live proof command:
-`python -m fund.adapters.chain_4663 --prove`. 1.2's loose ends are closed:
-- `config/universe.json` is retired;
-- `UniverseStatus.LISTED_NOT_ACTIVE` exists, and `Admission.universe_status`
-  maps to it;
-- the six owed LESSONS entries are written.
+**Read this first.** This note describes the repository at the commit that last
+changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
+commits, this note is older than the code, so read those commits before trusting
+it. The previous note went stale while six units were built after it, and handed
+a restarting session six wrong facts. Where this note and git disagree, git is
+right.
 
-**Open, for the operator.** None of these is resolved here.
-- **The weekend.** The decided rule judges every equity feed stale for about
-  23–35 h each weekend (one weekend measured). That is 1.11's checkpoint
-  question, which now has data.
-- **Where the staleness comparison lives.** It is in the chain adapter, while
-  CODEBASE says only `gates.py` makes one. That is for 1.8.
-- **Where the HTTP client lives.** `adapters/http.py` is still a stub. 1.4 and
-  1.5 need the chain adapter's deadline and backoff, so it is either lifted
-  into `http.py` or imported.
-- **The registry fetch.** The registry and directory fetch still has no owning
-  unit (from 1.2).
+**Check it in a minute.** Nothing here spends.
+- `git log --oneline -15` and `git status -sb`.
+- `make test`: 168 passed when this was written.
+- `make check-env`: which credentials are present, by name only.
+- `PYTHONPATH=src python3 -m fund.adapters.chain_4663 --prove`: live and
+  read-only, about 2 minutes, and needs `RPC_4663_MAINNET` in `.env`. It re-runs
+  every claim 1.3 makes.
 
-**Still open from before.** The 180 s transport timeout exceeds the 120 s worker
-deadline (for 2.4). The quote response's mixed formats are for 1.5. Six types
-wait for 2.1–6.1.
+### Done, through 1.3
+- **Phase 0.** Every probe, 0.1–0.11 plus 0.7b–e and the testnet probe. The
+  findings are in `research/findings.md`, and every decision is in
+  `tracker/LESSONS.md` (search "DECISION:").
+- **The Phase 1 replan.** Every Phase 1 unit was rewritten against the Phase 0
+  record, in `planning/PHASE-0-1.md`.
+- **1.1 types** (`src/fund/core/types.py`), **1.2 universe**
+  (`src/fund/core/universe.py`, `config/registry/`) and **1.3 chain adapter**
+  (`src/fund/adapters/chain_4663.py`, `config/chain.json`).
+- **The whole of what is built.** Under `src/fund/`, that is `config.py`,
+  `credentials.py`, `redaction.py`, `core/types.py`, `core/universe.py` and
+  `adapters/chain_4663.py`. Every other module is a stub whose docstring says
+  "Not yet built" and names its unit. `grep -l "Not yet built" -r src/` lists
+  34 of them.
+- **Make targets.** `make test` and `make check-env` work. `snapshot`,
+  `selftest`, `replay`, `cycle` and `cycle-demo` print "not built yet".
 
-**Funding.** Unchanged since 0.10. 1.3's proof read the wallet live: 0.078742
-USDG and 0.000460 ETH on 4663.
+### Next: unit 1.4, price cross-check (PHASE-0-1 1.4). Not started.
+It builds `adapters/gecko.py` and `core/valuation.py`, both stubs now. It
+depends on:
+- **1.2's pinned feed proxies.** Done.
+- **1.3's feed readings and freshness verdicts.** Done. `core/` cannot import
+  an adapter, so `valuation.py` takes them as arguments.
+- **An HTTP client for GeckoTerminal**, with a deadline, backoff and a
+  User-Agent. `adapters/http.py` is a stub; see "Stubbed" below.
+- **The divergence tiers in `config/thresholds.json`**: 100 bps above $1M of
+  24h volume. Set, provisional.
+- **The volume measure the tier was set on**: GeckoTerminal's token-level
+  `volume_usd.h24` from the batch tokens endpoint, as in `probes/feed.py`
+  (F0.4.5).
+- **The weekend decision.** It is not recorded; see "Open" below. Until it is,
+  a weekend-stale Chainlink answer is stale under the rule in force, so whether
+  it may be a mark is unsettled.
 
-**Next.** Unit 1.4 (price cross-check), when the operator says go.
+### Stubbed, and needed soon
+- **`adapters/http.py`** (its stub says unit 1.3). 1.4's `gecko.py` and 1.5's
+  `bankr_quote.py` both need the deadline, failover-on-hang, pacing and
+  doubling-backoff behaviour that 1.3 built inline, as `RpcClient` and
+  `urllib_transport` in `chain_4663.py`. It was built there because that pass
+  was limited to `chain_4663.py`. It is undecided whether to lift it into
+  `http.py` or import it from the chain adapter; CODEBASE's tree marks this open.
+- **The rest of Phase 1:**
+  - `gecko.py` and `valuation.py` (1.4);
+  - `bankr_quote.py` (1.5);
+  - `snapshot.py` (1.6);
+  - `cache.py` (1.9).
+
+  `core/gates.py` is 3.4's.
+
+### Open items, none resolved
+1. **The weekend-staleness decision is not recorded** (LESSONS, "schedule, not a
+   session").
+   - The operator decided that a gap inside a closed session keeps the last
+     round as the mark.
+   - The verdict carries only the directory's `marketHours` label, and nothing
+     says when that schedule is open. So the operator must say how a closed
+     session is defined before the decision can be recorded.
+   - The rule in force is heartbeat plus 3,600 s. It judges every equity feed
+     stale for about 23–35 h each weekend (one weekend measured).
+   - PLAN §13 was not changed.
+2. **The staleness comparison stays in the adapter**, as a named exception
+   (DECISION, LESSONS; CODEBASE §3; PLAN §2 invariant 4).
+   - Whether it later moves into `gates.py` is open.
+   - The decision named 1.8 for that, but `gates.py` is built at 3.4. Which unit
+     revisits it is for the operator.
+3. **Two listed feed checks do not exist as separate checks.**
+   - **Paused-oracle detection.** A paused feed shows only as a stale newest
+     point. Whether these proxies expose a pause flag was not probed.
+   - **Market-session awareness.** The schedule label is named in the verdict's
+     reason and changes nothing.
+4. **Where the HTTP client lives** (above).
+5. **Nothing owns the registry and directory refresh fetch** (from 1.2).
+6. **The 180 s transport timeout exceeds the 120 s worker deadline**, for 2.4 to
+   resolve.
+7. **The quote response mixes human, raw and lossy amount formats**, for 1.5.
+8. **Six types wait for 2.1–6.1** (1.1 was narrowed).
+9. **Unmeasured:** holidays, and every weekend but one.
+10. **Unexplained:** two beacon-slot reads failed once in 1.3's first proof run,
+    and the cause was not captured.
+11. **Failover has one endpoint**, so a dead RPC still fails loudly. The
+    operator's note of an Alchemy endpoint with archive access is unverified.
+12. **Folds owed**, outside this pass's paths:
+    - `planning/PHASE-0-1.md` 1.3 still calls the staleness location open;
+    - it says "the session is named in the verdict" (LESSONS preamble);
+    - `README.md` line 9 still says "Status: building, Phase 0 … unit 0.1 is
+      done". It is stale, so do not trust it.
+
+### Config values that are set but provisional
+- **`thresholds.json`:**
+  - `quote_max_age_seconds` 60;
+  - `impact_max_bps` 50;
+  - `feed_staleness_rule` `per_feed_heartbeat_plus_margin`, with
+    `feed_staleness_margin_seconds` 3600;
+  - `divergence_max_bps` 100, with `corroborator_min_volume_usd_24h` 1,000,000.
+- **`models.json`:**
+  - `analyst_model` `claude-sonnet-5`, until 2.4;
+  - `worker_deadline_seconds` 120;
+  - `transport_timeout_seconds` 180.
+- **`chain.json`**, where every value is provisional (unit 1.3):
+  - `request_timeout_seconds` 20;
+  - `attempts_per_endpoint` 3;
+  - `backoff_seconds` 2, doubling;
+  - `min_request_interval_ms` 500;
+  - `multicall_chunk` 200;
+  - `series_window_seconds` 604800 (7 days);
+  - `series_max_rounds` 1000;
+  - `series_scale_break_ratio` 10000.
+- **`analysts.json`:** the four-analyst roster, until checkpoint 2.1.
+
+**Set and decided, not provisional:**
+- `mandate.json`'s `execution_wallet`
+  (`0x93faecde3c88a713e1edddf417c02c326889a3da`);
+- capital $200 and $25 per trade (LESSONS 2026-09-17).
+
+**Still null, which means unresolved and blocks whatever reads it:**
+- `cadence.json`: `confirmation_depth`, `cycle_deadline_seconds`,
+  `retry_budget_per_worker`;
+- `models.json`: `risk_model`, `max_output_tokens`, `context_budget_tokens`;
+- `thresholds.json`: `max_position_weight`, `turnover_max_bps`,
+  `cash_floor_usd`, `quorum_min_analysts`;
+- `mandate.json`: `cumulative_budget_usd`, `approved_by`, `approved_at`,
+  `expires_at`, and an empty `allowed_assets`.
+
+### Committed versus pushed
+Checked with `git ls-remote` at 2026-09-19 00:41Z: the remote's `main` was
+`ab0b044`, the commit that closed 1.3. Everything through 1.3 is pushed; the
+operator pushed it, and no session has. This close-out's commits come after
+`ab0b044`, from `88d3ee1` through the commit that adds this note. They are
+committed, **not pushed**. To re-check, run `git fetch` and then
+`git log origin/main..HEAD`.
+
+### Funding
+Unchanged since 0.10. 1.3's proof read 0.078742 USDG and 0.000460 ETH on 4663
+at block 66652203.
+
+### What this note does not cover
+- **Decisions.** It does not restate any in full; LESSONS holds them.
+- **The plan.** It is not the plan: PLAN, ROADMAP and PHASE-0-1 are. ROADMAP
+  and PHASE-0-1 were not re-read in full for this note.
+- **Findings.** It does not list them; `research/findings.md` does.
+- **Credentials.** It checks none beyond `make check-env`'s names.
+- **The remote.** Its check is one moment. A push or fetch after 00:41Z is not
+  reflected.
+- **Phase 2 and later.** Nothing beyond the open items that block them.
+- **Unrecorded conversation.** Anything said in the session that wrote this
+  note but not written into `tracker/` or `planning/` is not here, and is lost
+  on restart.
