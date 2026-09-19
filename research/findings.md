@@ -3669,3 +3669,201 @@ and read-only might refuse it too.
   Re-measuring it needs the rule relaxed by name, which is the operator's call.
 - **Spent: $0.** Nothing was bought, nothing moved, and every attempt was sent
   once.
+
+
+---
+
+## 2.6 — The first real analyst report
+
+**Date:** 2026-09-19, sent 15:39:00Z. **Method:**
+`PYTHONPATH=src python3 -m fund.agents.runner --snapshot
+fixtures/snapshots/66852293-253315c0e691/snapshot.json --seats price-integrity
+--retries 0 --confirm`. That is one seat and one call. The runner's retry was
+held at 0 so the measurement is a single call. **Captures:**
+`fixtures/live/cycles/20260919T153900Z/` (gitignored): the result, the job and
+the event log.
+
+### The keys, measured before anything ran
+
+`probes/keymap.py`, read-only, with the 2.0 key and a never-issued key as
+controls:
+
+| Key | Wallet API | Read-only | LLM gateway | Agent API |
+|---|---|---|---|---|
+| `BANKR_LLM_KEY` | **off**: `/wallet/sign` refused 403 "Wallet API access not enabled" | not measurable: the Wallet API refuses first | on, balance $15.791107 | **off**, refused 403 |
+| `BANKR_KEY_READ` | on | yes: 403 "Read-only API key" | off | off |
+| `BANKR_KEY_EXEC` | on | no: 400 validation, as labelled | off | off |
+
+**Verdict: the key the analysts hold is refused by name on both surfaces that
+can sign or transact.** It matches the dashboard's word, where the 2026-09-19
+measurement did not.
+
+**Two things this cannot measure:** the read-only toggle itself on this key,
+and token launch on any key. No read is gated by token launch, and a deploy
+request was not sent.
+
+### The report, as it came back, unedited
+
+```
+REPORT price-integrity 0x93faecde3c88a713e1edddf417c02c326889a3da 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c
+
+The block carries a closed us_equities_24/5 session: every stock's Chainlink mark is frozen at its last pre-close round while GeckoTerminal and the venue AMM keep trading. The snapshot already flags five tradeable assets as closed-session divergences past 100bps (AMD, AMZN, GOOGL, MSTR, SGOV). Because a divergence alone doesn't say which of the three prices is wrong, I checked pairwise agreement: where GeckoTerminal and the venue land close to each other and far from the mark, the mark is the stale/broken one; where the mark and venue agree and only GeckoTerminal is the outlier, the mark still holds up despite the flagged finding. The other fifteen flagged assets sit below the GeckoTerminal volume line and are not tradeable, so I make no call on them. The remaining tradeable assets show no material three-way disagreement and need no comment.
+
+CALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc caution medium
+GeckoTerminal and the venue sit within ~30bps of each other while the frozen mark is ~136bps above both, so the closed-session freeze looks like it is overstating AMD, not the two live sources disagreeing.
+- 559.42445 mark [mark.price_usd]
+- 553.5582086607 GeckoTerminal [corroboration.price_usd]
+- 551.9120935475604 venue [quote.venue_price_usd]
+- mark vs venue diverges ~136bps, GeckoTerminal vs venue only ~30bps [mark.price_usd, quote.venue_price_usd, corroboration.price_usd]
+Wrong if: GeckoTerminal and the venue diverge from each other by more than 50bps at reopen, which would undercut the assumption that they, not the mark, are in agreement.
+
+CALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 proceed low
+The recorded -450.32bps finding is GeckoTerminal versus the mark, but the mark and the venue agree closely; the finding is GeckoTerminal's problem, not the mark's.
+- 253.863 mark [mark.price_usd]
+- 253.28085544501803 venue, ~23bps from mark [quote.venue_price_usd, mark.price_usd]
+- 265.8339854153 GeckoTerminal, divergence -450.32bps from mark [corroboration.price_usd, corroboration.divergence_bps]
+Wrong if: the venue price moves to track GeckoTerminal instead, diverging from the mark by more than 100bps.
+
+CALL GOOGL 0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3 proceed low
+Same pattern as AMZN: mark and venue are ~12bps apart while GeckoTerminal sits ~147bps from the venue, so the flagged -132.33bps finding traces to GeckoTerminal, not the mark.
+- 350.47135177 mark [mark.price_usd]
+- 350.04082044804966 venue, ~12bps from mark [quote.venue_price_usd, mark.price_usd]
+- 355.171284689 GeckoTerminal, divergence -132.33bps from mark [corroboration.price_usd, corroboration.divergence_bps]
+Wrong if: the venue price drifts toward GeckoTerminal, diverging from the mark by more than 100bps.
+
+CALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution medium
+GeckoTerminal and the venue are only ~55bps apart from each other, but the frozen mark is ~132-187bps from both, marking it as the outlier this close.
+- 152.643 mark [mark.price_usd]
+- 155.5016463786 GeckoTerminal [corroboration.price_usd]
+- 154.65896270001573 venue [quote.venue_price_usd]
+- mark vs venue diverges ~132bps, GeckoTerminal vs venue only ~55bps [mark.price_usd, quote.venue_price_usd, corroboration.price_usd]
+Wrong if: GeckoTerminal and the venue diverge from each other by more than 80bps at reopen, undercutting the case that mark alone is off.
+
+CALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 proceed low
+The 124.7bps finding is GeckoTerminal versus the mark; mark and venue are only ~22bps apart, so GeckoTerminal, likely thin here, is the one out of line, not the mark.
+- 101.10821255 mark [mark.price_usd]
+- 100.88197839075325 venue, ~22bps from mark [quote.venue_price_usd, mark.price_usd]
+- 99.8629967858 GeckoTerminal, divergence 124.7bps from mark [corroboration.price_usd, corroboration.divergence_bps]
+Wrong if: the venue price drifts down toward GeckoTerminal, diverging from the mark by more than 80bps.
+```
+
+### F2.6.1 — It was refused, on one real rule and one validator defect
+
+**Confidence: measured.**
+
+**As run, the verdict was `invalid`, with six refusals:**
+- **`header`:** the agent field is `0x93fa…a3da`, the fund's wallet, where the
+  brief gave `0x…` and said the first line "must be exactly" as given.
+  - The model read the unassigned placeholder as an elided address and filled
+    in the only wallet the snapshot names.
+  - **This is a real failure,** and it is the brief's and the placeholder's as
+    much as the model's.
+- **Five `figure` refusals:** `136bps`, `23bps`, `12bps`, `132bps`, `22bps`.
+  - Each is a divergence the model computed between the prices it cited.
+  - **All five are correct** to within a basis point (checked by hand below).
+  - **The validator was wrong to refuse them.** 2.2 treats any number followed
+    by "bps" as a claim about a `_bps` field. The approved rule says a computed
+    figure is cited and not checked.
+
+**Re-validating the same recorded text** in a scratch copy, with no new call:
+- with only the bps rule corrected (a bps figure is checked only when its line
+  cites a `_bps` field), **the sole refusal is the header**;
+- with the header's agent also as expected, **the report is accepted.** Its five
+  calls are MSTR and AMD `caution medium`, and AMZN, GOOGL and SGOV
+  `proceed low`.
+
+**The fix is owed.** It is the bps rule and its test, and `tests/` was outside
+this unit's paths. Nothing in `src/` changed after the call.
+
+### F2.6.2 — No figure was fabricated
+
+**Confidence: measured.**
+- **Every figure that is a single field matched it.** The model copied each
+  field at full precision, such as `551.9120935475604`. The two divergence
+  fields it cited (`-450.32`, `-132.33`) matched `corroboration.divergence_bps`.
+- **Its computed figures, checked by hand against the snapshot:**
+  - AMD: mark against venue 136.1 bps, GeckoTerminal against venue 29.8.
+  - AMZN: 23.0.
+  - GOOGL: 12.3 and 146.6.
+  - MSTR: 130.3, 54.5 and 183.8.
+  - SGOV: 22.4.
+
+  All are right except one clause. "The frozen mark is ~136bps above both" is
+  true of the venue, but the mark sits 106 bps above GeckoTerminal.
+- **The validator catches none of the prose.** It did not catch "venue AMM" (the
+  venue is RFQ, and the snapshot never calls it an AMM). Nor did it catch "the
+  other fifteen flagged assets", which are below the volume line, not flagged,
+  or "GeckoTerminal, likely thin here" for SGOV, whose $2.35M of volume is over
+  the line and was not cited. **These are the kind of thing the validator
+  cannot see, as designed.**
+
+### F2.6.3 — Cost, tokens and latency
+
+**Confidence: measured.**
+
+| | This call | 1.8a (daily closes) | 1.7 |
+|---|---|---|---|
+| Input tokens | 98,438 | 94,716 | 185,168 |
+| Output tokens | 7,628, of which 5,858 are reasoning | 7,484 | 7,725–9,087 |
+| Cost | **$0.273156** | $0.2643 | $0.448–0.461 |
+| Latency, the call alone | **78.6 s** | 60 s | 62–75 s |
+
+- **The input is 3,722 tokens more than 1.8a.** That is the per-seat brief and
+  the shared contract, about 10.4 KB of text.
+- **Latency is a little past 1.7's upper end.** The process took 82 s from
+  start to result.
+- **The reply's own usage block now states its cost.** `usage.cost` 0.273156
+  and `cost_details.upstream_inference_cost` 0.273156 equal our listed-price
+  estimate to the digit: prompt $0.196876 plus completions $0.07628. That is
+  provider evidence per request, in the reply, which F0.6.4 found `/v1/usage`
+  does not give. `buyer_cost_micro` (68,289) is still unexplained.
+- **Hidden reasoning, measured.** `completion_tokens_details.reasoning_tokens`
+  is 5,858 of 7,628 (77%). F1.7.5 inferred 37–50% of billed output absent from
+  the reply; here it is counted, and higher.
+- **The settled-window cross-check is owed.** It can run once the window has
+  been closed for `usage_settle_seconds` (3,600 s) after 15:40Z.
+
+### F2.6.4 — The judgement: a real view, done mechanically
+
+**Confidence: a judgement, on one call.**
+- **It is not the feared failure,** a report that validates and says nothing.
+  - It names the five divergences the snapshot flags.
+  - For each, it decides which of the three prices is out of line, using
+    arithmetic that is right.
+  - It gives each a testable "wrong if" for the reopen.
+  - A risk agent could act on it. So could a buyer, as a triage of the weekend's
+    divergences.
+- **It reads as a method applied, not a view formed.**
+  - The method is the brief's own sentence: "when two of the three prices
+    agree, the third is usually the one that is wrong."
+  - It reaches exactly the hand-written example's five calls, all low or
+    medium.
+- **It lacks what made the hand-written one worth reading:**
+  - AMD's corroborator sits barely over the $1M line, a reason for less
+    confidence;
+  - a Treasury-bill fund cannot fall 1.2% over a weekend.
+- **It adds one unsupported guess** (SGOV "likely thin") and one invented
+  description ("venue AMM").
+- **It writes numbers as a machine would,** to 16 digits.
+- **Worth $0.25?** As one of four seats feeding a decision, yes. On its own as
+  the product, it is thin.
+- **Not changed here, by instruction.** The brief is 2.3's; this is the
+  measurement.
+
+### What 2.6 changes
+
+| Change | Where |
+|---|---|
+| The bps rule refuses correct computed figures. Check a bps figure only when its line cites a `_bps` field, with a test | 2.2, `agents/schema.py` |
+| The unassigned agent `0x…` reads to a model as an address to fill in. It needs a token that cannot be mistaken for one, or a real agent address | 2.3's brief, the runner's `UNASSIGNED_AGENT`, 2.0's choice |
+| The reply states its own cost per request | 2.5: `bankr_llm.cost` could use it, and the estimate label could narrow |
+| Reasoning tokens are counted in the usage block | F1.7.5, the output cap |
+| The settled `/v1/usage` cross-check for this call | owed, after 16:40Z |
+
+### Method limitations
+
+- **One call, one seat, on the weekend capture.** Identical calls differ by
+  about 18% (F1.7.1), so another run could differ.
+- **The re-validation was run in a scratch copy** and is not the committed
+  validator's verdict.
+- **Spent:** $0.273156 by the reply's own statement and by our estimate.
