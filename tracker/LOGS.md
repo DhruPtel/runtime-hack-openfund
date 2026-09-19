@@ -881,10 +881,10 @@ Proposals for each are in SIMPLIFICATION.md, "Config the minimal build needs".
 None is set.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `3b53d32`. The reflog shows it
-pushed on 2026-09-19 at 03:45 PDT, after the previous note was written. Every
-commit from `57f9fda` to the one that adds this note is committed and **not
-pushed**.
+Checked locally, with no fetch. `origin/main` is `5c8eb98`. The reflog shows it
+pushed on 2026-09-19 at 04:58 PDT, which covers the pivot. Every commit from
+`e2bae90` (the Phase 2 plan) to the one that last changed this note is
+committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** It does not restate any in full; LESSONS holds them.
