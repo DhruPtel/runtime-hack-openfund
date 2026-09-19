@@ -287,15 +287,16 @@ def live(text: str, seat: str) -> schema.Verdict:
 
 
 def test_the_3_8_replies_revalidated_from_their_stored_text():
-    """No new call. price-trend, execution-quality and price-integrity now pass, each
-    loose citation recorded. cross-asset-macro still refuses on one figure, `+(-0.09)%`,
-    a percentage the parser does not read as one."""
+    """No new call. All four pass, each loose citation recorded. cross-asset-macro's
+    last refusal, `+(-0.09)%`, is SPY's change between the two closes its line cites,
+    one arithmetic step (S1). The parser still does not read the notation as a
+    percentage (S4): a figure that is no such step refuses."""
     verdicts = {s: live(recorded_3_8(s), s) for s in SEATS}
-    assert {s: v.ok for s, v in verdicts.items()} == {
-        "price-trend": True, "cross-asset-macro": False, "execution-quality": True,
-        "price-integrity": True}
-    assert [r.rule for r in verdicts["cross-asset-macro"].refusals] == ["figure"]
-    assert verdicts["cross-asset-macro"].refusals[0].detail.startswith("-0.09 matches none")
+    assert {s: v.ok for s, v in verdicts.items()} == {s: True for s in SEATS}
+    macro = recorded_3_8("cross-asset-macro")
+    assert "SPY +(-0.09)% over 30 days: 762.21 to 761.55079369" in macro
+    wrong = live(macro.replace("SPY +(-0.09)%", "SPY +(-0.19)%", 1), "cross-asset-macro")
+    assert [r.rule for r in wrong.refusals] == ["figure"] and "-0.19" in wrong.refusals[0].detail
     loose = {str(i) for i in verdicts["price-trend"].imprecisions}
     assert loose == {"109.05 cites INTC timeline 2026-09-09, INTC timeline 2026-09-17; "
                      "it is INTC mark.price_usd (line 34)"}
@@ -426,3 +427,34 @@ def test_a_fabricated_figure_under_an_indented_call_still_refuses():
         "- 644.00, the last pullback low", "- 641.00, the last pullback low", 1)
     assert "    - 641.00" in text
     assert "figure" in rules(verdict(text))
+
+
+# --- S1: a computed figure on a cited line is computed, not fabricated -----------------------------
+
+AMD_LINE = "- 559.42, Friday's close and the 30-day high [mark.price_usd]"
+
+
+@pytest.mark.parametrize("line, ok", [
+    # ratios, however written, are computed and never fields
+    ("- 559.42, Friday's close, up 1.9 % on the week [mark.price_usd]", True),
+    ("- 559.42, Friday's close, up 1.9 percent [mark.price_usd]", True),
+    ("- 559.42, Friday's close, 4.5pp ahead of the index [mark.price_usd]", True),
+    ("- 559.42, Friday's close, 8.3x its impact [mark.price_usd]", True),
+    # one arithmetic step from two cited fields: here the mark less the venue's price
+    ("- a 7.51 gap, 559.42 against 551.91 [mark.price_usd, quote.venue_price_usd]", True),
+    ("- a 1.36 premium over the venue [mark.price_usd, quote.venue_price_usd]", True),
+    # millions, however written, are still checked against a USD field
+    ("- 559.42 on $1.06m of volume [mark.price_usd, corroboration.volume_24h_usd]", True),
+    ("- 559.42 on $1.1 million of volume [mark.price_usd, corroboration.volume_24h_usd]", True),
+    ("- 559.42 on $4.42m of volume [mark.price_usd, corroboration.volume_24h_usd]", False),
+    # a figure that is no field and no one step from two is still fabricated
+    ("- a 9.51 gap, 559.42 against 551.91 [mark.price_usd, quote.venue_price_usd]", False),
+    ("- a 2.02 premium over the venue [mark.price_usd]", False),
+])
+def test_a_computed_figure_on_a_cited_line_is_computed_and_a_fabricated_one_is_not(line, ok):
+    """S1: `a 2.02 premium`, `8.3x` and `1.9 %` were refused as fabricated at the
+    sweep, though the brief asks for exactly such lines."""
+    text = example("price-trend")
+    assert AMD_LINE in text
+    v = verdict(text.replace(AMD_LINE, line, 1))
+    assert v.ok is ok, v.refusals

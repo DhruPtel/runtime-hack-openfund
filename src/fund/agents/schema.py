@@ -53,7 +53,13 @@ about 2,500 numbers, among which a figure written to two places could match by
 chance, and the fabrication check would be weaker for it.
 
 **Computed figures are cited but not checked,** as REPORT-FORMAT.md states:
-- a percentage;
+- a ratio: a percentage (`1.9%`, `1.9 %`, `1.9 percent`), points (`4.5pp`) or a
+  multiple (`8.3x`), since the 3.8 sweep's S1;
+- a plain decimal one arithmetic step from two fields its line cites: a
+  difference, sum, ratio or change. `a 2.02 premium` citing the venue's price and
+  the mark is the one less the other. The brief tells an analyst to cite the
+  fields a computed figure came from, and at the sweep doing so got it refused as
+  fabricated (S1). A figure that is no such step still refuses;
 - a figure in bps, unless its line cites a field that is itself in bps, such as
   `quote.swap_impact_bps` or `corroboration.divergence_bps`. Then it names that
   field and is checked against it;
@@ -96,9 +102,15 @@ _ITEM_TIMELINE = re.compile(r"^(?:([A-Z][A-Z0-9.]*) )?timeline(?: (\d{4}-\d{2}-\
 _ITEM_FIELD = re.compile(
     r"^(?:([A-Z][A-Z0-9.]*) )?([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*)(?: = (-?\d+(?:\.\d+)?))?$")
 
-_MILLIONS = re.compile(r"\$(\d+(?:\.\d+)?)M")
-_BPS = re.compile(r"(?<![\d.])(-?\d+(?:\.\d+)?) ?bps\b")
-_PERCENT = re.compile(r"[+-]?\d+(?:\.\d+)?%")
+#: Millions of dollars, however written: `$4.42M`, `$4.42m`, `$4.4 million`,
+#: `4.42M`. A lowercase m counts only after a dollar sign, so `5m` stays minutes.
+_MILLIONS = re.compile(r"(?:\$(\d+(?:\.\d+)?) ?(?:M|m|mn|million)|(?<![\w$.])(\d+(?:\.\d+)?) ?"
+                       r"(?:M|million))(?![A-Za-z0-9])")
+_BPS = re.compile(r"(?<![\d.])(-?\d+(?:\.\d+)?) ?(?:bps|basis points?)\b")
+#: A ratio, which is computed and never a field: `1.9%`, `1.9 %`, `1.9 percent`,
+#: `4.5pp`, and a multiple, `8.3x` (S1).
+_PERCENT = re.compile(r"[+-]?\d+(?:\.\d+)?(?: ?%| ?percent\b| ?pp\b| ?percentage points?\b)")
+_TIMES = re.compile(r"(?<![\w.])\d+(?:\.\d+)?(?: ?x| ?×)(?![A-Za-z0-9])")
 #: A number written with thousands separators, such as `2,101,924.28`: groups of
 #: three after a first group of one to three, never after a decimal point.
 _GROUPED = re.compile(r"(?<![\d.,])\d{1,3}(?:,\d{3})+(?![\d,])")
@@ -499,7 +511,8 @@ def _matches(claim: Decimal, value: Decimal) -> bool:
 
 def _claims(text: str) -> list[tuple[str, str, Decimal]]:
     """The figures a line writes: ($M, millions), (bps, bps), (plain, decimals).
-    Percentages are computed, and integers are dates or counts; neither is a claim.
+    Ratios (percentages, points, multiples) are computed, and integers are dates or
+    counts; neither is a claim.
     Whether a bps figure is a claim depends on what the line cites (_check_figure)."""
     # A citation is not a figure; a bracket of prose keeps its numbers, which are.
     body = _BRACKET.sub(lambda m: " " if _is_citation(m.group(1)) else f" {m.group(1)} ",
@@ -507,9 +520,10 @@ def _claims(text: str) -> list[tuple[str, str, Decimal]]:
     body = _GROUPED.sub(lambda m: m.group(0).replace(",", ""), body)  # 2,101,924.28 is one number
     claims: list[tuple[str, str, Decimal]] = []
     for kind, pattern in (("millions", _MILLIONS), ("bps", _BPS)):
-        claims += [(kind, m.group(0), Decimal(m.group(1))) for m in pattern.finditer(body)]
+        claims += [(kind, m.group(0), Decimal(next(g for g in m.groups() if g)))
+                   for m in pattern.finditer(body)]
         body = pattern.sub(" ", body)
-    body = _PERCENT.sub(" ", body)
+    body = _TIMES.sub(" ", _PERCENT.sub(" ", body))
     claims += [("plain", m.group(0), Decimal(m.group(1))) for m in _DECIMAL.finditer(body)]
     return claims
 
@@ -520,6 +534,23 @@ def _fits(kind: str, pairs: Sequence[tuple[_Resolved, Decimal]]) -> list[tuple[_
     return [(f, v) for f, v in pairs
             if kind == "plain" or (kind == "bps" and f.name.endswith("_bps"))
             or (kind == "millions" and f.name.endswith("_usd"))]
+
+
+def _derived(claim: Decimal, values: Sequence[Decimal]) -> bool:
+    """A figure one arithmetic step from two values its line cites: their
+    difference, sum or ratio, or the change from one to the other in percent or
+    bps (S1). `a 2.02 premium [quote.venue_price_usd, mark.price_usd]` is the
+    venue less the mark. A fabricated figure is none of these."""
+    for i, a in enumerate(values):
+        for b in values[i + 1:]:
+            steps = [a - b, b - a, a + b]
+            if b:
+                steps += [a / b, (a - b) / b * 100, (a - b) / b * 10_000]
+            if a:
+                steps += [b / a, (b - a) / a * 100, (b - a) / a * 10_000]
+            if any(_matches(claim, step) for step in steps):
+                return True
+    return False
 
 
 def _check_figure(figure: Figure, fields: list[_Resolved], *, loose: bool,
@@ -543,6 +574,8 @@ def _check_figure(figure: Figure, fields: list[_Resolved], *, loose: bool,
         scale = Decimal(1_000_000) if kind == "millions" else Decimal(1)
         if any(_matches(claim, v / scale) for _, v in _fits(kind, singles)):
             continue
+        if kind == "plain" and _derived(claim, [v for _, v in singles]):
+            continue  # computed from the fields the line cites, as the brief asks
         held = held if held is not None else [(f, _number(f.value)) for f in pool()]
         match = next((f for f, v in _fits(kind, held) if _matches(claim, v / scale)), None)
         if match is not None:  # a real value, cited under the wrong reference
