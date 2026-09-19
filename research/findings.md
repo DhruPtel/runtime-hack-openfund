@@ -4457,3 +4457,31 @@ caught.
 **One cause behind R1 to R3:** the aggregator, the planner and the gates each
 count cash their own way. **One cause behind S1 to S3:** the figure check works
 per line, not per figure.
+
+## After the sweep — the four 3.8 replies again, with the sweep's fixes
+
+**Run offline, 2026-09-19,** on the stored text. No new call was made.
+
+| Seat | At 3.8 | After the citation rule | Now | Loose citations recorded |
+|---|---|---|---|---|
+| price-trend | refused | accepted | **accepted** | 1 |
+| cross-asset-macro | refused | refused, on `+(-0.09)%` | **accepted** | 9 |
+| execution-quality | refused | accepted | **accepted** | 5 |
+| price-integrity | refused | accepted | **accepted** | 0 |
+
+**All four pass.** Cross-asset-macro's `+(-0.09)%` is now accepted as SPY's
+change between the two closes its line cites: (761.55 − 762.21) / 762.21 is
+−0.087%, written −0.09. That is S1's rule, one arithmetic step from two cited
+fields, not the notation. The parser still does not read `+(-0.09)%` as a
+percentage (S4), and `+(-0.19)%` in its place refuses.
+
+**Every hole R5 named is closed, and was attacked:**
+- `- 999.99, Friday's close` with no citation refuses;
+- `- The close was 999.99. [mark.price_usd]` refuses;
+- `- The close was 999.99.` refuses;
+- a fabricated figure under an indented CALL refuses (R6);
+- each hole reopened in a copy is caught.
+
+**The same four replies through the aggregator** would give the hypothetical
+of F3.8.8, now with every call counted. AMD's two direction seats disagree,
+buy against hold, and price-integrity cautions it.

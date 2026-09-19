@@ -1030,9 +1030,32 @@ to values the snapshot does not hold all refuse, and the fabrication check broke
 four ways in a copy was caught each time (`research/findings.md` §3.8,
 revisited).
 
+## After the sweep — Cash as one definition, the replay blocker, the validator holes
+**Date:** 2026-09-19 · **Commits:** 8a1a2a1, 9c54202, 0dcbd8a, 0b87581, e52e157, b191a85, 177554c
+
+The design lesson was recorded first: a value computed in more than one place is
+one function, defined before any of them. `core/cash.py` is that definition:
+- **The planner** funds buys only from cash above the floor plus what its
+  sells are worth.
+- **The gates** judge what each order sells, not its label.
+- **The floor** is judged on the orders approved, after the gates and the risk
+  vote. The last buy is dropped until it holds, and a sell never is.
+
+R1, R2 and R3 each reproduced before the fix (−$17.49; $19.38 under a $20
+floor; $25.90 under a $25 label), and each was caught when broken again in a
+copy. Also closed:
+- **R4:** a live vote and its replay now give the same record bytes;
+- **R5 and R6:** uncited figures, a decimal before a full stop, and an
+  indented or bolded CALL. Each was attacked;
+- **R7:** a rule named twice;
+- **S1:** computed ratios, and one-step derivations from cited fields.
+
+All four stored 3.8 replies now pass, with no new call, and 572 tests pass.
+S2 to S13 are recorded in LESSONS with their owners.
+
 ---
 
-## State at close — 2026-09-19, after 3.8 and its sweep: the validator fixed, the sweep's list waiting
+## State at close — 2026-09-19, after the sweep's fixes: cash as one definition, all four 3.8 replies passing
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -1054,7 +1077,7 @@ operator wrote down. This note was written at about 17:40Z.
 **Check it in a minute.** Nothing here spends unless marked. The `python3 -m`
 commands need `PYTHONPATH=src`.
 - `git log --oneline -25` and `git status -sb`.
-- `make test`: 521 passed when this was written, in about 24 s. The runner and
+- `make test`: 572 passed when this was written, in about 26 s. The runner and
   risk tests start real subprocesses against a fake gateway on 127.0.0.1.
 - `python3 -m fund.run.decide --snapshot fixtures/snapshots/66852293-253315c0e691
   --approved-reports --quotes Q --risk-reply R [--env-file E]` takes reports to
@@ -1101,7 +1124,8 @@ commands need `PYTHONPATH=src`.
   - three files outside the batch's paths, approved.
 - **What is built,** under `src/fund/`. Phases 0 to 2 as before, plus:
   - `core/aggregate.py`, `core/plan.py`, `core/gates.py`, `core/context.py`,
-    `core/record.py`;
+    `core/record.py`, and `core/cash.py`, the one definition of cash (after the
+    3.8 sweep);
   - `agents/risk.py` and `agents/briefs/risk.v1.md`;
   - `treasurer/sign.py`;
   - `run/decide.py`.
@@ -1109,24 +1133,20 @@ commands need `PYTHONPATH=src`.
   Every other module is a stub: `grep -l "Not yet built" -r src/` lists 17.
 
 ### Next
-- **3.8 waits on the operator.**
-  - **Done since the run:** the operator's rule to check by value, the
-    validator's two faults, and the brief line. On the stored 3.8 replies,
-    three of four now pass: a quorum. Cross-asset-macro is refused on
-    `+(-0.09)%`.
-  - **The sweep** (`research/findings.md`, "The sweep after 3.8") lists seven
-    real bugs, thirteen strictness mismatches and the planned items. **None is
-    fixed**, by instruction.
-  - **The money bugs:**
-    - R1: the cash floor is not judged on the approved set;
-    - R2: the aggregator and planner count cash differently;
-    - R3: the per-trade limit is passed on a cut to zero.
-  - **R4** breaks 3.9's replay of the 3.8 fixture.
-  - **The next live run's likeliest refusal** is S1: a computed decimal on a
-    cited line.
-  - Then another exit run, and the decision with a live risk call.
-- **3.9 after that.** It replays the recorded cycle's record byte for byte.
-  `fixtures/cycles/20260919T171351Z/` is a recorded cycle, though of a no-op.
+- **3.8 waits on the operator.** The sweep's R1 to R7 and S1 are fixed, and
+  all four stored 3.8 replies pass (entry above).
+  - **Before the next exit run and its live risk call, by LESSONS' owners:**
+    - S2, bps checks and the sign of `divergence_bps`;
+    - S5, `NO CALLS`;
+    - S6, the risk reply parser's strictness;
+    - S8, sells held to the buy rules. A money-path bug, and the operator's
+      call.
+  - Then another exit run (about $1.10), and the decision with a live risk
+    call (about $0.05).
+- **3.9 after that.** Today's code cannot rebuild the 3.8 fixture's record.
+  This batch changed what a record holds, and every remaining difference is one
+  of those changes. So 3.9 replays a cycle recorded under the current code, and
+  moves the record's schema to `openfund.decision/2`.
 - **Owed from Phase 2, unchanged:**
   - the settled `/v1/usage` cross-check for the 15:39Z and 15:58Z calls, and
     whether the 504 was billed;
@@ -1242,9 +1262,10 @@ commands need `PYTHONPATH=src`.
   `cumulative_budget_usd`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `8f97342`, 3.8's run and its
-records, pushed by the operator. Every commit from `013257a` (the separators fix)
-to the one that last changed this note is committed and **not pushed**.
+Checked locally, with no fetch. `origin/main` is `f2f8b41`, pushed by the
+operator: everything through the sweep's list and its note.
+Every commit from `8a1a2a1` (the design lesson) to the one that last changed this
+note is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** LESSONS holds them in full.
