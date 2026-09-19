@@ -125,7 +125,8 @@ def test_a_sell_passes_the_position_gate_and_frees_cash_for_the_floor():
     plan = written(the_book=book({"AMZN": worth("AMZN", "40")}, cash="160"))
     result = evaluate(plan)
     amzn = next(o for o in result["orders"] if o["symbol"] == "AMZN")
-    assert amzn["cleared"] and amzn["gates"][4]["reason"] == "a sell lowers the position"
+    assert amzn["cleared"]
+    assert [g["rule"] for g in amzn["gates"]] == ["priced", "mandate", "order-size", "quote"]
 
 
 def test_extra_plan_gates_are_counted():

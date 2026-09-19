@@ -45,6 +45,7 @@ from . import cash
 
 RULE_QUORUM = "quorum"
 RULE_TRADEABLE = "tradeable"        # the snapshot's status: staleness, divergence tier, quote at build
+RULE_PRICED = "priced"              # a sell: the snapshot holds a usable mark to value what is sold
 RULE_MANDATE = "mandate"            # the asset is one the mandate allows, on its chain, not revoked
 RULE_ORDER_SIZE = "order-size"      # at most the mandate's per-trade limit
 RULE_QUOTE = "quote"                # a fresh quote for this order, judged by bankr_quote.tradeability
@@ -210,13 +211,9 @@ def tradeable(entry: Mapping[str, Any] | None) -> Gate:
                                        f"{status.get('reason')}")
 
 
-def mandate_allows(order: Mapping[str, Any], mandate: Mapping[str, Any]) -> Gate:
-    """The asset is one the mandate names, on the mandate's chain, and the mandate
-    is not revoked."""
-    allowed = mandate.get("allowed_assets")
-    if not allowed:
-        return Gate(RULE_MANDATE, None, "the mandate names no allowed assets: unresolved, "
-                                        "and it blocks")
+def mandate_in_force(order: Mapping[str, Any], mandate: Mapping[str, Any]) -> Gate:
+    """The mandate is not revoked, and the order is on its chain. Spend authority,
+    not a market check, so it holds for a sell as for a buy."""
     if mandate.get("revoked") is not False:
         return Gate(RULE_MANDATE, False if mandate.get("revoked") else None,
                     f"the mandate's revoked flag is {mandate.get('revoked')!r}")
@@ -224,6 +221,20 @@ def mandate_allows(order: Mapping[str, Any], mandate: Mapping[str, Any]) -> Gate
     if asset["chain_id"] != mandate.get("chain_id"):
         return Gate(RULE_MANDATE, False, f"chain {asset['chain_id']} is not the mandate's "
                                          f"{mandate.get('chain_id')}")
+    return Gate(RULE_MANDATE, True, "the mandate is in force on this chain")
+
+
+def mandate_allows(order: Mapping[str, Any], mandate: Mapping[str, Any]) -> Gate:
+    """A buy: the asset is one the mandate names, on the mandate's chain, and the
+    mandate is not revoked."""
+    allowed = mandate.get("allowed_assets")
+    if not allowed:
+        return Gate(RULE_MANDATE, None, "the mandate names no allowed assets: unresolved, "
+                                        "and it blocks")
+    in_force = mandate_in_force(order, mandate)
+    if not in_force.passes:
+        return in_force
+    asset = order["asset"]
     if asset["address"].lower() not in {a["address"].lower() for a in allowed}:
         return Gate(RULE_MANDATE, False, f"{asset['symbol']} {asset['address']} is not an asset "
                                          "the mandate allows")
@@ -268,6 +279,29 @@ def fresh_quote(order: Mapping[str, Any]) -> Gate:
         return Gate(RULE_QUOTE, True, verdict.get("reason") or "tradeable")
     return Gate(verdict.get("rule") or RULE_QUOTE, verdict.get("value"),
                 verdict.get("reason") or "the quote's verdict was not recorded")
+
+
+def priced(order: Mapping[str, Any], snapshot: Mapping[str, Any]) -> Gate:
+    """A sell: the snapshot holds a usable mark for what is sold, so the sale can be
+    valued. With none, the sale is undetermined, and it blocks."""
+    try:
+        mark = cash.mark_of(snapshot, order["sell"]["address"])
+    except cash.NoMark as missing:
+        return Gate(RULE_PRICED, None, f"no price to value the sale: {missing}")
+    return Gate(RULE_PRICED, True, f"valued at its mark, "
+                                   f"{Decimal(mark.raw).scaleb(-mark.decimals)} USD")
+
+
+def sell_quote(order: Mapping[str, Any]) -> Gate:
+    """A sell: a fresh quote for this order at the size it sells. The quote's own
+    verdict from `bankr_quote.tradeability` is read, as for a buy, except that its
+    impact is not a condition of selling. That verdict checks impact last, so an
+    `impact` refusal means the quote, its size and its age all passed."""
+    verdict = fresh_quote(order)
+    if verdict.passes or verdict.rule != "impact":
+        return verdict
+    return Gate(RULE_QUOTE, True, "quoted at the size asked, within the age limit; impact "
+                                  f"is not a condition of selling ({verdict.reason})")
 
 
 def position_weight(after: Decimal, side: str, limits: Limits) -> Gate:
@@ -335,6 +369,16 @@ def evaluate(plan: Mapping[str, Any], *, snapshot: Mapping[str, Any],
     """Every gate over a written plan. The risk agent calls this (3.5), and the
     treasurer will call it again before it submits (4.4).
 
+    **Buying into an asset and exiting one are different risks** (the operator's
+    decision on the sweep's S8). A buy passes every check: tradeable in the
+    snapshot, which holds identity, markability, the corroborator line and
+    divergence; allowed by the mandate; the order size; the fresh quote's full
+    verdict of size, age and impact; and the position limit. A sell needs a price
+    to value what it sells, and a fresh quote at its size, with the mandate in
+    force and the order size, which are spend authority. It does not need the
+    asset to be tradeable, allowed for buying, or cheap to exit, so a position the
+    snapshot no longer calls tradeable can still be sold.
+
     Every money figure is what an order sells, at the snapshot's mark
     (`cash.order_worth`), never the planner's label. An order is cleared only when
     every one of its gates and every plan-level gate passes. False refuses and
@@ -365,8 +409,13 @@ def evaluate(plan: Mapping[str, Any], *, snapshot: Mapping[str, Any],
         size = (order_size(value, limits) if value is not None else
                 Gate(RULE_ORDER_SIZE, None, "what the order sells cannot be valued: no mark, "
                                             "or an amount its asset cannot hold"))
-        own = [tradeable(entries.get(address)), mandate_allows(order, mandate), size,
-               fresh_quote(order), position_weight(values[address] / nav, order["side"], limits)]
+        if order["side"] == "sell":  # an exit: a price and a fresh quote at its size
+            own = [priced(order, snapshot), mandate_in_force(order, mandate), size,
+                   sell_quote(order)]
+        else:  # a buy keeps every check
+            own = [tradeable(entries.get(address)), mandate_allows(order, mandate), size,
+                   fresh_quote(order),
+                   position_weight(values[address] / nav, order["side"], limits)]
         cleared = plan_clear and all(g.passes for g in own)
         blocking = [g.rule for g in [*own, *plan_gates] if not g.passes]
         orders.append({"index": order["index"], "symbol": order["asset"]["symbol"],

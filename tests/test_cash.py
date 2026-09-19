@@ -71,12 +71,13 @@ def decided(plan, tmp_path, reply=None):
 # --- R1: the cash floor is judged on the orders approved -----------------------------------------
 
 def test_r1_a_blocked_sell_does_not_leave_the_buys_it_funded_approved(tmp_path):
-    """$20 of cash and $180 of META. Sell META, buy MSFT. META's quote costs 80 bps,
-    so both META sells are blocked. The MSFT buys they would have paid for must not
-    be approved: at the sweep, approved cash was −$17.49."""
+    """$20 of cash and $180 of META. Sell META, buy MSFT. META's quotes are two
+    minutes old, so both META sells are blocked. The MSFT buys they would have paid
+    for must not be approved: at the sweep, approved cash was −$17.49. (At the
+    sweep the sells were blocked by impact, which since S8 no longer binds a sell.)"""
     plan = written(calls(META=("sell", "high"), MSFT=("buy", "high")),
                    the_book=book({"META": worth("META", "180")}, cash="20"),
-                   META={"impact_bps": 80})
+                   META={"fetched_ms": 1_790_000_000_000 - 120_000})
     outcome = decided(plan, tmp_path)
     approved = set(outcome["decision"]["approved"])
     sides = {o["index"]: (o["side"], o["asset"]["symbol"]) for o in plan["orders"]}

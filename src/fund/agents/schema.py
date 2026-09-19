@@ -19,7 +19,7 @@ its own worker and never the cycle:
       - the header: seat, agent and snapshot;
       - the seat's vocabulary and the three confidence words;
       - each called asset: present at its address, under its own symbol, and
-        tradeable;
+        tradeable, unless the call is a sell (S8);
       - at most the configured number of calls, one per asset;
       - every citation naming a field, or recorded as imprecise;
       - every figure matching a value the snapshot holds.
@@ -623,7 +623,9 @@ def _examine(report: Report, snapshot: Mapping[str, Any], *, contract: Contract,
         if entry["asset"]["symbol"] != call.symbol:
             refusals.append(Refusal("asset", f"{call.address} is {entry['asset']['symbol']}, "
                                     f"not {call.symbol}", call.line))
-        if entry["status"]["value"] != "tradeable":
+        if entry["status"]["value"] != "tradeable" and call.word != "sell":
+            # A sell may name an asset out of the buy universe: selling what is held is
+            # a different risk from buying (the operator's decision on S8).
             refusals.append(Refusal("asset", f"{call.symbol} is {entry['status']['value']}, "
                                     "not tradeable", call.line))
 
