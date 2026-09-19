@@ -1383,3 +1383,27 @@ Three statuses were added for one snapshot: `no_mark`, `uncorroborated` and
 A fully live second build would differ, because GeckoTerminal and the quotes
 are not pinned to a block. Recording them is 1.9's.
 **Affects:** 1.7, 1.9, 3.7, 3.8; the quote-age budget as the universe grows.
+
+## 2026-09-18 — AMZN's corroborating price alternates between two levels, so its "divergence" may be GeckoTerminal changing pools
+Three readings of GeckoTerminal's token-level AMZN price, against a feed that
+stayed between 252.60 and 253.86:
+
+| Reading | When | GeckoTerminal | Divergence |
+|---|---|---|---|
+| Probe 0.4 (F0.4.5) | Fri 15:40Z, open session | 265.88 | −499.5 bps |
+| 1.4's proof | Sat 01:28Z, closed | 253.96 | −4.01 bps |
+| 1.6's snapshot | Sat 02:14Z, closed | 265.09 | −423.69 bps |
+
+The two high readings sit about $1 apart. The low one agrees with the feed and
+the venue.
+- **The explanation is not measured.** One reading is that the token-level
+  price follows whichever pool GeckoTerminal ranks first, and that the ranking
+  changes; the batch endpoint lists only one pool (F0.4 limitations).
+- **What it means for the findings.** If that is right, AMZN's "divergence" is
+  the corroborator switching sources, not the market moving while the feed was
+  frozen. The closed-session finding's wording says the pools traded on, which
+  would then be wrong for AMZN.
+- **The veto was right to catch it** at 0.4, whatever its cause.
+- **Unresolved.** Finding out needs the pool list for AMZN, which the batch
+  endpoint does not give.
+**Affects:** 1.4's corroborator, the finding's wording, 3.7, 3.8; F0.4.5's AMZN case.
