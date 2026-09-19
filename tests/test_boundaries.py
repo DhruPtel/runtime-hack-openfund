@@ -392,3 +392,93 @@ def test_an_asset_deployed_on_several_chains_is_found_on_ours():
     records = universe.parse_registry(json.dumps({"assets": [item]}).encode())
     ours = records[AssetId(4663, address)]
     assert len(ours.deployments) == 2 and ours.deploys(AssetId(4663, address))
+
+
+# --- 4.0: each shared value in one place ---------------------------------------------------------
+#
+# The design lesson of the 3.8 sweep: a value more than one component computes is one
+# function, defined before any of them. The orientation after Phase 3 found five that
+# the first seven primitives left out (P8 to P12, `planning/PHASE-4.md`). Each is held
+# here to its one module, read from the source like the gate rule above. Their values
+# are tested in test_ledger.py, test_cash.py and test_orders.py.
+
+def _outside(*allowed: str):
+    """Every module but `allowed`, with its parsed source."""
+    for module, path in MODULES.items():
+        if module not in allowed:
+            yield module, ast.parse(path.read_text())
+
+
+def _constants(node: ast.AST) -> set:
+    return {s.value for s in ast.walk(node) if isinstance(s, ast.Constant)}
+
+
+#: What a fill gave and got, and its marks: read only by the ledger's fold (P3, P8).
+FILL_LEGS = {"gave", "got", "gave_mark", "got_mark", "cash_asset"}
+LEDGER_EVENTS = {"Opening", "Fill", "Fee", "Inference"}
+
+
+def test_p8_only_the_ledger_reads_a_fill_or_decides_what_an_event_does():
+    """No module outside core/ledger.py reads a fill's legs or dispatches on the kind
+    of ledger event: what each event does to holdings, cash, basis and value is the
+    ledger's one fold."""
+    found = []
+    for module, tree in _outside("fund.core.ledger"):
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute) and node.attr in FILL_LEGS:
+                found.append(f"{module}:{node.lineno}: .{node.attr}")
+            if (isinstance(node, ast.Call) and getattr(node.func, "id", None) == "isinstance"
+                    and len(node.args) == 2
+                    and {getattr(n, "attr", getattr(n, "id", None))
+                         for n in ast.walk(node.args[1])} & LEDGER_EVENTS):
+                found.append(f"{module}:{node.lineno}: {ast.unparse(node)}")
+    assert found == []
+
+
+def test_p9_only_the_ledger_decides_which_book_an_event_is_in():
+    """No module outside core/ledger.py compares against a book's name or reads an
+    event's book. `plan.book` is the planner's function, not a book."""
+    found = []
+    for module, tree in _outside("fund.core.ledger"):
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Compare) and _constants(node) & {"paper", "real"}:
+                found.append(f"{module}:{node.lineno}: {ast.unparse(node)}")
+            if (isinstance(node, ast.Attribute) and node.attr == "book"
+                    and getattr(node.value, "id", None) != "plan"):
+                found.append(f"{module}:{node.lineno}: {ast.unparse(node)}")
+    assert found == []
+
+
+def test_p10_only_cash_py_says_which_holding_is_cash():
+    """No module outside core/cash.py tests an asset's kind against cash or gas: which
+    holding is cash, and which a position, is `cash.cash_leg`. The NAV is `cash.nav`,
+    and test_cash.py and test_ledger.py replace it to show the planner's book and the
+    ledger's both follow."""
+    found = [f"{module}:{node.lineno}: {ast.unparse(node)}"
+             for module, tree in _outside("fund.core.cash") for node in ast.walk(tree)
+             if isinstance(node, ast.Compare) and _constants(node) & {"cash", "gas"}]
+    assert found == []
+
+
+def test_p11_only_the_planner_and_the_floor_project_cash_after_orders():
+    """`cash.cash_after` is a projection. The planner funds a plan with it, and
+    `gates.settle` judges the floor with it, partway through a decision only for what
+    has not filled. Nothing else projects cash, so the chokepoint (4.4) cannot count a
+    filled sale twice."""
+    callers = sorted({module for module, tree in _outside("fund.core.cash")
+                      for node in ast.walk(tree) if isinstance(node, ast.Call)
+                      and getattr(node.func, "attr", getattr(node.func, "id", None)) == "cash_after"})
+    assert callers == ["fund.core.gates", "fund.core.plan"]
+
+
+def test_p12_only_orders_py_moves_an_orders_state():
+    """An order is made `prepared`, and only `orders.transition` moves it, by the one
+    table: so a refusal, like every other state, is reached one way."""
+    found = []
+    for module, tree in _outside("fund.core.orders", "fund.core.types"):
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                for keyword in node.keywords:
+                    if keyword.arg == "state" and getattr(keyword.value, "attr", None) != "PREPARED":
+                        found.append(f"{module}:{node.lineno}: {ast.unparse(node)[:80]}")
+    assert found == []
