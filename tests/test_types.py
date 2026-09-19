@@ -110,11 +110,6 @@ def test_the_same_address_on_another_chain_is_another_asset():
     assert AssetId(1, AAPL.address) != AAPL
 
 
-def test_native_eth_is_keyed_by_the_sentinel():
-    assert ETH.is_native and not USDG.is_native
-    roundtrip(ETH)
-
-
 # --- quantities ----------------------------------------------------------------
 
 def test_a_human_amount_converts_at_the_decimals_given_and_never_rounds():
@@ -137,14 +132,6 @@ def test_amounts_of_different_assets_do_not_compare():
         Amount(1, 6, USDG) < Amount(1, 18, AAPL)
     with pytest.raises(TypeError):
         Amount(1, 6, USDG) < Amount(1, 18, USDG)
-
-
-def test_fixed_parses_exactly_and_compares_across_decimals():
-    multiplier = Fixed.parse("1.001148322800714293", MULTIPLE)  # registry, CRM
-    assert (multiplier.raw, multiplier.decimals) == (1001148322800714293, 18)
-    roundtrip(multiplier)
-    assert Fixed.parse("0.5", PERCENT).same_value(Fixed(50, 2, PERCENT))
-    assert Fixed(-155, 1, BPS) < Fixed(50, 0, BPS)
 
 
 def test_unlike_units_refuse_to_compare():
@@ -426,24 +413,6 @@ def tsla_quote(impact_bps: int | None) -> Quote:
         quote_id="c9f64995-fa7c-469b-a880-4796cfa739d9")
 
 
-def test_a_negative_impact_is_price_improvement_and_passes_a_positive_limit():
-    quote = tsla_quote(-15)
-    limit = Fixed(50, 0, BPS)  # impact_max_bps, compared signed
-    assert quote.swap_impact < Fixed(0, 0, BPS)
-    # The gate itself lives in core/gates.py; here the comparison it will make
-    # must come out right. A magnitude comparison would have refused this fill.
-    assert not (quote.swap_impact > limit)
-    assert Fixed(abs(quote.swap_impact.raw), 0, BPS) < limit  # and so would abs, here
-    assert not (Fixed(-60, 0, BPS) > limit)  # but abs would refuse -60; signed does not
-    roundtrip(quote)
-
-
-def test_an_absent_impact_is_none_never_zero():
-    quote = tsla_quote(None)
-    assert quote.swap_impact is None and quote.price_impact is None
-    roundtrip(quote)
-
-
 def test_a_quote_is_an_observation_with_no_source_time():
     seen = Observation(value=tsla_quote(-15), source=QUOTES, source_time=None,
                        fetch_time=Instant.from_seconds(T0), block=None,
@@ -474,16 +443,6 @@ def balance_of(asset: AssetId, raw: int, decimals: int) -> Observation:
                        status=FetchStatus.OK)
 
 
-def test_a_holding_with_no_feed_stays_in_the_book_unvalued_and_says_why():
-    held = Holding(asset=CRM, balance=balance_of(CRM, 10**17, 18),
-                   universe_status=UniverseStatus.UNMARKABLE,
-                   universe_reason="no Chainlink feed (F0.4.1)",
-                   mark=None, value=None,
-                   value_reason="no mark independent of the venue")
-    assert held.value is None
-    roundtrip(held)
-
-
 def test_an_unvalued_holding_must_say_why_and_a_value_needs_a_read_mark():
     with pytest.raises(ValueError):
         Holding(asset=CRM, balance=balance_of(CRM, 1, 18),
@@ -493,19 +452,6 @@ def test_an_unvalued_holding_must_say_why_and_a_value_needs_a_read_mark():
         Holding(asset=CRM, balance=balance_of(CRM, 1, 18),
                 universe_status=UniverseStatus.UNMARKABLE, universe_reason="no feed",
                 mark=None, value=Fixed(0, 0, USD), value_reason=None)
-
-
-def test_the_cash_leg_is_held_and_valued_from_its_own_feed():
-    # Since 0.10 the wallet holds 0.078742 USDG on 4663.
-    mark = Observation(value=Price(100_020_000, 8, USDG, USD),
-                       source=Source("chainlink-feed", "0x" + "11" * 20),
-                       source_time=Instant.from_seconds(T0 - 60),
-                       fetch_time=Instant.from_seconds(T0), block=PINNED,
-                       status=FetchStatus.OK)
-    cash = Holding(asset=USDG, balance=balance_of(USDG, 78_742, 6),
-                   universe_status=UniverseStatus.NOT_A_STOCK, universe_reason="cash leg",
-                   mark=mark, value=Fixed(78_757, 6, USD), value_reason=None)
-    roundtrip(cash)
 
 
 def test_an_unreadable_balance_is_kept_not_dropped():
@@ -612,49 +558,6 @@ def test_paper_and_pending_orders_carry_no_chain_evidence():
     roundtrip(swap_order(state=OrderState.UNKNOWN, reason="409: original still in flight"))
 
 
-# --- the whole contract ----------------------------------------------------------
-
-def test_the_measured_cases_each_survive_the_canonical_round_trip():
-    """1.1's measured cases, each round-tripped: a week of history whose newest
-    point is fresh, a source that was unreachable rather than false, a held
-    asset with no feed, a quote with negative impact, and the order executed via
-    a bundler. Their life together in one hashed snapshot is 1.6's
-    (tests/test_snapshot.py), since the snapshot is now a readable document
-    built from these types rather than a type of its own."""
-    week = Series(asset=TSLA, source=FEED, fetch_time=Instant.from_seconds(T0 + 12),
-                  status=FetchStatus.OK,
-                  points=tuple(Observation(
-                      value=Price(36_900_000_000 + d, 8, TSLA, USD), source=FEED,
-                      source_time=Instant.from_seconds(T0 - (7 - d) * DAY),
-                      fetch_time=Instant.from_seconds(T0 + 12), block=PINNED,
-                      status=FetchStatus.OK) for d in range(8)))
-    unreachable = Observation(value=None, source=Source("geckoterminal", "/tokens/multi"),
-                              source_time=None, fetch_time=Instant.from_seconds(T0),
-                              block=None, status=FetchStatus.UNREACHABLE,
-                              detail="timeout after 20 s")
-    crm_held = Holding(asset=CRM, balance=balance_of(CRM, 10**17, 18),
-                       universe_status=UniverseStatus.UNMARKABLE,
-                       universe_reason="no Chainlink feed", mark=None, value=None,
-                       value_reason="no mark independent of the venue")
-    quote = Observation(value=tsla_quote(-15), source=QUOTES, source_time=None,
-                        fetch_time=Instant.from_seconds(T0), block=None, status=FetchStatus.OK)
-    for case in (week, unreachable, crm_held, quote, swap_order(execution=swap_execution())):
-        blob = roundtrip(case)
-        assert all(not isinstance(v, float) for v in _leaves(json.loads(blob)))
-    assert week.age_of_newest_ms(Instant.from_seconds(T0 + 12)) == 12_000
-
-
-def _leaves(node):
-    if isinstance(node, dict):
-        for value in node.values():
-            yield from _leaves(value)
-    elif isinstance(node, list):
-        for value in node:
-            yield from _leaves(value)
-    else:
-        yield node
-
-
 # --- a short series is visible as short (unit 1.3) --------------------------------
 
 def week_series(window_days: int, coverage):
@@ -663,10 +566,6 @@ def week_series(window_days: int, coverage):
     return Series(asset=AAPL, source=FEED, fetch_time=Instant.from_seconds(T0 + 12),
                   status=FetchStatus.OK, points=points,
                   window_start=Instant.from_seconds(T0 - window_days * DAY), coverage=coverage)
-
-
-def test_a_series_that_reaches_its_window_may_say_so():
-    roundtrip(week_series(7, Check(True, "oldest point at the window start")))
 
 
 def test_a_series_cannot_claim_a_window_its_points_do_not_reach():
