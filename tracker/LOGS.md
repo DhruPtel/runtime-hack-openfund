@@ -653,7 +653,25 @@ operator.**
 
 ---
 
-## State at close — 2026-09-18, after 1.11
+## 1.11's checkpoint, and the Phase 1 gate
+**Date:** 2026-09-18 · **Commit:** 2d57446
+
+Every stock token's `oraclePaused()` is now read at the pinned block, and a
+paused feed is `no_mark` at its own rule, judged before freshness, with an
+unreadable flag undetermined (schema /4; eight breaks, each caught); 1.9's
+capture never recorded that read, so it was retired, not rebuilt, and a new
+weekend capture, `66852293-253315c0e691`, checked for every credential, replays
+byte for byte. The two decisions are recorded where they will be seen:
+GeckoTerminal's `Date` is unchecked, with its fail-open direction in PLAN §13,
+and the closed session is re-derived on Monday 9 November, not "Monday 3
+November", which is a Tuesday. `planning/PHASE-1-GATE.md` answers the gate:
+Phase 1's exit is met, the snapshot fully feeds one of four analyst seats,
+Phase 5 stays in cut to one round trip, and 60 units remain at about 0.7 h
+each, with 15 named to cut or fold.
+
+---
+
+## State at close — 2026-09-18, Phase 1 closed at its gate
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -662,22 +680,24 @@ it. Where this note and git disagree, git is right.
 
 **Check it in a minute.** Nothing here spends.
 - `git log --oneline -15` and `git status -sb`.
-- `make test`: 350 passed when this was written.
+- `make test`: 362 passed when this was written.
 - `make replay`: rebuilds the committed capture offline, byte for byte, in
   under a second. Needs no credential.
 - `make check-env`: which credentials are present, by name only.
 - `make selftest` attests every address in config against the chain in about
   100 s. It needs the RPC URL and spends nothing.
+- `CLAUDE.md` holds the pace rule (verification scales with risk) and the two
+  dated obligations.
 - `make snapshot` builds a live snapshot in about 2.5 minutes, captures it
   under `fixtures/live/captures/`, and replays it; `python3 -m
   fund.run.snapshot --prove` also re-reads the chain at the same block.
 - `probes/analyst_cost.py` **spends** with `--confirm`, in its default,
   `--one` or `--cache` mode.
 
-### Done, through 1.11
-- **Phase 0, the Phase 1 replan, units 1.1-1.8, the test audit, 1.9 with the
-  operator's changes from its checkpoint, 1.10, and 1.11,** shown at its
-  checkpoint and not yet judged.
+### Done, through Phase 1
+- **Phase 0 and all of Phase 1,** with the changes from 1.9's and 1.11's
+  checkpoints. The gate report, `planning/PHASE-1-GATE.md`, waits for the
+  operator. Phase 2 is not started.
 - **Decisions this far into Phase 1:**
   - staleness in open-session time, with sessions inferred from rounds;
   - the shared `adapters/http.py`;
@@ -689,7 +709,11 @@ it. Where this note and git disagree, git is right.
   - the series is daily closes over 30 days, adopted on measurement;
   - captures are recorded at the transport, and the repository keeps them in
     `fixtures/snapshots/`;
-  - the snapshot names its capture's answers by hash.
+  - the snapshot names its capture's answers by hash;
+  - a paused oracle is no mark, read from the token's `oraclePaused()`;
+  - GeckoTerminal's `Date` is not checked;
+  - the closed session is re-derived on 2026-11-09;
+  - verification scales with risk (`CLAUDE.md`).
 - **The whole of what is built.** Under `src/fund/`: `config.py`,
   `credentials.py`, `redaction.py`, `core/types.py`, `core/universe.py`,
   `core/valuation.py`, `core/snapshot.py`, `adapters/http.py`,
@@ -698,9 +722,9 @@ it. Where this note and git disagree, git is right.
   module is a stub; `grep -l "Not yet built" -r src/` lists 28.
 
 ### The numbers that stand
-- **Snapshot:** schema `openfund.snapshot/3`, about 189 KB with 763 daily
-  closes. The committed one is `daafd945…` at block 66812461, rebuilt from the
-  capture whose live build was `8afe38a3…`, in `fixtures/snapshots/`.
+- **Snapshot:** schema `openfund.snapshot/4`, about 195 KB with 763 daily
+  closes. The committed one is `253315c0…` at block 66852293, Sat 06:01Z, in
+  `fixtures/snapshots/`. 1.9's is in `fixtures/retired/`.
 - **Selftest:** 235 addresses, about 102 s and 204 requests, set by 500 ms
   pacing. No 429.
 - **Analyst call:** $0.264 at Sonnet 5, uncached (§1.8a).
@@ -708,23 +732,17 @@ it. Where this note and git disagree, git is right.
 - **Caching:** not honoured by the gateway, measured.
 - **LLM credits:** $0.937148 left, after 1.7 and 1.8 spent $1.862828.
 
-### Next: the 1.11 checkpoint and the weekday capture
-- **1.11 waits on the operator** (PHASE-0-1 1.11, LESSONS):
-  - whether the strictness is right;
-  - whether to read `oraclePaused()` and refuse a paused mark;
-  - whether to refuse a GeckoTerminal answer by its `Date` header;
-  - when to re-derive the closed span around 2026-11-01. Until then, every
-    weekend would be undetermined, if the feeds follow New York time.
-- **The weekday capture is owed** (1.9's checkpoint). It waits for the equity
-  feeds to reopen at Mon 2026-09-21 00:00Z, ideally 13:30–20:00Z. To take it:
-  - run `PYTHONPATH=src python3 -m fund.run.snapshot --capture
-    fixtures/snapshots`;
-  - scan the capture for every declared credential value, `set-cookie`,
-    `X-API-Key` and `Authorization`;
-  - commit it beside the weekend capture, which stays.
+### Next: the operator reads the gate, then Phase 2
+- **The gate report** asks for the deadline and the six judging criteria, and
+  recommends which units to cut (`planning/PHASE-1-GATE.md` §5).
+- **Owed, and dated** (`CLAUDE.md`):
+  - the weekday capture from Mon 2026-09-21 00:00Z;
+  - the closed-session re-derivation on 2026-11-09.
+- **Owed, and a spend:**
+  - LLM credits before 2.6, since $0.937 is less than one cycle;
+  - wallet funding before 5.2.
 - **Not answered from 1.9's checkpoint:** how much of the demo runs from
   fixtures and how much live.
-- **Phase 1's exit and the re-evaluation gate** follow 1.11's checkpoint.
 
 ### Open items, none resolved
 1. **Owed in code:** two `http.py` changes (LESSONS preamble).
@@ -744,13 +762,15 @@ it. Where this note and git disagree, git is right.
 11. **Nine feeds describe themselves `RH<ticker> / USD` on chain,** against
     F0.4.1's `Robinhood <TICKER> / USD`. `research/findings.md` is not
     updated (LESSONS).
-12. **A paused feed is refused only once stale,** and no offchain body has a
-    source time (1.11, open).
+12. **No offchain body has a source time,** and GeckoTerminal's `Date` is
+    unchecked by decision. Its fail-open direction is in PLAN §13.
 13. **Unchanged:** the unowned registry refresh fetch;
     six types waiting for 2.1-6.1; one RPC endpoint; which impact field gates;
     the stale README line 9.
 
 ### Config
+- **Changed at the gate:** `sessions.json` carries `_rederive_on`,
+  2026-11-09.
 - **Changed in 1.10's pass:** `mandate.json` pins
   `execution_wallet_delegate_4663`, the wallet's 7702 delegate.
 - **Changed in 1.8's pass:**
@@ -769,9 +789,9 @@ it. Where this note and git disagree, git is right.
     `expires_at`, and an empty `allowed_assets`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `aa02225`, the end of 1.10;
-this session did not push it. Every commit after it, 1.11's from `0c071cc` to
-the one that adds this note, is committed and **not pushed**. To
+Checked locally, with no fetch. `origin/main` is `104c878`, 1.11 at its
+checkpoint; this session did not push it. Every commit after it, from
+`a7392c8` to the one that adds this note, is committed and **not pushed**. To
 re-check, run `git fetch` and then `git log origin/main..HEAD`.
 
 ### What this note does not cover
