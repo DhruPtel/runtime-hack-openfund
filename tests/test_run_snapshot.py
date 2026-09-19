@@ -45,9 +45,10 @@ SMALL = dataclasses.replace(
     U, records=MappingProxyType({a: U.records[a] for a in (NVDA, AMZN, CLSK, CRM)}),
     feeds=MappingProxyType({a: U.feeds[a] for a in (NVDA, AMZN, CLSK, U.cash_leg, U.gas_asset)}))
 
-#: Weekday rounds at 20:00Z, the oldest before the seven-day window: no round
-#: falls in the previous weekend's closed span.
-WEEKDAYS = [SAT - 4 * HOUR - d * DAY for d in (7, 4, 3, 2, 1, 0)]
+#: A round at 20:00Z on every weekday for 40 days, the newest Fri 09-18: past
+#: the configured 30-day window, and none in a weekend's closed span.
+WEEKDAYS = sorted(t for t in (SAT - 4 * HOUR - d * DAY for d in range(40))
+                  if (t // DAY + 3) % 7 < 5)
 
 
 def w(value: int) -> str:
@@ -228,7 +229,9 @@ def test_the_live_path_builds_a_whole_snapshot_with_no_network():
     assert clsk["quote"]["tradeable"]["verdict"] is False and "[impact]" in clsk["quote"]["tradeable"]["reason"]
     nvda = entry(built, "NVDA")
     assert nvda["quote"]["sell_amount"] == "25.001227"  # $25 at USDG's own mark
-    assert nvda["timeline"]["rounds"] == 6 and nvda["timeline"]["coverage"]["verdict"] is True
+    assert nvda["timeline"]["columns"] == ["close_of", "updated_at", "price_usd"]  # the configured series
+    assert nvda["timeline"]["rounds"] == 22 and nvda["timeline"]["coverage"]["verdict"] is True
+    assert "8 days fell in the closed session" in nvda["timeline"]["coverage"]["reason"]
     assert nvda["mark"]["fresh"]["verdict"] is True and "of open session" in nvda["mark"]["fresh"]["reason"]
 
 
