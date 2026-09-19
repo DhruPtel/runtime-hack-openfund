@@ -637,7 +637,23 @@ decimals and symbol, and each check, broken in a copy, failed a test.
 
 ---
 
-## State at close — 2026-09-18, after 1.10
+## 1.11 ▶ — Skew rejection
+**Date:** 2026-09-18 · **Commit:** 0c071cc
+
+Mixed blocks, an observation from after the pin, a stale newest point and a
+holiday are each refused at their own rule, and a weekend and old history are
+accepted. Breaking each guard in a copy found one gap: the builder's block-pin
+was tested at one of the four places it checks, so one parametrized test now
+attacks all four (350 tests). A replayed offchain body cannot be built from a
+real source, since neither offchain body carries a source time, and a paused
+feed is not refused, since to the fund it is silence like a closed market,
+though every stock token answers `oraclePaused()` (all 35 false at block
+66841212); both are open. **Shown at the checkpoint and waiting for the
+operator.**
+
+---
+
+## State at close — 2026-09-18, after 1.11
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -646,7 +662,7 @@ it. Where this note and git disagree, git is right.
 
 **Check it in a minute.** Nothing here spends.
 - `git log --oneline -15` and `git status -sb`.
-- `make test`: 347 passed when this was written.
+- `make test`: 350 passed when this was written.
 - `make replay`: rebuilds the committed capture offline, byte for byte, in
   under a second. Needs no credential.
 - `make check-env`: which credentials are present, by name only.
@@ -658,9 +674,10 @@ it. Where this note and git disagree, git is right.
 - `probes/analyst_cost.py` **spends** with `--confirm`, in its default,
   `--one` or `--cache` mode.
 
-### Done, through 1.10
+### Done, through 1.11
 - **Phase 0, the Phase 1 replan, units 1.1-1.8, the test audit, 1.9 with the
-  operator's changes from its checkpoint, and 1.10.**
+  operator's changes from its checkpoint, 1.10, and 1.11,** shown at its
+  checkpoint and not yet judged.
 - **Decisions this far into Phase 1:**
   - staleness in open-session time, with sessions inferred from rounds;
   - the shared `adapters/http.py`;
@@ -691,7 +708,13 @@ it. Where this note and git disagree, git is right.
 - **Caching:** not honoured by the gateway, measured.
 - **LLM credits:** $0.937148 left, after 1.7 and 1.8 spent $1.862828.
 
-### Next: the weekday capture, then unit 1.11
+### Next: the 1.11 checkpoint and the weekday capture
+- **1.11 waits on the operator** (PHASE-0-1 1.11, LESSONS):
+  - whether the strictness is right;
+  - whether to read `oraclePaused()` and refuse a paused mark;
+  - whether to refuse a GeckoTerminal answer by its `Date` header;
+  - when to re-derive the closed span around 2026-11-01. Until then, every
+    weekend would be undetermined, if the feeds follow New York time.
 - **The weekday capture is owed** (1.9's checkpoint). It waits for the equity
   feeds to reopen at Mon 2026-09-21 00:00Z, ideally 13:30–20:00Z. To take it:
   - run `PYTHONPATH=src python3 -m fund.run.snapshot --capture
@@ -701,7 +724,7 @@ it. Where this note and git disagree, git is right.
   - commit it beside the weekend capture, which stays.
 - **Not answered from 1.9's checkpoint:** how much of the demo runs from
   fixtures and how much live.
-- **1.11, skew rejection,** is not started.
+- **Phase 1's exit and the re-evaluation gate** follow 1.11's checkpoint.
 
 ### Open items, none resolved
 1. **Owed in code:** two `http.py` changes (LESSONS preamble).
@@ -721,7 +744,9 @@ it. Where this note and git disagree, git is right.
 11. **Nine feeds describe themselves `RH<ticker> / USD` on chain,** against
     F0.4.1's `Robinhood <TICKER> / USD`. `research/findings.md` is not
     updated (LESSONS).
-12. **Unchanged:** paused-oracle detection; the unowned registry refresh fetch;
+12. **A paused feed is refused only once stale,** and no offchain body has a
+    source time (1.11, open).
+13. **Unchanged:** the unowned registry refresh fetch;
     six types waiting for 2.1-6.1; one RPC endpoint; which impact field gates;
     the stale README line 9.
 
@@ -744,9 +769,9 @@ it. Where this note and git disagree, git is right.
     `expires_at`, and an empty `allowed_assets`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `9e734fa`, 1.9 as shown at its
-checkpoint; this session did not push it. Every commit after it, from
-`8df6d7b` to the one that adds this note, is committed and **not pushed**. To
+Checked locally, with no fetch. `origin/main` is `aa02225`, the end of 1.10;
+this session did not push it. Every commit after it, 1.11's from `0c071cc` to
+the one that adds this note, is committed and **not pushed**. To
 re-check, run `git fetch` and then `git log origin/main..HEAD`.
 
 ### What this note does not cover
