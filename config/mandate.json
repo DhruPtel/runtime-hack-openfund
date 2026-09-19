@@ -5,6 +5,8 @@
   "chain_id": 4663,
   "execution_wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da",
   "_execution_wallet_note": "Named explicitly here, per planning/PLAN.md section 6 (decision before unit 1.1). Balances are read for this address over RPC, never from /wallet/portfolio, which omits every token (findings F0.7b.8). It is the one wallet all three Bankr keys resolve to (F0.2.3). On 4663 it carries an EIP-7702 delegation to a Bankr contract since its first swap (F0.10.3), so nothing may assume it is an EOA there. On Base it is an EOA.",
+  "execution_wallet_delegate_4663": "0xd6cedde84be40893d153be9d467cd6ad37875b28",
+  "_execution_wallet_delegate_note": "The contract the wallet's EIP-7702 designator names on 4663: its code there reads 0xef0100 followed by this address, measured at 0.10 (findings F0.10.3). The address selftest (1.10) attests it, so a changed delegation turns it red rather than going unnoticed. What the delegate permits is not measured.",
 
   "capital_usd": 200,
   "max_trade_usd": 25,
