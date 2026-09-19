@@ -671,12 +671,68 @@ each, with 15 named to cut or fold.
 
 ---
 
-## State at close — 2026-09-18, Phase 1 closed at its gate
+## Simplification plan — Phases 2 to 8 at reduced depth
+**Date:** 2026-09-19 · **Commit:** 57f9fda
+
+Wrote `planning/SIMPLIFICATION.md` as a proposal for the operator. Every unit in
+Phases 2 to 8 is kept, each with its minimal version, its full version and what
+the minimal one gives up, marked H or L by the risk rule in `CLAUDE.md`. From
+the record it:
+- repoints the fourth seat to price integrity;
+- builds the closed-session veto on the five divergence findings, where the
+  venue sides with the market on AMD and MSTR and with the frozen mark on AMZN,
+  GOOGL and SGOV;
+- gives each agent its own read-only Bankr account, which pays for its inference
+  but never transacts or signs.
+
+It proposed five build stages, each ending in a state a judge could watch.
+
+## The scope pivot, recorded across the plan
+**Date:** 2026-09-19 · **Commit:** 25b3e39
+
+LESSONS records the operator's approval of `SIMPLIFICATION.md` as analysis, and
+seven decisions with it, each with its reasoning:
+- minimal versions from Phase 2, with keys, signing and spend authority intact;
+- two report vocabularies;
+- the fourth seat as price integrity;
+- five agent wallets from `bankr login siwe`, unverified;
+- the live leg labelled a demonstration;
+- a public preview with a paid full record;
+- execution before the sale.
+
+The six judging criteria are now in `planning/JUDGING-CRITERIA.md`.
+
+The pivot is stated where PLAN §8's phase list begins and in `CLAUDE.md`. ROADMAP
+gives every unit from 2.1 a minimal line. Contradictions are marked in place
+rather than reconciled; the main ones are the 3.4 sweep, the public record in
+PLAN §5, and the page arriving at 7.6, after four of the five stops.
+
+SIMPLIFICATION's five-stage build order is marked superseded. The installed
+CLI's help shows the SIWE path exists, but lists no LLM gateway option and
+leaves the Agent API on by default, so the path stays unverified.
+
+---
+
+## State at close — 2026-09-19, the scope pivot recorded; Phase 2 not started
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
 commits, this note is older than the code, so read those commits before trusting
 it. Where this note and git disagree, git is right.
+
+**The build mode has changed.** From Phase 2, every unit is built at its
+minimal version.
+- Each unit's minimal, full and given-up versions are in
+  `planning/SIMPLIFICATION.md`. PLAN §8 states the pivot, and `CLAUDE.md`
+  carries the rule.
+- Keys, signing and spend authority keep their full guard.
+- The operator is stopped only at 3.8, 5.4, 6.6, 7.5 and 8.5.
+- Work follows the phase and unit order.
+
+**The deadline** was given on 2026-09-19 at about 11:00Z as "about 16 hours".
+That puts it at about Sun 2026-09-20 03:00Z. This is the note's arithmetic, not
+a time the operator wrote down. The whole window falls inside the equity feeds'
+closed session, Sat 00:05Z to Sun 23:55Z.
 
 **Check it in a minute.** Nothing here spends.
 - `git log --oneline -15` and `git status -sb`.
@@ -686,117 +742,129 @@ it. Where this note and git disagree, git is right.
 - `make check-env`: which credentials are present, by name only.
 - `make selftest` attests every address in config against the chain in about
   100 s. It needs the RPC URL and spends nothing.
-- `CLAUDE.md` holds the pace rule (verification scales with risk) and the two
-  dated obligations.
 - `make snapshot` builds a live snapshot in about 2.5 minutes, captures it
-  under `fixtures/live/captures/`, and replays it; `python3 -m
-  fund.run.snapshot --prove` also re-reads the chain at the same block.
-- `probes/analyst_cost.py` **spends** with `--confirm`, in its default,
-  `--one` or `--cache` mode.
+  under `fixtures/live/captures/`, and replays it.
+- `probes/analyst_cost.py` **spends** with `--confirm`.
 
-### Done, through Phase 1
-- **Phase 0 and all of Phase 1,** with the changes from 1.9's and 1.11's
-  checkpoints. The gate report, `planning/PHASE-1-GATE.md`, waits for the
-  operator. Phase 2 is not started.
-- **Decisions this far into Phase 1:**
-  - staleness in open-session time, with sessions inferred from rounds;
-  - the shared `adapters/http.py`;
-  - closed-session divergence is a finding, only past the limit;
-  - three named threshold exceptions, which 3.4 sweeps into `gates.py`;
-  - the live read lives in `run/snapshot.py`;
-  - the price is $0.25, provisional;
-  - the timeouts are 600 s and 630 s, with a 12,000-token output cap;
-  - the series is daily closes over 30 days, adopted on measurement;
-  - captures are recorded at the transport, and the repository keeps them in
-    `fixtures/snapshots/`;
-  - the snapshot names its capture's answers by hash;
-  - a paused oracle is no mark, read from the token's `oraclePaused()`;
-  - GeckoTerminal's `Date` is not checked;
-  - the closed session is re-derived on 2026-11-09;
-  - verification scales with risk (`CLAUDE.md`).
-- **The whole of what is built.** Under `src/fund/`: `config.py`,
-  `credentials.py`, `redaction.py`, `core/types.py`, `core/universe.py`,
-  `core/valuation.py`, `core/snapshot.py`, `adapters/http.py`,
-  `adapters/chain_4663.py`, `adapters/gecko.py`, `adapters/bankr_quote.py`,
-  `adapters/cache.py`, `run/snapshot.py` and `run/selftest.py`. Every other
-  module is a stub; `grep -l "Not yet built" -r src/` lists 28.
+### Done
+- **Phase 0 and all of Phase 1,** at full depth.
+- **The gate report,** `planning/PHASE-1-GATE.md`. Its §5 cut list is
+  superseded by the pivot.
+- **The simplification analysis,** approved 2026-09-19 as analysis. Its build
+  order was not adopted.
+- **Decisions of 2026-09-19** (LESSONS):
+  - the pivot;
+  - two report vocabularies, direction and condition;
+  - the fourth seat is `price-integrity`;
+  - five agent wallets from `bankr login siwe`, unverified;
+  - the ETH↔USDG leg is a demonstration of the money path;
+  - a public preview, with the full record paid;
+  - execution before the sale.
+- **The judging criteria** are in `planning/JUDGING-CRITERIA.md`.
+- **Answered, from 1.9's checkpoint:** the demo runs the committed capture for
+  the reproducible part, and a live cycle, the purchase and the explorer for the
+  rest (8.4's approved minimal version).
+- **What is built** is unchanged since Phase 1. Under `src/fund/`:
+  - `config.py`, `credentials.py`, `redaction.py`;
+  - `core/types.py`, `core/universe.py`, `core/valuation.py`,
+    `core/snapshot.py`;
+  - `adapters/http.py`, `adapters/chain_4663.py`, `adapters/gecko.py`,
+    `adapters/bankr_quote.py`, `adapters/cache.py`;
+  - `run/snapshot.py`, `run/selftest.py`.
+
+  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 28.
+
+### Next
+- **The next prompt plans Phase 2,** starting with 2.1. No Phase 2 work has
+  started.
+- **Before Phase 2 depends on the agent wallets,** prove `bankr login siwe`
+  with one key. Unknowns, from the installed CLI's help (0.3.37):
+  - how an agent key gets LLM gateway access, since no option is listed;
+  - the Agent API and Token Launch are on by default, so they must be turned
+    off;
+  - which address the wallet is;
+  - whether credits can be bought in it;
+  - whether a login replaces the fund's CLI session.
+
+  A failure is a finding. There is no shared-wallet fallback.
+- **Owed, and each a spend:**
+  - agent credits, about $22 plus about 5.8%;
+  - a fresh buyer key with about $1 of USDC on Base (7.5);
+  - the live round trip (5.2);
+  - one refused-swap attempt per agent key (4.12).
+- **Owed outside the plan docs:**
+  - `config/analysts.json`, with 2.1;
+  - `credentials.py` and `.env.example`, after SIWE is proven;
+  - the config values SIMPLIFICATION proposes, each set by its unit.
+- **Dated** (`CLAUDE.md`):
+  - the weekday capture, from Mon 2026-09-21 00:00Z, which is after the
+    deadline;
+  - the closed-session re-derivation, on 2026-11-09.
+
+### Open items, none resolved
+1. **The page lands at 7.6,** after the stops at 3.8, 5.4, 6.6 and 7.5.
+   Building it earlier moves one unit, and that is the operator's call.
+2. **The preview as decided** names no decision id, hashes or signature, and
+   7.2 serves by id.
+3. **How the handler holds the full record:** bundled per deploy, or a private
+   URL.
+4. **The live leg's mechanics.** Proposed, not decided: one small order per
+   trading cycle, alternating direction.
+5. **Token design** is a judging criterion that no unit covers (PLAN §12).
+6. **The 3.4 sweep** is deferred to 3.4's full version. After minimal 3.4,
+   invariant 4's "one module" does not hold.
+7. **Carried from 2026-09-18:**
+   - two `http.py` changes;
+   - daylight saving;
+   - holidays fail closed;
+   - exit is not assessed, because no sell quote is read;
+   - one daily-close call was set against 1.7's two;
+   - caching in other request shapes is untested;
+   - about 37–50% of billed output does not appear in the reply;
+   - AMZN's GeckoTerminal price alternates between two levels;
+   - $25 is sized at USDG's mark;
+   - the quote-age budget;
+   - nine feeds describe themselves `RH<ticker> / USD`;
+   - no offchain body has a source time;
+   - the registry refresh fetch has no owner;
+   - there is one RPC endpoint;
+   - which impact field gates;
+   - the README status line.
 
 ### The numbers that stand
 - **Snapshot:** schema `openfund.snapshot/4`, about 195 KB with 763 daily
   closes. The committed one is `253315c0…` at block 66852293, Sat 06:01Z, in
-  `fixtures/snapshots/`. 1.9's is in `fixtures/retired/`.
-- **Selftest:** 235 addresses, about 102 s and 204 requests, set by 500 ms
-  pacing. No 429.
-- **Analyst call:** $0.264 at Sonnet 5, uncached (§1.8a).
-- **Cycle:** about $1.11, $33 over 30 days, covered by 4.4 records at $0.25.
-- **Caching:** not honoured by the gateway, measured.
-- **LLM credits:** $0.937148 left, after 1.7 and 1.8 spent $1.862828.
-
-### Next: the operator reads the gate, then Phase 2
-- **The gate report** asks for the deadline and the six judging criteria, and
-  recommends which units to cut (`planning/PHASE-1-GATE.md` §5).
-- **Owed, and dated** (`CLAUDE.md`):
-  - the weekday capture from Mon 2026-09-21 00:00Z;
-  - the closed-session re-derivation on 2026-11-09.
-- **Owed, and a spend:**
-  - LLM credits before 2.6, since $0.937 is less than one cycle;
-  - wallet funding before 5.2.
-- **Not answered from 1.9's checkpoint:** how much of the demo runs from
-  fixtures and how much live.
-
-### Open items, none resolved
-1. **Owed in code:** two `http.py` changes (LESSONS preamble).
-2. **The daily cut's daylight saving.** 20:00Z is 16:00 New York only in
-   daylight time. The closed span needs re-deriving after 2026-11-01.
-3. **Holidays fail closed,** by decision. Daily closes skip them honestly.
-4. **Exit is not assessed** for ETH and stocks: no sell quote is read in
-   Phase 1.
-5. **One daily-close call** was set against 1.7's two. The report-shape proxy
-   is not a grade.
-6. **Caching in other request shapes** is untested.
-7. **About 37–50% of billed analyst output does not appear in the reply,**
-   inferred to be hidden reasoning.
-8. **AMZN's GeckoTerminal price alternates** between two levels; unresolved.
-9. **$25 is sized at USDG's Chainlink mark,** a 1.5 choice for the operator.
-10. **The quote-age budget.** The oldest quote was 21–25 s old at `built_at`.
-11. **Nine feeds describe themselves `RH<ticker> / USD` on chain,** against
-    F0.4.1's `Robinhood <TICKER> / USD`. `research/findings.md` is not
-    updated (LESSONS).
-12. **No offchain body has a source time,** and GeckoTerminal's `Date` is
-    unchecked by decision. Its fail-open direction is in PLAN §13.
-13. **Unchanged:** the unowned registry refresh fetch;
-    six types waiting for 2.1-6.1; one RPC endpoint; which impact field gates;
-    the stale README line 9.
+  `fixtures/snapshots/`.
+- **Selftest:** 235 addresses in about 102 s.
+- **Analyst call:** $0.264 at Sonnet 5, uncached. A cycle is about $1.11.
+- **LLM credits:** $0.937148 in the fund's account, not re-read since
+  2026-09-18.
+- **Wallet:** about $1.29, as 0.078742 USDG and 0.000460 ETH on 4663
+  (`PHASE-1-GATE.md` §2).
 
 ### Config
-- **Changed at the gate:** `sessions.json` carries `_rederive_on`,
-  2026-11-09.
-- **Changed in 1.10's pass:** `mandate.json` pins
-  `execution_wallet_delegate_4663`, the wallet's 7702 delegate.
-- **Changed in 1.8's pass:**
-  - `models.json`: `max_output_tokens` 12000, transport 600 s, worker
-    deadline 630 s;
-  - `chain.json`: `series_sampling` `daily_close`, window 30 days, 5,000
-    rounds, cut 20:00Z;
-  - `registry/pins.json`: an empty `carried` list.
-- **Still null, which blocks whatever reads it:**
-  - `cadence.json`: `confirmation_depth`, `cycle_deadline_seconds` and
-    `retry_budget_per_worker`;
-  - `models.json`: `risk_model` and `context_budget_tokens`;
-  - `thresholds.json`: `max_position_weight`, `turnover_max_bps`,
-    `cash_floor_usd` and `quorum_min_analysts`;
-  - `mandate.json`: `cumulative_budget_usd`, `approved_by`, `approved_at`,
-    `expires_at`, and an empty `allowed_assets`.
+Unchanged since 2026-09-18. `analysts.json` still names
+`fundamentals-calendar`. **Still null:**
+- `cadence.json`: `confirmation_depth`, `cycle_deadline_seconds` and
+  `retry_budget_per_worker`;
+- `models.json`: `risk_model` and `context_budget_tokens`;
+- `thresholds.json`: `max_position_weight`, `turnover_max_bps`,
+  `cash_floor_usd` and `quorum_min_analysts`;
+- `mandate.json`: `cumulative_budget_usd`, `approved_by`, `approved_at`,
+  `expires_at`, and an empty `allowed_assets`.
+
+Proposals for each are in SIMPLIFICATION.md, "Config the minimal build needs".
+None is set.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `104c878`, 1.11 at its
-checkpoint; this session did not push it. Every commit after it, from
-`a7392c8` to the one that adds this note, is committed and **not pushed**. To
-re-check, run `git fetch` and then `git log origin/main..HEAD`.
+Checked locally, with no fetch. `origin/main` is `3b53d32`. The reflog shows it
+pushed on 2026-09-19 at 03:45 PDT, after the previous note was written. Every
+commit from `57f9fda` to the one that adds this note is committed and **not
+pushed**.
 
 ### What this note does not cover
 - **Decisions.** It does not restate any in full; LESSONS holds them.
-- **The plan.** PLAN, ROADMAP and PHASE-0-1 are the plan.
+- **The plan.** PLAN, ROADMAP, PHASE-0-1 and SIMPLIFICATION are the plan.
 - **Credentials.** It checks none beyond `make check-env`'s names.
 - **The remote.** Its check is one local read of the remote-tracking ref.
 - **Unrecorded conversation.** Anything not written into `tracker/`,
