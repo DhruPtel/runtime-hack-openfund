@@ -11,9 +11,10 @@ help:
 	@echo "  make replay      rebuild every committed capture offline; fails unless identical [1.9]"
 	@echo "  make selftest    attest every address in config against the chain, ~2 min [1.10]"
 	@echo ""
+	@echo "  make cycle-demo  two whole paper cycles from the committed capture [4.8]"
+	@echo ""
 	@echo "Not yet built (the unit that lands each is named):"
-	@echo "  make cycle-demo  a full cycle from fixtures               [unit 4.8]"
-	@echo "  make cycle       a live cycle, durable orders, journal     [unit 4.8]"
+	@echo "  make cycle       a live cycle: live quotes and a real risk call [Phase 5, 8.3]"
 
 test:
 	python3 -m pytest -q
@@ -36,6 +37,12 @@ replay:
 selftest:
 	PYTHONPATH=src python3 -m fund.run.selftest --live
 
-cycle cycle-demo:
+# Two paper cycles on the committed capture and the exit run's four real reports: a
+# fake venue, a scripted risk vote, a scratch signing key of its own. Spends nothing,
+# calls no model, and touches no chain. Writes under fixtures/live/, which is ignored.
+cycle-demo:
+	PYTHONPATH=src python3 -m fund.run.cycle --demo
+
+cycle:
 	@echo "'$@' is not built yet. See 'make help' for the unit that lands it."
 	@exit 1
