@@ -861,9 +861,21 @@ refusal remains. Judged a real view reached mechanically: the same five calls
 as the hand-written example, thinner, and with two unsupported prose claims.
 **Shown, and waiting for the operator.**
 
+## After 2.6 — Display, the validator loosened, the entry point tested
+**Date:** 2026-09-19 · **Commit:** eba2e75
+
+`python -m fund.agents.show <cycle dir or result>` prints a stored report
+exactly as the model wrote it, and every attempt now keeps its reply whole.
+2.2's bps rule now checks a bps figure only when its line cites a field in bps,
+and a seat with no wallet is written `unassigned`, never `0x…`. On the same
+recorded 2.6 reply, kept in `tests/data/`, with no new call, the six refusals
+became one: the header its old placeholder provoked, and with that token alone
+restored the report is accepted. The runner's `main()` has its tests; 449 pass,
+and no rule was added.
+
 ---
 
-## State at close — 2026-09-19, 2.6 run once live; the first report was refused
+## State at close — 2026-09-19, after 2.6: the validator loosened, the report readable
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -887,8 +899,10 @@ closed session, Sat 00:05Z to Sun 23:55Z.
 
 **Check it in a minute.** Nothing here spends.
 - `git log --oneline -15` and `git status -sb`.
-- `make test`: 436 passed when this was written, about 12 s. The runner tests
+- `make test`: 449 passed when this was written, about 12 s. The runner tests
   start real subprocesses against a fake gateway on 127.0.0.1.
+- `python3 -m fund.agents.show fixtures/live/cycles/20260919T153900Z` prints
+  2.6's report as the model wrote it.
 - `python3 -m fund.agents.runner --snapshot <path> [--seats …] [--retries N]`
   prints what it would run. It **spends** only with `--confirm`.
 - `python3 -m probes.keymap`: each key's measured capabilities, read-only.
@@ -925,6 +939,11 @@ closed session, Sat 00:05Z to Sun 23:55Z.
 - **The keys, fixed by the operator and measured.** `BANKR_LLM_KEY` is refused
   by the Wallet API and the Agent API.
 - **2.6, run once live** on one seat: refused, and shown (entry above).
+- **After 2.6** (entry above):
+  - the display;
+  - the bps rule loosened;
+  - `unassigned` for a seat with no wallet;
+  - the entry point tested.
 - **What is built.** Under `src/fund/`:
   - `config.py`, `credentials.py`, `redaction.py`;
   - `core/types.py`, `core/universe.py`, `core/valuation.py`,
@@ -940,15 +959,12 @@ closed session, Sat 00:05Z to Sun 23:55Z.
 
 ### Next
 - **The operator reads 2.6** (`research/findings.md` §2.6).
-- **Owed from 2.6, each needing a path the 2.6 pass did not have:**
-  - **2.2's bps rule:** check a bps figure only when its line cites a `_bps`
-    field. Add the test with it. Paths: `src/fund/agents/schema.py`, `tests/`.
-  - **The unassigned agent `0x…`** reads as an address to fill in. It needs a
-    token that cannot be, or real agent addresses (2.0's choice). Paths: the
-    runner, the brief.
-  - **Tests for the runner's `main()`.** Path: `tests/`.
-  - **The settled `/v1/usage` cross-check** for the 15:39Z call, once the window
-    has been closed for 3,600 s.
+- **Owed from 2.6:**
+  - **The settled `/v1/usage` cross-check** for the 15:39Z call. The window
+    will have been closed long enough by now; it needs one live read.
+  - **`research/findings.md` §2.6's "What 2.6 changes" table** still lists the
+    bps rule and the placeholder as owed. Both are done (LESSONS); the file was
+    outside this pass's paths.
 - **2.0's choice is still open:**
   - (a) email sign-ups with `--llm`, untested;
   - (b) the dashboard, unknown for a SIWE account;
@@ -1053,9 +1069,9 @@ closed session, Sat 00:05Z to Sun 23:55Z.
   `expires_at`, and an empty `allowed_assets`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `fd0a6f2`, the 2.2–2.5
-batch, pushed by the operator. Every commit from `e2d9e3d` (2.6's entry point)
-to the one that last changed this note is committed and **not pushed**.
+Checked locally, with no fetch. `origin/main` is `bb7de97`, 2.6, pushed by the
+operator. Every commit from `ea39fd6` (the bps rule) to the one that last
+changed this note is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** It does not restate any in full; LESSONS holds them.
