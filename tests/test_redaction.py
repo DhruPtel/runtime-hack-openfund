@@ -376,11 +376,11 @@ def test_exactly_one_credential_can_transact():
     assert [c.name for c in credentials.transacting()] == ["BANKR_KEY_EXEC"]
 
 
-def test_role_scoping_survives_a_credential_being_reassigned(monkeypatch):
+def test_role_scoping_survives_a_credential_being_reassigned(monkeypatch, credential_env):
     """A row moved to the analyst role changes what the analyst can load.
 
     Guards against role checks being satisfied by a cached or hard-coded list
-    rather than by reading the table.
+    rather than by reading the table when the role loads.
     """
     original = credentials.by_name("SIGNING_KEY")
     widened = replace(original, used_by=frozenset({Role.ANALYST, Role.TREASURER}))
@@ -390,4 +390,5 @@ def test_role_scoping_survives_a_credential_being_reassigned(monkeypatch):
     monkeypatch.setattr(credentials, "CREDENTIALS", patched)
     monkeypatch.setattr(config, "CREDENTIALS", patched)
 
-    assert "SIGNING_KEY" in {c.name for c in credentials.for_role(Role.ANALYST)}
+    analyst = config.load(Role.ANALYST, install_redaction=False)
+    assert analyst.secret("SIGNING_KEY") == FAKE_VALUES["SIGNING_KEY"]
