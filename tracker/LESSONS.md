@@ -9,12 +9,13 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds: two, as of 2026-09-18, after 1.3's close-out.** Both belong in
-`planning/PHASE-0-1.md` 1.3, which that pass could not write:
-1. **The staleness-exception DECISION.** 1.3's text still calls the
-   comparison's location open.
-2. **The schedule-not-session entry.** 1.3's text says "the session is named in
-   the verdict". What the verdict names is the feed's schedule label.
+**Pending folds: none, as of 2026-09-18, after 1.4.** The two folds owed in
+`planning/PHASE-0-1.md` 1.3 since 1.3's close-out were made in 1.4's pass: the
+staleness-exception DECISION, and the verdict naming a schedule, not a
+session. Every 1.4 entry was folded in the same pass, into PLAN, PHASE-0-1,
+CODEBASE and `config/`. Two entries leave questions marked open in the plan
+docs rather than reconciled: where the divergence tier is compared, and which
+unit revisits the staleness exception.
 
 Every earlier entry was checked as folded: the 1.2 and 1.3 entries in their own
 passes, and the older ones entry by entry before unit 1.1.
