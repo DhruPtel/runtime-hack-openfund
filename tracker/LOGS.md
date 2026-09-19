@@ -1126,9 +1126,41 @@ Each is one function in `core/`, built as the new unit 4.0. It then plans 4.1 to
 carries S10 to S13, the mandate's approval and the `.env` split to their units.
 Six decisions wait on the operator before 4.0.
 
+## 3.9 hardened — A replay reads the config its cycle carries, and judges by the gates its record names
+**Date:** 2026-09-19 · **Commits:** 0f64916, 51f3ff2, ecc4f67, 30c2c77, bf7611a, 6de24c3
+
+The orientation after Phase 3 found the replay read the working tree's config, and
+4.1's first edit to `mandate.json` would have failed 3.9's test. Building the fix
+found two more such reads: the validator's contract and the quote verdicts.
+- **Config:** a decision reads its four config files once, from one directory, and
+  writes the copy beside its record. Both recorded cycles carry theirs, and
+  `decide.replay` reads that copy and refuses one its record does not name.
+- **Gates:** a record's schema names its gate set beside its plan's layout, and a
+  replay judges by that set. Set 1 is Phase 3's; S10 and S11 make set 2 at 4.4.
+- **Verified H:** nine rules broken in a copy, each caught. Among them, a replay
+  reading any one of the four files from the tree, and one taking today's gates.
+
+## 4.0 — Twelve shared values, one definition each
+**Date:** 2026-09-19 · **Commits:** 9057dbe, cbd0193, 7329920, 38915d3, 8467648, c8fc7d2, dbdd3cf, 6b27b64, de7a9ec
+
+Built before any Phase 4 unit, and consumed by none yet:
+- **`core/orders.py`:** the moves an order may make, with `prepared → refused`
+  for a chokepoint refusal, and its id and key from the decision and plan index.
+- **`core/ledger.py`:** the four events and which book, paper or real, each is in;
+  a paper fill that is its quote exactly; and one fold that gives holdings, cash
+  as USDG at its own mark, average-cost basis, realised and unrealised value, costs
+  and expenses. A fee is never basis. Each book's NAV is `cash.nav`, the sum the
+  planner uses, and equals opened + realised + unrealised − costs, exactly.
+- **`core/cash.py`:** which holding is cash, and the NAV. `gates.settle` now counts
+  filled orders at what they booked and the rest at their projection.
+
+Verified H: 51 rules broken in a copy as each primitive was built, each caught by
+its own test. The five values the orientation found missing are held to one
+module each by `tests/test_boundaries.py`. 674 tests pass. **Stopped before 4.1.**
+
 ---
 
-## State at close — 2026-09-19, Phase 3 closed: 3.9 replays the exit run; Phase 4 planned
+## State at close — 2026-09-19, 4.0 built, stopped before 4.1
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -1141,16 +1173,17 @@ it. Where this note and git disagree, git is right.
   carries the rule.
 - Keys, signing and spend authority keep their full guard.
 - The operator is stopped at 2.1, 3.8, 4.11, 5.4, 6.6, 7.5 and 8.5. 2.1 was
-  approved, and past 3.8 the operator asked for Phase 3's close.
+  approved, and past 3.8 the operator asked for Phase 3's close. Then for the
+  orientation's fixes and 4.0, stopping before 4.1.
 
 **The deadline** was given at about 11:00Z on 2026-09-19 as "about 16 hours":
 about Sun 2026-09-20 03:00Z. That is this note's arithmetic, not a time the
-operator wrote down. This note was written at about 20:50Z.
+operator wrote down. This note was written at about 21:50Z.
 
 **Check it in a minute.** Nothing here spends unless marked. The `python3 -m`
 commands need `PYTHONPATH=src`.
 - `git log --oneline -25` and `git status -sb`.
-- `make test`: 614 passed when this was written, in about 27 s. The runner and
+- `make test`: 674 passed when this was written, in about 28 s. The runner and
   risk tests start real subprocesses against a fake gateway on 127.0.0.1.
 - `python3 -m fund.run.decide --snapshot fixtures/snapshots/66852293-253315c0e691
   --approved-reports --quotes Q --risk-reply R [--env-file E]` takes reports to
@@ -1161,7 +1194,11 @@ commands need `PYTHONPATH=src`.
   - `--cycle DIR` takes a runner cycle's accepted reports instead.
 
   It signs with `.env`'s `SIGNING_KEY` unless `--env-file` names another. Do
-  not sign fake inputs with the fund's key.
+  not sign fake inputs with the fund's key. It writes the config it read beside
+  the record, as `config/`.
+- `decide.replay(cycle, snapshot, out)` rebuilds a recorded cycle's record from
+  what the cycle carries, its config included, and never signs
+  (`tests/test_replay_cycle.py`).
 - `python3 -m fund.agents.show <cycle dir>` prints a stored report as written.
 - `python3 -m fund.agents.runner --snapshot <path> ...` **spends** with
   `--confirm`.
@@ -1174,8 +1211,9 @@ commands need `PYTHONPATH=src`.
 ### Done
 - **Phases 0 and 1,** at full depth.
 - **Phase 2, 2.0 to 2.7.** 2.8 is not closed, though its three cases exist as
-  2.4's tests. The exit run has not happened, so Phase 2's exit is not met: one
-  seat of four has had an accepted real report, and no seat has its own account.
+  2.4's tests. Phase 2's exit is not met: all four seats had real reports
+  accepted at 3.8's exit run, but no seat has its own account. (Until this note,
+  this line still said the exit run had not happened: stale since 3.8.)
 - **Phase 3, 3.1 to 3.7,** offline, in one pass (entries above). It was built on
   the four approved reports, the committed capture, a labelled fake venue,
   scripted risk replies and 2.4's fake gateway.
@@ -1192,6 +1230,11 @@ commands need `PYTHONPATH=src`.
   - the exit run's decision, `732161de…`, in `fixtures/cycles/20260919T202259Z/`;
   - 3.9's test rebuilds it byte for byte, network refused;
   - plans are written in layout 2, and records as `openfund.decision/2`.
+- **3.9 hardened** (entry above): each recorded cycle carries the config it was
+  decided under, a replay reads that copy, and a record's schema names its gate
+  set as well as its layout.
+- **4.0** (entry above): twelve shared values in `core/orders.py`,
+  `core/ledger.py`, `core/cash.py` and `gates.settle`. No unit consumes them yet.
 - **Decisions of 2026-09-19** (LESSONS): the pivot, and the Phase 2 decisions.
   Then the Phase 3 batch's:
   - a target starts at the weight held;
@@ -1206,24 +1249,22 @@ commands need `PYTHONPATH=src`.
     3.8 sweep);
   - `agents/risk.py` and `agents/briefs/risk.v1.md`;
   - `treasurer/sign.py`;
-  - `run/decide.py`.
+  - `run/decide.py`;
+  - `core/orders.py` and `core/ledger.py` (4.0).
 
   Every other module is a stub: `grep -l "Not yet built" -r src/` lists 17.
 
 ### Next
-- **Phase 3 is closed.** 3.8 was shown, and 3.9's test rebuilds the exit run's
-  record byte for byte. The split-order presentation and the NVDA example are
-  fixed (entries above).
-- **Phase 4 is planned,** in `planning/PHASE-4.md`, and waits on six operator
-  decisions:
-  - the cost-basis method;
-  - what paper cash is held as;
-  - the mandate's approval values and allowed assets;
-  - the published signing key's place in config;
-  - S11's snapshot-age limit;
-  - 4.12's refused-swap authorization.
+- **Phase 4's Batch B, from 4.1,** in `planning/PHASE-4.md`. Nothing from 4.1
+  is started. The six decisions are made (LESSONS), and each waits for its unit:
+  - 4.1 writes `mandate.json`: approved by the operator, a 7-day expiry, the 35
+    markable stocks plus ETH and USDG. S10 needs USDG in it before 4.4;
+  - 4.2 writes `config/keys.json`, the public key only;
+  - 4.4 builds S11 at 15 minutes, as gate set 2 and a new record schema;
+  - 4.12's refused swaps are authorized.
 
-  Then batch A is unit 4.0, the shared primitives.
+  Average cost, a fee kept out of basis, and paper cash as USDG at its own mark
+  are already in 4.0.
 - **Stops:** 2.1, 3.8, **4.11**, 5.4, 6.6, 7.5 and 8.5. 4.11 was added by the
   operator on 2026-09-19. `CLAUDE.md`'s list is owed the same; it was outside
   this pass's paths.
@@ -1241,6 +1282,13 @@ commands need `PYTHONPATH=src`.
   - 2.0's choice, (a), (b) or (c);
   - 2.8;
   - the page slice.
+- **Owed to later Phase 4 units, from 4.0** (LESSONS, "4.0: what building…"):
+  - whether the paper book opens with 200 USDG ($199.98) or $200 of it: 4.8 and
+    4.11;
+  - 4.8 cannot replay the exit run's risk reply: a fake venue and a scripted
+    reply, as 3.7 used;
+  - a `prepared` order found at startup: 4.9;
+  - 4.4 matches a quote to an `Order` with `orders.quote_is_for`.
 - **Owed from Phase 3:**
   - the mandate is provisional: 4.1 replaces the allowed assets and the
     placeholder approvals;
@@ -1329,6 +1377,9 @@ commands need `PYTHONPATH=src`.
   $0.099454, 45.9 s, 29,202 tokens in. The balance was not re-read.
 - **The exit run's decision:** eight buys of $164.06 planned, six approved,
   and two vetoed by the risk agent. It leaves $73.44 of paper cash.
+- **The same six, filled on paper in 4.0's tests** from 200 USDG at the recorded
+  quotes: 73.430231 USDG left, $73.42 at the snapshot's USDG mark of 0.99992279.
+  The 200 USDG itself is $199.98.
 - **Phase 3, offline, on the four approved reports:**
   - META 12.5%, AMD, INTC and USO 6.25% each, 68.75% cash;
   - four buys totalling $62.50 of the $200 paper book;
@@ -1350,10 +1401,10 @@ commands need `PYTHONPATH=src`.
   `cumulative_budget_usd`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `d2638dd`, pushed by the
-operator: everything through 3.8 finished. Every commit from `45f1e2d` (the
-split-order fix) to the one that last changed this note is committed and **not
-pushed**.
+Checked locally, with no fetch. `origin/main` is `f145540`, pushed by the
+operator at about 20:49Z: everything through Phase 3's close and the Phase 4 plan.
+Every commit from `0f64916` (3.9 hardened) to the one that last changed this
+note is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** LESSONS holds them in full.
