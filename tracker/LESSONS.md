@@ -2470,3 +2470,31 @@ made no NVDA call.
 - the refused replies in the record;
 - another exit run once those are settled.
 **Affects:** 2.2, 2.3, 3.7, 3.8, 3.9; the quorum; the exit run.
+
+## 2026-09-19 — DECISION: check a cited figure by value; fix the validator's two faults; one brief line
+*The operator's, after 3.8, where all four live reports were refused and none
+had invented a figure.*
+- **Check by value, and record the looseness.** A figure that is not the field
+  its line cites is accepted if it is a value the snapshot holds. The
+  imprecision is recorded in the parsed result and in the signed record. A
+  figure found nowhere still refuses the report, because it is fabricated.
+- **"Holds" is read as: held by an asset the line is about.** That is the
+  call's own asset, and every asset the line names in its citations or words.
+  It is not the whole snapshot, whose 1,398 values would let a figure written
+  to two places match by chance. Every 3.8 figure falls inside that scope.
+- **Our two faults fixed:**
+  - thousands separators are read as one number;
+  - a bracket that is not a field reference is prose. Its numbers stay
+    figures, and a line whose brackets are all prose is checked by value.
+    Otherwise a fabricated figure could hide behind `[see above]`.
+- **The brief line** (2.3, authorized): name the other asset when citing its
+  figure, and write a field's full path.
+- **Contradicts:** 2.2's rule that a citation naming no field refuses the
+  report. Three tests that pinned it now test that the imprecision is
+  recorded, and that the figure under it is still checked.
+
+**The result on the stored 3.8 replies, with no new call:** three of four
+accepted, a quorum. Cross-asset-macro is still refused, on `+(-0.09)%`, a
+percentage the parser cannot read.
+**Affects:** 2.2, 2.3, 3.7, 3.8; `agents/schema.py`, `core/record.py`,
+`run/decide.py`.

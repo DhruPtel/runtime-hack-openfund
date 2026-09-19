@@ -1013,6 +1013,23 @@ quorum. So the fund's real decision, signed with its key as `2c9c1a79…`, is no
 rebalance: no order, no risk call and no veto (`research/findings.md` §3.8;
 `fixtures/cycles/20260919T171351Z/`). **Shown, and waiting for the operator.**
 
+## After 3.8 — Check by value, the validator's two faults, one brief line
+**Date:** 2026-09-19 · **Commits:** 013257a, 60375c3, 45b4575, ff1bff4, df7cf74, d426bc8
+
+`agents/schema.py` now:
+- reads thousands separators;
+- treats a bracket that is not a field reference as prose;
+- accepts a real value cited under a loose reference, recording the imprecision
+  in the parsed result and the signed record. A figure matching no value of the
+  assets its line is about still refuses.
+
+The shared brief gained its one line: name the other asset, and write the full
+path. On the stored 3.8 replies, with no new call, three of four now pass.
+Cross-asset-macro is still refused on `+(-0.09)%`. Six of their figures changed
+to values the snapshot does not hold all refuse, and the fabrication check broken
+four ways in a copy was caught each time (`research/findings.md` §3.8,
+revisited).
+
 ---
 
 ## State at close — 2026-09-19, after 3.8's run: no quorum, no veto, waiting at the stop
