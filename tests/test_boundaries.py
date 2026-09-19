@@ -12,7 +12,7 @@ import pathlib
 from types import MappingProxyType
 
 from fund.adapters import bankr_quote, chain_4663
-from fund.core import snapshot, universe, valuation
+from fund.core import gates, snapshot, universe, valuation
 from fund.core.types import BPS, USD, AssetId, Check, FetchStatus, Fixed, Instant
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -139,10 +139,13 @@ NAMED_EXCEPTIONS = {
 THRESHOLDS = json.loads((REPO / "config" / "thresholds.json").read_text())
 
 #: The names a threshold travels under once read from config/thresholds.json:
-#: the fields of the two objects that carry the gates' limits, and the chain
-#: adapter's staleness margin. The trade size is not a limit.
+#: the fields of the objects that carry the gates' limits, and the chain
+#: adapter's staleness margin. The trade size is not a limit. Since 3.1 that
+#: includes every field of `gates.Limits`, so the aggregator and the planner
+#: cannot compare against a limit themselves: they call gates.py to apply it.
 THRESHOLD_NAMES = ({f.name for f in dataclasses.fields(valuation.DivergenceRule)}
                    | {f.name for f in dataclasses.fields(bankr_quote.Limits)} - {"nominal"}
+                   | {f.name for f in dataclasses.fields(gates.Limits)}
                    | {"margin_s", "staleness_margin_s"})
 THRESHOLD_KEYS = {k for k in THRESHOLDS if not k.startswith("_")}
 ORDERING = (ast.Lt, ast.LtE, ast.Gt, ast.GtE)
