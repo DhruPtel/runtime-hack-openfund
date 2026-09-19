@@ -1483,3 +1483,47 @@ available". A read by block hash is safe to retry in either wording.
   not look at coverage, and whether it should is open.
 - **The fix is owed** in `adapters/chain_4663.py`, outside 1.7's paths.
 **Affects:** 1.3's `RpcClient`, 1.6, 1.11.
+
+## 2026-09-18 — DECISION: the x402 price rises to $0.25 a record
+*Decided by the operator after 1.7.* At 1.7's measured $1.87 a cycle, $0.05
+needs 37 record sales a cycle to cover inference. $0.25 needs 8, which is still
+cheap for an agent buying a research record. **Provisional**: it can move again
+once the cycle cost settles, which the history and caching decisions below may
+do. This answers 1.7's "done when".
+**Affects:** 1.7, 7.2, 7.4, 8.6; PLAN §11.
+
+## 2026-09-18 — DECISION: thin the history to daily closes over 30 days, if measurement supports it
+*Decided by the operator after 1.7, on a condition.* At 1.7 the series was
+every round over 7 days: about 132 points an asset, 66.8% of the input and 53%
+of a cycle, for a fund that rebalances daily. It is to become one close a day
+over 30 days, a longer view in fewer points.
+- **Measure first.** Build a snapshot with the new series, re-run 1.7's analyst
+  call against it, and report tokens, cost, and whether the reports still cite
+  history. If daily closes make the analysts worse, the denser series stays.
+- **No close is invented.** A daily close inside a closed session does not
+  exist, and the series must say what it does across a weekend rather than
+  interpolate.
+**Affects:** 1.3's series, 1.6, 1.7's numbers, 1.9; `config/chain.json`.
+
+## 2026-09-18 — DECISION: output cap 12,000; transport timeout 600 s; worker deadline 630 s
+*Decided by the operator after 1.7,* as recommended in F1.7.4, and set now
+rather than at 2.4.
+- **The inversion was the real bug.** A 120 s worker deadline fired before a
+  180 s transport timeout could.
+- **The slow case is real.** The gateway ran at about 17 and about 121 output
+  tokens a second at 0.9 and 1.7.
+- **A call cut off on our side is still billed** (F0.9.3).
+
+The worker deadline now exceeds the transport timeout, so the transport ends a
+call and the worker is left time to record it.
+**Affects:** 2.4; `config/models.json`.
+
+## 2026-09-18 — DECISION: test explicit prompt caching, in two calls
+*Decided by the operator after 1.7.* If four analysts can share one cached
+snapshot, a cycle drops from about $1.87 to about $0.96 (F1.7.6), halving the
+largest cost line in the project. Two calls:
+- one that writes the cached snapshot;
+- one that reads it.
+
+They measure whether the gateway honours cache control, and what it saves.
+**Affects:** 2.4, 6.3; PLAN §10.
