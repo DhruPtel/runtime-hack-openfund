@@ -9,19 +9,20 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds into the plan docs: none, as of 2026-09-18, after 1.6.** Every
-1.6 entry was folded in 1.6's pass.
+**Pending folds into the plan docs: none, as of 2026-09-18, after 1.7.** Every
+1.7 entry, and the DECISION taken before it, was folded in 1.7's pass.
 
-**Owed in code, outside 1.6's paths.** Two things are recorded and folded but
-not yet true in the code:
-1. **`adapters/http.py` owes two changes**, found by 1.5: a caller-named
-   status returned as an answer without retries, and caller headers on
-   `urllib_transport`. 1.5 works around both inside its own module.
+**Owed in code, outside the paths of the passes that found them:**
+1. **`adapters/http.py`, two changes** (found by 1.5): return a caller-named
+   status as an answer without retries, and take caller headers on
+   `urllib_transport`. 1.5 works around both in its own module.
 2. **The Makefile's `make snapshot`** still prints "not built yet". The live
    read is `python -m fund.run.snapshot` (1.6).
-
-The two `core/valuation.py` items owed after 1.5, the closed-session finding
-and the stale docstring, were done in 1.6.
+3. **`adapters/chain_4663.py`** retries missing state only in one wording, and
+   misses `missing trie node … layer stale` (found by 1.7).
+4. **`core/valuation.py`'s docstring** says the snapshot entry carries each
+   closed-session `Finding`. Since the findings DECISION after 1.6, it carries
+   only those past the limit.
 
 Every earlier entry was checked as folded: the 1.2 and 1.3 entries in their own
 passes, and the older ones entry by entry before unit 1.1.
