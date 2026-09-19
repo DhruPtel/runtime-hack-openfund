@@ -225,3 +225,57 @@ def test_a_books_nav_is_one_function_and_it_is_exact(monkeypatch):
         ENTRIES[ADDRESS["META"]]["mark"]["price_usd"])
     monkeypatch.setattr(cash, "nav", lambda cash_usd, values: Decimal("12345"))
     assert plan.book(held, Decimal("150"), SNAPSHOT).nav_usd == Decimal("12345")
+
+
+# --- 4.0 P11: cash partway through a decision ------------------------------------------------------
+
+def sell_then_buy():
+    """R2's book: NAV $205 with $20.50 of cash. Sell META, buy AAPL and MSFT, funded
+    by the sale. The plan leaves the floor with a few cents to spare."""
+    the_book = book({"META": worth("META", "60"), "AMD": worth("AMD", "60"),
+                     "INTC": worth("INTC", "64.5")}, cash="20.50")
+    plan = written(calls(META=("sell", "medium"), AAPL=("buy", "high"), MSFT=("buy", "high")),
+                   the_book=the_book)
+    sells = [o for o in plan["orders"] if o["side"] == "sell"]
+    buys = [o for o in plan["orders"] if o["side"] == "buy"]
+    assert sells and buys and plan["orders"] == sells + buys  # sells run first
+    return plan, sells, buys
+
+
+def test_p11_a_filled_sell_counts_at_what_it_booked_and_the_rest_at_their_projection():
+    """The sells fill for 2% less than their marks: a closed-session divergence. At
+    decision nothing is dropped. Partway through, with the sells booked at what they
+    really got, the buys they were funding no longer all fit, and the last is dropped."""
+    plan, sells, buys = sell_then_buy()
+    every = [o["index"] for o in plan["orders"]]
+    assert gates.settle(plan, every, snapshot=SNAPSHOT, limits=LIMITS)[1] == []
+
+    cash_usd = Decimal(plan["book"]["cash_usd"])
+    booked = cash_usd + sum(traded(o) for o in sells) * Decimal("0.98")
+    filled = [o["index"] for o in sells]
+    kept, dropped, floor = gates.settle(plan, every, snapshot=SNAPSHOT, limits=LIMITS,
+                                        booked_usd=booked, filled=filled)
+    assert dropped == [buys[-1]["index"]] and floor.passes
+    assert booked - sum(traded(o) for o in buys if o["index"] in kept) >= FLOOR
+    # Booked at their marks, the same sells drop nothing: the rule is what was booked
+    # plus what is still to come, not either one alone, and never a sale counted twice.
+    at_mark = cash_usd + sum(traded(o) for o in sells)
+    assert gates.settle(plan, every, snapshot=SNAPSHOT, limits=LIMITS, booked_usd=at_mark,
+                        filled=filled)[1] == []
+
+
+def test_p11_a_filled_buy_is_never_dropped_and_a_fill_needs_its_booked_cash():
+    plan, sells, buys = sell_then_buy()
+    every = [o["index"] for o in plan["orders"]]
+    all_but_last = [o["index"] for o in sells + buys[:-1]]
+    kept, dropped, floor = gates.settle(plan, every, snapshot=SNAPSHOT, limits=LIMITS,
+                                        booked_usd=Decimal("1"), filled=all_but_last)
+    assert dropped == [buys[-1]["index"]] and set(all_but_last) <= set(kept)
+    assert floor.value is False  # what filled cannot be undone: the floor says so
+    for wrong in (dict(filled=all_but_last),  # no booked cash
+                  dict(booked_usd=Decimal("50"), filled=[max(every) + 1])):  # not approved
+        try:
+            gates.settle(plan, every, snapshot=SNAPSHOT, limits=LIMITS, **wrong)
+        except ValueError:
+            continue
+        raise AssertionError(f"settle judged the floor with {wrong}")

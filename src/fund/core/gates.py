@@ -451,22 +451,37 @@ def evaluate(plan: Mapping[str, Any], *, snapshot: Mapping[str, Any],
 
 
 def settle(plan: Mapping[str, Any], approved: Iterable[int], *,
-           snapshot: Mapping[str, Any], limits: Limits) -> tuple[list[int], list[int], Gate]:
+           snapshot: Mapping[str, Any], limits: Limits, booked_usd: Decimal | None = None,
+           filled: Iterable[int] = ()) -> tuple[list[int], list[int], Gate]:
     """The cash floor, on the orders actually approved (R1): after the gates and the
     risk vote. While the approved orders would leave less than the floor, the last
     approved buy is dropped. A sell is never dropped: it raises cash. Returns the
     orders still approved, the buys dropped, and the floor's verdict on what is left.
 
-    With the floor unresolved, every buy is dropped: null blocks."""
+    **Partway through a decision** (4.4, admitting each order; 4.0 P11), some
+    approved orders have filled. Their effect is in `booked_usd`, the cash the ledger
+    holds now at the cash leg's mark (`ledger.cash_held`): what they really booked.
+    The approved orders not in `filled` are projected by `cash.cash_after`, as at
+    decision time. A filled order is never projected again and never dropped. So a
+    sell that booked less than its mark funds the buys after it only with what it
+    booked. At decision time nothing has filled, and the floor starts from the plan's
+    own cash, exactly as before.
+
+    With the floor unresolved, every buy not yet filled is dropped: null blocks."""
     known(limits)
     orders = {o["index"]: o for o in plan["orders"]}
     kept = sorted(i for i in approved if i in orders)
+    done = set(filled)
+    if done - set(kept):
+        raise ValueError(f"orders {sorted(done - set(kept))} are filled but not approved")
+    if done and booked_usd is None:
+        raise ValueError("orders have filled: the floor needs the cash they booked")
     dropped: list[int] = []
-    start = Decimal(plan["book"]["cash_usd"])
+    start = Decimal(plan["book"]["cash_usd"]) if booked_usd is None else booked_usd
     while True:
-        left = cash.cash_after(start, [orders[i] for i in kept], snapshot)
+        left = cash.cash_after(start, [orders[i] for i in kept if i not in done], snapshot)
         verdict = cash_floor(left, limits)
-        buys = [i for i in kept if orders[i]["side"] == "buy"]
+        buys = [i for i in kept if orders[i]["side"] == "buy" and i not in done]
         if verdict.passes or not buys:
             return kept, dropped, verdict
         kept.remove(buys[-1])
