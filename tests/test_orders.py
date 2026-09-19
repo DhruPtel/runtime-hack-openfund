@@ -6,7 +6,6 @@ in a copy and a test failed (LOGS, 4.0).
 
 from __future__ import annotations
 
-import dataclasses
 import itertools
 import uuid
 
