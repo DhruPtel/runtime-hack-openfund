@@ -27,6 +27,9 @@ What the record requires, and where each requirement is met:
   (CODEBASE §3).
 - **Three-valued results.** An unreachable source yields an Observation marked
   UNREACHABLE, which a Check reads as undetermined, never as false.
+- **The oracle pause flag.** A paused feed is silent, as a closed market is.
+  Each stock token's `oraclePaused()` is read at the pinned block, so the two
+  can be told apart (1.11, Chainlink's Robinhood feed page).
 - **Round ids exceed 2**53.** They are parsed from hex into Python ints and
   carried as text in `source_ref`; no float is ever made.
 - **The multiplier.** A Chainlink answer is taken as published. Per the
@@ -160,6 +163,7 @@ SEL_GET_ROUND = "9a6fc8f5"      # getRoundData(uint80)
 SEL_DECIMALS = "313ce567"       # decimals()
 SEL_BALANCE_OF = "70a08231"     # balanceOf(address)
 SEL_AGGREGATE3 = "82ad56cb"     # aggregate3((address,bool,bytes)[])
+SEL_ORACLE_PAUSED = "7706ba52"  # oraclePaused(), on the Robinhood stock token
 
 _U64 = (1 << 64) - 1
 
@@ -458,6 +462,36 @@ class ChainReader:
                 out[token] = self._failed(source, error)
             except ValueError as error:
                 out[token] = self._observe(source, status=FetchStatus.REFUSED, detail=str(error))
+        return out
+
+    def unpaused(self, tokens: Sequence[AssetId]) -> dict[AssetId, Check]:
+        """Each stock token's `oraclePaused()` at the pinned block, as a verdict
+        on whether its feed is live: True when the flag is false.
+
+        Chainlink freezes a Robinhood feed at its last value while the token's
+        flag is true, which is while a corporate action is applied. The rounds
+        alone cannot tell that silence from a closed market (1.11). The flag is
+        on the token, not the feed proxy, which reverts. A flag that could not
+        be read, or an answer that is not a bool, is undetermined, never false.
+        """
+        what = "the token's oraclePaused()"
+        try:
+            results = self.multicall([(t.address, bytes.fromhex(SEL_ORACLE_PAUSED)) for t in tokens])
+        except ChainError as error:
+            return {t: Check(None, f"{what} not read: {error}") for t in tokens}
+        out = {}
+        for token, (ok, data) in zip(tokens, results):
+            flag = _uint(data, 0) if ok and len(data) == 32 else None
+            if not ok:
+                out[token] = Check(None, f"{what} reverted: the token answers no pause flag")
+            elif flag not in (0, 1):
+                out[token] = Check(None, f"{what} answered {data.hex() or 'nothing'}, not a bool")
+            elif flag:
+                out[token] = Check(False, f"{what} is true at block {self.block.number}: Chainlink "
+                                          f"holds the feed at its last value while a corporate "
+                                          f"action is applied")
+            else:
+                out[token] = Check(True, f"{what} is false at block {self.block.number}")
         return out
 
     # the price series ----------------------------------------------------------------

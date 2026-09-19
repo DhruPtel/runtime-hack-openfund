@@ -201,6 +201,7 @@ class FakeChain:
         self.balances: dict[tuple[str, str], int] = {}
         self.native: dict[str, int] = {}
         self.slots: dict[str, str] = {}
+        self.pause_flags: dict[str, bytes] = {}  # token -> oraclePaused()'s raw answer
         self.block_params: list = []
         self.calls = 0
         self.fail_after: int | None = None
@@ -241,6 +242,8 @@ class FakeChain:
             return True, word(self.decimals[target])
         if selector == chain.SEL_BALANCE_OF and target in self.decimals:
             return True, word(self.balances.get((target, "0x" + data[16:36].hex()), 0))
+        if selector == chain.SEL_ORACLE_PAUSED and target in self.pause_flags:
+            return True, self.pause_flags[target]
         return False, b""  # a revert
 
 
@@ -553,6 +556,29 @@ def test_the_beacon_read_feeds_the_cross_check_in_universe():
     unread = reader(dead_rpc()).beacon_slots([gme])
     assert unread[gme].status is FetchStatus.UNREACHABLE
     assert u.cross_check_beacons(unread)[gme].value is None  # undetermined, never False
+
+
+@pytest.mark.parametrize("answer, verdict, said", [
+    (word(0), True, "is false at block"),
+    (word(1), False, "is true at block"),          # paused: the feed is held at its last value
+    (None, None, "reverted"),                      # a token with no flag
+    (word(2), None, "not a bool"),
+    (word(0) + word(0), None, "not a bool"),
+])
+def test_the_oracle_pause_flag_is_read_per_token_and_unknown_is_undetermined(answer, verdict, said):
+    fake = FakeChain()
+    token = AssetId(CHAIN, addr(11))
+    if answer is not None:
+        fake.pause_flags[token.address] = answer
+    check = reader(rpc_for(fake)).unpaused([token])[token]
+    assert check.value is verdict and said in check.reason
+    assert fake.block_params == [{"blockHash": H}]
+
+
+def test_an_unreachable_pause_flag_is_undetermined_not_unpaused():
+    token = AssetId(CHAIN, addr(11))
+    check = reader(dead_rpc()).unpaused([token])[token]
+    assert check.value is None and "not read" in check.reason
 
 
 def test_a_malformed_slot_word_is_a_refused_read():
