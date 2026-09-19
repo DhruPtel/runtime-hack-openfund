@@ -20,24 +20,33 @@ The adapters' verdicts are made here, with the adapters' own functions:
 freshness in open-session time (1.3), and tradeability (1.5). `core/` receives
 them as arguments.
 
-    PYTHONPATH=src python3 -m fund.run.snapshot            build live, write it, print a summary
-    PYTHONPATH=src python3 -m fund.run.snapshot --prove    also rebuild at the same block
+    PYTHONPATH=src python3 -m fund.run.snapshot                  build live, capture, replay the capture
+    PYTHONPATH=src python3 -m fund.run.snapshot --prove          also re-read the chain at the same block
+    PYTHONPATH=src python3 -m fund.run.snapshot --capture DIR    put the capture under DIR instead
+    PYTHONPATH=src python3 -m fund.run.snapshot --replay DIR     rebuild from a capture, network refused
 
-The snapshot is written to `fixtures/live/snapshot-<sha256>.json`, which is
-never committed (.gitignore). The file is exactly the hashed bytes.
+The snapshot is written to `fixtures/live/snapshot-<sha256>.json`, and the file
+is exactly the hashed bytes. Every live build also records its capture (unit
+1.9), as `<block>-<sha256[:12]>/` under `fixtures/live/captures/` by default.
+Nothing under `fixtures/live/` is committed (.gitignore). A capture chosen for
+the repository is taken with `--capture fixtures/snapshots`, where `make
+replay` and the tests rebuild it.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import shutil
+import subprocess
+import tempfile
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
 
 from fund import config
-from fund.adapters import bankr_quote, chain_4663, gecko
+from fund.adapters import bankr_quote, cache, chain_4663, gecko, http
 from fund.core import snapshot, universe, valuation
 from fund.core.types import (
     USD, Amount, AssetId, BlockRef, ChainAddress, Check, FetchStatus, Instant, Observation,
@@ -65,19 +74,15 @@ class ChainRead:
 
 @dataclass(frozen=True)
 class Sources:
-    """The three adapters' clients, and the chain reader's clock. `live_sources`
-    makes the real ones; a capture wraps them; a replay and the offline test pass
-    clients over recorded transports, and nothing else changes."""
+    """The three adapters' clients, and the chain reader's clock.
+    `capturing_sources` makes the real ones, each recording what it hears; a
+    replay and the offline test pass clients over recorded transports, and
+    nothing else changes."""
 
     rpc: chain_4663.RpcClient
     corroborator: gecko.Gecko
     venue: bankr_quote.QuoteAdapter
     chain_clock: Callable[[], Instant] = chain_4663.wall_clock
-
-
-def live_sources(cfg: config.Config, settings: chain_4663.Settings) -> Sources:
-    return Sources(rpc=settings.client(cfg.secret), corroborator=gecko.Settings.load().gecko(),
-                   venue=bankr_quote.Settings.load().adapter(cfg.secret))
 
 
 @dataclass(frozen=True)
@@ -284,21 +289,191 @@ def write(snap: snapshot.Snapshot) -> Path:
     return path
 
 
-def main(prove: bool = False) -> int:
+# --- capture and replay (unit 1.9) -----------------------------------------------------------
+#
+# A live build records every answer at the transport and every clock read, with
+# `adapters/cache.py`. A replay feeds them back through the same adapters, with
+# the capture's own config, and refuses every connection. The live build's
+# snapshot and the replay's must be the same bytes.
+
+SNAPSHOTS = ROOT / "fixtures" / "snapshots"
+REPLAY_URL = "replay://{}"   # a replayed RPC client's endpoint: nowhere; its transport is the capture
+
+
+def capturing_sources(cfg: config.Config, settings: chain_4663.Settings, g: gecko.Settings,
+                      q: bankr_quote.Settings
+                      ) -> tuple[Sources, dict[str, cache.Recorder], Callable[[], Instant]]:
+    """The live clients, each over a recording transport and clock, and the run's
+    own recorded clock, which stamps `built_at`."""
+    recorders = {"chain": cache.Recorder("chain", {n: cfg.secret(n) for n in settings.endpoints}),
+                 "gecko": cache.Recorder("gecko", {gecko.ENDPOINT_NAME: g.base_url}),
+                 "venue": cache.Recorder("venue", {bankr_quote.ENDPOINT_NAME: q.base_url}),
+                 "run": cache.Recorder("run", {})}
+    wire = bankr_quote.keyed_transport(q.user_agent, q.auth_header, cfg.secret(q.credential))
+    sources = Sources(
+        rpc=settings.client(cfg.secret, recorders["chain"].transport(
+            http.urllib_transport(settings.user_agent))),
+        corroborator=g.gecko(recorders["gecko"].transport(http.urllib_transport(g.user_agent)),
+                             recorders["gecko"].clock(now)),
+        venue=q.adapter(cfg.secret, recorders["venue"].transport(wire), recorders["venue"].clock(now)),
+        chain_clock=recorders["chain"].clock(now))
+    return sources, recorders, recorders["run"].clock(now)
+
+
+def _iso(ms: int) -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ms // 1000))
+
+
+def _code() -> dict[str, object]:
+    """The commit that captured, and whether src/ or config/ differed from it."""
+    try:
+        head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True,
+                              text=True, check=True).stdout.strip()
+        dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain", "--", "src", "config"],
+                               capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return {"commit": None}
+    return {"commit": head, "uncommitted_changes_in_src_or_config": bool(dirty)}
+
+
+def write_capture(directory: Path, built: Built, recorders: dict[str, cache.Recorder],
+                  u: universe.Universe, settings: chain_4663.Settings, g: gecko.Settings,
+                  q: bankr_quote.Settings, started_ms: int) -> dict:
+    """Write what the build heard, with the config it read, beside its snapshot.
+    The config is read back and must hash to what the snapshot names."""
+    config_files = {name: (CONFIG / name).read_bytes() for name in CONFIG_FILES}
+    named = built.snapshot.document["inputs"]["config_sha256"]
+    changed = [n for n, data in config_files.items() if hashlib.sha256(data).hexdigest() != named[n]]
+    if changed:
+        raise ValueError(f"config changed during the build, so no capture: {', '.join(changed)}")
+    block = built.chain.block
+    manifest = {
+        "about": ("Every answer one live build heard, at the transport, and every reading of each "
+                  "source's clock. `--replay` rebuilds the snapshot from these alone, with every "
+                  "connection refused, and it must be byte-identical to snapshot.json."),
+        "block": {"chain_id": block.chain_id, "number": block.number, "hash": block.hash,
+                  "time": _iso(block.timestamp.epoch_ms)},
+        "captured": {"started_at": _iso(started_ms), "finished_at": _iso(now().epoch_ms)} | _code(),
+        "endpoints": ({n: "a declared credential: kept by name only" for n in settings.endpoints}
+                      | {gecko.ENDPOINT_NAME: g.base_url, bankr_quote.ENDPOINT_NAME: q.base_url}),
+        "pinned": {"issuer_registry": u.registry.sha256, "feed_directory": u.directory.sha256,
+                   "held_in": "config/registry/, under their sha256, and not copied here"},
+        "snapshot": {"sha256": built.snapshot.sha256, "bytes": len(built.snapshot.body)},
+        "replay": f"PYTHONPATH=src python3 -m fund.run.snapshot --replay {directory.relative_to(ROOT)}",
+    }
+    return cache.write(directory, recorders=recorders, manifest=manifest, config_files=config_files,
+                       snapshot_body=built.snapshot.body)
+
+
+@dataclass(frozen=True)
+class Replayed:
+    snapshot: snapshot.Snapshot
+    capture: cache.Capture
+    unused: dict[str, tuple[int, int]]   # per source: (exchanges, clock readings) never asked for
+
+    @property
+    def expected(self) -> str:
+        return self.capture.manifest["snapshot"]["sha256"]
+
+    @property
+    def identical(self) -> bool:
+        return (self.snapshot.sha256 == self.expected and self.snapshot.body == self.capture.snapshot_body
+                and not self.capture.altered and all(u == (0, 0) for u in self.unused.values()))
+
+
+def replay(directory: Path) -> Replayed:
+    """Rebuild the snapshot a capture recorded, from its own answers, clocks and
+    config, with every connection refused."""
+    capture = cache.Capture(directory)
+    with tempfile.TemporaryDirectory() as tmp:
+        config_dir = Path(tmp)
+        for name, data in capture.config_files().items():
+            (config_dir / name).parent.mkdir(parents=True, exist_ok=True)
+            (config_dir / name).write_bytes(data)
+        registry_dir = config_dir / "registry"
+        for pinned in json.loads((registry_dir / "pins.json").read_text())["inputs"].values():
+            held = CONFIG / "registry" / pinned["file"]
+            if not held.exists():
+                raise FileNotFoundError(f"the capture references {pinned['file']}, which "
+                                        f"config/registry/ no longer holds")
+            shutil.copyfile(held, registry_dir / pinned["file"])
+        # Pacing and backoff only set how long to wait between answers already on
+        # disk. Nothing they decide reaches the snapshot, so a replay waits for none.
+        settings = replace(chain_4663.Settings.load(config_dir / "chain.json",
+                                                    config_dir / "thresholds.json",
+                                                    config_dir / "sessions.json"),
+                           min_interval_s=0, backoff_s=0)
+        g = replace(gecko.Settings.load(config_dir / "gecko.json"), min_interval_s=0, backoff_s=0)
+        q = replace(bankr_quote.Settings.load(config_dir / "quote.json"), min_interval_s=0, backoff_s=0)
+        thresholds = json.loads((config_dir / "thresholds.json").read_text())
+        u = universe.load(registry_dir)
+        wallet = ChainAddress(settings.chain_id, json.loads(
+            (config_dir / "mandate.json").read_text())["execution_wallet"])
+        replayers = {"chain": capture.replayer("chain", {n: REPLAY_URL.format(n) for n in settings.endpoints}),
+                     "gecko": capture.replayer("gecko", {gecko.ENDPOINT_NAME: g.base_url}),
+                     "venue": capture.replayer("venue", {bankr_quote.ENDPOINT_NAME: q.base_url}),
+                     "run": capture.replayer("run", {})}
+        sources = Sources(
+            rpc=settings.client(REPLAY_URL.format, replayers["chain"].transport()),
+            corroborator=g.gecko(replayers["gecko"].transport(), replayers["gecko"].clock()),
+            venue=q.adapter(REPLAY_URL.format, replayers["venue"].transport(),
+                            replayers["venue"].clock()),
+            chain_clock=replayers["chain"].clock())
+        with cache.no_network():
+            built = read_and_build(sources, settings=settings, u=u,
+                                   rule=valuation.DivergenceRule.from_thresholds(thresholds),
+                                   limits=bankr_quote.Limits.from_thresholds(thresholds),
+                                   wallet=wallet, clock=replayers["run"].clock(),
+                                   config_dir=config_dir)
+    return Replayed(built.snapshot, capture, {s: r.unused() for s, r in replayers.items()})
+
+
+def replay_main(directory: Path) -> int:
+    """Rebuild from a capture, report it, and fail unless it is byte-identical."""
+    try:
+        r = replay(directory)
+    except (cache.ReplayMiss, cache.NetworkDisabled) as stopped:
+        print(f"== replay of {directory} stopped: {type(stopped).__name__}: {stopped}")
+        return 1
+    m = r.capture.manifest
+    print(f"== replay of {directory}")
+    print(f"   block {m['block']['number']} at {m['block']['time']}, captured "
+          f"{m['captured']['started_at']} by commit {str(m['captured'].get('commit'))[:12]}")
+    print("   every answer served from the capture, every clock read from its tape, every "
+          "connection refused")
+    served = ", ".join(f"{s} {m['exchanges'][s] - r.unused[s][0]}/{m['exchanges'][s]}"
+                       for s in m["exchanges"])
+    clocks = ", ".join(f"{s} {m['clock_readings'][s] - r.unused[s][1]}/{m['clock_readings'][s]}"
+                       for s in m["clock_readings"])
+    print(f"   exchanges answered: {served}")
+    print(f"   clock readings used: {clocks}")
+    print("   capture files against the manifest: "
+          + ("all match" if not r.capture.altered else "ALTERED: " + ", ".join(r.capture.altered)))
+    path = write(r.snapshot)
+    print(f"   rebuilt  {r.snapshot.sha256}  {path.relative_to(ROOT)}")
+    print(f"   captured {r.expected}")
+    print(f"   identical: {'yes, byte for byte' if r.identical else 'NO'}")
+    return 0 if r.identical else 1
+
+
+def main(prove: bool = False, capture_to: Path = OUT / "captures") -> int:
     cfg = config.load(Role.ANALYST, require=False)
     settings = chain_4663.Settings.load()
+    g, q = gecko.Settings.load(), bankr_quote.Settings.load()
     thresholds = json.loads((CONFIG / "thresholds.json").read_text())
     rule = valuation.DivergenceRule.from_thresholds(thresholds)
     limits = bankr_quote.Limits.from_thresholds(thresholds)
     u = universe.load()
     wallet = ChainAddress(settings.chain_id,
                           json.loads((CONFIG / "mandate.json").read_text())["execution_wallet"])
-    sources = live_sources(cfg, settings)
-    started = time.monotonic()
+    sources, recorders, clock = capturing_sources(cfg, settings, g, q)
+    started, started_ms = time.monotonic(), now().epoch_ms
     built = read_and_build(sources, settings=settings, u=u, rule=rule, limits=limits,
-                           wallet=wallet)
+                           wallet=wallet, clock=clock)
     snap, chain, offchain, block = built.snapshot, built.chain, built.offchain, built.chain.block
     path = write(snap)
+    directory = capture_to / f"{block.number}-{snap.sha256[:12]}"
+    manifest = write_capture(directory, built, recorders, u, settings, g, q, started_ms)
 
     doc = snap.document
     oldest = max((offchain.built_at.epoch_ms - o.fetch_time.epoch_ms)
@@ -318,6 +493,13 @@ def main(prove: bool = False) -> int:
     print(f"   outside the universe: {doc['outside_universe']['count']} registry assets with no feed")
     for symbol, status, why in doc["summary"]["assets"]:
         print(f"     {symbol:6} {status:24} {why or ''}")
+    on_disk = sum(f.stat().st_size for f in directory.rglob("*") if f.is_file())
+    print(f"\n== captured: {directory.relative_to(ROOT)}, {on_disk:,} bytes on disk")
+    print(f"   exchanges {manifest['exchanges']}; clock readings {manifest['clock_readings']}; "
+          f"strings masked by the credential redactor: {manifest['redaction']['strings_masked']}")
+    replayed = replay(directory)
+    print(f"   replayed from it, every connection refused: {replayed.snapshot.sha256} "
+          f"(identical: {replayed.identical})")
     if not prove:
         return 0
 
@@ -351,7 +533,12 @@ if __name__ == "__main__":
     import sys
 
     args = sys.argv[1:]
-    if args not in ([], ["--prove"]):
-        print("usage: python -m fund.run.snapshot [--prove]")
+    if len(args) == 2 and args[0] == "--replay":
+        sys.exit(replay_main(Path(args[1]).resolve()))
+    prove = "--prove" in args
+    rest = [a for a in args if a != "--prove"]
+    if rest and not (len(rest) == 2 and rest[0] == "--capture"):
+        print("usage: python -m fund.run.snapshot [--prove] [--capture DIR]\n"
+              "       python -m fund.run.snapshot --replay DIR")
         sys.exit(2)
-    sys.exit(main(prove=args == ["--prove"]))
+    sys.exit(main(prove=prove, **({"capture_to": Path(rest[1]).resolve()} if rest else {})))
