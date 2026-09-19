@@ -10,6 +10,16 @@ we learn will change them.
 to judge it on*, and *what it could change*. That last one matters most. A
 checkpoint isn't a demo, it's a decision point where the plan can bend.
 
+**From Phase 2 on, each unit is built at its minimal version** (DECISION, LESSONS
+2026-09-19; stated in PLAN §8).
+- **The tables.** From Phase 2 each table has a third column. *Goal* is the full
+  version. *Minimal* is what gets built. `SIMPLIFICATION.md` has each unit's
+  full version and what it gives up.
+- **The stops.** Only 3.8, 5.4, 6.6, 7.5 and 8.5 stop for the operator. The
+  2.1 format was approved with the pivot. Every other ▶ below is shown, not
+  stopped. The ▶ write-ups describe the full checkpoints.
+- **The order** is unchanged: phase by phase, unit by unit.
+
 ---
 
 ## Phase 0 — probes · no product code
@@ -110,16 +120,16 @@ them, a series with a week of old history and a fresh newest point, accepted.
 
 The reports are the product. Design them before writing the code that makes them.
 
-| Unit | Goal |
-|---|---|
-| 2.1 ▶ | Report format designed by hand, before any code |
-| 2.2 | Output schema, hard validation, `NO_CALL`, address-scoped claims |
-| 2.3 | Brief format: mandate, scope boundaries, snapshot bytes, effort scaling. Scopes are disjoint in QUESTION, not necessarily in asset set — two analysts may both look at every asset provided they ask different things of it; the failure mode is two analysts asking the same question of overlapping assets |
-| 2.4 | Runner: bounded width, deadlines, retries, fallback, partial-failure flag |
-| 2.5 | Per-call token accounting, reconciled to provider usage |
-| 2.6 ▶ | First real report from a real snapshot |
-| 2.7 | Immutable content-addressed report store |
-| 2.8 ▶ | Failure drill |
+| Unit | Goal (full version) | Minimal: what gets built |
+|---|---|---|
+| 2.1 ▶ | Report format designed by hand, before any code | Two vocabularies, direction and condition; a three-sentence summary; up to eight calls with field paths that code resolves. The format was approved 2026-09-19; the work remains. |
+| 2.2 | Output schema, hard validation, `NO_CALL`, address-scoped claims | One validator: types, the vocabulary, addresses in the tradeable set, field paths present, the snapshot hash echoed back. |
+| 2.3 | Brief format: mandate, scope boundaries, snapshot bytes, effort scaling. Scopes are disjoint in QUESTION, not necessarily in asset set — two analysts may both look at every asset provided they ask different things of it; the failure mode is two analysts asking the same question of overlapping assets | One versioned brief. Every seat sees the whole universe and differs in question. |
+| 2.4 | Runner: bounded width, deadlines, retries, fallback, partial-failure flag | Four processes in parallel, each holding only its own key. One retry, a failed worker named, and an event log. |
+| 2.5 | Per-call token accounting, reconciled to provider usage | The `usage` block, plus each agent's own credit balance before and after. No `/v1/usage` reconciliation. |
+| 2.6 ▶ | First real report from a real snapshot | One call on the committed snapshot, with cost and latency. Shown, not stopped. |
+| 2.7 | Immutable content-addressed report store | Canonical JSON files named by sha256, written once. |
+| 2.8 ▶ | Failure drill | Three offline tests: malformed, hung, `NO_CALL`. Shown, not stopped. |
 
 **▶ 2.1 — the format**
 *You see:* a hand-written example report, written as if by a good analyst, with
@@ -128,6 +138,9 @@ no code behind it.
 enough to actually read? Can you tell evidence from opinion?
 *Could change:* everything downstream. The schema, the brief, the model choice,
 the price, and how many analysts we need.
+*2026-09-19:* the format was approved with the pivot, so this stop is spent.
+The format has two vocabularies, direction and condition, and a fourth seat,
+`price-integrity` (`SIMPLIFICATION.md`, "The report format").
 
 **▶ 2.6 — the real thing**
 *You see:* an actual model-generated report on real snapshot data, with cost and
@@ -148,17 +161,17 @@ cycle?
 
 Where opinions become a decision, and where the decision can be refused.
 
-| Unit | Goal |
-|---|---|
-| 3.1 | Aggregator as a total function: equation, quorum, cash, tie-break, residual |
-| 3.2 ▶ | Aggregation made visible |
-| 3.3 | Planner: weights + holdings + quotes → sized orders |
-| 3.4 | Gate module, shared by risk and treasurer; sweeps in the three named exceptions from 1.3, 1.4 and 1.5 |
-| 3.5 | Risk agent: full reports + sized plan → verdict |
-| 3.6 | Context budget: veto rather than summarize |
-| 3.7 | Signed decision record with content hashes, carrying closed-session divergence findings |
-| 3.8 ▶ | A veto actually happening |
-| 3.9 ▶ | Byte-stable replay |
+| Unit | Goal (full version) | Minimal: what gets built |
+|---|---|---|
+| 3.1 | Aggregator as a total function: equation, quorum, cash, tie-break, residual | direction × (1 − caution); quorum; all-abstain keeps holdings; capped weights, cash and residual. |
+| 3.2 ▶ | Aggregation made visible | The table of contributions, weights, cash and residual. Shown, not stopped. |
+| 3.3 | Planner: weights + holdings + quotes → sized orders | Paper capital into orders of at most $25, each re-quoted and carrying its asset's three prices and findings, plus the demonstration leg. |
+| 3.4 | Gate module, shared by risk and treasurer; sweeps in the three named exceptions from 1.3, 1.4 and 1.5 | Named three-valued checks over the plan, where null blocks, called by risk and treasurer. The three exceptions are called, not moved. |
+| 3.5 | Risk agent: full reports + sized plan → verdict | Its own process and account. Approve or veto per order. A failed or null gate is a veto whatever the model says. |
+| 3.6 | Context budget: veto rather than summarize | The bundle measured conservatively from bytes. Over budget vetoes. |
+| 3.7 | Signed decision record with content hashes, carrying closed-session divergence findings | **Equal.** Hashes of every input, findings carried, signed ed25519 by the treasurer's key. |
+| 3.8 ▶ | A veto actually happening | **Stop.** Built on the closed-session divergence findings: `price-integrity` names the case, and risk decides. Shown from a recorded cycle if the live one does not veto. |
+| 3.9 ▶ | Byte-stable replay | One test rebuilding a recorded cycle's record byte for byte. Shown, not stopped. |
 
 **▶ 3.2 — the maths**
 *You see:* a table of reports in, weights out, each analyst's contribution, the
@@ -171,6 +184,11 @@ allocated differently?
 *You see:* a cycle where a gate trips, the named reason, and execution blocked.
 *Judge:* is the veto substantive or theatrical? Did it catch something real?
 *Could change:* the gate thresholds and what risk is allowed to see.
+*2026-09-19, minimal:* in a closed session no market-data gate fires on a
+tradeable name. The divergence veto stands down by DECISION. So the veto is
+built on the five closed-session divergence findings: `price-integrity` names
+each case, and risk decides. It is shown from a recorded cycle if the live one
+does not veto (`SIMPLIFICATION.md`, Q2).
 
 **▶ 3.9 — provenance**
 *You see:* a decision record regenerated from recorded model outputs, hashes
@@ -184,20 +202,20 @@ matching.
 
 Make the money path correct before it touches money.
 
-| Unit | Goal |
-|---|---|
-| 4.1 | Mandate: bounds, wallet, assets, budget, expiry, revocation |
-| 4.2 | Execution intent with stable idempotency key |
-| 4.3 | Durable order state machine, written before action |
-| 4.4 | Validating chokepoint with regression vectors |
-| 4.5 | Paper executor on the live interface |
-| 4.6 | Accounting journal covering every event type |
-| 4.7 | Positions derived from journal; one valuation function |
-| 4.8 ▶ | A full paper cycle end to end |
-| 4.9 | Startup reconciliation and single-owner lock |
-| 4.10 ▶ | Crash drill |
-| 4.11 ▶ | Known-answer accounting fixture |
-| 4.12 | Treasurer as its own process with its own credentials; deployed-isolation test |
+| Unit | Goal (full version) | Minimal: what gets built |
+|---|---|---|
+| 4.1 | Mandate: bounds, wallet, assets, budget, expiry, revocation | Loaded, with nulls refused and bounds checked. No hash-and-replay of approvals. |
+| 4.2 | Execution intent with stable idempotency key | **Equal in substance.** Orders from the signed record, each keyed by decision id and index. |
+| 4.3 | Durable order state machine, written before action | **Equal in substance.** Five states, each written before its act. No reservations, because orders run one at a time. |
+| 4.4 | Validating chokepoint with regression vectors | One function every submission passes, and six regression vectors. |
+| 4.5 | Paper executor on the live interface | Stock legs filled at a fresh quote and marked paper. |
+| 4.6 | Accounting journal covering every event type | Opening balance, fills, fees, gas, x402 settlement and inference cost. |
+| 4.7 | Positions derived from journal; one valuation function | **Equal.** Derived from the journal, with one valuation function. |
+| 4.8 ▶ | A full paper cycle end to end | `make cycle-demo` end to end. Shown, not stopped. |
+| 4.9 | Startup reconciliation and single-owner lock | Unresolved orders resolved before a new cycle, and one lock row. |
+| 4.10 ▶ | Crash drill | One offline test: killed after `submitted`, resolved once. Shown, not stopped. |
+| 4.11 ▶ | Known-answer accounting fixture | A small fixture checked for positions and value. 6.1 adds the four lines, and it is shown at 6.6's stop. |
+| 4.12 | Treasurer as its own process with its own credentials; deployed-isolation test | **Equal in substance.** Its own process with the execution and signing keys; isolation tests from every agent's environment. One machine, no separate host. |
 
 **▶ 4.8 — the whole machine**
 *You see:* one command producing snapshot → reports → weights → plan → verdict →
@@ -229,15 +247,15 @@ money path is proven against a real chain using an **ungated leg** — ETH→USD
 location verification — through the same treasurer, the same order state
 machine and the same journal.
 
-| Unit | Goal |
-|---|---|
-| 5.1 | Live executor behind the same interface the paper executor satisfies |
-| 5.2 | Small real buy and sell round trip on the ungated leg |
-| 5.3 | Receipt reconciliation, confirmation depth, mined-revert handling |
-| 5.4 ▶ | A real transaction on the explorer |
-| 5.5 | Access expiry and gate behaviour: pause, preserve, expose remediation |
-| 5.6 ▶ | A real 403 from the gated stock path, decoded |
-| 5.7 ▶ | A live scheduled cycle |
+| Unit | Goal (full version) | Minimal: what gets built |
+|---|---|---|
+| 5.1 | Live executor behind the same interface the paper executor satisfies | `bankr_exec.py`, for ETH and USDG only. |
+| 5.2 | Small real buy and sell round trip on the ungated leg | **Equal in substance.** ETH→USDG→ETH, about $0.50 a leg, labelled a demonstration of the money path that no analyst chose. |
+| 5.3 | Receipt reconciliation, confirmation depth, mined-revert handling | Confirmed from `UserOperationEvent` and `Transfer` logs, at a fixed depth. The 6 bps is left as an exception. |
+| 5.4 ▶ | A real transaction on the explorer | **Equal. Stop.** |
+| 5.5 | Access expiry and gate behaviour: pause, preserve, expose remediation | A 401 or 403 stops submissions and shows "access lost". |
+| 5.6 ▶ | A real 403 from the gated stock path, decoded | 0.5's recorded body decoded; anything else fails closed. Shown, not stopped. |
+| 5.7 ▶ | A live scheduled cycle | One of 8.3's cycles carries the live leg. Shown, not stopped. |
 
 **Exit:** a real transaction on 4663 executed through the treasurer, reconciled
 from its receipt, and booked exactly once.
@@ -263,16 +281,16 @@ presented.
 
 ## Phase 6 — books and attribution
 
-| Unit | Goal |
-|---|---|
-| 6.1 | Statement builder over sealed inputs |
-| 6.2 | Reconciliation against balances and settlements; exceptions shown |
-| 6.3 | Cost with estimate flags, reconciled to provider usage |
-| 6.4 | Funded contribution: realized P&L allocated once, with residual |
-| 6.5 | Call accuracy: hypothetical, labelled, never mixed into profit |
-| 6.6 ▶ | The first real statement |
-| 6.7 ▶ | Attribution with overlapping calls |
-| 6.8 ▶ | A reconciliation exception surfacing |
+| Unit | Goal (full version) | Minimal: what gets built |
+|---|---|---|
+| 6.1 | Statement builder over sealed inputs | NAV as two labelled figures, real and paper, and four lines: revenue, costs, expenses, net. |
+| 6.2 | Reconciliation against balances and settlements; exceptions shown | The journal against RPC balances and `PaymentSettled`, with differences listed. |
+| 6.3 | Cost with estimate flags, reconciled to provider usage | Per agent, from its own account's balance. |
+| 6.4 | Funded contribution: realized P&L allocated once, with residual | Shares per executed order with a residual. No dollars while marks are frozen. |
+| 6.5 | Call accuracy: hypothetical, labelled, never mixed into profit | Stored and labelled hypothetical. "Not yet scorable" over a weekend. |
+| 6.6 ▶ | The first real statement | **Stop.** |
+| 6.7 ▶ | Attribution with overlapping calls | A test: credited once. Shown, not stopped. |
+| 6.8 ▶ | A reconciliation exception surfacing | The exceptions listed, and a test. Shown, not stopped. |
 
 **▶ 6.6 — the differentiator**
 *You see:* a real income statement and portfolio report from real cycles.
@@ -295,17 +313,17 @@ residual reconciling.
 
 ## Phase 7 — surfaces
 
-| Unit | Goal |
-|---|---|
-| 7.1 | Publisher: immutable bytes, manifest, atomic latest pointer |
-| 7.2 | x402 handler serving by immutable id |
-| 7.3 | Purchase binding: request, decision, payer, settlement |
-| 7.4 | Revenue booked from settlement evidence |
-| 7.5 ▶ | A real purchase, end to end |
-| 7.6 | Public page over the same records |
-| 7.7 ▶ | The page |
-| 7.8 | Skill manifest for other Bankr agents |
-| 7.9 ▶ | Recovery drill |
+| Unit | Goal (full version) | Minimal: what gets built |
+|---|---|---|
+| 7.1 | Publisher: immutable bytes, manifest, atomic latest pointer | Bytes written once under their sha256, the latest pointer moved by rename, and the signature checked first. |
+| 7.2 | x402 handler serving by immutable id | 0.7d's handler serving the full record by id at $0.25. The public copy is a preview. |
+| 7.3 | Purchase binding: request, decision, payer, settlement | Payer, amount and tx hash from `PaymentSettled`, but not which record was bought. |
+| 7.4 | Revenue booked from settlement evidence | **Equal.** |
+| 7.5 ▶ | A real purchase, end to end | **Equal. Stop.** A fresh local key pays with `@x402/fetch` 2.26.0. |
+| 7.6 | Public page over the same records | One static page over the event log and the preview. |
+| 7.7 ▶ | The page | Judged at 8.5's dry run. The page shows the preview, and the reasoning is paid. |
+| 7.8 | Skill manifest for other Bankr agents | A `SKILL.md` naming the endpoint, the price and the client. |
+| 7.9 ▶ | Recovery drill | Stated, not drilled: retrieving it again is paid again. |
 
 **▶ 7.5 — the business model working**
 *You see:* a client paying, receiving the record, and the payment landing in the
@@ -317,7 +335,8 @@ evidence rather than from a handler log?
 
 **▶ 7.7 — what a judge sees**
 *You see:* the public page: basket, weights, latest decision and reasoning, veto
-history, statements.
+history, statements. *(2026-09-19: the page shows the preview. The reasoning
+and the analyst reports are in the paid record.)*
 *Judge:* does a stranger understand what this is in thirty seconds?
 *Could change:* the framing, the hierarchy, what gets cut.
 
@@ -331,15 +350,15 @@ without a second charge.
 
 ## Phase 8 — schedule, demo, submission
 
-| Unit | Goal |
-|---|---|
-| 8.1 | Scheduler: cheap ticks, overlap fencing, no permission bypass |
-| 8.2 | Kill switch that stops submissions, not reconciliation |
-| 8.3 ▶ | Unattended multi-cycle run |
-| 8.4 | Demo script, fixtures plus a live section |
-| 8.5 ▶ | Timed dry run |
-| 8.6 | Submission text: architecture, limitations, six criteria |
-| 8.7 ▶ | Final read-through as a judge |
+| Unit | Goal (full version) | Minimal: what gets built |
+|---|---|---|
+| 8.1 | Scheduler: cheap ticks, overlap fencing, no permission bypass | A loop on an interval, holding 4.9's lock. |
+| 8.2 | Kill switch that stops submissions, not reconciliation | **Equal.** |
+| 8.3 ▶ | Unattended multi-cycle run | Three cycles: one with the live leg, one that does not trade. Shown, not stopped. |
+| 8.4 | Demo script, fixtures plus a live section | The committed capture for the reproducible part, a live cycle, the purchase, the explorer. |
+| 8.5 ▶ | Timed dry run | **Stop.** |
+| 8.6 | Submission text: architecture, limitations, six criteria | Architecture, limitations, and the criteria in `JUDGING-CRITERIA.md`. |
+| 8.7 ▶ | Final read-through as a judge | Folded into 8.5. |
 
 **▶ 8.3 — autonomy**
 *You see:* several cycles running with nobody touching anything, including one
@@ -359,6 +378,9 @@ that correctly decides not to trade.
 ## Checkpoint summary
 
 Twenty-seven playtime checkpoints. The five that can most change the plan:
+
+*From Phase 2, since 2026-09-19:* only 3.8, 5.4, 6.6, 7.5 and 8.5 stop. 2.1 was
+spent on the pivot's approval. 4.11 is shown at 6.6's stop.
 
 1. **0.11** — do the probes kill an assumption?
 2. **1.6** — is the data enough for an analyst to be intelligent?
