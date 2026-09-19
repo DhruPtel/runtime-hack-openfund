@@ -15,9 +15,10 @@ checkpoint isn't a demo, it's a decision point where the plan can bend.
 - **The tables.** From Phase 2 each table has a third column. *Goal* is the full
   version. *Minimal* is what gets built. `SIMPLIFICATION.md` has each unit's
   full version and what it gives up.
-- **The stops.** Only 3.8, 5.4, 6.6, 7.5 and 8.5 stop for the operator. The
-  2.1 format was approved with the pivot. Every other ▶ below is shown, not
-  stopped. The ▶ write-ups describe the full checkpoints.
+- **The stops.** 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5 stop for the operator. 2.1 is
+  the report format, which the operator reads before any code consumes it.
+  Every other ▶ below is shown, not stopped. The ▶ write-ups describe the full
+  checkpoints.
 - **The order** is unchanged: phase by phase, unit by unit.
 
 ---
@@ -122,7 +123,8 @@ The reports are the product. Design them before writing the code that makes them
 
 | Unit | Goal (full version) | Minimal: what gets built |
 |---|---|---|
-| 2.1 ▶ | Report format designed by hand, before any code | Two vocabularies, direction and condition; a three-sentence summary; up to eight calls with field paths that code resolves. The format was approved 2026-09-19; the work remains. |
+| 2.0 | SIWE agent wallet, proven once (added 2026-09-19, `PHASE-2.md`) | One account made with `bankr login siwe`, then measured: its own address, a refused transaction, the Agent API off, and the gateway reached. Before anything assumes five. |
+| 2.1 ▶ | Report format designed by hand, before any code | **Stop.** Four hand-written example reports, one per seat, in the two vocabularies, read and approved before any code consumes them. |
 | 2.2 | Output schema, hard validation, `NO_CALL`, address-scoped claims | One validator: types, the vocabulary, addresses in the tradeable set, field paths present, the snapshot hash echoed back. |
 | 2.3 | Brief format: mandate, scope boundaries, snapshot bytes, effort scaling. Scopes are disjoint in QUESTION, not necessarily in asset set — two analysts may both look at every asset provided they ask different things of it; the failure mode is two analysts asking the same question of overlapping assets | One versioned brief. Every seat sees the whole universe and differs in question. |
 | 2.4 | Runner: bounded width, deadlines, retries, fallback, partial-failure flag | Four processes in parallel, each holding only its own key. One retry, a failed worker named, and an event log. |
@@ -138,9 +140,12 @@ no code behind it.
 enough to actually read? Can you tell evidence from opinion?
 *Could change:* everything downstream. The schema, the brief, the model choice,
 the price, and how many analysts we need.
-*2026-09-19:* the format was approved with the pivot, so this stop is spent.
-The format has two vocabularies, direction and condition, and a fourth seat,
-`price-integrity` (`SIMPLIFICATION.md`, "The report format").
+*2026-09-19:* a stop. The minimal version shortens the report, not the stop.
+Settled before it:
+- two vocabularies, direction and condition;
+- a fourth seat, `price-integrity`.
+
+The format itself is decided here (`PHASE-2.md` 2.1).
 
 **▶ 2.6 — the real thing**
 *You see:* an actual model-generated report on real snapshot data, with cost and
@@ -379,8 +384,8 @@ that correctly decides not to trade.
 
 Twenty-seven playtime checkpoints. The five that can most change the plan:
 
-*From Phase 2, since 2026-09-19:* only 3.8, 5.4, 6.6, 7.5 and 8.5 stop. 2.1 was
-spent on the pivot's approval. 4.11 is shown at 6.6's stop.
+*From Phase 2, since 2026-09-19:* only 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5 stop.
+4.11 is shown at 6.6's stop.
 
 1. **0.11** — do the probes kill an assumption?
 2. **1.6** — is the data enough for an analyst to be intelligent?
