@@ -9,8 +9,8 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds into the plan docs: none, as of 2026-09-18, after 1.7.** Every
-1.7 entry, and the DECISION taken before it, was folded in 1.7's pass.
+**Pending folds into the plan docs: none, as of 2026-09-18, after 1.8.** Every
+1.8 entry, and the four DECISIONs taken before it, was folded in 1.8's pass.
 
 **Owed in code, outside the paths of the passes that found them:**
 1. **`adapters/http.py`, two changes** (found by 1.5): return a caller-named
@@ -18,11 +18,9 @@ it open rather than reconciling it.
    `urllib_transport`. 1.5 works around both in its own module.
 2. **The Makefile's `make snapshot`** still prints "not built yet". The live
    read is `python -m fund.run.snapshot` (1.6).
-3. **`adapters/chain_4663.py`** retries missing state only in one wording, and
-   misses `missing trie node … layer stale` (found by 1.7).
-4. **`core/valuation.py`'s docstring** says the snapshot entry carries each
-   closed-session `Finding`. Since the findings DECISION after 1.6, it carries
-   only those past the limit.
+
+Done in 1.8: the chain client's second missing-state wording, and
+`valuation.py`'s docstring on findings.
 
 Every earlier entry was checked as folded: the 1.2 and 1.3 entries in their own
 passes, and the older ones entry by entry before unit 1.1.
@@ -1580,3 +1578,41 @@ whether from a read failing partway, a round cap, or a young feed.
 - **The reasoning.** An analyst reasons from the series, and a buy on one
   point is a buy on no history.
 **Affects:** 1.6's status order, 1.11; `core/snapshot.py`.
+
+## 2026-09-18 — 1.8: the registry dropping a held asset was the quiet way out of the book
+Holdings come from the chain: a balance is read for cash, gas, and every asset
+the pinned registry lists. 1.2's `accept()` already refused a registry refresh
+that removed a held asset unless acknowledged. But once acknowledged, the
+asset was in no list anything read, so its balance stopped being read and the
+holding left the book. The books would still balance, and they would be wrong.
+- **What 1.8 changed.** An acknowledged removal now writes the asset to
+  `pins.json`'s `carried` list, with its last record's symbol, name and
+  decimals, and the registry version that dropped it. The live read keeps
+  reading its balance, and it stays a holding: `identity_in_doubt`, no mark,
+  and `value_usd` null with the reason. A registry that lists it again takes it
+  off the list.
+- **Every other way out already kept the row,** because a held asset in or out
+  of the universe was always read. 1.8 now proves it:
+  - `tests/test_holdings.py` takes a held NVDA out ten ways, and the set of
+    holdings is identical before and after each;
+  - a test fails if a way-out status has no case there.
+- **The count of ways out.** PHASE-0-1 1.8 lists five. The task named four.
+  1.6 and 1.8 have added four per-snapshot statuses: no mark, short history,
+  uncorroborated, and divergence veto. All are tested, nine statuses in all.
+**Affects:** 1.2's refresh, 1.6, 1.9, 4.x's positions; `config/registry/pins.json`.
+
+## 2026-09-18 — 1.8: each holding carries a holding status apart from its universe status
+- **The universe status** says whether the asset can be bought.
+- **The holding status** says three things:
+  - `owned`: the balance, or why it was not read;
+  - `valued`: true at its own mark, false with the reason when there is none
+    (never zero, never the venue's quote), and undetermined when the mark or
+    balance is unread;
+  - `exit`: true for cash, which is what a sale settles into; for ETH and the
+    stocks it is *not assessed*, because Phase 1 reads no sell quote, and a
+    stock sale is paper for this operator (F0.5.1).
+
+The snapshot schema is now `openfund.snapshot/2`, with sampled timelines and
+these rows. Live, at block 66750551, USDG and ETH carry both statuses, and a
+re-read at the same block rebuilt to the identical hash.
+**Affects:** 1.9, 3.3 (sizing reads holdings), 4.x, 6.x.
