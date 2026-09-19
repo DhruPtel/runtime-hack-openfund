@@ -239,11 +239,17 @@ def test_an_unreachable_source_is_not_false_and_not_zero():
 
 def test_an_absent_field_is_null_with_a_reason_never_zero():
     # F0.3.2: all 12 fields appeared, which is not a guarantee.
-    missing = Observation(
-        value=None, source=Source("bankr-quote", "/wallet/swap-quote"),
-        source_time=None, fetch_time=Instant.from_seconds(T0), block=None,
-        status=FetchStatus.ABSENT, detail="swapImpactBps not in response")
-    roundtrip(missing)
+    def absent(value, detail):
+        return Observation(
+            value=value, source=Source("bankr-quote", "/wallet/swap-quote"),
+            source_time=None, fetch_time=Instant.from_seconds(T0), block=None,
+            status=FetchStatus.ABSENT, detail=detail)
+
+    roundtrip(absent(None, "swapImpactBps not in response"))
+    with pytest.raises(ValueError):
+        absent(Fixed(0, 0, BPS), "swapImpactBps not in response")  # zero is a value
+    with pytest.raises(ValueError):
+        absent(None, None)  # and absence says why
 
 
 def test_a_week_of_history_with_a_fresh_newest_point_is_one_series():
