@@ -47,7 +47,10 @@ Each is structural where possible, and tested where not.
 3. **Risk sees every full report and the sized plan.** If the bundle exceeds the
    context budget, the cycle vetoes. It never silently summarizes.
 4. **Gates exist once.** One module, called by both risk and treasurer. Never
-   two interpretations of the same limit.
+   two interpretations of the same limit. *(One recorded exception, 2026-09-18:
+   feed staleness is compared in the chain adapter, where 1.3 built it, and is
+   still defined once. Whether it moves into the gate module (3.4) is open —
+   `planning/CODEBASE.md` §3, `tracker/LESSONS.md`.)*
 5. **Unknown blocks execution.** Every check is true / false / null. Null is not
    false. A required check must be explicitly true.
 6. **`NO_CALL` is valid**, and the aggregator is a total function that handles

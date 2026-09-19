@@ -28,9 +28,12 @@ its own process with its own credentials.
 
 **3. One rule, one location.** A limit is defined once in `core/gates.py` and
 called by both risk and treasurer. Two interpretations of the same limit is how
-a fund trades outside its own policy. **Open (1.3):** the feed staleness
-comparison is in `adapters/chain_4663.py`, because the record placed the rule in
-1.3. Whether 1.8 moves it here is undecided (LESSONS 2026-09-18).
+a fund trades outside its own policy. **One recorded exception** (DECISION,
+LESSONS 2026-09-18): the feed staleness comparison lives in
+`adapters/chain_4663.py` (`freshness()`), because the plan assigned the rule to
+1.3 and this module does not exist until 3.4. It is still defined once, with its
+margin read from `config/thresholds.json`. Whether a later unit moves it here is
+open. So is the decision's naming of 1.8 for that, since this module is 3.4's.
 
 **4. Nothing important happens in an agent.** Models produce opinions and prose.
 Arithmetic, ranking, thresholding, sizing and accounting are deterministic code.
@@ -98,6 +101,7 @@ fund/
 │   │   ├── aggregate.py        reports → weights or no-rebalance. A total function.
 │   │   ├── plan.py             weights + holdings + quotes → sized orders
 │   │   ├── gates.py            the declarative gate array. THE single definition of every limit.
+│   │   │                       (one recorded exception: feed staleness, in chain_4663.py; §3)
 │   │   ├── valuation.py        the ONE valuation function
 │   │   ├── books.py            journal → income statement + portfolio report
 │   │   └── attribution.py      funded contribution (allocated once) and call accuracy (hypothetical)
@@ -165,7 +169,7 @@ thirty seconds to understand the safety model.
 | `core/` is pure | no module under `core/` imports `adapters/`, `agents/`, `store/` |
 | Analysts cannot spend | no module under `agents/` or `core/` imports `bankr_exec` or `sign` |
 | One signer | `sign.py` is imported only by `treasurer/` |
-| One gate definition | `gates.py` is the only module defining a threshold comparison (open: 1.3's staleness comparison, LESSONS 2026-09-18) |
+| One gate definition | `gates.py` is the only module defining a threshold comparison, except the recorded feed-staleness exception in `adapters/chain_4663.py` (§3), which the test must name |
 | Deployed isolation | from the analyst process environment, execution credentials are unreadable and a raw HTTP swap fails (unit 4.12) |
 | No credential in logs | every declared credential value is masked in captured log output |
 
