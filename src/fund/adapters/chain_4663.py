@@ -19,6 +19,12 @@ What the record requires, and where each requirement is met:
   There is one endpoint today, so the failover has nowhere to go
   (`config/chain.json`). What is JSON-RPC's own stays here: an error inside a
   200, and which of those are worth retrying.
+- **Freshness in open-session time.** A newest round is stale past its feed's
+  heartbeat plus the margin, counting only time outside the closed session
+  inferred from the feeds' own rounds (`config/sessions.json`, `--sessions`).
+  A weekend is expected; a holiday is not modelled and reads as stale (PLAN
+  §13). The comparison lives here as the named exception to "gates exist once"
+  (CODEBASE §3).
 - **Three-valued results.** An unreachable source yields an Observation marked
   UNREACHABLE, which a Check reads as undetermined, never as false.
 - **Round ids exceed 2**53.** They are parsed from hex into Python ints and
@@ -36,6 +42,7 @@ import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Callable, Mapping, Sequence
 
 from fund.adapters import http
@@ -259,13 +266,22 @@ def pin_block(rpc: RpcClient, chain_id: int, tag: str = "latest") -> BlockRef:
                     Instant.from_seconds(int(block["timestamp"], 16)), block["hash"].lower())
 
 
-def freshness(reading: Observation, feed: FeedRef, as_of: Instant, margin_s: int) -> Check:
+def freshness(reading: Observation, feed: FeedRef, as_of: Instant, margin_s: int,
+              sessions: Mapping[str, WeeklyClosure] = MappingProxyType({})) -> Check:
     """Is this newest reading fresh? Judged against its own feed's heartbeat
     plus the margin, at `as_of` — the pinned block's time, not the wall clock,
     so the same snapshot gives the same verdict every time.
 
     Only the newest point of a series is ever judged (decision 2026-09-18). A
     reading that was not taken is undetermined, never stale and never fresh.
+
+    **Closed sessions** (DECISION 2026-09-18). When `sessions` holds a closed
+    span inferred for the feed's market hours, time inside it does not count:
+    a gap that matches the closed session is expected, and the last round
+    stands. Any other gap past the limit is stale, a market holiday included,
+    because holidays are not modelled (PLAN §13). A round dated inside the span
+    contradicts the inference, so the verdict is undetermined until the span is
+    re-derived. With no span for the label, every second counts, as before.
     """
     if not reading.ok or reading.source_time is None:
         return Check(None, f"no reading to judge: {reading.status.value}: {reading.detail}")
@@ -273,9 +289,28 @@ def freshness(reading: Observation, feed: FeedRef, as_of: Instant, margin_s: int
         raise ValueError("heartbeat is whole seconds")
     limit_ms = (feed.heartbeat.raw + margin_s) * 1000
     age_ms = as_of.epoch_ms - reading.source_time.epoch_ms
-    detail = (f"age {age_ms // 1000}s against heartbeat {feed.heartbeat.raw}s + margin "
-              f"{margin_s}s; market hours {feed.market_hours}")
-    return Check(age_ms <= limit_ms, detail)
+    closure = sessions.get(feed.market_hours) if feed.market_hours else None
+    if closure is None:
+        detail = (f"age {age_ms // 1000}s against heartbeat {feed.heartbeat.raw}s + margin "
+                  f"{margin_s}s; market hours {feed.market_hours}")
+        return Check(age_ms <= limit_ms, detail)
+    if closure.contains(reading.source_time.epoch_ms // 1000):
+        return Check(None, _contradiction(closure, reading.source_time))
+    closed_ms = closure.closed_ms(reading.source_time.epoch_ms, as_of.epoch_ms)
+    open_ms = age_ms - closed_ms
+    detail = (f"age {age_ms // 1000}s, of which {closed_ms // 1000}s in the closed session "
+              f"inferred for {feed.market_hours} ({closure.describe()}): {open_ms // 1000}s of open "
+              f"session against heartbeat {feed.heartbeat.raw}s + margin {margin_s}s")
+    if open_ms > limit_ms:
+        detail += ("; a gap this long in an open session is stale, and a market holiday reads "
+                   "exactly like this (PLAN §13)")
+    return Check(open_ms <= limit_ms, detail)
+
+
+def _contradiction(closure: WeeklyClosure, when: Instant) -> str:
+    return (f"a round at {_iso(when)} lies inside the closed session inferred for {closure.label} "
+            f"({closure.describe()}), which contradicts the inference, so freshness is "
+            f"undetermined; re-derive it with --sessions (config/sessions.json)")
 
 
 class ChainReader:
@@ -527,12 +562,24 @@ def _age(seconds: int, since: Instant) -> str:
     return f"{(seconds * 1000 - since.epoch_ms) // 1000}s"
 
 
-def series_freshness(series: Series, feed: FeedRef, as_of: Instant, margin_s: int) -> Check:
+def series_freshness(series: Series, feed: FeedRef, as_of: Instant, margin_s: int,
+                     sessions: Mapping[str, WeeklyClosure] = MappingProxyType({})) -> Check:
     """Freshness of a series is the freshness of its newest point, and of nothing
-    else: every older point is old by construction (decision 2026-09-18)."""
+    else: every older point is old by construction (decision 2026-09-18).
+
+    The older points do one other job. A seven-day series always spans a
+    weekend, so each snapshot re-tests the inferred closed session against the
+    latest week: a point inside the span contradicts it, and the verdict is
+    undetermined."""
     if series.newest is None:
         return Check(None, f"no points to judge: {series.status.value}: {series.detail}")
-    return freshness(series.newest, feed, as_of, margin_s)
+    closure = sessions.get(feed.market_hours) if feed.market_hours else None
+    if closure is not None:
+        inside = [p for p in series.points if closure.contains(p.source_time.epoch_ms // 1000)]
+        if inside:
+            return Check(None, f"{len(inside)} of the series' {len(series.points)} rounds: "
+                               + _contradiction(closure, inside[0].source_time))
+    return freshness(series.newest, feed, as_of, margin_s, sessions)
 
 
 # --- market sessions, inferred from the feeds' own rounds ----------------------------
@@ -693,6 +740,10 @@ CHAIN_CONFIG = Path(__file__).resolve().parents[3] / "config" / "chain.json"
 THRESHOLDS = Path(__file__).resolve().parents[3] / "config" / "thresholds.json"
 SESSIONS = Path(__file__).resolve().parents[3] / "config" / "sessions.json"
 
+#: The rule `config/thresholds.json` must name: heartbeat plus margin, counted
+#: in open-session time where a closed session is inferred.
+STALENESS_RULE = "per_feed_heartbeat_plus_margin_in_open_session"
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -710,13 +761,20 @@ class Settings:
     scale_break_ratio: int
     user_agent: str
     staleness_margin_s: int
+    sessions: Mapping[str, WeeklyClosure]
 
     @classmethod
-    def load(cls, chain_path: Path = CHAIN_CONFIG, thresholds_path: Path = THRESHOLDS) -> Settings:
+    def load(cls, chain_path: Path = CHAIN_CONFIG, thresholds_path: Path = THRESHOLDS,
+             sessions_path: Path = SESSIONS) -> Settings:
         c = json.loads(chain_path.read_text())
         t = json.loads(thresholds_path.read_text())
-        if t["feed_staleness_rule"] != "per_feed_heartbeat_plus_margin":
+        if t["feed_staleness_rule"] != STALENESS_RULE:
             raise ValueError(f"unknown staleness rule {t['feed_staleness_rule']!r}")
+        closed = json.loads(sessions_path.read_text())["closed"]
+        sessions = MappingProxyType({
+            label: WeeklyClosure(label, span["start_seconds_after_monday_utc"],
+                                 span["end_seconds_after_monday_utc"])
+            for label, span in closed.items()})
         return cls(chain_id=c["chain_id"], endpoints=tuple(c["rpc_endpoints"]),
                    block_tag=c["block_tag"], timeout_s=c["request_timeout_seconds"],
                    attempts=c["attempts_per_endpoint"], backoff_s=c["backoff_seconds"],
@@ -725,7 +783,7 @@ class Settings:
                    chunk=c["multicall_chunk"], window_s=c["series_window_seconds"],
                    max_rounds=c["series_max_rounds"],
                    scale_break_ratio=c["series_scale_break_ratio"], user_agent=c["user_agent"],
-                   staleness_margin_s=t["feed_staleness_margin_seconds"])
+                   staleness_margin_s=t["feed_staleness_margin_seconds"], sessions=sessions)
 
     def client(self, secret: Callable[[str], str], transport: Transport | None = None) -> RpcClient:
         """`secret` is `Config.secret`: the URLs come from the role's credentials."""
@@ -778,7 +836,7 @@ def prove(series_asset: str = "AAPL") -> int:
               for a, f in u.feeds.items()}  # display only
     by_symbol = {v: k for k, v in symbol.items()}
     feeds = dict(sorted(u.feeds.items(), key=lambda item: symbol[item[0]]))
-    margin = settings.staleness_margin_s
+    margin, sessions = settings.staleness_margin_s, settings.sessions
 
     rpc = settings.client(cfg.secret)
     block = pin_block(rpc, settings.chain_id, settings.block_tag)
@@ -787,7 +845,9 @@ def prove(series_asset: str = "AAPL") -> int:
     print(f"   endpoints {', '.join(e.name for e in rpc.endpoints)}; every read below is at this hash\n")
 
     print(f"== 1. {len(feeds)} feeds at one block: latestRoundData, decimals, freshness "
-          f"(heartbeat + {margin}s, judged at block time)")
+          f"(heartbeat + {margin}s of open session, judged at block time)")
+    for label, closure in sessions.items():
+        print(f"   closed session inferred for {label}: {closure.describe()} (config/sessions.json)")
     rounds = read.latest_rounds(feeds)
     chain_decimals = read.feed_decimals(feeds)
     print(f"   {'asset':6} {'proxy':12} {'dec dir/chain':13} {'round id (exact)':24} "
@@ -795,7 +855,7 @@ def prove(series_asset: str = "AAPL") -> int:
     counts: dict[Any, int] = {}
     for asset, f in feeds.items():
         o, d = rounds[asset], chain_decimals[asset]
-        verdict = freshness(o, f, block.timestamp, margin)
+        verdict = freshness(o, f, block.timestamp, margin, sessions)
         counts[verdict.value] = counts.get(verdict.value, 0) + 1
         on_chain = d.value.raw if d.ok else d.status.value
         if o.ok:
@@ -844,11 +904,11 @@ def prove(series_asset: str = "AAPL") -> int:
                          ("newest", s.newest)):
         if point is None:
             continue
-        alone = freshness(point, feeds[target], block.timestamp, margin)
+        alone = freshness(point, feeds[target], block.timestamp, margin, sessions)
         print(f"   {label:6} round {point.source_ref} at {_iso(point.source_time)}, "
               f"age {_dur(block.timestamp.epoch_ms - point.source_time.epoch_ms):10} "
               f"price {point.value.raw}; judged alone it would be fresh={alone.value}")
-    verdict = series_freshness(s, feeds[target], block.timestamp, margin)
+    verdict = series_freshness(s, feeds[target], block.timestamp, margin, sessions)
     print(f"   the series' verdict judges the newest point only: fresh={verdict.value} ({verdict.reason})")
     print("   every point at the pinned block:", all(p.block == block for p in s.points))
     same = lambda o: (o.status, o.value, o.source_time, o.source_ref, o.block)  # noqa: E731
@@ -895,7 +955,7 @@ def prove(series_asset: str = "AAPL") -> int:
                      transport=urllib_transport(settings.user_agent))
     gone = ChainReader(dead, block, multicall3=settings.multicall3, chunk=settings.chunk,
                        clock=wall_clock).latest_rounds({one: feeds[one]})[one]
-    verdict = freshness(gone, feeds[one], block.timestamp, margin)
+    verdict = freshness(gone, feeds[one], block.timestamp, margin, sessions)
     print(f"   AAPL via a refused endpoint: status {gone.status.value}; freshness {verdict.value} "
           f"(is False: {verdict.value is False}); {verdict.reason}")
     silent = socket.socket()

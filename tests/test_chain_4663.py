@@ -713,3 +713,81 @@ def test_replaying_the_rule_the_weekend_is_expected_and_the_holiday_is_stale():
     assert with_span[0][1] == MONDAY + 3 * 7 * DAY              # until Monday's first round
     without = chain.stale_spans(times, times[-1], limit, None)
     assert len(without) == 5  # every one of the five weekends, the holiday merged into its own
+
+
+# --- freshness in open-session time (DECISION 2026-09-18) ---------------------------------------
+
+EQUITY_CLOSED = {"us_equities_24/5": chain.WeeklyClosure("us_equities_24/5", SAT_0005, SUN_2355)}
+FRI, SAT, SUN = MONDAY - 3 * DAY, MONDAY - 2 * DAY, MONDAY - DAY  # the weekend before MONDAY
+
+
+def reading_at(epoch_s: int) -> Observation:
+    fake = FakeChain()
+    fake.feeds[addr(1)] = [(100, epoch_s)]
+    asset = AssetId(CHAIN, addr(11))
+    return reader(rpc_for(fake)).latest_rounds({asset: feed(addr(1))})[asset]
+
+
+def judged(round_s: int, as_of_s: int, sessions=EQUITY_CLOSED) -> Check:
+    return chain.freshness(reading_at(round_s), feed(addr(1)), Instant.from_seconds(as_of_s),
+                           MARGIN, sessions)
+
+
+def test_a_weekend_gap_is_expected_and_the_last_round_stands():
+    verdict = judged(FRI + 20 * HOUR, SUN + 23 * HOUR)  # 51 h by the wall clock
+    assert verdict.value is True and "of open session" in verdict.reason
+    assert judged(FRI + 20 * HOUR, SUN + 23 * HOUR, sessions={}).value is False  # the rule it replaces
+
+
+# Friday 23:00Z to Saturday 00:05Z is 1h05m of open session; the other 23h55m of
+# the 25 h allowance runs from Sunday 23:55Z, so the limit falls at Monday 23:50Z.
+@pytest.mark.parametrize("as_of_s, fresh", [
+    (MONDAY + 23 * HOUR + 50 * 60 - 1, True),
+    (MONDAY + 23 * HOUR + 50 * 60, True),        # exactly heartbeat + margin of open session
+    (MONDAY + 23 * HOUR + 50 * 60 + 1, False),   # one second past it
+])
+def test_open_session_time_resumes_at_the_end_of_the_span(as_of_s, fresh):
+    assert judged(FRI + 23 * HOUR, as_of_s).value is fresh
+
+
+def test_a_gap_in_an_open_session_is_stale_and_names_the_holiday_it_may_be():
+    verdict = judged(MONDAY + HOUR, MONDAY + DAY + 3 * HOUR)  # Monday 01:00Z to Tuesday 03:00Z
+    assert verdict.value is False and "holiday" in verdict.reason
+
+
+def test_a_friday_holiday_is_stale_through_the_weekend():
+    # Thursday 20:00Z, then nothing: 28h05m of open session by Saturday 00:05Z.
+    thursday = FRI - DAY + 20 * HOUR
+    assert judged(thursday, SAT + 12 * HOUR).value is False
+    assert judged(thursday, SUN + 23 * HOUR).value is False
+
+
+def test_a_round_inside_the_closed_span_contradicts_it_and_is_undetermined():
+    verdict = judged(SAT + 12 * HOUR, SAT + 13 * HOUR)
+    assert verdict.value is None and "contradicts the inference" in verdict.reason
+
+
+def test_a_series_whose_history_crosses_the_span_reopens_the_question():
+    fake = FakeChain()
+    fake.feeds[addr(1)] = [(100, SAT + 12 * HOUR), (101, MONDAY + HOUR)]
+    s = reader(rpc_for(fake)).price_series(AssetId(CHAIN, addr(11)), feed(addr(1)),
+                                           window_s=7 * DAY, max_rounds=100, scale_break_ratio=10_000)
+    verdict = chain.series_freshness(s, feed(addr(1)), Instant.from_seconds(MONDAY + 2 * HOUR),
+                                     MARGIN, EQUITY_CLOSED)
+    assert verdict.value is None and "1 of the series' 2 rounds" in verdict.reason
+
+
+def test_a_feed_whose_schedule_has_no_span_counts_every_second():
+    crypto = FeedRef(proxy=ChainAddress(CHAIN, addr(1)), decimals=8, heartbeat=Fixed(DAY, 0, "s"),
+                     deviation_threshold=Fixed.parse("0.5", "%"), market_hours="Crypto",
+                     name="ETH / USD")
+    verdict = chain.freshness(reading_at(FRI + 20 * HOUR), crypto,
+                              Instant.from_seconds(SUN + 23 * HOUR), MARGIN, EQUITY_CLOSED)
+    assert verdict.value is False and "of open session" not in verdict.reason
+
+
+def test_settings_load_the_closed_span_and_the_rule_that_uses_it():
+    s = chain.Settings.load()
+    span = s.sessions["us_equities_24/5"]
+    assert (span.start_s, span.end_s) == (SAT_0005, SUN_2355)
+    assert "Crypto" not in s.sessions
