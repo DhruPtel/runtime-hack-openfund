@@ -231,6 +231,13 @@ def test_a_venue_refusal_keeps_the_venues_words_and_is_not_called_unreachable():
     assert judged(seen).rule == bq.RULE_QUOTE
 
 
+def test_a_server_error_is_an_answer_too_and_is_refused_with_its_body():
+    error = (500, b'{"message":"Internal server error"}', {})
+    seen = adapter(replies(error, error, error)).quote(REQUEST)
+    assert seen.status is FetchStatus.REFUSED and "HTTP 500" in seen.detail
+    assert "Internal server error" in seen.detail and judged(seen).verdict.value is False
+
+
 def test_no_answer_at_all_is_unreachable():
     def refuse(url, body, timeout):
         raise ConnectionRefusedError("[Errno 111] Connection refused")

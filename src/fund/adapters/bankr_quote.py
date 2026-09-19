@@ -266,8 +266,8 @@ def keyed_transport(user_agent: str, header: str, key: str) -> http.Transport:
 
 def _recording(transport: http.Transport, replies: list) -> http.Transport:
     """Keep every reply. The shared client treats any non-200 as a failure to
-    retry and keeps only its status, but a 4xx from the venue is an answer: its
-    body says why it would not quote (LESSONS 2026-09-18)."""
+    retry and keeps only its status, but an HTTP error from the venue is still
+    an answer, and its body says why it would not quote (LESSONS 2026-09-18)."""
     def send(url: str, body: bytes | None, timeout_s: float) -> tuple:
         result = transport(url, body, timeout_s)
         replies.append(result)
@@ -276,8 +276,10 @@ def _recording(transport: http.Transport, replies: list) -> http.Transport:
 
 
 class QuoteAdapter:
-    """Quotes over the shared client. Every request becomes an Observation:
-    OK with a `Quote`, REFUSED with the venue's reason, or UNREACHABLE."""
+    """Quotes over the shared client. Every request becomes an Observation, with
+    the statuses `core/types.py` defines: OK with a `Quote`; REFUSED when the
+    venue answered with an error, 4xx or 5xx, whose body is kept; UNREACHABLE
+    when no answer came at all."""
 
     def __init__(self, client: http.HttpClient, *, chain: str, path: str,
                  clock: Callable[[], Instant], replies: list):
@@ -294,7 +296,7 @@ class QuoteAdapter:
         return parse(reply.body, request, self.chain, self.clock())
 
     def _failed(self, unavailable: http.Unavailable) -> Observation:
-        answered = [r for r in self._replies if 400 <= r[0] < 500 and r[0] != 429]
+        answered = [r for r in self._replies if r[0] != 200]
         if answered:
             status, body = answered[-1][0], answered[-1][1]
             said = self.client.scrub(body.decode("utf-8", "replace")[:400])
