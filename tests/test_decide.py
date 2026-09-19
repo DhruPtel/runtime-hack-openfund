@@ -169,3 +169,34 @@ def test_the_command_runs_from_its_arguments(tmp_path, capsys):
     assert {p.name for p in (tmp_path / "out").iterdir()} >= {
         "record.json", "envelope.json", "plan.json", "quotes.json", "risk.json",
         "proposal.json", "table.txt", "reports.json"}
+
+
+def test_the_record_names_each_loose_citation_of_the_reports_it_accepted(tmp_path):
+    """One approved report with a citation cut short: it is still accepted, and the
+    signed record says which citation was loose and where the value is."""
+    offered = decide.approved_reports()
+    trend = next(o for o in offered if o.seat == "price-trend")
+    cut = trend.text.replace("- 559.42, Friday's close and the 30-day high [mark.price_usd]",
+                             "- 559.42, Friday's close and the 30-day high [price_usd]", 1)
+    assert cut != trend.text
+    offered = [decide.Offered(o.seat, o.agent, cut, o.source) if o is trend else o
+               for o in offered]
+    expected = written()
+    env_file = tmp_path / "treasurer.env"
+    env_file.write_text(f"SIGNING_KEY={SEED}\n")
+    settings = risk.Settings(model="claude-sonnet-5", max_tokens=12000, transport_timeout_s=2.5,
+                             worker_deadline_s=3.5, bytes_per_token=Decimal("1.8"), pricing=PRICE)
+    quotes = quotes_file(tmp_path)
+    done = decide.decide(snapshot_path=CAPTURE / "snapshot.json", offered=offered, holdings={},
+                         cash_usd=Decimal(200), out_dir=tmp_path / "out",
+                         quotes=lambda intents: decide.recorded_quotes(quotes), quote_label="t",
+                         risk_settings=settings, risk_credential=None, environ=SHARED,
+                         recorded_reply=scripted(expected),
+                         store=reports.ReportStore(tmp_path / "store"), env_file=env_file)
+    assert len(done["accepted"]) == 4 and done["envelope"]["signed"] is True
+    carried = {r["seat"]: r["imprecise_citations"] for r in done["record"]["reports"]}
+    # Two fields end in price_usd (the mark and the corroboration), so the citation
+    # names none; the figure is then found by value at the mark.
+    assert [(c["cited"], c["found"], c["written"]) for c in carried["price-trend"]] == [
+        ("price_usd", None, None), ("no field", "AMD mark.price_usd", "559.42")]
+    assert carried["cross-asset-macro"] == []

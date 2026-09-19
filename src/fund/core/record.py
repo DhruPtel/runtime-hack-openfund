@@ -2,7 +2,9 @@
 
 One canonical JSON document holds the decision and everything it stands on:
 - **the snapshot:** its sha256, block and build time;
-- **every accepted report:** its seat, agent, text and the sha256 of the text;
+- **every accepted report:** its seat, agent, text and the sha256 of the text,
+  and every citation in it that was loose: a real value cited under an imprecise
+  reference, which 2.2 accepts and records (since 3.8);
 - **the config the decision read:** the sha256 of each file;
 - **the proposal, the plan, the gates' verdicts and the risk agent's output:**
   its reply in full, its sha256, and the decision the override rule reached;
@@ -47,9 +49,12 @@ def build(*, snapshot: Mapping[str, Any], snapshot_sha256: str,
           proposal: Mapping[str, Any], plan: Mapping[str, Any], review: Mapping[str, Any],
           risk_agent: str | None, risk_reply: str | None) -> dict[str, Any]:
     """The record, as a plain document. `reports` are the accepted ones, each
-    with `seat`, `agent` and `text`. `review` is `agents/risk.review`'s result."""
+    with `seat`, `agent`, `text` and its `imprecise_citations`. `review` is
+    `agents/risk.review`'s result."""
     carried = sorted(({"seat": r["seat"], "agent": r["agent"], "text": r["text"],
-                       "sha256": _sha256(r["text"])} for r in reports),
+                       "sha256": _sha256(r["text"]),
+                       "imprecise_citations": list(r.get("imprecise_citations") or ())}
+                      for r in reports),
                      key=lambda r: r["seat"])
     findings = [{"symbol": a["asset"]["symbol"], "address": a["asset"]["address"], **finding}
                 for a in snapshot["assets"] for finding in a.get("findings") or ()]

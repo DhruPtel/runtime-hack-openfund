@@ -70,3 +70,23 @@ def test_a_vetoed_order_names_every_rule_that_vetoed_it(tmp_path):
     r = built(tmp_path, veto=("META",), META={"fetched_ms": 1_790_000_000_000 - 120_000})
     meta = next(o for o in r["decision"]["vetoed"] if o["symbol"] == "META")
     assert meta["vetoed_by"] == ["quote-age", "risk"]
+
+
+def test_a_loose_citation_is_carried_into_the_signed_record(tmp_path):
+    """A reader of the record sees which citations were imprecise (2.2, since 3.8)."""
+    loose = {"cited": "swap_impact_bps", "found": "MSTR quote.swap_impact_bps",
+             "written": None, "line": 12, "why": "MSTR has no field swap_impact_bps"}
+    plan = written()
+    reply = reply_for(plan)
+    outcome = risk.review(plan, document_id(plan), snapshot=SNAPSHOT, mandate=MANDATE,
+                          limits=LIMITS, settings=SETTINGS, work_dir=tmp_path,
+                          reports=[risk.ReportText(r["seat"], r["text"]) for r in REPORTS],
+                          recorded_reply=reply)
+    reports = [{**r, "imprecise_citations": [loose] if r["seat"] == "execution-quality" else []}
+               for r in REPORTS]
+    r = record.build(snapshot=SNAPSHOT, snapshot_sha256=SNAPSHOT_SHA256, reports=reports,
+                     config_sha256=CONFIG, proposal=propose().as_dict(), plan=plan,
+                     review=outcome, risk_agent="unassigned", risk_reply=reply)
+    carried = {c["seat"]: c["imprecise_citations"] for c in r["reports"]}
+    assert carried["execution-quality"] == [loose] and carried["price-trend"] == []
+    assert b'"imprecise_citations"' in record.encode(r)

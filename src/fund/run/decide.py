@@ -100,15 +100,16 @@ def cycle_reports(cycle_dir: Path) -> list[Offered]:
 
 
 def check(offered: Sequence[Offered], snapshot: Mapping[str, Any], snapshot_sha256: str
-          ) -> tuple[list[tuple[Offered, schema.Report]], list[tuple[Offered, str]]]:
-    """Every report checked again against this snapshot. Only accepted ones count."""
+          ) -> tuple[list[tuple[Offered, schema.Verdict]], list[tuple[Offered, str]]]:
+    """Every report checked again against this snapshot. Only accepted ones count,
+    each with its verdict, which records any citation that was loose."""
     accepted, refused = [], []
     for report in offered:
         verdict = schema.validate(report.text, snapshot,
                                   contract=schema.Contract.load(report.seat),
                                   agent=report.agent, snapshot_sha256=snapshot_sha256)
         if verdict.ok:
-            accepted.append((report, verdict.report))
+            accepted.append((report, verdict))
         else:
             refused.append((report, "; ".join(str(r) for r in verdict.refusals)))
     return accepted, refused
@@ -227,7 +228,7 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
     the_book = plan.book(holdings, cash_usd, snapshot)
     symbols = {a["asset"]["address"].lower(): a["asset"]["symbol"] for a in snapshot["assets"]}
     proposal = aggregate.aggregate(
-        [r.as_dict() for _, r in accepted],
+        [v.report.as_dict() for _, v in accepted],
         kinds={a["id"]: a["vocabulary"] for a in analysts["analysts"]},
         current=the_book.weights, cash_weight=the_book.cash_weight, nav_usd=the_book.nav_usd,
         limits=limits, symbols=symbols,
@@ -252,7 +253,9 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
                      for name in record.CONFIG_FILES}
     the_record = record.build(
         snapshot=snapshot, snapshot_sha256=snapshot_sha256,
-        reports=[{"seat": o.seat, "agent": o.agent, "text": o.text} for o, _ in accepted],
+        reports=[{"seat": o.seat, "agent": o.agent, "text": o.text,
+                  "imprecise_citations": [i.as_dict() for i in v.imprecisions]}
+                 for o, v in accepted],
         config_sha256=config_sha256, proposal=proposal.as_dict(), plan=written, review=outcome,
         risk_agent=None if risk_credential is None else risk_credential.agent,
         risk_reply=outcome["reply_text"])
