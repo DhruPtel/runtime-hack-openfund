@@ -1535,3 +1535,6 @@ At the end of Phase 1, before detailing Phase 2, we answer:
    return leg still unexercised.
 4. What did Phases 0 and 1 actually cost in time, and what does that imply for
    the remaining seven?
+
+**Answered in [`PHASE-1-GATE.md`](PHASE-1-GATE.md)** (2026-09-18). Phase 2 is
+detailed after the operator reads it.
