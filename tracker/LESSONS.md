@@ -2076,3 +2076,38 @@ The runner builds each child's environment from nothing, and children never read
 `.env` (`planning/PHASE-2.md` 2.4). The file itself stays readable on one
 machine until 4.12 splits it.
 **Affects:** 2.4, 4.12; PLAN §2 invariant 1.
+
+## 2026-09-19 — 2.0: SIWE made an agent account with its own address, a read-only key and the Agent API off, but no gateway access
+**What we believed.** The five-wallet decision rested on `bankr login siwe`
+producing accounts that are read-only, have the Agent API off, and have the LLM
+gateway on. The CLI's help and source already doubted the gateway: the SIWE
+request never asks for it.
+
+**What one account measured** (`research/findings.md` §2.0; nothing spent; the
+fund's CLI session untouched):
+- **Its own address.** `0x42a9…3d27` is a new Bankr wallet, not the signer's
+  address.
+- **It cannot transact.** A signature and a swap were each refused 403 "Read-only
+  API key", with the permission named. A signature needs no balance, so the
+  empty wallet is not the reason.
+- **The Agent API is off.** `/agent/prompt` was refused 403, with the toggle
+  named.
+- **The gateway is off.** Every gateway call drew 403, "does not have LLM
+  Gateway access enabled". That is `BANKR_KEY_READ`'s body exactly.
+- **It cannot buy credits either.** The top-up was refused at the gateway toggle
+  first. So read-only's own effect on buying credits is unresolved.
+- **An aside:** `POST /agent/sign`, which `research/bankr-claude.md` lists, is a
+  404.
+
+**What it changes.** The five-wallet plan cannot proceed as designed through
+SIWE alone. The options are recorded, not chosen:
+- (a) email sign-ups with `--llm`, untested;
+- (b) enabling the gateway in the dashboard, which is unknown for a SIWE
+  account;
+- (c) own wallets with inference on the fund's key. It is available now, and
+  gives up "each agent pays for its own inference".
+
+One shared wallet stays ruled out. 2.4's credential rows and every live Phase 2
+run wait on the operator.
+**Affects:** 2.0, 2.4, 2.5, 2.6, 3.5, 6.3; PLAN §6, §8 and §13; the SIWE DECISION
+above.

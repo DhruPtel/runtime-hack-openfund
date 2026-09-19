@@ -188,7 +188,10 @@ surfaces by probe 0.2.
 *Decided 2026-09-19, unverified (LESSONS 2026-09-19):* each analyst and the risk
 agent get their own Bankr account from `bankr login siwe`, with one key each:
 read-only, LLM gateway on, Agent API off.
-- They join this table once the path is proven.
+- They join this table once the path is proven. **2.0, measured:** a SIWE key
+  is read-only with the Agent API off, but has no gateway access. So the path
+  as decided is not proven, and the options wait on the operator
+  (`research/findings.md` §2.0).
 - The agent keys will then no longer share the account that holds spend
   authority. `BANKR_KEY_READ` still will.
 - The SIWE private key is setup material, never a process credential.
@@ -266,8 +269,10 @@ re-evaluate before detailing the next.
 >     (proceed, caution);
 >   - the fourth seat is `price-integrity`;
 >   - each analyst and the risk agent get their own Bankr wallet through
->     `bankr login siwe`. **This is unverified; prove it before Phase 2
->     depends on it.** They never transact or sign;
+>     `bankr login siwe`. They never transact or sign. **2.0 measured one
+>     account:** its own address, read-only and Agent API off all pass, each
+>     by refusal, but **no LLM gateway access**. The options are the
+>     operator's (`research/findings.md` §2.0);
 >   - the ETH↔USDG leg is a demonstration of the money path that no analyst
 >     chose;
 >   - the paid endpoint sells the full record, and a preview is public;
