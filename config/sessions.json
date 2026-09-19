@@ -21,7 +21,8 @@
       "end_seconds_after_monday_utc": 604500,
       "_reads": "Sat 00:05Z to Sun 23:55Z, every week.",
       "_evidence": "Proposed by --sessions at block 66681376 from 86,606 rounds of all 35 us_equities_24/5 feeds, 2026-06-23 to 2026-09-19. Pooled over 12 complete weeks, no round was ever published between Sat 00:01:45Z and Mon 00:00:16Z. Replayed over that history, heartbeat + margin of open session is never stale except on the two holidays in range, 2026-07-03 and 2026-09-07, which closed a whole session each (tracker/LESSONS.md 2026-09-18).",
-      "_unmeasured": "Every week observed was daylight time. If the schedule follows New York time, both edges move an hour later on 2026-11-01; a round inside this span then makes freshness undetermined until the span is re-derived. Holidays are not modelled and read as stale."
+      "_unmeasured": "Every week observed was daylight time. If the schedule follows New York time, both edges move an hour later on 2026-11-01; a round inside this span then makes freshness undetermined until the span is re-derived. Holidays are not modelled and read as stale.",
+      "_rederive_on": "2026-11-09 (Monday). DECISION, tracker/LESSONS.md 2026-09-18. US clocks go back on Sunday 2026-11-01; if the feeds follow New York time, Friday's close lands at Sat 01:00Z from 2026-11-07, inside this span, and every equity price is undetermined until the span is re-derived. Run `python -m fund.adapters.chain_4663 --sessions`, review what it proposes, and write it here by hand."
     }
   }
 }

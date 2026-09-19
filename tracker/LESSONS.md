@@ -1732,6 +1732,7 @@ rounds.
   `Age`, is too old against its fetch time. Its limit belongs in
   `config/thresholds.json`, which was outside 1.11's paths. The operator's call.
 **Affects:** 1.4, 1.5, 1.11; PLAN §9; `adapters/gecko.py`.
+*Decided at 1.11's checkpoint: not checked. See the DECISION below.*
 
 ## 2026-09-18 — 1.11: a paused feed and a closed market look alike to the fund, but not to the chain
 **What we believed.** 1.3 recorded that a paused feed shows up only as a stale
@@ -1763,3 +1764,36 @@ order and schema, and `run/snapshot.py`, which was outside 1.11's paths. No
 paused answer has been observed, so none could be recorded as a case. The
 operator's call.
 **Affects:** 1.3, 1.6, 1.8 (a held asset's value), 1.11; PLAN §9; F0.4.4.
+
+## 2026-09-18 — DECISION: GeckoTerminal's `Date` header is not checked
+*The operator's, at 1.11's checkpoint.* No offchain body carries a source time,
+and GeckoTerminal's HTTP `Date` is the only time it states. It stays unread.
+- **Why.** GeckoTerminal only corroborates. It never sets a mark, a size or a
+  price paid.
+- **The exposure, both ways.** A stale answer that invents a divergence vetoes a
+  trade in an open session, which fails closed, or records a false finding in a
+  closed one. A stale answer that hides a divergence, in an open session and
+  while the Chainlink mark is wrong at the same moment, lets through a trade the
+  veto would have stopped. That is the one direction that fails open. The
+  operator's reasoning, a finding rather than a trade, holds for the closed
+  session and for an invented divergence. PLAN §13 states both.
+- **Measured:** four answers, all edge-cache misses within 2.5 s of our clock.
+  GeckoTerminal allows a 60 s cache.
+**Affects:** 1.4, 3.4 (the veto), PLAN §13.
+
+## 2026-09-18 — DECISION: the closed session is re-derived on Monday 9 November 2026
+*The operator's, at 1.11's checkpoint:* re-derive after the first weekend on US
+standard time. The date given was "Monday 3 November". 3 November 2026 is a
+Tuesday, and the recorded date is Monday 9 November, for the decision's own
+reason:
+- US clocks go back on Sunday 1 November.
+- If the feeds follow New York time, Friday's 20:00 close lands at Sat 01:00Z
+  first on Saturday 7 November, inside the span, which starts at Sat 00:05Z.
+- A re-derivation on Monday 2 November would see no such round and propose the
+  same span.
+
+Until 9 November, if the prediction holds, every equity price is undetermined
+from Sat 7 Nov 00:05Z to Monday's first round. That weekend fails closed. The
+prediction is not a measurement. The date is where it will be seen: in
+`CLAUDE.md`, in `config/sessions.json` (`_rederive_on`) and in PLAN §13.
+**Affects:** `config/sessions.json`, PLAN §13, every weekend cycle from 7 November.

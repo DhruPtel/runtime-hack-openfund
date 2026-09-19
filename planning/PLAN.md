@@ -751,7 +751,26 @@ Published with the project, not hidden.
   Monday. It fails closed, not open, and it is the honest cost of not pinning
   a calendar. Daylight saving is unmeasured, because every week observed was
   daylight time; if the schedule moves, a round inside the span stops
-  valuation until the span is re-derived.
+  valuation until the span is re-derived. **The span is re-derived on Monday 9
+  November 2026** (DECISION, LESSONS 2026-09-18). US clocks go back on Sunday 1
+  November. If the feeds follow New York time, the first Saturday rounds inside
+  the span come on 7 November, and every equity price is undetermined from then
+  until the re-derivation.
+- **The corroborator's age is not checked** (DECISION, LESSONS 2026-09-18).
+  GeckoTerminal's answer carries no time of its own. Its HTTP `Date` header is
+  the only time it states, and nothing reads it, so a stale or replayed answer
+  is taken as current. GeckoTerminal only corroborates: it never sets a mark, a
+  size or a price paid. A stale answer can fail in two directions:
+  - **Inventing a divergence.** In an open session this vetoes a trade that
+    should have gone through, which fails closed. In a closed session it records
+    a false finding.
+  - **Hiding a divergence.** In an open session this lets a trade through that
+    the veto would have stopped, if the Chainlink mark was wrong at the same
+    moment. That is the one direction that fails open. In a closed session it
+    only loses a finding.
+
+  Measured, the answers are fresh: four were edge-cache misses within 2.5 s of
+  our clock, and GeckoTerminal allows a 60 s cache.
 - Single runner, single SQLite file, no high availability, no automated backup.
 - One signing key, published, rotated manually. No trust chain.
 - Refunds for paid-but-undelivered records are manual, though retrieval by
