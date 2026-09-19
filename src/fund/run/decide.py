@@ -230,7 +230,7 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
     proposal = aggregate.aggregate(
         [v.report.as_dict() for _, v in accepted],
         kinds={a["id"]: a["vocabulary"] for a in analysts["analysts"]},
-        current=the_book.weights, cash_weight=the_book.cash_weight, nav_usd=the_book.nav_usd,
+        current=the_book.weights, cash_weight=the_book.cash_weight,
         limits=limits, symbols=symbols,
         confidence_weights={w: Decimal(v) for w, v in analysts["confidence_weights"].items()})
     table = aggregate.table(proposal, list(SEATS), the_book.nav_usd)
@@ -299,7 +299,13 @@ def summary(done: Mapping[str, Any]) -> str:
         if d.get("model_why"):
             lines.append(f"            risk: {d['model_why'][:150]}")
     budget = review["budget"]
-    lines += ["", f"risk       bundle: {budget['gate']['reason']}"]
+    funding = done["plan"].get("funding") or {}
+    if funding.get("share_funded") is not None:
+        lines.append(f"funding    the plan funds {Decimal(funding['share_funded']) * 100:.2f}% of "
+                     f"the raises the calls want, from cash above the floor")
+    floor = review["decision"].get("cash_floor") or {}
+    lines += [f"cash       after the approved orders: {floor.get('reason')}",
+              "", f"risk       bundle: {budget['gate']['reason']}"]
     if review["decision"]["overall"]:
         lines.append(f"           overall {review['decision']['overall']['vote']}: "
                      f"{review['decision']['overall']['why'][:150]}")

@@ -169,17 +169,25 @@ def parse(text: str, plan: Mapping[str, Any], plan_sha256: str) -> tuple[Votes |
 
 
 def decide(gate_report: Mapping[str, Any], votes: Votes | None,
-           no_votes: tuple[str, str] | None = None) -> dict[str, Any]:
-    """The override rule. An order is approved only when its gates cleared, the
-    model approved it, and the model approved overall. A failed or null gate
-    vetoes whatever the model says; the model can only add vetoes."""
+           no_votes: tuple[str, str] | None = None, *, plan: Mapping[str, Any],
+           snapshot: Mapping[str, Any], limits: gates.Limits) -> dict[str, Any]:
+    """The override rule, then the cash floor on what it approved.
+
+    An order is approved only when its gates cleared, the model approved it, and
+    the model approved overall. A failed or null gate vetoes whatever the model
+    says; the model can only add vetoes. Then `gates.settle` judges the cash floor
+    on the orders so approved (R1). A buy is dropped, last first, while they would
+    leave less than the floor, and a sell never is. So a vetoed sell cannot leave
+    approved the buys it was paying for."""
     decided = []
     for order in gate_report["orders"]:
         index = order["index"]
         by = list(order["blocked_by"])
         vote = why = None
         if votes is None:
-            by.append(no_votes[0] if no_votes else RULE_RISK_UNAVAILABLE)
+            rule = no_votes[0] if no_votes else RULE_RISK_UNAVAILABLE
+            if rule not in by:
+                by.append(rule)
         else:
             vote, why = votes.orders[index]
             if vote != "approve":
@@ -193,9 +201,18 @@ def decide(gate_report: Mapping[str, Any], votes: Votes | None,
             entry["note"] = ("the model approved; a gate refused, and the gates decide: "
                              + ", ".join(order["blocked_by"]))
         decided.append(entry)
+    kept, dropped, floor = gates.settle(plan, [o["index"] for o in decided if o["approved"]],
+                                        snapshot=snapshot, limits=limits)
+    for entry in decided:
+        if entry["index"] in dropped:
+            entry["approved"] = False
+            entry["vetoed_by"].append(gates.RULE_CASH_FLOOR)
+            entry["note"] = ("approved, then dropped: the approved orders would leave less "
+                             "cash than the floor")
     return {"orders": decided,
             "approved": [o["index"] for o in decided if o["approved"]],
             "vetoed": [o["index"] for o in decided if not o["approved"]],
+            "cash_floor": floor.as_dict(),
             "overall": None if votes is None else {"vote": votes.overall[0],
                                                    "why": votes.overall[1]},
             "no_votes": None if votes is not None else {
@@ -341,7 +358,8 @@ def review(plan: Mapping[str, Any], plan_sha256: str, *, reports: Sequence[Repor
             "reply_text": None if not (reply and reply.get("reply_text")) else reply["reply_text"],
             "reply_sha256": None if not (reply and reply.get("reply_text")) else hashlib.sha256(
                 reply["reply_text"].encode("utf-8")).hexdigest(),
-            "decision": decide(gate_report, votes, no_votes)}
+            "decision": decide(gate_report, votes, no_votes, plan=plan, snapshot=snapshot,
+                               limits=limits)}
 
 
 if __name__ == "__main__":

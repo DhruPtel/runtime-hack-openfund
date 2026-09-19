@@ -28,21 +28,22 @@ def sized(reports=FOUR, the_book=None):
 
 def test_the_four_approved_reports_become_four_buys_sized_from_their_weights():
     intents = sized()
-    assert [(i.index, i.symbol, i.side, str(i.usd)) for i in intents] == [
-        (1, "AMD", "buy", "12.50"), (2, "USO", "buy", "12.50"), (3, "META", "buy", "25"),
+    assert [(i.index, i.symbol, i.side, f"{i.usd:.2f}") for i in intents] == [
+        (1, "AMD", "buy", "12.50"), (2, "USO", "buy", "12.50"), (3, "META", "buy", "25.00"),
         (4, "INTC", "buy", "12.50")]
     usdg_mark = Decimal("0.9999509")  # the capture's USDG mark
-    for intent in intents:
+    for intent, dollars in zip(intents, ("12.50", "12.50", "25", "12.50")):
         spent = Decimal(intent.sell.raw).scaleb(-6)
-        assert spent * usdg_mark <= intent.usd < (spent + Decimal("0.000001")) * usdg_mark
+        assert intent.usd == spent * usdg_mark  # what it sells, at the mark: nothing else
+        assert intent.usd <= Decimal(dollars) < (spent + Decimal("0.000001")) * usdg_mark
         assert intent.sell.asset.address == "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
         assert intent.buy.address == ADDRESS[intent.symbol] and intent.buy_decimals == 18
 
 
 def test_no_order_is_larger_than_the_per_trade_limit_and_dust_is_dropped():
-    """A move of about $37.50 is a $25 order and the rest. A remainder under the
-    minimum order is dropped. TSLA is held worth a hair under $50, since a holding's
-    units are rounded down, so the move is $37.49."""
+    """A sale worth about $37.50 is two even orders, each within the $25 limit.
+    Since the 3.8 sweep a move is split evenly, so no remainder is left over to
+    drop; only a whole move under the minimum order is dust."""
     the_book = book({"TSLA": worth("TSLA", "50")}, cash="150")
     sell_high = {"symbol": "TSLA", "address": ADDRESS["TSLA"], "word": "sell",
                  "confidence": "high"}
@@ -51,10 +52,10 @@ def test_no_order_is_larger_than_the_per_trade_limit_and_dust_is_dropped():
                {"seat": "execution-quality", "calls": []}]
     proposal = propose(reports, the_book)  # cut by 0.75 x 0.25
     intents = plan.size(proposal, the_book, SNAPSHOT, LIMITS)
-    assert [(i.side, str(i.usd)) for i in intents] == [("sell", "25"), ("sell", "12.49")]
+    assert [(i.side, f"{i.usd:.2f}") for i in intents] == [("sell", "18.75"), ("sell", "18.75")]
     assert all(i.usd <= LIMITS.max_trade_usd for i in intents)
-    fussy = dataclasses.replace(LIMITS, min_order_usd=Decimal(13))
-    assert [str(i.usd) for i in plan.size(proposal, the_book, SNAPSHOT, fussy)] == ["25"]
+    fussy = dataclasses.replace(LIMITS, min_order_usd=Decimal(40))  # the whole move is dust
+    assert plan.size(proposal, the_book, SNAPSHOT, fussy) == ()
 
 
 def test_hold_and_silence_trade_nothing_in_cycle_two():
@@ -78,8 +79,8 @@ def test_a_partial_sell_sells_the_stock_worth_its_dollars_at_the_mark():
     sell = [i for i in sized(FOUR, book({"AMZN": held}, cash="160")) if i.side == "sell"][0]
     mark = Decimal(next(a for a in SNAPSHOT["assets"]
                         if a["asset"]["symbol"] == "AMZN")["mark"]["price_usd"])
-    assert str(sell.usd) == "12.49"  # 0.0625 of a NAV a hair under $200, cut to the cent
-    assert Decimal(sell.sell.raw).scaleb(-18) * mark <= sell.usd
+    assert f"{sell.usd:.2f}" == "12.50"  # 0.0625 of a NAV a hair under $200
+    assert Decimal(sell.sell.raw).scaleb(-18) * mark == sell.usd <= Decimal("12.5")
     assert sell.sell.raw < held.raw
 
 
@@ -96,11 +97,13 @@ def test_a_holding_the_snapshot_cannot_mark_refuses_the_plan():
 
 def test_each_order_carries_its_fresh_quote_its_verdict_and_the_evidence_risk_reads():
     written_plan = written()
-    assert written_plan["judged_at_ms"] and written_plan["turnover_usd"] == "62.5"
-    assert written_plan["cash_after_usd"] == "137.5"
+    turnover = Decimal(written_plan["turnover_usd"])
+    assert written_plan["judged_at_ms"] and turnover <= Decimal("62.5") < turnover + Decimal("0.00001")
+    assert Decimal(written_plan["cash_after_usd"]) == Decimal(200) - turnover
     amd = written_plan["orders"][0]
     assert amd["asset"]["symbol"] == "AMD"
-    assert amd["weight"] == {"current": "0", "target": "0.0625", "after": "0.0625"}
+    assert amd["weight"]["current"] == "0" and amd["weight"]["target"] == "0.0625"
+    assert Decimal("0.062499") < Decimal(amd["weight"]["after"]) <= Decimal("0.0625")
     assert amd["quote"]["tradeable"] == {
         "value": True, "rule": None, "reason": amd["quote"]["tradeable"]["reason"]}
     assert "age 5.0s within 60s" in amd["quote"]["tradeable"]["reason"]

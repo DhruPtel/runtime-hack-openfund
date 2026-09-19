@@ -8,6 +8,11 @@ This is the one module that compares a quantity with a limit read from config
   - **the code that checks one:** the risk agent now, and the treasurer at 4.4.
     Both call the same gate functions on the same plan.
 
+**Money is `core/cash.py`'s** (since the 3.8 sweep). What an order is worth and
+what cash orders leave are defined there, and this module calls it. The planner
+funds and sizes with the same two functions, so a plan cannot break the floor
+it is judged on.
+
 Nothing else defines a limit. A limit's number lives in `config/`, is loaded
 into `Limits`, and never appears as a literal.
 
@@ -34,7 +39,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterable, Mapping, Sequence
+
+from . import cash
 
 RULE_QUORUM = "quorum"
 RULE_TRADEABLE = "tradeable"        # the snapshot's status: staleness, divergence tier, quote at build
@@ -147,35 +154,38 @@ def cut_by(current: Decimal, step: Decimal) -> Decimal:
     return step if step <= current else current
 
 
-def funded_share(cash_weight: Decimal, released: Decimal, wanted: Decimal, nav_usd: Decimal,
-                 limits: Limits) -> Decimal | None:
-    """The share, from 0 to 1, of the wanted increases that cash can pay for
-    without going below the cash floor. `released` is what the cycle's cuts free.
-    None when the floor is unresolved."""
+# --- the limits the planner applies (3.3, one definition of cash since the 3.8 sweep) ---------
+
+def fund(cash_usd: Decimal, proceeds_usd: Decimal, wanted_usd: Decimal,
+         limits: Limits) -> Decimal | None:
+    """The share, from 0 to 1, of the wanted buys that cash can pay for without
+    going below the floor. `proceeds_usd` is what the plan's sells are worth, by
+    `cash.worth`, the same measure the floor is judged on. None when the floor is
+    unresolved, and then no buy is funded."""
     floor_usd = limits.cash_floor_usd
     if floor_usd is None:
         return None
-    if wanted <= 0:
+    if wanted_usd <= 0:
         return Decimal(1)
-    spare = cash_weight + released - floor_usd / nav_usd
+    spare = cash_usd + proceeds_usd - floor_usd
     if spare <= 0:
         return Decimal(0)
-    if wanted <= spare:
+    if wanted_usd <= spare:
         return Decimal(1)
-    return spare / wanted
+    return spare / wanted_usd
 
 
-# --- the limits the planner applies (3.3) ----------------------------------------------------
-
-def pieces(total_usd: Decimal, limits: Limits) -> list[Decimal] | None:
-    """A move in dollars as orders: whole orders of the per-trade limit, then the
-    remainder, and any piece under the minimum order dropped as dust. None when
-    either limit is unresolved."""
+def split(worth_usd: Decimal, limits: Limits) -> int | None:
+    """How many orders a move worth this much becomes: the fewest that keep each
+    within the per-trade limit, split evenly. A move under the minimum order is
+    dust and becomes none. None when either limit is unresolved."""
     size, least = limits.max_trade_usd, limits.min_order_usd
     if size is None or least is None:
         return None
-    whole, rest = divmod(total_usd, size)
-    return [piece for piece in [size] * int(whole) + [rest] if piece >= least]
+    if worth_usd < least:
+        return 0
+    whole, rest = divmod(worth_usd, size)
+    return int(whole) + (1 if rest else 0)
 
 
 # --- the gate array (3.4) -----------------------------------------------------------------------
@@ -310,43 +320,79 @@ def context_budget(tokens: int, limits: Limits) -> Gate:
     return Gate(RULE_CONTEXT_BUDGET, True, f"about {tokens} tokens, within the budget of {budget}")
 
 
+def _worth(order: Mapping[str, Any], snapshot: Mapping[str, Any]) -> Decimal | None:
+    """What the order sells, or None when that cannot be known: no mark, or an
+    amount the asset's decimals cannot hold. None blocks; it never raises."""
+    try:
+        return cash.order_worth(order, snapshot)
+    except (cash.NoMark, ValueError, KeyError, TypeError):
+        return None
+
+
 def evaluate(plan: Mapping[str, Any], *, snapshot: Mapping[str, Any],
              mandate: Mapping[str, Any], limits: Limits, reported: int,
              extra: Sequence[Gate] = ()) -> dict[str, Any]:
     """Every gate over a written plan. The risk agent calls this (3.5), and the
     treasurer will call it again before it submits (4.4).
 
-    An order is cleared only when every one of its gates and every plan-level
-    gate passes. False refuses and None blocks, alike. `extra` carries plan-level
-    gates measured outside the plan, such as the context budget (3.6)."""
+    Every money figure is what an order sells, at the snapshot's mark
+    (`cash.order_worth`), never the planner's label. An order is cleared only when
+    every one of its gates and every plan-level gate passes. False refuses and
+    None blocks, alike. `extra` carries plan-level gates measured outside the
+    plan, such as the context budget (3.6).
+
+    **The cash floor is not judged here.** It is judged by `settle`, on the orders
+    actually approved, once these gates and the risk vote have spoken (R1)."""
     entries = {a["asset"]["address"].lower(): a for a in snapshot["assets"]}
     book = plan["book"]
     nav = Decimal(book["nav_usd"])
     values = {a.lower(): Decimal(p["value_usd"]) for a, p in book["positions"].items()}
-    cash = Decimal(book["cash_usd"])
+    worths = {order["index"]: _worth(order, snapshot) for order in plan["orders"]}
     traded = Decimal(0)
     for order in plan["orders"]:
-        usd = Decimal(order["usd"])
-        signed = usd if order["side"] == "buy" else -usd
+        value = worths[order["index"]] or Decimal(0)
         address = order["asset"]["address"].lower()
-        values[address] = values.get(address, Decimal(0)) + signed
-        cash -= signed
-        traded += usd
+        values[address] = values.get(address, Decimal(0)) + (
+            value if order["side"] == "buy" else -value)
+        traded += value
 
-    plan_gates = [quorum(reported, limits), cash_floor(cash, limits),
-                  turnover(traded, nav, limits), *extra]
+    plan_gates = [quorum(reported, limits), turnover(traded, nav, limits), *extra]
     plan_clear = all(g.passes for g in plan_gates)
     orders = []
     for order in plan["orders"]:
         address = order["asset"]["address"].lower()
-        own = [tradeable(entries.get(address)), mandate_allows(order, mandate),
-               order_size(Decimal(order["usd"]), limits), fresh_quote(order),
-               position_weight(values[address] / nav, order["side"], limits)]
+        value = worths[order["index"]]
+        size = (order_size(value, limits) if value is not None else
+                Gate(RULE_ORDER_SIZE, None, "what the order sells cannot be valued: no mark, "
+                                            "or an amount its asset cannot hold"))
+        own = [tradeable(entries.get(address)), mandate_allows(order, mandate), size,
+               fresh_quote(order), position_weight(values[address] / nav, order["side"], limits)]
         cleared = plan_clear and all(g.passes for g in own)
         blocking = [g.rule for g in [*own, *plan_gates] if not g.passes]
         orders.append({"index": order["index"], "symbol": order["asset"]["symbol"],
                        "cleared": cleared, "blocked_by": blocking,
                        "gates": [g.as_dict() for g in own]})
     return {"plan": [g.as_dict() for g in plan_gates], "plan_clear": plan_clear,
-            "orders": orders, "cash_after_usd": format(cash, "f"),
-            "turnover_usd": format(traded, "f")}
+            "orders": orders, "turnover_usd": format(traded, "f")}
+
+
+def settle(plan: Mapping[str, Any], approved: Iterable[int], *,
+           snapshot: Mapping[str, Any], limits: Limits) -> tuple[list[int], list[int], Gate]:
+    """The cash floor, on the orders actually approved (R1): after the gates and the
+    risk vote. While the approved orders would leave less than the floor, the last
+    approved buy is dropped. A sell is never dropped: it raises cash. Returns the
+    orders still approved, the buys dropped, and the floor's verdict on what is left.
+
+    With the floor unresolved, every buy is dropped: null blocks."""
+    orders = {o["index"]: o for o in plan["orders"]}
+    kept = sorted(i for i in approved if i in orders)
+    dropped: list[int] = []
+    start = Decimal(plan["book"]["cash_usd"])
+    while True:
+        left = cash.cash_after(start, [orders[i] for i in kept], snapshot)
+        verdict = cash_floor(left, limits)
+        buys = [i for i in kept if orders[i]["side"] == "buy"]
+        if verdict.passes or not buys:
+            return kept, dropped, verdict
+        kept.remove(buys[-1])
+        dropped.append(buys[-1])

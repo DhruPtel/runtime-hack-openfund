@@ -95,8 +95,8 @@ def test_four_approved_reports_become_a_signed_decision(gateway, tmp_path, monke
     assert done["plan"] == expected  # the command and the units agree to the byte
     decision = done["record"]["decision"]
     assert [o["symbol"] for o in decision["approved"]] == ["USO", "META", "INTC"]
-    assert decision["vetoed"] == [{"index": 1, "symbol": "AMD", "side": "buy", "usd": "12.5",
-                                   "vetoed_by": ["risk"]}]
+    assert decision["vetoed"] == [{"index": 1, "symbol": "AMD", "side": "buy",
+                                   "usd": expected["orders"][0]["usd"], "vetoed_by": ["risk"]}]
     envelope = done["envelope"]
     assert envelope["signed"] is True and done["authorizes"]["authorizes"] is True
     record_bytes = (tmp_path / "out" / "record.json").read_bytes()

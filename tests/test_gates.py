@@ -31,10 +31,10 @@ def blocked(result) -> dict[str, list[str]]:
 def test_the_approved_reports_plan_clears_every_gate():
     result = evaluate(written())
     assert result["plan_clear"] and blocked(result) == {}
-    assert [g["rule"] for g in result["plan"]] == ["quorum", "cash-floor", "turnover"]
+    assert [g["rule"] for g in result["plan"]] == ["quorum", "turnover"]  # the floor: settle
     assert [g["rule"] for g in result["orders"][0]["gates"]] == [
         "tradeable", "mandate", "order-size", "quote", "position-weight"]
-    assert result["cash_after_usd"] == "137.5" and result["turnover_usd"] == "62.5"
+    assert Decimal(result["turnover_usd"]).quantize(Decimal("0.01")) == Decimal("62.50")
 
 
 def test_a_stale_quote_and_a_costly_one_are_refused_by_the_rule_that_judged_them():
@@ -79,10 +79,17 @@ def test_the_mandate_refuses_an_asset_it_does_not_name_a_revoked_mandate_and_an_
     assert empty["orders"][0]["gates"][1]["value"] is None
 
 
-def test_an_order_past_the_per_trade_limit_is_refused():
+def test_an_order_past_the_per_trade_limit_is_refused_on_what_it_sells_not_its_label():
     plan = written()
-    plan["orders"][2]["usd"] = "25.01"
-    assert blocked(evaluate(plan)) == {"META": ["order-size"]}
+    plan["orders"][2]["usd"] = "99"  # a label: never read
+    assert blocked(evaluate(plan)) == {}
+    sold = plan["orders"][2]["sell"]
+    sold["amount"] = format((Decimal(sold["amount"]) * Decimal("1.01")).quantize(
+        Decimal("0.000001")), "f")  # $25.25 of USDG
+    assert "order-size" in blocked(evaluate(plan))["META"]
+    sold["amount"] = "25.1234567"  # more places than USDG has: unknown, and it blocks
+    gate = next(o for o in evaluate(plan)["orders"] if o["symbol"] == "META")["gates"][2]
+    assert gate["rule"] == "order-size" and gate["value"] is None
 
 
 def test_a_buy_past_the_position_limit_is_refused_whatever_the_plan_says_it_leaves():
@@ -97,9 +104,6 @@ def test_a_buy_past_the_position_limit_is_refused_whatever_the_plan_says_it_leav
 
 def test_a_plan_level_failure_blocks_every_order():
     everyone = {"AMD", "USO", "META", "INTC"}
-    floor = evaluate(written(), limits=dataclasses.replace(LIMITS, cash_floor_usd=Decimal(150)))
-    assert not floor["plan_clear"] and set(blocked(floor)) == everyone
-    assert blocked(floor)["AMD"] == ["cash-floor"]
     churn = evaluate(written(), limits=dataclasses.replace(LIMITS, turnover_max_bps=Decimal(100)))
     assert blocked(churn)["META"] == ["turnover"]
     short = evaluate(written(), reported=2)
@@ -107,8 +111,8 @@ def test_a_plan_level_failure_blocks_every_order():
 
 
 def test_every_unresolved_limit_blocks_and_none_passes_as_a_default():
-    for name in ("quorum_min_analysts", "max_position_weight", "cash_floor_usd",
-                 "max_trade_usd", "turnover_max_bps"):
+    for name in ("quorum_min_analysts", "max_position_weight", "max_trade_usd",
+                 "turnover_max_bps"):  # the floor is settle's, on the approved set
         result = evaluate(written(), limits=dataclasses.replace(LIMITS, **{name: None}))
         assert not any(o["cleared"] for o in result["orders"]), name
         values = [g["value"] for g in result["plan"]] + [

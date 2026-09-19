@@ -84,7 +84,7 @@ def book(holdings: dict[str, Amount] | None = None, cash: str = "200") -> plan.B
 def propose(reports=FOUR, the_book: plan.Book | None = None, limits=LIMITS) -> aggregate.Proposal:
     the_book = the_book or book()
     return aggregate.aggregate(reports, kinds=KINDS, current=the_book.weights,
-                               cash_weight=the_book.cash_weight, nav_usd=the_book.nav_usd,
+                               cash_weight=the_book.cash_weight,
                                limits=limits, confidence_weights=WEIGHTS, symbols=SYMBOLS)
 
 

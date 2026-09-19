@@ -32,12 +32,16 @@ A score is therefore a fraction of one position limit per cycle. A buy at high
 confidence, uncautioned, moves an asset three quarters of the way to the
 limit.
 
-**Cash takes the rest, and the floor holds.** New buys are paid from cash above
-`cash_floor_usd`, plus what the cycle's cuts free. If that is not enough, every
-raise is scaled by the same share. Each change is rounded toward zero at six
-decimal places, so no trade is larger than decided, and what rounding drops is
-shown as the residual, left in cash. Rows are ordered by address, so the result
-does not depend on the order reports arrive in.
+**The targets are what the calls want; what cash can pay for is the plan's.**
+The aggregator works in weights and counts no cash. Funding raises from cash
+above the floor is `core/plan.py`'s, through `core/cash.py`: the one place that
+knows what an order is worth. Until the 3.8 sweep the aggregator also scaled
+raises to the floor. It counted a cut's exact dollars as freed, while the planner
+sold less, so the planner wrote plans its own floor refused (R2; LESSONS
+2026-09-19, the design lesson). Each change is rounded toward zero at six decimal
+places, so no trade is larger than decided, and what rounding drops is shown as
+the residual. Rows are ordered by address, so the result does not depend on the
+order reports arrive in.
 
 **No rebalance keeps every holding** (PLAN §2 invariant 6, §11). It happens when:
 - fewer seats reported than the quorum;
@@ -119,7 +123,6 @@ class Proposal:
     cash_current: Decimal
     cash_target: Decimal
     residual: Decimal  # what rounding each change toward zero left in cash
-    funded: Decimal  # the share of the wanted raises that cash above the floor paid for
     confidence_weights: Mapping[str, Decimal]
 
     def target(self, address: str) -> Decimal | None:
@@ -130,7 +133,7 @@ class Proposal:
                 "reported": list(self.reported), "quorum": self.quorum.as_dict(),
                 "rows": [r.as_dict() for r in self.rows],
                 "cash": {"current": decimal_text(self.cash_current), "target": decimal_text(self.cash_target)},
-                "residual": decimal_text(self.residual), "funded": decimal_text(self.funded),
+                "residual": decimal_text(self.residual),
                 "confidence_weights": {w: decimal_text(v) for w, v in self.confidence_weights.items()}}
 
 
@@ -157,11 +160,11 @@ def _kept(rows: list[Row], cash_weight: Decimal, reason: str, reported: tuple[st
     kept = tuple(Row(r.address, r.symbol, r.contributions, r.direction, r.caution, r.score,
                      r.current, r.current, f"no rebalance: {reason}") for r in rows)
     return Proposal(False, reason, reported, quorum, kept, cash_weight, cash_weight,
-                    Decimal(0), Decimal(0), weights)
+                    Decimal(0), weights)
 
 
 def aggregate(reports: Sequence[Mapping[str, Any]], *, kinds: Mapping[str, str],
-              current: Mapping[str, Decimal], cash_weight: Decimal, nav_usd: Decimal,
+              current: Mapping[str, Decimal], cash_weight: Decimal,
               limits: gates.Limits, confidence_weights: Mapping[str, Decimal],
               symbols: Mapping[str, str]) -> Proposal:
     """Target weights from accepted reports. Never raises for what the reports
@@ -217,21 +220,11 @@ def aggregate(reports: Sequence[Mapping[str, Any]], *, kinds: Mapping[str, str],
             why[row.address] = (f"sell: cut by {decimal_text(cut)}" if cut else
                                 "sell on an asset not held: nothing to cut")
 
-    raises = sum((d for d in wanted.values() if d > 0), Decimal(0))
-    released = -sum((d for d in wanted.values() if d < 0), Decimal(0))
-    share = gates.funded_share(cash_weight, released, raises, nav_usd, limits)
-    if share is None:
-        return _kept(rows, cash_weight, "cash_floor_usd is null: unresolved, and it blocks",
-                     reported, quorum, confidence_weights)
-
     final: list[Row] = []
     residual = Decimal(0)
     for row in rows:
         change = wanted.get(row.address, Decimal(0))
         note = why[row.address]
-        if change > 0 and share < 1:
-            change = change * share
-            note += f"; scaled to {decimal_text((share * 100).quantize(Decimal('0.01')))}% by the cash floor"
         if row.current + change == 0:
             kept = change  # a position cut to zero is left at exactly zero
         else:
@@ -242,7 +235,7 @@ def aggregate(reports: Sequence[Mapping[str, Any]], *, kinds: Mapping[str, str],
 
     moved = sum((r.target - r.current for r in final), Decimal(0))
     return Proposal(True, "quorum met: targets from the calls", reported, quorum, tuple(final),
-                    cash_weight, cash_weight - moved, residual, share, confidence_weights)
+                    cash_weight, cash_weight - moved, residual, confidence_weights)
 
 
 # --- the table (unit 3.2) ------------------------------------------------------------------------
@@ -297,5 +290,6 @@ def table(proposal: Proposal, seats: Sequence[str], nav_usd: Decimal | None = No
     for cells in [columns, *rows]:
         lines.append("  ".join(str(c).ljust(w) for c, w in zip(cells, widths)).rstrip())
     lines += ["", f"residual {decimal_text(proposal.residual)}: what rounding each change toward zero "
-              f"left in cash · raises funded {decimal_text((proposal.funded * 100).normalize())}%"]
+              f"left in cash · targets are what the calls want; the plan funds raises "
+              f"only from cash above the floor"]
     return "\n".join(lines)

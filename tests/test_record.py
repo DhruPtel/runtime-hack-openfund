@@ -52,7 +52,8 @@ def test_the_record_cites_every_input_by_hash_and_carries_every_finding(tmp_path
     assert {f["symbol"] for f in r["findings"]} == {"AMD", "AMZN", "GOOGL", "MSTR", "SGOV"}
     assert [o["symbol"] for o in r["decision"]["approved"]] == ["USO", "META", "INTC"]
     assert r["decision"]["vetoed"] == [{"index": 1, "symbol": "AMD", "side": "buy",
-                                        "usd": "12.5", "vetoed_by": ["risk"]}]
+                                        "usd": r["plan"]["orders"][0]["usd"],
+                                        "vetoed_by": ["risk"]}]
     assert r["decision"]["executed"].startswith("nothing")
 
 

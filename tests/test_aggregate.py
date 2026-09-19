@@ -50,7 +50,7 @@ def run(reports, current=None, cash=None, limits=LIMITS, nav="200"):
     current = {ADDRESS[s]: Decimal(w) for s, w in (current or {}).items()}
     cash = Decimal(1) - sum(current.values(), Decimal(0)) if cash is None else Decimal(cash)
     return aggregate.aggregate(reports, kinds=KINDS, current=current, cash_weight=cash,
-                               nav_usd=Decimal(nav), limits=limits, confidence_weights=WEIGHTS,
+                               limits=limits, confidence_weights=WEIGHTS,
                                symbols=SYMBOLS)
 
 
@@ -67,7 +67,7 @@ def test_the_four_approved_reports_give_a_book_of_their_buy_calls():
     # META buy medium: 0.5 x 0.25. AMD buy medium, cautioned medium by price-integrity:
     # 0.5 x (1 - 0.5) x 0.25. INTC and USO buy low: 0.25 x 0.25.
     assert targets(p) == {"META": "0.125", "AMD": "0.0625", "INTC": "0.0625", "USO": "0.0625"}
-    assert p.cash_target == Decimal("0.6875") and p.residual == 0 and p.funded == 1
+    assert p.cash_target == Decimal("0.6875") and p.residual == 0
     row = {r.symbol: r for r in p.rows}
     assert row["AMD"].direction == Decimal("0.5") and row["AMD"].caution == Decimal("0.5")
     assert row["MSTR"].score is None and row["MSTR"].caution == Decimal("0.75")  # caution only
@@ -126,17 +126,18 @@ def test_every_seat_abstaining_keeps_every_holding_and_liquidates_nothing():
     assert p.cash_target == Decimal("0.7")
 
 
-def test_new_buys_are_funded_only_above_the_cash_floor():
-    # 85% held in names nobody mentions: 15% cash, and the floor is $20 of $200.
+def test_the_aggregator_counts_no_cash_its_targets_are_what_the_calls_want():
+    """Since the 3.8 sweep, funding is the planner's, through core/cash.py (R2). With
+    85% held and 15% in cash, the targets are still the calls' own, and the plan
+    decides what cash can pay for (test_cash.py, test_plan.py)."""
     p = run(FOUR, current={"TSLA": "0.85"}, cash="0.15")
-    assert p.funded == Decimal("0.16")  # 0.05 spare over 0.3125 wanted
-    assert targets(p)["META"] == "0.02" and targets(p)["TSLA"] == "0.85"
-    assert p.cash_target >= Decimal("0.1") and p.cash_target - Decimal("0.1") < Decimal("0.00001")
-    assert "scaled to 16% by the cash floor" in {r.symbol: r for r in p.rows}["META"].why
+    assert targets(p)["META"] == "0.125" and targets(p)["TSLA"] == "0.85"
+    assert p.cash_target == Decimal("0.15") - Decimal("0.3125")
+    assert "cash floor" not in {r.symbol: r for r in p.rows}["META"].why
 
 
 def test_an_unresolved_limit_blocks_the_rebalance():
-    for name in ("quorum_min_analysts", "max_position_weight", "cash_floor_usd"):
+    for name in ("quorum_min_analysts", "max_position_weight"):
         thresholds = {**config.load_json("thresholds.json"), name: None}
         p = run(FOUR, current={"NVDA": "0.1"}, limits=gates.Limits.from_config(thresholds))
         assert not p.rebalance and "unresolved" in p.reason, name
@@ -160,6 +161,6 @@ def test_the_table_shows_each_seat_the_weights_cash_and_residual():
     assert "buy med +0.5" in amd and "caution med 0.5" in amd and amd.endswith("+12.50")
     assert next(line for line in lines if line.startswith("cash")).split()[-3:] == [
         "1", "0.6875", "-62.50"]
-    assert lines[-1].startswith("residual 0:") and "funded 100%" in lines[-1]
+    assert lines[-1].startswith("residual 0:") and "the plan funds raises" in lines[-1]
     held = aggregate.table(run(FOUR[:2], current={"NVDA": "0.1"}), SEATS)
     assert "NO REBALANCE" in held

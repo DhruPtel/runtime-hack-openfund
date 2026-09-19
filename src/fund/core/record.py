@@ -10,7 +10,8 @@ One canonical JSON document holds the decision and everything it stands on:
   its reply in full, its sha256, and the decision the override rule reached;
 - **every closed-session finding the snapshot carries,** so a buyer sees what
   was judged expected rather than refused (DECISION 2026-09-18);
-- **the decision:** each order approved or vetoed, and by what.
+- **the decision:** each order approved or vetoed, and by what, and the cash
+  floor judged on the orders approved (since the 3.8 sweep).
 
 A `hashes` block repeats the sha256 of each part, so a buyer can check any part
 separately.
@@ -67,6 +68,7 @@ def build(*, snapshot: Mapping[str, Any], snapshot_sha256: str,
         "vetoed": [{"index": o["index"], "symbol": o["symbol"], "side": orders[o["index"]]["side"],
                     "usd": orders[o["index"]]["usd"], "vetoed_by": o["vetoed_by"]}
                    for o in decided["orders"] if not o["approved"]],
+        "cash_floor": decided.get("cash_floor"),
         "executed": "nothing: a signed decision, not a trade (execution is Phases 4 and 5)"}
     risk = {"seat": "risk", "agent": risk_agent, "brief": review["brief"],
             "budget": review["budget"],
