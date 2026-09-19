@@ -711,9 +711,23 @@ SIMPLIFICATION's five-stage build order is marked superseded. The installed
 CLI's help shows the SIWE path exists, but lists no LLM gateway option and
 leaves the Agent API on by default, so the path stays unverified.
 
+## Phase 2 plan — the swarm at minimal depth
+**Date:** 2026-09-19 · **Commit:** 5de21a2
+
+Wrote `planning/PHASE-2.md`, awaiting the operator: 2.1 to 2.8 at the approved
+minimal scope, each with goal, build, artifact, done condition, risk and full
+version. It adds 2.0 first, to prove one SIWE agent account can reach the
+gateway before anything assumes five, because the installed CLI's source shows
+SIWE never requests gateway access and would overwrite the fund's CLI session.
+It sets the four values blocking 2.4 from measurement (1,800 s, 1 retry,
+`claude-sonnet-5`, 70,000 tokens), keeps every other key out of each analyst
+process despite `config.load()` merging all of `.env`, recommends pulling a
+page slice forward to watch the swarm, and treats 2.1 as a stop against what the
+pivot recorded.
+
 ---
 
-## State at close — 2026-09-19, the scope pivot recorded; Phase 2 not started
+## State at close — 2026-09-19, Phase 2 planned, not started
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -726,7 +740,9 @@ minimal version.
   `planning/SIMPLIFICATION.md`. PLAN §8 states the pivot, and `CLAUDE.md`
   carries the rule.
 - Keys, signing and spend authority keep their full guard.
-- The operator is stopped only at 3.8, 5.4, 6.6, 7.5 and 8.5.
+- The operator is stopped at **2.1**, 3.8, 5.4, 6.6, 7.5 and 8.5. **`CLAUDE.md`
+  still omits 2.1,** which the operator made a stop in the Phase 2 brief (LESSONS
+  2026-09-19). Stop at 2.1 anyway. The fix is owed.
 - Work follows the phase and unit order.
 
 **The deadline** was given on 2026-09-19 at about 11:00Z as "about 16 hours".
@@ -775,18 +791,19 @@ closed session, Sat 00:05Z to Sun 23:55Z.
   Every other module is a stub: `grep -l "Not yet built" -r src/` lists 28.
 
 ### Next
-- **The next prompt plans Phase 2,** starting with 2.1. No Phase 2 work has
-  started.
-- **Before Phase 2 depends on the agent wallets,** prove `bankr login siwe`
-  with one key. Unknowns, from the installed CLI's help (0.3.37):
-  - how an agent key gets LLM gateway access, since no option is listed;
-  - the Agent API and Token Launch are on by default, so they must be turned
-    off;
-  - which address the wallet is;
-  - whether credits can be bought in it;
-  - whether a login replaces the fund's CLI session.
+- **`planning/PHASE-2.md` awaits the operator.** No Phase 2 work has started.
+  Its order: 2.0 → 2.1 (a stop) → 2.2 → 2.3 → 2.4 → the page slice, if
+  approved → 2.5 → 2.6 → 2.7 → 2.8 → the exit run.
+- **2.0 comes first:** prove `bankr login siwe` with one key before anything
+  assumes five wallets. The installed CLI's source (0.3.37) shows:
+  - the SIWE request never asks for gateway access;
+  - the Agent API and Token Launch are on unless flagged off;
+  - the server creates a new wallet;
+  - the key is written over the fund's session in `~/.bankr/config.json`
+    unless `--config` is given.
 
-  A failure is a finding. There is no shared-wallet fallback.
+  A failure is a finding. The options are in PHASE-2.md. There is no
+  shared-wallet fallback.
 - **Owed, and each a spend:**
   - agent credits, about $22 plus about 5.8%;
   - a fresh buyer key with about $1 of USDC on Base (7.5);
@@ -803,17 +820,24 @@ closed session, Sat 00:05Z to Sun 23:55Z.
 
 ### Open items, none resolved
 1. **The page lands at 7.6,** after the stops at 3.8, 5.4, 6.6 and 7.5.
-   Building it earlier moves one unit, and that is the operator's call.
-2. **The preview as decided** names no decision id, hashes or signature, and
+   PHASE-2.md recommends pulling a first slice forward into Phase 2. That is
+   the operator's call.
+2. **Folds owed to CLAUDE.md, PLAN, ROADMAP and SIMPLIFICATION:**
+   - 2.1 as a stop;
+   - unit 2.0;
+   - a context budget of 70,000.
+3. **`config.load()` merges all of `.env` into the caller's environment.** 2.4
+   works around it for analysts, and 4.12 owns the split.
+4. **The preview as decided** names no decision id, hashes or signature, and
    7.2 serves by id.
-3. **How the handler holds the full record:** bundled per deploy, or a private
+5. **How the handler holds the full record:** bundled per deploy, or a private
    URL.
-4. **The live leg's mechanics.** Proposed, not decided: one small order per
+6. **The live leg's mechanics.** Proposed, not decided: one small order per
    trading cycle, alternating direction.
-5. **Token design** is a judging criterion that no unit covers (PLAN §12).
-6. **The 3.4 sweep** is deferred to 3.4's full version. After minimal 3.4,
+7. **Token design** is a judging criterion that no unit covers (PLAN §12).
+8. **The 3.4 sweep** is deferred to 3.4's full version. After minimal 3.4,
    invariant 4's "one module" does not hold.
-7. **Carried from 2026-09-18:**
+9. **Carried from 2026-09-18:**
    - two `http.py` changes;
    - daylight saving;
    - holidays fail closed;
