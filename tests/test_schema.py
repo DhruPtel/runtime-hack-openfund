@@ -366,3 +366,26 @@ def test_an_asset_named_at_the_end_of_a_sentence_is_one_the_line_is_about():
     assert "for META." in text
     found = {(i.written, i.found) for i in live(text, "cross-asset-macro").imprecisions}
     assert ("544.70535", "META timeline 2026-08-20") in found
+
+
+# --- R5: the two holes the 3.8 sweep found in the fabrication check, attacked -----------------------
+
+@pytest.mark.parametrize("line, ok", [
+    ("- 559.42, Friday's close and the 30-day high", True),
+    ("- 999.99, Friday's close and the 30-day high", False),
+    ("- The close was 559.42. [mark.price_usd]", True),
+    ("- The close was 999.99. [mark.price_usd]", False),
+    ("- The close was 999.99.", False),
+    ("- Friday's close, up 9.0% this week", True),
+])
+def test_a_figure_with_no_citation_or_before_a_full_stop_is_still_checked(line, ok):
+    """At the sweep, `- 999.99, Friday's close` and `- The close was 999.99.
+    [mark.price_usd]` were both accepted: the first never checked, the second never
+    read. A percentage stays computed, cited or not."""
+    real = "- 559.42, Friday's close and the 30-day high [mark.price_usd]"
+    text = example("price-trend")
+    assert real in text
+    v = verdict(text.replace(real, line, 1))
+    assert v.ok is ok, v.refusals
+    if not ok:
+        assert "999.99" in next(r for r in v.refusals if r.rule == "figure").detail

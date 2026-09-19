@@ -64,9 +64,10 @@ it cited, such as `~136bps`. An earlier version of this rule checked every bps
 figure against a bps field, and refused all five correct figures.
 
 **A bracket that is not a field reference is not a citation** (3.8). It is
-prose, and the numbers inside it stay figures. A figure line whose brackets are
-all prose is checked by value, so writing `[see above]` cannot hide a figure from
-the fabrication check.
+prose, and the numbers inside it stay figures. **A figure line with no citation,
+whether its brackets are prose or it has none, is checked by value** (the 3.8
+sweep's R5), so leaving the citation out cannot hide a figure from the
+fabrication check. A decimal is read where a full stop follows it.
 
 **A figure written with thousands separators is the same number.**
 `$2,101,924.28` is 2101924.28. Until 3.8's live run found it, the comma split it,
@@ -101,7 +102,8 @@ _PERCENT = re.compile(r"[+-]?\d+(?:\.\d+)?%")
 #: A number written with thousands separators, such as `2,101,924.28`: groups of
 #: three after a first group of one to three, never after a decimal point.
 _GROUPED = re.compile(r"(?<![\d.,])\d{1,3}(?:,\d{3})+(?![\d,])")
-_DECIMAL = re.compile(r"(?<![\d.])(-?\d+\.\d+)(?![\d.])")
+#: A decimal, which a full stop may follow: `559.42.` ends a sentence (R5).
+_DECIMAL = re.compile(r"(?<![\d.])(-?\d+\.\d+)(?!\d|\.\d)")
 
 _SYMBOL = re.compile(r"(?<![A-Za-z0-9])([A-Z][A-Z0-9.]{0,9})(?![A-Za-z0-9])")
 
@@ -587,8 +589,9 @@ def _examine(report: Report, snapshot: Mapping[str, Any], *, contract: Contract,
                                                     line=line_of(item), why=why))
         for figure in figures:
             fields: list[_Resolved] = []
-            # Brackets on the line, none a citation: nothing marks a figure as computed.
-            loose = bool(_BRACKET.search(figure.text)) and not _citations(figure.text)
+            # No citation on the line, whether it has brackets of prose or none at all:
+            # nothing marks a figure as computed, so every figure is checked by value (R5).
+            loose = not _citations(figure.text)
             for items in _citations(figure.text):
                 for item in items:
                     if _ITEM_ALL.match(item):
