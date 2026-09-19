@@ -11,6 +11,8 @@ design lesson of the 3.8 sweep, where three components counted cash three ways
 - `Fill` (P3): what an order gave and got, the marks at fill time, and which leg
   is cash. `paper_fill` builds one from a quote; a live one comes from receipts
   at 5.3.
+- `Transfer`: value into or out of a book that is not a trade — a contribution or a
+  withdrawal. Capital, never income and never a cost (4.11).
 - `Fee`: what was paid, in what, at what mark.
 - `Inference`: a model call's cost, in USD, paid from LLM credits.
 
@@ -30,12 +32,16 @@ function without a caller). What each event does:
     opening    + the amount        + its worth at its mark        what opened the book
     fill       − gave, + got       gave: − its average cost;      realised += value − that basis
                                    got: + the fill's value
+    transfer   + or − the amount   in: + its worth; out: − its    capital in or out: it moves
+                                   average cost                   `opened`, never realised
     fee        − the amount paid   − the average cost of what     cost += its worth at its mark;
                                    paid it; never any position's  realised += that − that basis
     inference  none                none                           expense += its USD
 
 Every asset is held at average cost, USDG and ETH included, so a move in USDG's own
-mark is value like any other. Then, per book and exactly:
+mark is value like any other. `opened` is what was put in less what was taken out: an
+opening balance and a transfer in add to it, a transfer out takes the basis it
+carries away with it, and neither is ever income. Then, per book and exactly:
 
     NAV = opened + realised + unrealised − costs
 
@@ -62,6 +68,7 @@ from .types import (
 )
 
 PAPER, REAL = BOOKS = ("paper", "real")
+IN, OUT = DIRECTIONS = ("in", "out")
 
 #: The basis a partial disposal removes is its share of the basis, rounded half-even
 #: to this, the one rounding in the ledger. Every other figure is exact.
@@ -152,6 +159,28 @@ class Fill:
 
 
 @dataclass(frozen=True)
+class Transfer:
+    """Value into or out of a book that is not a trade: a contribution, or a
+    withdrawal. It is capital, so it moves what the book was given and never what it
+    earned: a contribution is not income, and a withdrawal is not a loss (4.11)."""
+
+    book: str
+    direction: str  # "in" or "out"
+    amount: Amount
+    mark: Price
+    what: str
+
+    def __post_init__(self):
+        _book(self.book)
+        if self.direction not in DIRECTIONS:
+            raise LedgerError(f"a transfer goes {' or '.join(DIRECTIONS)}, not {self.direction!r}")
+        _given("a transfer", self.amount)
+        _marks("a transfer's mark", self.mark, self.amount)
+        if not isinstance(self.what, str) or not self.what:
+            raise ValueError("a transfer says what it was")
+
+
+@dataclass(frozen=True)
 class Fee:
     """A fee paid from a book: the amount, in the asset that paid it, and the mark it
     was paid at. Never part of any position's basis (P8)."""
@@ -185,7 +214,7 @@ class Inference:
             raise LedgerError("an inference cost is a non-negative Decimal of USD")
 
 
-Event = Union[Opening, Fill, Fee, Inference]
+Event = Union[Opening, Fill, Transfer, Fee, Inference]
 
 
 def book_for(mode: ExecutionMode) -> str:
@@ -200,7 +229,7 @@ def book_of(event: Event) -> str:
         return book_for(event.mode)
     if isinstance(event, Inference):
         return REAL
-    if isinstance(event, (Opening, Fee)):
+    if isinstance(event, (Opening, Transfer, Fee)):
         return event.book
     raise LedgerError(f"not a ledger event: {type(event).__name__}")
 
@@ -226,6 +255,9 @@ def encode(event: Event) -> dict[str, Any]:
                 "gave": _plain(event.gave), "got": _plain(event.got),
                 "gave_mark": _plain(event.gave_mark), "got_mark": _plain(event.got_mark),
                 "cash_asset": _plain(event.cash_asset)}
+    if isinstance(event, Transfer):
+        return {"kind": "transfer", "book": event.book, "direction": event.direction,
+                "amount": _plain(event.amount), "mark": _plain(event.mark), "what": event.what}
     if isinstance(event, Fee):
         return {"kind": "fee", "book": event.book, "amount": _plain(event.amount),
                 "mark": _plain(event.mark), "what": event.what, "order_id": event.order_id}
@@ -244,6 +276,9 @@ def decode(document: Mapping[str, Any]) -> Event:
                     gave=_typed(document["gave"]), got=_typed(document["got"]),
                     gave_mark=_typed(document["gave_mark"]), got_mark=_typed(document["got_mark"]),
                     cash_asset=_typed(document["cash_asset"]))
+    if kind == "transfer":
+        return Transfer(document["book"], document["direction"], _typed(document["amount"]),
+                        _typed(document["mark"]), document["what"])
     if kind == "fee":
         return Fee(document["book"], _typed(document["amount"]), _typed(document["mark"]),
                     document["what"], document.get("order_id"))
@@ -332,6 +367,13 @@ def _walk(events: Iterable[Event], book: str) -> _Walked:
                 value = event.value_usd
                 realised += value - dispose(event.gave, at)
                 acquire(event.got, value)
+            elif isinstance(event, Transfer):
+                if event.direction == IN:
+                    value = cash.worth(event.amount, event.mark)
+                    acquire(event.amount, value)
+                    opened += value
+                else:  # what leaves takes the basis it carries: capital out, not a loss
+                    opened -= dispose(event.amount, at)
             elif isinstance(event, Fee):
                 paid = cash.worth(event.amount, event.mark)
                 realised += paid - dispose(event.amount, at)
