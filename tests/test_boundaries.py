@@ -40,7 +40,8 @@ MODULES = _modules()
 
 def _imports(name: str) -> set[str]:
     """Every module `name` imports, anywhere in its body, function-level and
-    relative imports included. `from a import b` counts as importing `a.b`."""
+    relative imports included. `from a import b` counts as importing `a.b`.
+    Not seen: a module named in a string and loaded by `exec` or `eval`."""
     path = MODULES[name]
     package = name if path.name == "__init__.py" else name.rpartition(".")[0]
     found = set()
@@ -195,7 +196,9 @@ def _threshold_comparisons() -> dict[tuple[str, str], list[int]]:
     """Every ordering comparison of a measured value against a threshold, by the
     function it sits in. A threshold is a name in THRESHOLD_NAMES, a key of
     thresholds.json, or a local assigned from either; a comparison with a bare
-    number (a sign check such as `x > 0`) is not one."""
+    number (a sign check such as `x > 0`) is not one. Not seen: a comparison
+    spelled as a method call (`a.__gt__(b)`), or one in a helper that receives
+    the threshold under another parameter name."""
     found: dict[tuple[str, str], list[int]] = {}
 
     def visit(node: ast.AST, module: str, path: tuple[str, ...], outer: set[str]) -> None:
@@ -250,7 +253,9 @@ def _gate_values() -> set[int]:
 
 def test_no_threshold_value_is_written_into_a_comparison():
     """A threshold appears as a literal nowhere outside config/ (CODEBASE §8): no
-    ordering comparison under src/ carries a number that a read threshold holds."""
+    ordering comparison under src/ carries a number that a read threshold holds.
+    A literal assigned to a name first is not seen here; for the three named
+    exceptions the next test catches it by what they do."""
     values = _gate_values()
     assert {25, 50, 60, 100, 3600, 1_000_000} <= values
     literal = []
