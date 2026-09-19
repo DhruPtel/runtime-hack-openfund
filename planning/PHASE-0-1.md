@@ -1362,6 +1362,95 @@ the decision accepted. A holiday refuses to value, for up to two and a half
 days around a Friday holiday (3 July replayed), and daylight saving is
 unmeasured.
 
+**Built:** one test, and two findings. The operator's brief framed four
+cases: mixed blocks, a replayed offchain body, a paused feed and a closed
+market. The seven above map onto them. Each existing guard was broken in a copy
+of the code to see which test caught it.
+- **Two kinds of refusal.**
+  - An inconsistent snapshot raises `SnapshotRefused`, and nothing between the
+    builder and the process exit catches it.
+  - A stale or undetermined mark refuses its asset instead: status `no_mark`
+    at `freshness`, verdict false or null, carried in the snapshot so every
+    reader sees it. It does not raise, because one stale feed would then stop
+    every asset's snapshot.
+- **Mixed blocks: refused, raised.** The build's guard is `core/snapshot.py`'s
+  block-pin, which runs at four places:
+  - the mark;
+  - each series point;
+  - the cash and gas readings;
+  - each balance.
+
+  Only the mark was tested. Deleting the check at any of the other three left
+  every test passing. `test_snapshot.py::test_a_chain_value_from_another_block_is_refused_at_block_pin_wherever_it_enters`
+  now attacks all four, and each case asserts the message that names its
+  place. 1.3's `require_one_block` runs only in `--prove`, never in a build.
+  Already guarded: the one-block series
+  (`test_types.py::test_a_series_from_two_blocks_is_refused`) and reads by
+  block hash (`test_chain_4663.py::test_every_read_addresses_the_pinned_block_by_hash`).
+- **From the future: refused, raised,** at `after-pin`
+  (`test_snapshot.py::test_a_round_dated_after_the_pinned_block_is_refused_at_after_pin`).
+- **Stale newest point, and old history with a fresh one: already tested.**
+  - `test_chain_4663.py::test_a_series_whose_newest_point_is_old_is_stale`;
+  - `::test_a_week_of_rounds_covers_the_window_and_only_the_newest_is_judged`;
+  - in the snapshot, `test_snapshot.py::test_a_stale_mark_is_no_mark_at_freshness`.
+- **Replayed offchain body: cannot be built from a real source.** Neither
+  offchain body carries a source time. GeckoTerminal's only source-stated time
+  is the HTTP `Date` header, and no rule reads it (LESSONS 2026-09-18). The
+  case as written assumed an offchain series with dated points, but history
+  has come from chain rounds since the price-history decision. What is
+  guarded:
+  - a quote older than 60 s by our own clock
+    (`test_bankr_quote.py::test_quote_age_is_measured_from_our_fetch_time`);
+  - a quote judged before it was fetched (`::test_a_quote_judged_before_it_was_fetched_has_no_age`);
+  - our own replay, which never mints a fresh fetch time
+    (`test_cache.py::test_a_clock_read_past_the_tape_never_falls_back_to_today`).
+
+  **Open.**
+- **Paused feed: not refused, because the fund cannot tell it from a closed
+  market.** It reads only `latestRoundData`, and a pause is silence, as a
+  closure is.
+  - A feed frozen during an open session is judged fresh for heartbeat plus
+    margin, 25 h of open-session time.
+  - One frozen from Friday afternoon stays fresh until Monday about 20:00Z.
+
+  The chain can tell them apart: each stock token answers `oraclePaused()`
+  (LESSONS 2026-09-18). **Open.**
+- **Closed session and holiday: already tested, each at its rule.**
+  - The weekend is accepted (`test_chain_4663.py::test_a_weekend_gap_is_expected_and_the_last_round_stands`).
+  - An open-session gap is stale and names the holiday it may be (`::test_a_gap_in_an_open_session_is_stale_and_names_the_holiday_it_may_be`).
+  - A Friday holiday is stale through the weekend (`::test_a_friday_holiday_is_stale_through_the_weekend`).
+  - A round inside the span is undetermined (`::test_a_round_inside_the_closed_span_contradicts_it_and_is_undetermined`),
+    and so is history that crosses it (`::test_a_series_whose_history_crosses_the_span_reopens_the_question`).
+  - The verdict reaches the snapshot as `no_mark` at freshness, false or null
+    (`test_valuation.py::test_a_mark_that_is_not_fresh_is_refused_at_freshness`).
+  - The replay tests fail if `run/snapshot.py` drops the verdict, the span or
+    the session flag.
+- **Breaking each guard.** Of 22 guards broken in a copy, 18 failed a test.
+  The three block-pin places now fail too. The last survivor is
+  `run/snapshot.py` judging the newest reading instead of the series. Under
+  daily closes only the newest point can fall inside the span, so the two
+  agree. It is left unguarded, knowingly.
+
+**Shown: what fires in normal operation.**
+- **block-pin, after-pin, series-head and duplicate:** never, barring a bug.
+  Reads go by block hash, so a reorg is an error, not a mixed block.
+- **Stale freshness:** market holidays only. Over 12 weeks of real rounds,
+  only the two holidays fired:
+  - 3 July: 28 of 34 feeds stale, from Friday afternoon to Monday's open;
+  - 7 September: 34 of 35, for the last 1–23 h of Monday.
+
+  About ten NYSE holidays fall in a year, if each closes the feeds as both of
+  these did.
+- **Undetermined freshness:** predicted, not measured. From 2026-11-01, if the
+  feeds follow New York time, it would fire every weekend for every equity
+  feed, from Saturday 00:05Z until Monday's first round, until
+  `config/sessions.json` is re-derived.
+- **The cash leg:** USDG/USD's widest gap was 24h01m against a 25 h limit.
+  Stale, it would stop every quote, and nothing would be tradeable. It has
+  never been measured stale.
+- **The weekend itself fires nothing.** Marks stand, and divergence is a
+  finding.
+
 **Changed by:** the staleness decision, which closes the gap this unit carried;
 the price-history decision; the staleness config decision; F0.4.1, F0.4.7.
 **Size:** bigger than drafted — seven cases, not four.
@@ -1407,6 +1496,11 @@ Stated before the code, so that no unit's done-condition quietly assumes it:
 - **Catch a counterfeit that is inside the registry, or one that clones the
   proxy with its own beacon, except via the registry** (F0.8.5). Neither is
   testable.
+- **Tell a paused feed from a closed market** (1.11). Both are silence in the
+  rounds. The token's `oraclePaused()` would tell them apart, but nothing reads
+  it, so a pause is refused only once it is stale.
+- **Detect a stale offchain body** (1.11). Neither GeckoTerminal's body nor the
+  venue's carries a source time. A quote's age runs from our own fetch.
 - **Know Bankr's or the RPC's rate limit.** Bankr returned no limit headers
   (F0.10.5). The RPC refused a batch of 100 with a bare 429 and no
   `Retry-After` (1.3), but its actual limit is unknown. So 1.3 and 1.5 back off
