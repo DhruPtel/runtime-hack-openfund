@@ -1208,3 +1208,50 @@ Either way, the "one gate definition" test must name it.
 
 The recorded AMZN case (−499.47 bps on $2.19M) is vetoed by the same function.
 **Affects:** 1.6, 1.11, 3.4; the weekend cycle.
+
+## 2026-09-18 — DECISION: divergence during a closed session is a finding, not a veto
+*Decided by the operator after 1.4.* In an inferred closed session the feed is
+frozen while the pools keep trading. Divergence then measures market movement
+since the close, not a broken mark. Vetoing on it is too blunt: 1.4's proof
+vetoed MSTR at −122.87 bps on $4.76M of volume, on a Saturday, and MSTR tracks
+bitcoin, which trades all weekend.
+- **In a closed session:** mark at the last published price, do not veto on
+  divergence, and record the divergence as a finding.
+- **The finding reaches the decision record, not just a log.** A buyer of the
+  record should see that the pool moved while the feed was frozen. That is the
+  difference between "we ignored it" and "we saw it and judged it expected".
+- **In an open session:** the divergence veto is unchanged and still fires.
+
+**Not yet in code.** `core/valuation.py`'s `cross_check()` still vetoes in a
+closed session. It was outside 1.5's paths. Three things are owed:
+- `cross_check()` must take whether the mark's feed is inside its closed span;
+- the snapshot entry must carry the finding (1.6);
+- the decision record must carry it (3.7).
+
+A holiday is not a closed session under the 1.4 decision. There the mark is
+stale, so there is no mark to cross-check at all.
+**Affects:** 1.4's `cross_check()`, 1.6, 3.4, 3.7, 3.8; PLAN §11.
+
+## 2026-09-18 — DECISION: threshold comparisons stay where the plan put them, as named exceptions, and 3.4 sweeps them into `gates.py`
+*Decided by the operator after 1.4.* CODEBASE §3 reserves threshold comparisons
+to `core/gates.py`. That module is 3.4's, while 1.3, 1.4 and 1.5 each need
+one. So each is recorded as a **named exception with its reason**, rather than
+three unmarked contradictions, and **3.4 owns the sweep** into `gates.py` as one
+deliberate move. The three:
+1. **Feed staleness**, in `adapters/chain_4663.py` `freshness()` (1.3).
+   Heartbeat plus margin in open-session time; margin from
+   `config/thresholds.json`.
+2. **The divergence tier**, in `core/valuation.py` `cross_check()` (1.4). The
+   $1M line and the 100 bps veto, from `config/thresholds.json`.
+3. **Quote age and signed impact**, in `adapters/bankr_quote.py` (1.5). 60 s
+   and 50 bps, from `config/thresholds.json`.
+
+Each reads its thresholds from config as arguments, and each refusal names its
+rule. This settles two questions left open:
+- which unit revisits the staleness exception (3.4, not the "1.8" the first
+  decision named);
+- whether the divergence tier is an exception (it is, until 3.4).
+
+The "one gate definition" test must name all three until the sweep.
+**Affects:** 3.4; CODEBASE §3 and rules table; PLAN §2 invariant 4; PHASE-0-1
+1.3-1.5; ROADMAP 3.4.
