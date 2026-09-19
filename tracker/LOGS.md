@@ -1242,9 +1242,9 @@ commands need `PYTHONPATH=src`.
   `cumulative_budget_usd`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `cea3a3a`, 3.1 to 3.7 and
-their records, pushed by the operator. Every commit from `f619d61` (3.8's brief
-label) to the one that last changed this note is committed and **not pushed**.
+Checked locally, with no fetch. `origin/main` is `8f97342`, 3.8's run and its
+records, pushed by the operator. Every commit from `013257a` (the separators fix)
+to the one that last changed this note is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** LESSONS holds them in full.
