@@ -145,7 +145,7 @@ def test_the_real_transport_sends_a_user_agent():
 from fund.core import universe
 from fund.core.types import (
     AssetId, BlockRef, ChainAddress, Check, FeedRef, FetchStatus, Fixed, Instant, Observation,
-    Source,
+    Series, Source,
 )
 
 CHAIN = 4663
@@ -315,6 +315,7 @@ def test_every_read_addresses_the_pinned_block_by_hash():
     r.decimals([cash])
     r.balances(ChainAddress(CHAIN, HOLDER), {cash: 6, eth: 18})
     r.beacon_slots([cash])
+    r.price_series(stock, feed(addr(1)), window_s=7 * DAY, max_rounds=100, scale_break_ratio=10_000)
     assert fake.block_params and all(p == {"blockHash": H} for p in fake.block_params)
 
 
@@ -431,6 +432,90 @@ def test_an_unreachable_feed_is_undetermined_not_stale_and_not_zero():
     assert not verdict.passes and "unreachable" in verdict.reason
 
 
+# --- the price series ----------------------------------------------------------------------
+
+def series(fake, *, days=7, cap=1000, ratio=10_000, rpc=None) -> Series:
+    return reader(rpc or rpc_for(fake)).price_series(
+        AssetId(CHAIN, addr(11)), feed(addr(1)), window_s=days * DAY, max_rounds=cap,
+        scale_break_ratio=ratio)
+
+
+def test_a_week_of_rounds_covers_the_window_and_only_the_newest_is_judged():
+    fake = FakeChain()
+    fake.feeds[addr(1)] = hourly(10, 600)
+    s = series(fake)
+    assert s.status is FetchStatus.OK and s.coverage.value is True
+    assert s.window_start == Instant.from_seconds(T - 7 * DAY)
+    assert s.oldest.source_time <= s.window_start < s.points[1].source_time  # one anchor round
+    assert len(s.points) == 7 * 24 + 1
+    assert all(p.block == BLOCK for p in s.points)
+    # The oldest point is a week old, far past heartbeat + margin, and that is fine:
+    oldest_alone = chain.freshness(s.oldest, feed(addr(1)), BLOCK.timestamp, MARGIN)
+    assert oldest_alone.value is False
+    assert chain.series_freshness(s, feed(addr(1)), BLOCK.timestamp, MARGIN).value is True
+
+
+def test_a_series_whose_newest_point_is_old_is_stale():
+    fake = FakeChain()
+    fake.feeds[addr(1)] = hourly(10, 2 * DAY)
+    assert chain.series_freshness(series(fake), feed(addr(1)), BLOCK.timestamp, MARGIN).value is False
+
+
+def test_a_feed_younger_than_the_window_gives_a_series_visibly_short():
+    fake = FakeChain()
+    fake.feeds[addr(1)] = hourly(2, 600)
+    s = series(fake)
+    assert s.status is FetchStatus.OK and len(s.points) == 48
+    assert s.coverage.value is False and "round 1" in s.coverage.reason
+    assert s.oldest.source_time > s.window_start
+
+
+def test_the_round_cap_gives_a_series_visibly_short():
+    fake = FakeChain()
+    fake.feeds[addr(1)] = hourly(10, 600)
+    s = series(fake, cap=30)
+    assert len(s.points) == 30
+    assert s.coverage.value is False and "round cap 30" in s.coverage.reason
+
+
+def test_a_scale_break_stops_the_series_and_leaves_the_old_units_out():
+    fake = FakeChain()
+    rounds = hourly(10, 600)
+    # The first 100 rounds report 1e8 too large, as 32 of 37 real feeds did at launch.
+    fake.feeds[addr(1)] = [(a * 10 ** 8, t) for a, t in rounds[:100]] + rounds[100:]
+    s = series(fake)
+    assert s.coverage.value is False and "scale break" in s.coverage.reason
+    assert len(s.points) == len(rounds) - 100
+    assert max(p.value.raw for p in s.points) < 10 ** 12
+
+
+def test_a_read_that_fails_partway_keeps_its_points_and_is_undetermined():
+    fake = FakeChain()
+    fake.feeds[addr(1)] = hourly(10, 600)
+    fake.fail_after = 2  # latestRoundData and one batch, then the RPC goes away
+    s = series(fake)
+    assert s.status is FetchStatus.OK and len(s.points) == 51
+    assert s.coverage.value is None and "read failed" in s.coverage.reason
+
+
+def test_an_unreachable_rpc_gives_no_series_and_an_undetermined_verdict():
+    s = series(None, rpc=dead_rpc())
+    assert s.status is FetchStatus.UNREACHABLE and s.points == ()
+    assert s.coverage.value is None
+    verdict = chain.series_freshness(s, feed(addr(1)), BLOCK.timestamp, MARGIN)
+    assert verdict.value is None and "unreachable" in verdict.reason
+
+
+def test_a_round_dated_after_its_successor_stops_the_walk():
+    fake = FakeChain()
+    rounds = hourly(10, 600)
+    rounds[-3] = (rounds[-3][0], rounds[-1][1] + 60)
+    fake.feeds[addr(1)] = rounds
+    s = series(fake)
+    assert s.coverage.value is None and "order in doubt" in s.coverage.reason
+    assert len(s.points) == 2
+
+
 # --- tokens, balances, the beacon --------------------------------------------------------
 
 def test_decimals_and_balances_are_read_at_the_pinned_block():
@@ -493,3 +578,19 @@ def test_a_multicall_reply_with_the_wrong_count_is_refused_not_trusted():
     asset = AssetId(CHAIN, addr(11))
     got = reader(fake_rpc).latest_rounds({asset: feed(addr(1))})[asset]
     assert got.status is FetchStatus.REFUSED and "0 results for 1 calls" in got.detail
+
+
+def test_a_proxy_answering_a_different_round_than_asked_is_not_believed():
+    fake = FakeChain()
+    fake.feeds[addr(1)] = hourly(10, 600)
+    real_answer = fake.answer
+
+    def always_latest(target, data):
+        if data[:4].hex() == chain.SEL_GET_ROUND:
+            return real_answer(target, bytes.fromhex(chain.SEL_LATEST_ROUND))
+        return real_answer(target, data)
+
+    fake.answer = always_latest
+    s = series(fake)
+    assert s.coverage.value is None and "returned round" in s.coverage.reason
+    assert len(s.points) == 1

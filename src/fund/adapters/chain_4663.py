@@ -43,7 +43,7 @@ from fund import redaction
 from fund.core import universe
 from fund.core.types import (
     USD, Amount, AssetId, BlockRef, ChainAddress, Check, FeedRef, FetchStatus, Fixed, Instant,
-    Observation, Price, Source,
+    Observation, Price, Series, Source,
 )
 
 RULE_TRANSPORT = "transport"
@@ -496,3 +496,119 @@ class ChainReader:
             except ValueError as error:
                 out[token] = self._observe(source, status=FetchStatus.REFUSED, detail=str(error))
         return out
+
+    # the price series ----------------------------------------------------------------
+
+    def _rounds(self, proxy: str, phase: int, numbers: Sequence[int]) -> list[tuple[bool, bytes]]:
+        return self.multicall([(proxy, bytes.fromhex(SEL_GET_ROUND + _w((phase << 64) | n)))
+                               for n in numbers])
+
+    def price_series(self, asset: AssetId, feed: FeedRef, *, window_s: int, max_rounds: int,
+                     scale_break_ratio: int) -> Series:
+        """Chainlink rounds for `asset`, newest first back to the window start,
+        returned oldest first, all read at the pinned block.
+
+        The window is measured back from the pinned block's time. The walk keeps
+        the first round at or before the window start, so the series holds the
+        price in effect when the window opened, and `coverage` is True only then.
+
+        It stops early, and says so in `coverage`, at the first of:
+        - the start of the current phase: the feed is younger than the window;
+        - `max_rounds`: a very active feed, or a cap too low;
+        - a scale break: consecutive answers `scale_break_ratio` apart, which is
+          a change of units, not a price move (32 of 37 feeds, measured);
+        - a round that fails Chainlink's sanity rules, or a failed read: the
+          points gathered so far are kept, and coverage is undetermined.
+        """
+        source = Source("chainlink-feed", feed.proxy.address)
+        window_start = Instant(max(0, self.block.timestamp.epoch_ms - window_s * 1000))
+
+        def failed(status: FetchStatus, detail: str) -> Series:
+            return Series(asset=asset, source=source, fetch_time=self.clock(), status=status,
+                          detail=detail, window_start=window_start,
+                          coverage=Check(None, f"no series: {detail}"))
+
+        latest = self.latest_rounds({asset: feed})[asset]
+        if not latest.ok:
+            return failed(latest.status, latest.detail)
+        head = int(latest.source_ref)
+        phase = head >> 64
+
+        walked: list[Round] = [decode_round_from(latest, head)]
+        coverage: Check | None = None
+        while coverage is None:
+            oldest = walked[-1]
+            number = (oldest.round_id & _U64) - 1
+            if oldest.updated_at * 1000 <= window_start.epoch_ms:
+                coverage = Check(True, f"{len(walked)} rounds reach back to the window start")
+            elif number < 1:
+                coverage = Check(False, f"history starts at phase {phase} round 1, "
+                                        f"{_age(oldest.updated_at, window_start)} after the "
+                                        f"window start; earlier phases are not walked")
+            elif len(walked) >= max_rounds:
+                coverage = Check(False, f"round cap {max_rounds} reached "
+                                        f"{_age(oldest.updated_at, window_start)} short of the "
+                                        f"window start")
+            else:
+                coverage = self._walk_back(walked, feed.proxy.address, phase, number,
+                                           min(self.chunk, max_rounds - len(walked)),
+                                           window_start, scale_break_ratio)
+
+        points = tuple(self._observe(source, value=Price(r.answer, feed.decimals, asset, USD),
+                                     source_time=Instant.from_seconds(r.updated_at),
+                                     detail=MULTIPLIER_NOTE, ref=str(r.round_id))
+                       for r in reversed(walked))
+        return Series(asset=asset, source=source, fetch_time=self.clock(), status=FetchStatus.OK,
+                      points=points, window_start=window_start, coverage=coverage,
+                      detail=f"{len(points)} rounds, phase {phase}")
+
+    def _walk_back(self, walked: list[Round], proxy: str, phase: int, number: int, count: int,
+                   window_start: Instant, scale_break_ratio: int) -> Check | None:
+        """Read up to `count` rounds below `number`, appending each good one to
+        `walked`. Returns a coverage verdict if the walk must stop here, and
+        None if it may go on. Each call reads at least one round or returns a
+        verdict, so the walk always ends."""
+        if count < 1 or number < 1:
+            raise ValueError("a walk step reads at least one round")
+        batch = list(range(number, max(0, number - count), -1))
+        try:
+            results = self._rounds(proxy, phase, batch)
+        except ChainError as error:
+            return Check(None, f"read failed at round {(phase << 64) | number}: {error}")
+        for n, (ok, data) in zip(batch, results):
+            wanted = (phase << 64) | n
+            r = decode_round(data) if ok and len(data) >= 160 else None
+            problem = ("the call reverted" if r is None else
+                       f"returned round {r.round_id}" if r.round_id != wanted else round_problem(r))
+            if problem:
+                return Check(None, f"round {wanted}: {problem}")
+            newer = walked[-1]
+            if r.updated_at > newer.updated_at:
+                return Check(None, f"round {wanted} is dated after the round that follows it; "
+                                   f"history order in doubt")
+            if max(r.answer, newer.answer) >= scale_break_ratio * min(r.answer, newer.answer):
+                return Check(False, f"scale break before round {newer.round_id}: answer "
+                                    f"{r.answer} then {newer.answer}; older rounds are in other "
+                                    f"units and are left out")
+            walked.append(r)
+            if r.updated_at * 1000 <= window_start.epoch_ms:
+                return None  # the loop above records the coverage
+        return None
+
+
+def decode_round_from(reading: Observation, round_id: int) -> Round:
+    """The Round behind an OK feed Observation, for the walk's comparisons."""
+    return Round(round_id=round_id, answer=reading.value.raw, started_at=0,
+                 updated_at=reading.source_time.epoch_ms // 1000, answered_in_round=round_id)
+
+
+def _age(seconds: int, since: Instant) -> str:
+    return f"{(seconds * 1000 - since.epoch_ms) // 1000}s"
+
+
+def series_freshness(series: Series, feed: FeedRef, as_of: Instant, margin_s: int) -> Check:
+    """Freshness of a series is the freshness of its newest point, and of nothing
+    else: every older point is old by construction (decision 2026-09-18)."""
+    if series.newest is None:
+        return Check(None, f"no points to judge: {series.status.value}: {series.detail}")
+    return freshness(series.newest, feed, as_of, margin_s)
