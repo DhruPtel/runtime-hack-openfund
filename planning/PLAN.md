@@ -7,6 +7,11 @@ research to other agents.
 Revised against the technical review. Dispositions for every finding are in
 `REVIEW-RESPONSE.md`. Stated limitations are in §13.
 
+**Build mode changed on 2026-09-19.** From Phase 2 on, each unit is built at
+its minimal version: reduced depth, the same components, and every guard on
+keys, signing and spend authority kept. The pivot is stated at the start of §8,
+and each unit's minimal version is in `SIMPLIFICATION.md`.
+
 ---
 
 ## 1. The product, in one paragraph
@@ -21,7 +26,9 @@ treasurer, the only component with spend authority, revalidates the same gates
 against fresh evidence, persists a durable order intent, and executes. An
 accounting layer publishes reconciled statements: revenue, cost, P&L, and two
 separate analyst measures. The signed decision record is sold over x402 and
-shown on a public page.
+shown on a public page. *(2026-09-19: the full record, with every report and
+its reasoning, is what is sold. The page shows a preview: basket, weights,
+verdict, and that a veto fired. LESSONS 2026-09-19.)*
 
 **The pitch: a fund that shows its work.**
 
@@ -52,6 +59,10 @@ Each is structural where possible, and tested where not.
    divergence tier (1.4), and quote age and impact (1.5) are compared where the
    plan put them. Each is still defined once, from config. 3.4 sweeps all three
    into the gate module as one move — `planning/CODEBASE.md` §3.)*
+   *Contradicted 2026-09-19, not reconciled:* the minimal 3.4 calls the three
+   from the gate module without moving them, so they outlive 3.4. The sweep is
+   3.4's full version (`SIMPLIFICATION.md`). "Each limit defined once" still
+   holds; "in one module" does not.
 5. **Unknown blocks execution.** Every check is true / false / null. Null is not
    false. A required check must be explicitly true.
 6. **`NO_CALL` is valid**, and the aggregator is a total function that handles
@@ -147,6 +158,13 @@ Named concretely, because "it runs locally" is not a deployment.
 
 Egress IP is fixed and added to the execution key's allowlist.
 
+*Changed 2026-09-19, not reconciled (LESSONS 2026-09-19):*
+- **The public path carries a preview only.** The full record is sold, so the
+  handler cannot fetch it from a public path. How the handler holds it is open.
+- **The minimal build has no runner host.** The treasurer is isolated by
+  process on one machine (4.12's minimal version).
+- **Whether the execution key carries an IP allowlist today is not recorded.**
+
 ---
 
 ## 6. Credentials
@@ -166,6 +184,14 @@ carry Read Only ON; only `BANKR_KEY_EXEC` has the Wallet API with Read Only OFF.
 **No key the analyst role can load may transact** — enforced by a `can_transact`
 field asserted in tests, not by the prose above, and verified against the live
 surfaces by probe 0.2.
+
+*Decided 2026-09-19, unverified (LESSONS 2026-09-19):* each analyst and the risk
+agent get their own Bankr account from `bankr login siwe`, with one key each:
+read-only, LLM gateway on, Agent API off.
+- They join this table once the path is proven.
+- The agent keys will then no longer share the account that holds spend
+  authority. `BANKR_KEY_READ` still will.
+- The SIWE private key is setup material, never a process credential.
 
 The **execution wallet address is named explicitly in config** and its balances
 are read via RPC. We never assume another account's portfolio describes it. Since
@@ -577,13 +603,14 @@ rounding.
   third-party payment, and it closes the inference recorded in §13.
 - **7.6** Public page reading the same published records.
 - **7.7** ▶ **The page:** *Show: basket, weights, latest decision with reasoning,
-  veto history, statements.*
+  veto history, statements.* *(2026-09-19: the reasoning is in the paid record,
+  and the page shows the preview.)*
 - **7.8** Skill manifest so other Bankr agents can call it.
 - **7.9** ▶ **Recovery drill:** *Show: a response dropped after settlement, and
   the buyer retrieving the paid record by id without paying again.*
 
-**Exit:** an agent pays and receives; the page shows the same record; revenue
-reconciles.
+**Exit:** an agent pays and receives; the page shows the same record (its
+preview, since 2026-09-19); revenue reconciles.
 
 ### Phase 8 — schedule, demo, submission
 
@@ -595,7 +622,7 @@ reconciles.
 - **8.4** Demo script running from fixtures with a live section.
 - **8.5** ▶ **Dry run of the demo**, timed.
 - **8.6** Submission: architecture note, limitations section, the six judging
-  criteria addressed.
+  criteria addressed (`JUDGING-CRITERIA.md`, supplied 2026-09-19).
 - **8.7** ▶ **Final read-through** of the page and books as a judge would see
   them.
 
@@ -717,6 +744,16 @@ snapshot's timeline 53% of it. The levers:
   Bankr users"** — never "payable by any x402 client".
 - **No-rebalance preserves holdings.** It never means liquidate.
 - **Published, reconciled books.** Not "audited."
+- **The paid endpoint sells the full record, and a preview is public**
+  (DECISION 2026-09-19).
+  - The preview holds the basket, the weights, the verdict, and that a veto
+    fired.
+  - Every analyst report and its reasoning are paid.
+  - How the handler holds the full record is open.
+- **The live ETH↔USDG leg is a demonstration** of the money path that no
+  analyst chose (DECISION 2026-09-19).
+- **NAV is two labelled figures, real and paper,** and they are never added
+  together (6.1's minimal version, `SIMPLIFICATION.md`).
 
 ### Locked operating parameters
 
@@ -725,10 +762,10 @@ the fund is readable without opening a JSON file.
 
 | Parameter | Value | Config |
 |---|---|---|
-| Capital under management | ~$200 — a target, not yet funded: the wallet holds about $2 (`tracker/LOGS.md`, state note) | `thresholds.json`, `mandate.json` |
+| Capital under management | ~$200 — a target, not yet funded: the wallet holds about $1.29 (`PHASE-1-GATE.md` §2) | `thresholds.json`, `mandate.json` |
 | Nominal per-trade size for quoting | $25 | `thresholds.json`, `mandate.json` |
 | Cadence | daily, plus a manual trigger on the identical code path | `cadence.json` |
-| Roster | 4 analysts, 1 risk agent, 1 treasurer | `analysts.json` |
+| Roster | 4 analysts, 1 risk agent, 1 treasurer. Since 2026-09-19 the fourth seat is `price-integrity`; `analysts.json` still names `fundamentals-calendar` until 2.1 | `analysts.json` |
 | Paid endpoint price | $0.25 per decision record, USDC on Base; provisional (raised from $0.05 after 1.7) | set at unit 7.2 |
 
 Both platform caps ($500/24h, $500/tx) sit well above our sizing, so they are a
@@ -755,7 +792,9 @@ again once the cycle cost settles (DECISION, LESSONS 2026-09-18).
   ETH→USDG on 4663. 0.10 proved it for one $0.08 sell; the return leg is still
   unexercised.
 - Do we launch a token, and would a stock-paired launch with quote-only fees make
-  the treasury's own income arrive in equity?
+  the treasury's own income arrive in equity? *2026-09-19: token design is one
+  of the six judging criteria (`JUDGING-CRITERIA.md`), and no unit covers it.
+  Open.*
 
 *Resolved:* execution eligibility (the operator is US-based; see §13), cadence
 (daily plus a manual trigger; see §11), and the live-leg asset (ETH→USDG on
@@ -774,7 +813,10 @@ Published with the project, not hidden.
   owner's own credentials are the whole fund's blast radius; and the execution
   key cannot be revoked without touching the account the analysts depend on.
   Mitigated, not solved: no analyst-role key may transact, which is asserted in
-  tests and verified against the live surfaces by probe 0.2.
+  tests and verified against the live surfaces by probe 0.2. *To narrow,
+  2026-09-19:* once the SIWE path is proven, the agent keys live in five
+  accounts of their own, and only `BANKR_KEY_READ` shares the fund's. Until
+  then, this stands as written.
 - **The execution wallet runs Bankr's code on 4663.** Its first swap signed an
   EIP-7702 authorization that delegates the wallet to a Bankr contract
   (`0xd6ce…5b28`), and swaps now run as UserOperations through that code
@@ -838,7 +880,11 @@ Published with the project, not hidden.
   leg on the same chain, through the same treasurer, so receipts and
   reconciliation are genuine. Everything upstream of execution — snapshot,
   quotes, sizing, gates, veto, books — is identical in both paths. Probe 0.5
-  records the exact 403 rather than assuming it.
+  records the exact 403 rather than assuming it. The ungated leg is labelled a
+  demonstration of the money path that no analyst chose (DECISION 2026-09-19).
+- **No fundamental research** (DECISION 2026-09-19). The fourth seat reads price
+  integrity, not the companies. No seat reasons about earnings, filings or
+  events.
 - No independent measurement of executable liquidity for stocks. Tradeability
   is defined operationally: a quote at intended size succeeded, quote age within
   bound, impact known and within limit or null — and null blocks. We do not
