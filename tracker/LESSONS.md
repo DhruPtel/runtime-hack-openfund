@@ -1652,3 +1652,27 @@ hash.
   decision record can cite its raw inputs directly. That is the operator's
   call.
 **Affects:** 1.9, `core/snapshot.py`, 3.7 (decision records citing their inputs).
+*Resolved at the 1.9 checkpoint: the next entry.*
+
+## 2026-09-18 — DECISION: the snapshot names its capture's answers by hash
+*The operator's, at the 1.9 checkpoint.* A decision record should cite the raw
+answers it came from, not only the snapshot built from them.
+- **What it holds.** `inputs.capture` holds the sha256 of the capture's
+  answers (the per-source `*.jsonl.gz` files and `clock.json.gz`) and each
+  file's sha256. A buyer can hash the files themselves and find both.
+  Schema `openfund.snapshot/3`.
+- **With nothing recorded,** the field is `sha256: null` with a reason, never
+  an empty string. That covers tests built from typed inputs.
+- **Sealed before the build.** The answers are complete before the snapshot is
+  built, so the capture is sealed first and written after.
+- **What broke was what was predicted:** the core type, the cache writer, the
+  committed fixture's `snapshot.json`, and the snapshot, cache, replay and run
+  tests. Nothing else reads the schema or the hash.
+- **The fixture.** Its raw answers are unchanged, and its snapshot was rebuilt
+  from them, as `daafd945…`. The manifest keeps the live build's `8afe38a3…`
+  and says why it was rebuilt. The two differ only in the schema and the new
+  field.
+- **The header byte now moves the hash.** It is a test case.
+**Affects:** 1.9, `core/snapshot.py`, `adapters/cache.py`, `fixtures/snapshots/`,
+3.7.
+

@@ -335,7 +335,8 @@ what each finding changed, is in `PHASE-0-1.md`.*
   assumed. They capture each asset's series. *Built:* every live build records
   its raw answers and clock readings at the transport, and `make replay`
   rebuilds the committed capture at block 66812461 byte for byte with the
-  network off. Shown at the checkpoint and not yet judged.
+  network off. Shown at the checkpoint. Since then, the snapshot names its
+  capture's answers by hash, and a weekday capture is owed.
 - **1.10** Adapter selftest attesting every address in the table against chain,
   beacon included; the execution wallet is expected to carry its 7702
   delegation on 4663.

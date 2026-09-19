@@ -1219,21 +1219,36 @@ from fixtures versus live.
   disk; the chain's answers are 23.6 MB before gzip.
   - 189 chain, 2 GeckoTerminal and 35 quote exchanges;
   - 20,036 clock readings;
-  - snapshot `8afe38a3…`, 189,098 bytes;
+  - snapshot `8afe38a3…` as built live; `daafd945…` since the snapshot names
+    its capture (below);
   - none of the six declared credentials.
 - **The replay.** It rebuilds that snapshot byte for byte in 0.4 s, inside a
   network namespace with no route (`unshare -rn`) and an empty environment. A
   live build in the same namespace fails at its first RPC call.
 - **A changed byte.** One byte changed in the chain's, GeckoTerminal's or the
-  venue's answers, or in the clock tape, changes the rebuilt hash. A changed
-  byte the snapshot does not carry, such as a response header, cannot move the
-  hash. The manifest check names the file, and the replay fails (LESSONS
-  2026-09-18).
+  venue's answers, or in the clock tape, changes the rebuilt hash. So does a
+  byte the snapshot never reads, such as a response header, since the snapshot
+  names its capture (below). The manifest check also names the file.
 - **Limits.** Two are known:
   - an HTTP-date `Retry-After` would be judged against the replay's own wall
     clock, since the shared client reads it; no source has sent one;
   - newer code replaying an old capture can differ where the code changed, and
     the manifest names the commit that captured.
+
+**After the checkpoint** (operator, 2026-09-18; LESSONS 2026-09-18):
+- **The snapshot names its capture.** `inputs.capture` holds the sha256 of the
+  capture's raw answers, the four `*.jsonl.gz` and `clock.json.gz` files, and
+  each file's sha256, so every captured byte moves the snapshot hash. A build
+  that recorded nothing holds `sha256: null` and a reason. The schema is
+  `openfund.snapshot/3`.
+- **The committed capture's snapshot was rebuilt** from its unchanged answers,
+  as `daafd945…`. The manifest keeps the live build's `8afe38a3…` and says why
+  it was rebuilt; the two differ only in the schema and `inputs.capture`.
+- **A weekday capture is owed.** The committed one is from a Saturday, so every
+  equity feed was frozen and the veto cannot fire from it. An open-session
+  capture is to be committed beside it, not in place of it: the weekend one is
+  the only evidence of the closed-session path. None exists yet (LOGS).
+- **Not answered:** how much of the demo runs from fixtures and how much live.
 
 **Changed by:** the 2026-09-17 RPC lesson, the price-history decision, 1.2's
 pinned snapshots, and 0.1's redaction. **Size:** bigger than drafted, by the
