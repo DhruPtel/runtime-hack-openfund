@@ -1282,9 +1282,28 @@ execute swaps", `BANKR_LLM_KEY` 403 "Wallet API access not enabled"
 caught, among them the treasurer's key being sent and a request that went through
 counted as refused.
 
+## 4.11 ▶ — The known answer, shown at the stop
+**Date:** 2026-09-19 · **Commits:** 22fcfa0, 5b0e57b
+
+`fixtures/accounting/` holds thirteen constructed events — opening capital, two paper
+buys and a partial sale, a contribution in, a live fill with its gas, gas on a
+transaction that reverted, a withdrawal, and two inference costs — and `answer.md`
+works out by hand, in exact rationals and without running the ledger, what a book that
+tells economic truth must say about them. The ledger met it figure by figure at the
+first run: paper NAV **$183.64629364**, real NAV **$4.26567681261301**, and in each
+book opened + realised + unrealised − costs equals NAV to the last digit, including
+the one basis share that does not divide, rounded half-even to 10⁻³⁰. A contribution
+moved what was put in and no income; the reverted transaction's gas is a cost with no
+fill; the two inference costs are one expense line, in neither NAV. 4.11 added the
+transfer event, capital in and out. Verified H: eight rules broken in a copy — basis at
+the last price, a fee capitalised, a contribution as income, a withdrawal as a loss,
+the share rounded to the cent, a fill valued at its stock leg, inference inside the
+book, and the two books read together — each caught. **Shown, and waiting for the
+operator.**
+
 ---
 
-## State at close — 2026-09-19, Phase 4 built but for 4.11, which is a stop
+## State at close — 2026-09-19, Phase 4 built; 4.11 shown at its stop
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -1299,7 +1318,8 @@ it. Where this note and git disagree, git is right.
 - The operator is stopped at 2.1, 3.8, 4.11, 5.4, 6.6, 7.5 and 8.5. 2.1 was
   approved, and past 3.8 the operator asked for Phase 3's close. Then for the
   orientation's fixes and 4.0, then for Batch B, 4.1 to 4.8, then for the audit, its
-  four cuts, and 4.9, 4.10 and 4.12. **4.11 is next, and it is a stop.**
+  four cuts, 4.9, 4.10 and 4.12, and 4.11. **4.11 is shown, and waits for the
+  operator.**
 
 **The deadline** was given at about 11:00Z on 2026-09-19 as "about 16 hours":
 about Sun 2026-09-20 03:00Z. That is this note's arithmetic, not a time the
@@ -1308,7 +1328,7 @@ operator wrote down. This note was written at about 23:40Z.
 **Check it in a minute.** Nothing here spends unless marked. The `python3 -m`
 commands need `PYTHONPATH=src`.
 - `git log --oneline -25` and `git status -sb`.
-- `make test`: 762 passed when this was written, in about 37 s. The runner and
+- `make test`: 770 passed when this was written, in about 37 s. The runner and
   risk tests start real subprocesses against a fake gateway on 127.0.0.1.
 - `make cycle-demo`: two whole paper cycles on the committed capture and the exit
   run's four real reports, in about 8 s. A fake venue, a scripted risk vote and a
@@ -1376,6 +1396,8 @@ commands need `PYTHONPATH=src`.
 - **The audit, its four cuts, and `CLAUDE.md`'s six pace rules** (entry above).
 - **4.9, 4.10 and 4.12** (entries above): the lock and the startup, and the
   treasurer in its own process, with both analyst keys measured refusing a swap.
+- **4.11** (entry above): the ledger meets a hand-computed answer, figure by
+  figure, in `fixtures/accounting/`. Shown at the stop.
 - **Decisions of 2026-09-19** (LESSONS): the pivot, and the Phase 2 decisions.
   Then the Phase 3 batch's:
   - a target starts at the weight held;
@@ -1405,10 +1427,15 @@ commands need `PYTHONPATH=src`.
   (Phase 7), `run/schedule.py` (Phase 8).
 
 ### Next
-- **4.11, the known-answer accounting fixture, and it is a stop.** Nothing of it
-  is started. Its fixture uses 4.8's rule for the paper book's opening,
-  `capital_usd` of USDG, and the journal already keeps the fee and inference events
-  it needs; no cycle books either yet.
+- **Phase 4 is built, and 4.11 waits for the operator.** Past it, Phase 5 opens:
+  the live executor (5.1) behind the paper one's interface, the round trip (5.2),
+  and receipts (5.3). Nothing of Phase 5 is started.
+- **What 4.11 found the ledger still cannot say:** settled revenue has no event and
+  the identity no line for it (6.1, on 7.2's settlement evidence); unsettled revenue
+  is not an event at all and must not become one (invariant 9); LLM credits are
+  bought inside the agents' own accounts, so neither book sees the purchase (6.3);
+  and the journal's schema keeps four kinds, so it cannot yet persist the transfer
+  the ledger now computes (4.6's full version).
 - **All six decisions are applied,** the refused swaps included (4.12, measured).
 - **Owed to the plan docs, outside this batch's paths:** `planning/` still says
   4.10 is the crash drill. The operator reassigned it to the single-owner lock in
@@ -1558,8 +1585,8 @@ commands need `PYTHONPATH=src`.
 ### Committed versus pushed
 Checked locally, with no fetch. `origin/main` is `385285f`, pushed by the operator:
 everything through Batch B. Every commit from `4992d62` (the audit's first cut) to
-the one that last changed this note — the cuts, the pace rules, 4.9, 4.10 and 4.12 —
-is committed and **not pushed**.
+the one that last changed this note — the cuts, the pace rules, 4.9, 4.10, 4.12 and
+4.11 — is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** LESSONS holds them in full.

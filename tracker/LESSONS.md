@@ -2812,3 +2812,31 @@ Nothing was spent. Invariant 1 now rests on a measurement at every layer: the to
 the lock here, and the drill is covered by the kill tests at 4.3 and 4.8.
 **Affects:** 4.9, 4.10, 4.12, 4.11; `CLAUDE.md`, `planning/PHASE-4.md`, ROADMAP,
 SIMPLIFICATION.
+
+## 2026-09-19 — 4.11: the ledger met the hand answer, and named what it still cannot say
+**What we believed.** Every book the fund had produced reconciled, which proved the
+ledger consistent with itself, not correct.
+
+**What the fixture measured.** Thirteen constructed events, an answer worked out by
+hand in exact rationals from the event list and the written rules, and the ledger
+matched it at the first run — every position, every line, both books, including the
+one basis share that does not divide and is rounded half-even to 10⁻³⁰. That rounding
+is why 4.0's exact arithmetic was kept, and this is where it was cashed in: the
+identity is an equality, not a tolerance.
+
+**What it could not express, and who owns it.**
+- **Settled revenue** is income, not capital, so it cannot be a transfer in without
+  becoming a contribution. It needs its own event and a line in the identity: 6.1,
+  resting on 7.2's settlement evidence.
+- **Unsettled revenue** is not an event and must not become one (invariant 9: nothing
+  is booked from an HTTP status). The fixture shows it by having no event for it.
+- **LLM credits bought** happen inside each agent's own Bankr account, not the fund's
+  execution wallet, so neither book sees the purchase. The books see consumption,
+  once, as an expense. Whether the operator's credit spend is the fund's cost is 6.3's.
+- **A transfer cannot be persisted:** `store/schema.sql` accepts four kinds. The
+  ledger computes the fifth; the journal cannot keep it (4.6's full version).
+
+**One event kind was added,** the transfer, because a contribution and a withdrawal are
+capital and no existing kind could carry them without calling one of them income or a
+cost. The fixture is its caller.
+**Affects:** 4.6, 6.1, 6.2, 6.3, 7.2; `core/ledger.py`, `store/schema.sql`.
