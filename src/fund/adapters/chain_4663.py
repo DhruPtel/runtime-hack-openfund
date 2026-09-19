@@ -37,6 +37,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable, Sequence
 
 from fund import redaction
@@ -612,3 +613,59 @@ def series_freshness(series: Series, feed: FeedRef, as_of: Instant, margin_s: in
     if series.newest is None:
         return Check(None, f"no points to judge: {series.status.value}: {series.detail}")
     return freshness(series.newest, feed, as_of, margin_s)
+
+
+# --- configuration ------------------------------------------------------------------
+
+CHAIN_CONFIG = Path(__file__).resolve().parents[3] / "config" / "chain.json"
+THRESHOLDS = Path(__file__).resolve().parents[3] / "config" / "thresholds.json"
+
+
+@dataclass(frozen=True)
+class Settings:
+    chain_id: int
+    endpoints: tuple[str, ...]   # credential names, in failover order
+    block_tag: str
+    timeout_s: float
+    attempts: int
+    backoff_s: float
+    min_interval_s: float
+    multicall3: str
+    chunk: int
+    window_s: int
+    max_rounds: int
+    scale_break_ratio: int
+    user_agent: str
+    staleness_margin_s: int
+
+    @classmethod
+    def load(cls, chain_path: Path = CHAIN_CONFIG, thresholds_path: Path = THRESHOLDS) -> Settings:
+        c = json.loads(chain_path.read_text())
+        t = json.loads(thresholds_path.read_text())
+        if t["feed_staleness_rule"] != "per_feed_heartbeat_plus_margin":
+            raise ValueError(f"unknown staleness rule {t['feed_staleness_rule']!r}")
+        return cls(chain_id=c["chain_id"], endpoints=tuple(c["rpc_endpoints"]),
+                   block_tag=c["block_tag"], timeout_s=c["request_timeout_seconds"],
+                   attempts=c["attempts_per_endpoint"], backoff_s=c["backoff_seconds"],
+                   min_interval_s=c["min_request_interval_ms"] / 1000,
+                   multicall3=ChainAddress(c["chain_id"], c["multicall3"]).address,
+                   chunk=c["multicall_chunk"], window_s=c["series_window_seconds"],
+                   max_rounds=c["series_max_rounds"],
+                   scale_break_ratio=c["series_scale_break_ratio"], user_agent=c["user_agent"],
+                   staleness_margin_s=t["feed_staleness_margin_seconds"])
+
+    def client(self, secret: Callable[[str], str], transport: Transport | None = None) -> RpcClient:
+        """`secret` is `Config.secret`: the URLs come from the role's credentials."""
+        return RpcClient([Endpoint(name, secret(name)) for name in self.endpoints],
+                         timeout_s=self.timeout_s, attempts=self.attempts,
+                         backoff_s=self.backoff_s, min_interval_s=self.min_interval_s,
+                         transport=transport or urllib_transport(self.user_agent))
+
+    def reader(self, rpc: RpcClient, block: BlockRef,
+               clock: Callable[[], Instant] | None = None) -> ChainReader:
+        return ChainReader(rpc, block, multicall3=self.multicall3, chunk=self.chunk,
+                           clock=clock or wall_clock)
+
+
+def wall_clock() -> Instant:
+    return Instant(time.time_ns() // 1_000_000)

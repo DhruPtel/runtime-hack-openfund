@@ -580,6 +580,15 @@ def test_a_multicall_reply_with_the_wrong_count_is_refused_not_trusted():
     assert got.status is FetchStatus.REFUSED and "0 results for 1 calls" in got.detail
 
 
+def test_settings_come_from_chain_json_and_the_margin_from_thresholds():
+    s = chain.Settings.load()
+    assert s.chain_id == CHAIN and s.endpoints == ("RPC_4663_MAINNET",)
+    assert s.staleness_margin_s == 3600 and s.window_s == 7 * DAY
+    rpc = s.client(lambda name: f"https://{name}.invalid/key")
+    assert [e.name for e in rpc.endpoints] == ["RPC_4663_MAINNET"]
+    assert "invalid/key" not in repr(rpc.endpoints)
+
+
 def test_a_proxy_answering_a_different_round_than_asked_is_not_believed():
     fake = FakeChain()
     fake.feeds[addr(1)] = hourly(10, 600)
