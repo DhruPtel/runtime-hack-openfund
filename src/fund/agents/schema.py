@@ -35,9 +35,16 @@ of 266.085, which the approved report writes 266.08, and USO's of 161.405,
 written 161.41. A strict half-up rule refused the first; that was the rule's
 error, not the report's.
 
-A percentage is computed, and a line that cites only a whole series
-(`[timeline]`) is computed. Computed figures are cited but not checked, as
-REPORT-FORMAT.md states.
+**Computed figures are cited but not checked,** as REPORT-FORMAT.md states:
+- a percentage;
+- a figure in bps, unless its line cites a field that is itself in bps, such as
+  `quote.swap_impact_bps` or `corroboration.divergence_bps`. Then it names that
+  field and is checked against it;
+- anything on a line that cites only a whole series (`[timeline]`).
+
+2.6's first real report wrote five divergences it had computed between prices
+it cited, such as `~136bps`. An earlier version of this rule checked every bps
+figure against a bps field, and refused all five correct figures.
 
 One leniency: a single code fence wrapped around the whole reply is removed
 before parsing. It is transport, not content. Nothing else is forgiven.
@@ -334,7 +341,8 @@ def _matches(claim: Decimal, value: Decimal) -> bool:
 
 def _claims(text: str) -> list[tuple[str, str, Decimal]]:
     """The figures a line writes: ($M, millions), (bps, bps), (plain, decimals).
-    Percentages are computed, and integers are dates or counts; neither is a claim."""
+    Percentages are computed, and integers are dates or counts; neither is a claim.
+    Whether a bps figure is a claim depends on what the line cites (_check_figure)."""
     body = _BRACKET.sub(" ", text).replace("−", "-")
     claims: list[tuple[str, str, Decimal]] = []
     for kind, pattern in (("millions", _MILLIONS), ("bps", _BPS)):
@@ -349,7 +357,10 @@ def _check_figure(figure: Figure, fields: list[_Resolved]) -> Refusal | None:
     singles = [(f, _number(f.value)) for f in fields if f.single]
     if not singles:
         return None  # a computed figure: cited, not checked
+    cites_bps = any(f.name.endswith("_bps") for f, _ in singles)
     for kind, written, claim in _claims(figure.text):
+        if kind == "bps" and not cites_bps:
+            continue  # computed from the prices it cites, like a percentage: not checked
         candidates = [(f, v) for f, v in singles
                       if kind == "plain"
                       or (kind == "bps" and f.name.endswith("_bps"))

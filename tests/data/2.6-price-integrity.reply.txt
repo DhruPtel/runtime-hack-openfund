@@ -1,0 +1,40 @@
+REPORT price-integrity 0x93faecde3c88a713e1edddf417c02c326889a3da 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c
+
+The block carries a closed us_equities_24/5 session: every stock's Chainlink mark is frozen at its last pre-close round while GeckoTerminal and the venue AMM keep trading. The snapshot already flags five tradeable assets as closed-session divergences past 100bps (AMD, AMZN, GOOGL, MSTR, SGOV). Because a divergence alone doesn't say which of the three prices is wrong, I checked pairwise agreement: where GeckoTerminal and the venue land close to each other and far from the mark, the mark is the stale/broken one; where the mark and venue agree and only GeckoTerminal is the outlier, the mark still holds up despite the flagged finding. The other fifteen flagged assets sit below the GeckoTerminal volume line and are not tradeable, so I make no call on them. The remaining tradeable assets show no material three-way disagreement and need no comment.
+
+CALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc caution medium
+GeckoTerminal and the venue sit within ~30bps of each other while the frozen mark is ~136bps above both, so the closed-session freeze looks like it is overstating AMD, not the two live sources disagreeing.
+- 559.42445 mark [mark.price_usd]
+- 553.5582086607 GeckoTerminal [corroboration.price_usd]
+- 551.9120935475604 venue [quote.venue_price_usd]
+- mark vs venue diverges ~136bps, GeckoTerminal vs venue only ~30bps [mark.price_usd, quote.venue_price_usd, corroboration.price_usd]
+Wrong if: GeckoTerminal and the venue diverge from each other by more than 50bps at reopen, which would undercut the assumption that they, not the mark, are in agreement.
+
+CALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 proceed low
+The recorded -450.32bps finding is GeckoTerminal versus the mark, but the mark and the venue agree closely; the finding is GeckoTerminal's problem, not the mark's.
+- 253.863 mark [mark.price_usd]
+- 253.28085544501803 venue, ~23bps from mark [quote.venue_price_usd, mark.price_usd]
+- 265.8339854153 GeckoTerminal, divergence -450.32bps from mark [corroboration.price_usd, corroboration.divergence_bps]
+Wrong if: the venue price moves to track GeckoTerminal instead, diverging from the mark by more than 100bps.
+
+CALL GOOGL 0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3 proceed low
+Same pattern as AMZN: mark and venue are ~12bps apart while GeckoTerminal sits ~147bps from the venue, so the flagged -132.33bps finding traces to GeckoTerminal, not the mark.
+- 350.47135177 mark [mark.price_usd]
+- 350.04082044804966 venue, ~12bps from mark [quote.venue_price_usd, mark.price_usd]
+- 355.171284689 GeckoTerminal, divergence -132.33bps from mark [corroboration.price_usd, corroboration.divergence_bps]
+Wrong if: the venue price drifts toward GeckoTerminal, diverging from the mark by more than 100bps.
+
+CALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution medium
+GeckoTerminal and the venue are only ~55bps apart from each other, but the frozen mark is ~132-187bps from both, marking it as the outlier this close.
+- 152.643 mark [mark.price_usd]
+- 155.5016463786 GeckoTerminal [corroboration.price_usd]
+- 154.65896270001573 venue [quote.venue_price_usd]
+- mark vs venue diverges ~132bps, GeckoTerminal vs venue only ~55bps [mark.price_usd, quote.venue_price_usd, corroboration.price_usd]
+Wrong if: GeckoTerminal and the venue diverge from each other by more than 80bps at reopen, undercutting the case that mark alone is off.
+
+CALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 proceed low
+The 124.7bps finding is GeckoTerminal versus the mark; mark and venue are only ~22bps apart, so GeckoTerminal, likely thin here, is the one out of line, not the mark.
+- 101.10821255 mark [mark.price_usd]
+- 100.88197839075325 venue, ~22bps from mark [quote.venue_price_usd, mark.price_usd]
+- 99.8629967858 GeckoTerminal, divergence 124.7bps from mark [corroboration.price_usd, corroboration.divergence_bps]
+Wrong if: the venue price drifts down toward GeckoTerminal, diverging from the mark by more than 80bps.

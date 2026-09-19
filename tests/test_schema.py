@@ -183,3 +183,48 @@ def test_nothing_a_model_writes_raises():
     assert not any(schema.validate(t, SNAPSHOT, contract=schema.Contract.load("price-integrity"),
                                    agent=AGENTS["price-integrity"], snapshot_sha256=SHA).ok
                    for t in cut_short[:3])
+
+
+# --- 2.6's first real reply, recorded (research/findings.md §2.6) --------------------------------
+
+REPLY_2_6 = (REPO / "tests" / "data" / "2.6-price-integrity.reply.txt").read_text()
+FUND_WALLET = "0x93faecde3c88a713e1edddf417c02c326889a3da"
+
+
+def test_the_first_real_reply_is_the_one_recorded():
+    """Byte for byte what the gateway returned for chatcmpl-ZIpvPVmNGmb4GQNT7CTWG."""
+    assert len(REPLY_2_6) == 4073
+    assert REPLY_2_6.startswith(f"REPORT price-integrity {FUND_WALLET} {SHA}\n")
+
+
+def test_its_computed_bps_figures_are_cited_not_checked():
+    """Five divergences the model computed between the prices it cited, all correct,
+    that the earlier rule refused. Only the header refusal is left."""
+    v = schema.validate(REPLY_2_6, SNAPSHOT, contract=schema.Contract.load("price-integrity"),
+                        agent="0x…", snapshot_sha256=SHA)
+    assert [r.rule for r in v.refusals] == ["header"]
+    assert FUND_WALLET in v.refusals[0].detail
+
+
+def test_with_only_the_placeholder_it_filled_in_put_back_the_reply_is_accepted():
+    """The header refusal was provoked by the `0x…` placeholder (now `unassigned`).
+    Put back only that token, and nothing else in the report fails."""
+    restored = REPLY_2_6.replace(f"REPORT price-integrity {FUND_WALLET} ",
+                                 "REPORT price-integrity 0x… ", 1)
+    assert restored.count("\n") == REPLY_2_6.count("\n") and len(restored) < len(REPLY_2_6)
+    v = schema.validate(restored, SNAPSHOT, contract=schema.Contract.load("price-integrity"),
+                        agent="0x…", snapshot_sha256=SHA)
+    assert v.ok, [str(r) for r in v.refusals]
+    assert [(c.symbol, c.word, c.confidence) for c in v.report.calls] == [
+        ("AMD", "caution", "medium"), ("AMZN", "proceed", "low"), ("GOOGL", "proceed", "low"),
+        ("MSTR", "caution", "medium"), ("SGOV", "proceed", "low")]
+
+
+def test_a_bps_figure_that_names_a_bps_field_is_still_checked():
+    """The same reply's cited divergence field, altered by ten bps, is refused."""
+    altered = REPLY_2_6.replace("divergence -450.32bps from mark", "divergence -440.32bps from mark")
+    v = schema.validate(altered.replace(f" {FUND_WALLET} ", " 0x… ", 1), SNAPSHOT,
+                        contract=schema.Contract.load("price-integrity"), agent="0x…",
+                        snapshot_sha256=SHA)
+    refusal = next(r for r in v.refusals if r.rule == "figure")
+    assert "-440.32bps" in refusal.detail and "corroboration.divergence_bps = -450.32" in refusal.detail
