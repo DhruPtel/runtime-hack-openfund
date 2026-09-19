@@ -302,6 +302,7 @@ def test_the_3_8_replies_revalidated_from_their_stored_text():
     found = {(i.written, i.found) for i in verdicts["cross-asset-macro"].imprecisions}
     assert ("544.70535", "META timeline 2026-08-20") in found
     assert ("751.28", "SPY timeline 2026-09-16") in found
+    assert verdicts["price-integrity"].imprecisions == ()  # its bracket was prose, not a citation
     paths = {(i.cited, i.found) for i in verdicts["execution-quality"].imprecisions}
     assert ("swap_impact_bps", "MSTR quote.swap_impact_bps") in paths
     assert all(i.line and i.line > 3 for i in verdicts["execution-quality"].imprecisions)
@@ -332,3 +333,27 @@ def test_a_real_value_of_an_asset_the_line_does_not_name_still_refuses():
                                           "- 544.71, the low on 3 September [timeline 2026-09-03]",
                                           1)
     assert "figure" in rules(verdict(text))
+
+
+def test_a_bracket_that_is_not_a_field_reference_is_not_a_citation():
+    """3.8: price-integrity quoted `["us_equities_24/5"]` in its prose, and was refused."""
+    text = example("price-integrity").replace(
+        "none\nwill move until Monday", 'none\nwill move until Monday (`["us_equities_24/5"]`)', 1)
+    assert '["us_equities_24/5"]' in text
+    v = verdict(text, "price-integrity")
+    assert v.ok and v.imprecisions == ()
+
+
+@pytest.mark.parametrize("line, ok", [
+    ("- 559.42, Friday's close and the 30-day high [see above]", True),
+    ("- 569.42, Friday's close and the 30-day high [see above]", False),
+    ("- Friday's close and the 30-day high [569.42]", False),
+    ("- Friday's close and the 30-day high [559.42]", True),
+])
+def test_a_figure_behind_a_bracket_of_prose_is_still_checked(line, ok):
+    """Not a citation is not a way around the fabrication check."""
+    real = "- 559.42, Friday's close and the 30-day high [mark.price_usd]"
+    text = example("price-trend")
+    assert real in text
+    v = verdict(text.replace(real, line, 1))
+    assert v.ok is ok, v.refusals

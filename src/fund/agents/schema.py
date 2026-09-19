@@ -63,6 +63,11 @@ chance, and the fabrication check would be weaker for it.
 it cited, such as `~136bps`. An earlier version of this rule checked every bps
 figure against a bps field, and refused all five correct figures.
 
+**A bracket that is not a field reference is not a citation** (3.8). It is
+prose, and the numbers inside it stay figures. A figure line whose brackets are
+all prose is checked by value, so writing `[see above]` cannot hide a figure from
+the fabrication check.
+
 **A figure written with thousands separators is the same number.**
 `$2,101,924.28` is 2101924.28. Until 3.8's live run found it, the comma split it,
 and `924.28` was refused against the field.
@@ -440,9 +445,20 @@ class _Snapshot:
         return out
 
 
+def _items(bracket: str) -> list[str]:
+    return [" ".join(item.split()) for item in bracket.split(",")]
+
+
+def _is_citation(bracket: str) -> bool:
+    """A bracket is a citation when at least one of its items reads as a field
+    reference, a close or a whole series. Anything else in brackets is prose: 3.8's
+    price-integrity wrote `["us_equities_24/5"]` inside a code span."""
+    return any(_ITEM_ALL.match(i) or _ITEM_TIMELINE.match(i) or _ITEM_FIELD.match(i)
+               for i in _items(bracket))
+
+
 def _citations(text: str) -> list[list[str]]:
-    return [[" ".join(item.split()) for item in bracket.split(",")]
-            for bracket in _BRACKET.findall(text)]
+    return [_items(bracket) for bracket in _BRACKET.findall(text) if _is_citation(bracket)]
 
 
 def _matches(claim: Decimal, value: Decimal) -> bool:
@@ -455,7 +471,9 @@ def _claims(text: str) -> list[tuple[str, str, Decimal]]:
     """The figures a line writes: ($M, millions), (bps, bps), (plain, decimals).
     Percentages are computed, and integers are dates or counts; neither is a claim.
     Whether a bps figure is a claim depends on what the line cites (_check_figure)."""
-    body = _BRACKET.sub(" ", text).replace("−", "-")
+    # A citation is not a figure; a bracket of prose keeps its numbers, which are.
+    body = _BRACKET.sub(lambda m: " " if _is_citation(m.group(1)) else f" {m.group(1)} ",
+                        text).replace("−", "-")
     body = _GROUPED.sub(lambda m: m.group(0).replace(",", ""), body)  # 2,101,924.28 is one number
     claims: list[tuple[str, str, Decimal]] = []
     for kind, pattern in (("millions", _MILLIONS), ("bps", _BPS)):
@@ -569,7 +587,8 @@ def _examine(report: Report, snapshot: Mapping[str, Any], *, contract: Contract,
                                                     line=line_of(item), why=why))
         for figure in figures:
             fields: list[_Resolved] = []
-            loose = False
+            # Brackets on the line, none a citation: nothing marks a figure as computed.
+            loose = bool(_BRACKET.search(figure.text)) and not _citations(figure.text)
             for items in _citations(figure.text):
                 for item in items:
                     if _ITEM_ALL.match(item):
