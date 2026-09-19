@@ -132,3 +132,18 @@ def test_a_sell_passes_the_position_gate_and_frees_cash_for_the_floor():
 def test_extra_plan_gates_are_counted():
     over = gates.Gate("context-budget", False, "constructed")
     assert set(blocked(evaluate(written(), extra=[over]))) == {"AMD", "USO", "META", "INTC"}
+
+
+def test_a_gate_set_this_code_does_not_define_refuses_rather_than_judging_by_another():
+    """A record names the gate set it was judged by (3.9). A set the code does not
+    define refuses, in `evaluate` and in `settle`, rather than judging by other gates."""
+    assert gates.GATE_SET in gates.GATE_SETS and LIMITS.gate_set == gates.GATE_SET
+    later = dataclasses.replace(LIMITS, gate_set=max(gates.GATE_SETS) + 1)
+    for judge in (lambda: evaluate(written(), limits=later),
+                  lambda: gates.settle(written(), [1], snapshot=SNAPSHOT, limits=later)):
+        try:
+            judge()
+        except ValueError as refused:
+            assert "gate set" in str(refused)
+        else:
+            raise AssertionError("an unknown gate set was judged")

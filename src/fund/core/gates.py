@@ -54,6 +54,16 @@ RULE_CASH_FLOOR = "cash-floor"      # the plan leaves at least the cash floor
 RULE_TURNOVER = "turnover"          # the plan trades at most turnover_max_bps of the NAV
 RULE_CONTEXT_BUDGET = "context-budget"  # risk's whole bundle fits the budget (invariant 3)
 
+#: The gate sets a decision can be judged by. A record's schema names the set it was
+#: judged by (`core/record.py`), as it names its plan's layout, and a replay judges by
+#: that set. So a gate added or changed later never changes an earlier record's
+#: rebuild (3.9). A set changes when what a gate checks changes. A limit's number is
+#: config, which each recorded cycle carries, so a new number is not a new set.
+#: - 1: the Phase 3 gates, as the exit run was judged. S10 (both legs, at 4.4) and
+#:   S11 (the snapshot's age) will make set 2, and the record schema that names it.
+GATE_SETS = (1,)
+GATE_SET = 1
+
 
 def _number(config: Mapping[str, Any], name: str) -> Decimal | None:
     """A limit from config: an int or decimal text, never a float. Null is None,
@@ -88,13 +98,17 @@ class Limits:
     max_trade_usd: Decimal | None
     turnover_max_bps: Decimal | None
     context_budget_tokens: int | None
+    gate_set: int = GATE_SET  # which gates apply the limits: the set a record names
 
     @classmethod
     def from_config(cls, thresholds: Mapping[str, Any],
                     mandate: Mapping[str, Any] | None = None,
-                    models: Mapping[str, Any] | None = None) -> "Limits":
-        """Without a mandate or the models file, their limits are unresolved and block."""
-        return cls(quorum_min_analysts=_whole(thresholds, "quorum_min_analysts"),
+                    models: Mapping[str, Any] | None = None, *,
+                    gate_set: int | None = None) -> "Limits":
+        """Without a mandate or the models file, their limits are unresolved and block.
+        Without a gate set, today's."""
+        return cls(gate_set=GATE_SET if gate_set is None else gate_set,
+                   quorum_min_analysts=_whole(thresholds, "quorum_min_analysts"),
                    max_position_weight=_number(thresholds, "max_position_weight"),
                    cash_floor_usd=_number(thresholds, "cash_floor_usd"),
                    min_order_usd=_number(thresholds, "min_order_usd"),
@@ -363,6 +377,14 @@ def _worth(order: Mapping[str, Any], snapshot: Mapping[str, Any]) -> Decimal | N
         return None
 
 
+def known(limits: Limits) -> None:
+    """Refuse a gate set this code does not define: it would judge by other gates than
+    the set names."""
+    if limits.gate_set not in GATE_SETS:
+        raise ValueError(f"gate set {limits.gate_set!r} is not defined here: known sets are "
+                         f"{', '.join(map(str, GATE_SETS))}")
+
+
 def evaluate(plan: Mapping[str, Any], *, snapshot: Mapping[str, Any],
              mandate: Mapping[str, Any], limits: Limits, reported: int,
              extra: Sequence[Gate] = ()) -> dict[str, Any]:
@@ -386,7 +408,10 @@ def evaluate(plan: Mapping[str, Any], *, snapshot: Mapping[str, Any],
     plan, such as the context budget (3.6).
 
     **The cash floor is not judged here.** It is judged by `settle`, on the orders
-    actually approved, once these gates and the risk vote have spoken (R1)."""
+    actually approved, once these gates and the risk vote have spoken (R1).
+
+    The gates are the set `limits.gate_set` names, and an unknown set refuses."""
+    known(limits)
     entries = {a["asset"]["address"].lower(): a for a in snapshot["assets"]}
     book = plan["book"]
     nav = Decimal(book["nav_usd"])
@@ -433,6 +458,7 @@ def settle(plan: Mapping[str, Any], approved: Iterable[int], *,
     orders still approved, the buys dropped, and the floor's verdict on what is left.
 
     With the floor unresolved, every buy is dropped: null blocks."""
+    known(limits)
     orders = {o["index"]: o for o in plan["orders"]}
     kept = sorted(i for i in approved if i in orders)
     dropped: list[int] = []
