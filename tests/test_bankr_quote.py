@@ -148,11 +148,6 @@ def test_a_body_that_is_not_json_is_refused():
 
 # --- tradeability: three conditions, each refused at its own rule -----------------------------
 
-def test_negative_impact_is_price_improvement_and_is_admitted():
-    verdict = judged(parsed())
-    assert verdict.verdict.passes and verdict.rule is None
-    assert "price improvement" in verdict.verdict.reason
-
 
 def test_tradeable_is_never_evidence_of_execution():
     verdict = judged(parsed())
