@@ -260,3 +260,21 @@ def test_a_beacon_that_disagrees_stops_the_build():
     chain.beacon = "0x" + "66" * 20
     with pytest.raises(universe.BeaconDisagreement):
         build(chain)
+
+
+def test_with_daily_closes_the_live_path_takes_one_close_a_day_and_none_at_the_weekend():
+    chain = RecordedChain()
+    clock = ticking(BLOCK_TIME + 30)
+    settings = dataclasses.replace(chain_4663.Settings.load(), sampling="daily_close",
+                                   window_s=7 * DAY, max_rounds=5000)
+    built = run.read_and_build(sources(chain, clock), settings=settings, u=SMALL,
+                               rule=valuation.DivergenceRule.from_thresholds(THRESHOLDS),
+                               limits=bankr_quote.Limits.from_thresholds(THRESHOLDS),
+                               wallet=WALLET, clock=clock)
+    t = entry(built, "NVDA")["timeline"]
+    assert t["columns"] == ["close_of", "updated_at", "price_usd"]
+    assert [row[0] for row in t["points"]] == ["2026-09-14", "2026-09-15", "2026-09-16",
+                                               "2026-09-17", "2026-09-18"]
+    assert "2 days fell in the closed session and have no close" in t["coverage"]["reason"]
+    assert entry(built, "NVDA")["status"]["value"] == "tradeable"
+    assert "One close a day over 7 days" in built.snapshot.document["rules"]["timeline"]

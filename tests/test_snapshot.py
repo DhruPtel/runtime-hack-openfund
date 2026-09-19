@@ -345,3 +345,16 @@ def test_core_snapshot_imports_nothing_from_adapters_anywhere():
     modules = {n.module or "" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)}
     modules |= {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
     assert not any("adapters" in m for m in modules)
+
+
+def test_a_daily_close_timeline_names_each_close_and_ends_with_the_latest_round():
+    first = stock("NVDA")
+    points = first.series.points
+    samples = tuple(Instant(p.source_time.epoch_ms + HOUR * 1000) for p in points[:-1]) + (BLOCK.timestamp,)
+    sampled = dataclasses.replace(first.series, samples=samples)
+    snap = snapshot.build(inputs(dataclasses.replace(first, series=sampled)), U)
+    t = entry(snap, "NVDA")["timeline"]
+    assert t["columns"] == ["close_of", "updated_at", "price_usd"]
+    assert t["points"][0] == ["2026-09-10", "2026-09-10T20:00:00Z", "250"]
+    assert t["points"][-1] == ["latest", "2026-09-18T20:00:00Z", "252.6"]
+    assert snap.document["schema"] == "openfund.snapshot/2"

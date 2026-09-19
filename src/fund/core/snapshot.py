@@ -33,7 +33,8 @@ document is its output (LESSONS 2026-09-18).
   carries every divergence and its session (DECISION, LESSONS 2026-09-18);
 - `status`: the first rule that did not pass, or `tradeable`;
 - `timeline`: the price series, oldest first, as `[updated_at, price_usd]`,
-  with its coverage stated. A short series says so; nothing is truncated
+  or as daily closes `[close_of, updated_at, price_usd]` ending with the latest
+  round, with its coverage stated. A short series says so; nothing is truncated
   silently.
 
 **Chain values carry their block and not their fetch time.** A value read at a
@@ -69,7 +70,7 @@ from .types import (
 )
 from .universe import Universe
 
-SCHEMA = "openfund.snapshot/1"
+SCHEMA = "openfund.snapshot/2"  # /2 (1.8): sampled timelines, and holdings with both statuses
 
 RULE_BLOCK_PIN = "block-pin"
 RULE_AFTER_PIN = "after-pin"
@@ -241,15 +242,22 @@ def _mark(asset: Asset, reading: Observation, fresh: Check, the_mark: valuation.
     return out
 
 
-def _timeline(series: Series) -> dict:
+def _timeline(series: Series, block: BlockRef) -> dict:
+    """Every round as `[updated_at, price_usd]`; or, for a sampled series such as
+    daily closes, `[close_of, updated_at, price_usd]`, where `close_of` is the
+    sample's day and the last row, the latest round, reads `latest`."""
     out = _read_series(series) | {
         "window_start": _time(series.window_start),
         "coverage": _check(series.coverage),
         "rounds": len(series.points),
-        "columns": ["updated_at", "price_usd"],
-        "points": [[_time(p.source_time), _q(p.value)] for p in series.points],
     }
-    return out
+    if not series.samples:
+        return out | {"columns": ["updated_at", "price_usd"],
+                      "points": [[_time(p.source_time), _q(p.value)] for p in series.points]}
+    return out | {"columns": ["close_of", "updated_at", "price_usd"],
+                  "points": [["latest" if at == block.timestamp else _time(at)[:10],
+                              _time(p.source_time), _q(p.value)]
+                             for p, at in zip(series.points, series.samples)]}
 
 
 def _read_series(series: Series) -> dict:
@@ -404,7 +412,7 @@ def build(inputs: Inputs, universe: Universe) -> Snapshot:
             "findings": ([_finding(cross.finding)]
                          if cross.finding and cross.finding.beyond_open_session_limit else []),
             "status": _status(status, rule_name, check),
-            "timeline": _timeline(s.series),
+            "timeline": _timeline(s.series, block),
         })
 
     holdings = _holdings(inputs, universe, verdicts, marks)

@@ -102,9 +102,17 @@ def read_chain(settings: chain_4663.Settings, rpc: chain_4663.RpcClient, u: univ
     read = settings.reader(rpc, block)
     stocks = stocks_of(u)
     readings = read.latest_rounds(dict(u.feeds))
-    series = {a: read.price_series(a, u.feeds[a], window_s=settings.window_s,
-                                   max_rounds=settings.max_rounds,
-                                   scale_break_ratio=settings.scale_break_ratio) for a in stocks}
+    def series_of(a: AssetId) -> Series:
+        feed = u.feeds[a]
+        if settings.sampling == "daily_close":
+            return read.daily_closes(a, feed, days=settings.window_s // 86400, cut_s=settings.cut_s,
+                                     closure=settings.sessions.get(feed.market_hours),
+                                     max_rounds=settings.max_rounds,
+                                     scale_break_ratio=settings.scale_break_ratio)
+        return read.price_series(a, feed, window_s=settings.window_s, max_rounds=settings.max_rounds,
+                                 scale_break_ratio=settings.scale_break_ratio)
+
+    series = {a: series_of(a) for a in stocks}
     tokens = {u.cash_leg: u.cash_decimals, u.gas_asset: u.gas_decimals}
     tokens |= {a: r.decimals for a, r in u.records.items() if a.chain_id == block.chain_id}
     balances = read.balances(wallet, tokens)
@@ -172,10 +180,17 @@ def _rules(settings: chain_4663.Settings, rule: valuation.DivergenceRule,
                          f"{q(limits.max_age)} s old at built_at, and its swapImpactBps is known and "
                          f"at most {q(limits.max_impact)}, compared signed. A quote is a price, "
                          f"not a fill."),
-        "timeline": (f"The feed's own rounds over {settings.window_s // 86400} days to the pinned "
-                     f"block, oldest first, at most {settings.max_rounds}. A series that falls "
-                     f"short says so in its coverage, and its asset is not tradeable that "
-                     f"snapshot."),
+        "timeline": ((f"One close a day over {settings.window_s // 86400} days to the pinned block: "
+                      f"the round in effect at {settings.cut_s // 3600:02d}:"
+                      f"{settings.cut_s % 3600 // 60:02d}Z, then the latest round. A day whose cut "
+                      f"falls in a closed session has no close, and neither has a day with no new "
+                      f"round since the previous close, such as a holiday: nothing is carried "
+                      f"forward or interpolated. ")
+                     if settings.sampling == "daily_close" else
+                     f"The feed's own rounds over {settings.window_s // 86400} days to the pinned "
+                     f"block, oldest first. ") +
+                    (f"At most {settings.max_rounds} rounds are read. A series that falls short "
+                     f"says so in its coverage, and its asset is not tradeable that snapshot."),
         "value": "Raw units times the mark, exact. No mark, no value, and never zero.",
     }
 
