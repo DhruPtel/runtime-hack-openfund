@@ -168,12 +168,12 @@ Where opinions become a decision, and where the decision can be refused.
 
 | Unit | Goal (full version) | Minimal: what gets built |
 |---|---|---|
-| 3.1 | Aggregator as a total function: equation, quorum, cash, tie-break, residual | direction × (1 − caution); quorum; all-abstain keeps holdings; capped weights, cash and residual. |
+| 3.1 | Aggregator as a total function: equation, quorum, cash, tie-break, residual | direction × (1 − caution), moving a target from the weight held: buy raises, sell cuts, hold and silence keep (2026-09-19); quorum; all-abstain keeps holdings; capped weights, cash and residual. |
 | 3.2 ▶ | Aggregation made visible | The table of contributions, weights, cash and residual. Shown, not stopped. |
-| 3.3 | Planner: weights + holdings + quotes → sized orders | Paper capital into orders of at most $25, each re-quoted and carrying its asset's three prices and findings, plus the demonstration leg. |
+| 3.3 | Planner: weights + holdings + quotes → sized orders | Paper capital into orders of at most $25, each re-quoted and carrying its asset's three prices and findings. The demonstration leg moved to Phase 5 (2026-09-19). |
 | 3.4 | Gate module, shared by risk and treasurer; sweeps in the three named exceptions from 1.3, 1.4 and 1.5 | Named three-valued checks over the plan, where null blocks, called by risk and treasurer. The three exceptions are called, not moved. |
 | 3.5 | Risk agent: full reports + sized plan → verdict | Its own process and account. Approve or veto per order. A failed or null gate is a veto whatever the model says. |
-| 3.6 | Context budget: veto rather than summarize | The bundle measured conservatively from bytes. Over budget vetoes. |
+| 3.6 | Context budget: veto rather than summarize | The bundle measured conservatively from bytes. Over budget vetoes. Built before 3.5 (2026-09-19). |
 | 3.7 | Signed decision record with content hashes, carrying closed-session divergence findings | **Equal.** Hashes of every input, findings carried, signed ed25519 by the treasurer's key. |
 | 3.8 ▶ | A veto actually happening | **Stop.** Built on the closed-session divergence findings: `price-integrity` names the case, and risk decides. Shown from a recorded cycle if the live one does not veto. |
 | 3.9 ▶ | Byte-stable replay | One test rebuilding a recorded cycle's record byte for byte. Shown, not stopped. |

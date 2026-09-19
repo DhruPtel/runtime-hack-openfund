@@ -287,6 +287,12 @@ re-evaluate before detailing the next.
 >     chose;
 >   - the paid endpoint sells the full record, and a preview is public;
 >   - execution comes before the sale, in unit order.
+> - **Decided for Phase 3,** in the operator's batch brief (LESSONS 2026-09-19):
+>   - a target starts at the weight held, and hold and silence keep it;
+>   - the live leg is Phase 5's, not 3.3's;
+>   - 3.6 is built before 3.5;
+>   - the config values SIMPLIFICATION proposed are set, and the mandate is
+>     populated provisionally until 4.1.
 > - **The judging criteria** are in
 >   [`JUDGING-CRITERIA.md`](JUDGING-CRITERIA.md).
 > - **Where this contradicts text above,** it is marked in place rather than
