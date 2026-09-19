@@ -376,9 +376,17 @@ class Replayed:
         return self.capture.manifest["snapshot"]["sha256"]
 
     @property
+    def same_snapshot(self) -> bool:
+        return self.snapshot.sha256 == self.expected and self.snapshot.body == self.capture.snapshot_body
+
+    @property
+    def all_used(self) -> bool:
+        return all(u == (0, 0) for u in self.unused.values())
+
+    @property
     def identical(self) -> bool:
-        return (self.snapshot.sha256 == self.expected and self.snapshot.body == self.capture.snapshot_body
-                and not self.capture.altered and all(u == (0, 0) for u in self.unused.values()))
+        """The captured snapshot, from an intact capture, every answer and reading used."""
+        return self.same_snapshot and not self.capture.altered and self.all_used
 
 
 def replay(directory: Path) -> Replayed:
@@ -447,12 +455,14 @@ def replay_main(directory: Path) -> int:
                        for s in m["clock_readings"])
     print(f"   exchanges answered: {served}")
     print(f"   clock readings used: {clocks}")
-    print("   capture files against the manifest: "
-          + ("all match" if not r.capture.altered else "ALTERED: " + ", ".join(r.capture.altered)))
     path = write(r.snapshot)
     print(f"   rebuilt  {r.snapshot.sha256}  {path.relative_to(ROOT)}")
     print(f"   captured {r.expected}")
-    print(f"   identical: {'yes, byte for byte' if r.identical else 'NO'}")
+    print(f"   the captured snapshot, byte for byte: {'yes' if r.same_snapshot else 'NO'}")
+    print("   capture files against the manifest: "
+          + ("all match" if not r.capture.altered else "ALTERED: " + ", ".join(r.capture.altered)))
+    print(f"   every answer and clock reading used: {'yes' if r.all_used else 'NO'}")
+    print(f"   replay: {'PASS' if r.identical else 'FAIL'}")
     return 0 if r.identical else 1
 
 

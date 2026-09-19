@@ -57,6 +57,18 @@ def test_a_changed_byte_in_any_source_changes_the_rebuilt_hash(tmp_path, name, b
     assert replayed.snapshot.sha256 != replayed.expected and not replayed.identical
 
 
+def test_a_changed_byte_the_snapshot_does_not_carry_still_fails_the_replay(tmp_path):
+    # GeckoTerminal's cache-status header is kept in the capture and not in the
+    # snapshot, so the hash cannot move; the manifest check names the file instead.
+    copy = tmp_path / CAPTURE.name
+    shutil.copytree(CAPTURE, copy)
+    raw = gzip.decompress((copy / "gecko.jsonl.gz").read_bytes())
+    (copy / "gecko.jsonl.gz").write_bytes(gzip.compress(raw.replace(b'"MISS"', b'"MIST"', 1)))
+    replayed = run.replay(copy)
+    assert replayed.same_snapshot and replayed.capture.altered == ["gecko.jsonl.gz"]
+    assert not replayed.identical
+
+
 def test_a_missing_answer_stops_the_replay_rather_than_reading_as_unreachable(tmp_path):
     copy = tmp_path / CAPTURE.name
     shutil.copytree(CAPTURE, copy)
