@@ -184,6 +184,16 @@ carry Read Only ON; only `BANKR_KEY_EXEC` has the Wallet API with Read Only OFF.
 **No key the analyst role can load may transact** — enforced by a `can_transact`
 field asserted in tests, not by the prose above, and verified against the live
 surfaces by probe 0.2.
+*Contradicted by measurement, 2026-09-19, not reconciled (LESSONS 2026-09-19,
+`probes/keymap.py`):*
+- `BANKR_LLM_KEY` is **not read-only**. It passes the Wallet API's read-only
+  gate, where `BANKR_KEY_READ` is refused.
+- The **Agent API is on for all three keys.**
+- `BANKR_KEY_EXEC` also has the LLM gateway on.
+
+Probe 0.2 never tested a write with `BANKR_LLM_KEY` (F0.2.2), and the Agent API
+was asserted off in code, not measured (F0.2.5). The key settings are the
+operator's to change.
 
 *Decided 2026-09-19, unverified (LESSONS 2026-09-19):* each analyst and the risk
 agent get their own Bankr account from `bankr login siwe`, with one key each:

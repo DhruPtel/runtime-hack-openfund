@@ -2111,3 +2111,61 @@ One shared wallet stays ruled out. 2.4's credential rows and every live Phase 2
 run wait on the operator.
 **Affects:** 2.0, 2.4, 2.5, 2.6, 3.5, 6.3; PLAN §6, §8 and §13; the SIWE DECISION
 above.
+
+## 2026-09-19 — The fund's keys, measured: `BANKR_LLM_KEY` is not read-only, and the Agent API is on for all three
+**Why this was run.** The operator asked which `.env` key is which, to match the
+dashboard. `probes/keymap.py` is read-only and signs nothing:
+- the wallet, from `/wallet/me`;
+- the gateway, from `/v1/credits`;
+- the Agent API, from `/agent/profile`, a read. It is calibrated against the
+  2.0 key, whose Agent API was measured off, and which draws 403 "Agent API
+  access not enabled" here too;
+- read-only, from `/wallet/sign` with **no message**. A read-only key is
+  refused by name before the body is read. A key that may sign fails
+  validation instead.
+
+A never-issued key drew 401 everywhere.
+
+| Key | Wallet | Read-only | LLM gateway | Agent API |
+|---|---|---|---|---|
+| `BANKR_KEY_READ` | `0x93fa…a3da` | yes (403 "Read-only API key") | off | **on** |
+| `BANKR_KEY_EXEC` | `0x93fa…a3da` | no (400 validation) | **on** | **on** |
+| `BANKR_LLM_KEY` | `0x93fa…a3da` | **no** (400 validation) | on | **on** |
+
+Token launch is not measured: no read is gated by it, and a deploy request was
+not sent.
+
+**What we believed** (PLAN §6, `credentials.py`, LESSONS 2026-09-17):
+- `BANKR_LLM_KEY` is "Read Only ON … Cannot transact", held by the analyst
+  role;
+- the Agent API is off on both Bankr keys.
+
+**What the record actually held.** Neither was ever measured. F0.2.2 said
+outright that a write with `BANKR_LLM_KEY` was not tested. F0.2.5 said the
+Agent API could not be read, and the decision was asserted in code instead: no
+call to `/agent/*`.
+
+**What it means:**
+- **Invariant 1 ("no key the analyst role can load may transact") is false
+  as measured today.** The role can load `BANKR_LLM_KEY`, which passes the
+  read-only gate on the Wallet API and has the Agent API on.
+- **No current code misuses it.** `src/` never calls a write with it, and the
+  boundary tests hold. The exposure is the key's own capability.
+- **2.0's option (c) is unsafe as the keys stand.** It would hand
+  `BANKR_LLM_KEY` to every analyst process.
+- **The spend authority itself is still one account**, as §13 already states.
+- **The gateway balance reads $15.791107.** Credits were bought since the
+  $0.937148 on record.
+
+**Not reconciled here.** Key settings are the operator's, and this pass
+changed none. Marked in PLAN §6. `credentials.py`'s scope text and
+`can_transact=False` are owed, outside this pass's paths.
+
+**Confidence:**
+- read-only is measured by contrast. The identical request was refused by name
+  for two read-only keys and passed that gate for these two; a signature was
+  never attempted;
+- the Agent API is measured through a read, calibrated against a key known to
+  be off.
+**Affects:** invariant 1; PLAN §6 and §13; `credentials.py`; 2.0's option (c);
+2.4; 4.12.
