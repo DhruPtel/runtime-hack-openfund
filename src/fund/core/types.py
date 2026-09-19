@@ -882,6 +882,7 @@ class UniverseStatus(enum.Enum):
     DIVERGENCE_VETO = "divergence_veto"                  # this snapshot: mark and corroborator disagree, open session
     UNCORROBORATED = "uncorroborated"                    # this snapshot: no corroborating price or volume, so undetermined
     NO_MARK = "no_mark"                                  # this snapshot: a feed is pinned, its reading is stale or unread
+    SHORT_HISTORY = "short_history"                      # this snapshot: the price series does not reach its window
     BELOW_CORROBORATOR_LINE = "below_corroborator_line"  # still marked by Chainlink
     UNMARKABLE = "unmarkable"                            # no feed: no independent mark
     LISTED_NOT_ACTIVE = "listed_not_active"              # identity passes; the registry's status is not ACTIVE
