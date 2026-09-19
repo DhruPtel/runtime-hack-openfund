@@ -20,8 +20,11 @@ one to the `real` book; an opening and a fee name theirs; inference is real.
 default and no way to sum across books.
 
 **One fold (P8).** `_walk` applies a book's events in the ledger's order, and every
-figure below is read from it: holdings (P4), cash (P5), basis (P6), realised and
-unrealised value (P7), costs and expenses. What each event does:
+figure comes from it: holdings (P4), cash (P5), and `value`, which is the whole book
+at once — each position with its basis (P6) and its unrealised value, and the book's
+opened, realised, costs and expenses (P7, P8). P6 and P7 had a reader each until the
+audit: nothing called them, because every consumer reads the book (CLAUDE.md, no
+function without a caller). What each event does:
 
     event      holdings            basis                          value
     opening    + the amount        + its worth at its mark        what opened the book
@@ -338,7 +341,7 @@ def _walk(events: Iterable[Event], book: str) -> _Walked:
     return _Walked(held, opened, realised, costs, expenses)
 
 
-# --- P4 to P8: what the fold says ----------------------------------------------------------------
+# --- P4, P5: what the fold says; the rest is `value`, below --------------------------------------
 
 def holdings(events: Iterable[Event], *, book: str) -> dict[AssetId, Amount]:
     """P4: what the book holds of each asset, in raw units. The only way a quantity
@@ -373,44 +376,6 @@ def cash_held(events: Iterable[Event], *, book: str,
     asset, decimals = cash.cash_leg(snapshot)
     held = _walk(events, book).held.get(asset, (Amount(0, decimals, asset), Decimal(0)))
     return held[0], _position(*held, snapshot).value_usd
-
-
-def basis(events: Iterable[Event], asset: AssetId, *, book: str) -> Decimal:
-    """P6: what the book's holding of `asset` cost, at average cost. Zero when it
-    holds none. A fee is never part of it."""
-    held = _walk(events, book).held.get(asset)
-    return Decimal(0) if held is None else held[1]
-
-
-def realised(events: Iterable[Event], *, book: str) -> Decimal:
-    """P7: every disposal's proceeds, at the marks recorded when it happened, less the
-    basis it removed. A fill's proceeds are its value; a fee's, what it paid."""
-    return _walk(events, book).realised
-
-
-def unrealised(events: Iterable[Event], *, book: str, snapshot: Mapping[str, Any]) -> Decimal:
-    """P7: each holding at the snapshot's mark, less its basis. A holding with no usable
-    mark refuses (`cash.NoMark`): no value is never a value of zero."""
-    walked = _walk(events, book)
-    with localcontext(cash.EXACT):
-        return sum((_position(amount, cost, snapshot).unrealised_usd
-                    for amount, cost in walked.held.values()), Decimal(0))
-
-
-def opened(events: Iterable[Event], *, book: str) -> Decimal:
-    """What opened the book: each opening balance at the mark it came in at."""
-    return _walk(events, book).opened
-
-
-def costs(events: Iterable[Event], *, book: str) -> Decimal:
-    """P8: every fee, at the mark it was paid at. 6.1's costs line."""
-    return _walk(events, book).costs
-
-
-def expenses(events: Iterable[Event], *, book: str) -> Decimal:
-    """P8: every inference cost. 6.1's expenses line, beside the NAV, never in it.
-    The paper book has none."""
-    return _walk(events, book).expenses
 
 
 # --- P10: a book's NAV, and the planner's view of the paper book ---------------------------------

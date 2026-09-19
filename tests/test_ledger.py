@@ -72,6 +72,20 @@ def order(index: int, state=OrderState.SUBMITTED, mode=ExecutionMode.PAPER) -> O
                  min_buy=quote.min_buy, state=state)
 
 
+def book(events, name: str = "paper") -> ledger.BookValue:
+    """The whole book, which is how every figure is read since the audit: a position's
+    basis and unrealised value, and the book's opened, realised, costs and expenses."""
+    return ledger.value(events, book=name, snapshot=SNAPSHOT)
+
+
+def basis_of(events, asset: AssetId, name: str = "paper") -> Decimal:
+    held = book(events, name)
+    if asset == held.cash.amount.asset:
+        return held.cash.basis_usd
+    position = held.positions.get(asset)
+    return Decimal(0) if position is None else position.basis_usd
+
+
 def filled(index: int) -> ledger.Fill:
     return ledger.paper_fill(order(index), QUOTES[index], SNAPSHOT)
 
@@ -196,8 +210,8 @@ def test_inference_touches_no_holding_and_no_book_but_the_real_ones_expenses():
              ledger.Inference("risk", Decimal("0.099454"))]
     assert ledger.holdings([OPEN_PAPER, *spent], book="paper") == {USDG: OPEN_PAPER.amount}
     assert ledger.holdings(spent, book="real") == {}
-    assert ledger.expenses(spent, book="real") == Decimal("0.360018")
-    assert ledger.expenses([OPEN_PAPER, *spent], book="paper") == 0
+    assert book(spent, "real").expenses_usd == Decimal("0.360018")
+    assert book([OPEN_PAPER, *spent]).expenses_usd == 0
 
 
 # --- P6: average cost; a fee is never basis ----------------------------------------------------
@@ -205,23 +219,23 @@ def test_inference_touches_no_holding_and_no_book_but_the_real_ones_expenses():
 def test_a_buy_adds_what_it_paid_and_a_sale_removes_its_share_of_the_average():
     events = [OPEN_PAPER, SIX[0]]
     paid = Decimal("18.751447") * USDG_MARK
-    assert ledger.basis(events, GME, book="paper") == paid
-    assert ledger.basis(events, USDG, book="paper") == Decimal("181.248553") * USDG_MARK
+    assert basis_of(events, GME) == paid
+    assert basis_of(events, USDG) == Decimal("181.248553") * USDG_MARK
     half = [*events, sold_half_of_gme()]
     assert QUOTES[1].buy.raw % 2 == 0  # so half the units carry exactly half the basis
-    assert ledger.basis(half, GME, book="paper") == paid / 2
+    assert basis_of(half, GME) == paid / 2
     rest = [*half, sold_half_of_gme(order_id="test/sell-gme-2")]
-    assert ledger.basis(rest, GME, book="paper") == 0 and GME not in ledger.holdings(rest, book="paper")
+    assert basis_of(rest, GME) == 0 and GME not in ledger.holdings(rest, book="paper")
 
 
 def test_a_second_buy_at_another_price_averages_and_a_part_sale_rounds_only_at_1e_30():
     second = ledger.Opening("paper", Amount(QUOTES[1].buy.raw, 18, GME), usd_mark(GME, "30"))
     events = [OPEN_PAPER, SIX[0], second]
     total = Decimal("18.751447") * USDG_MARK + units(QUOTES[1].buy) * 30
-    assert ledger.basis(events, GME, book="paper") == total
+    assert basis_of(events, GME) == total
     third = QUOTES[1].buy.raw * 2 // 3  # two thirds of the units: a share that does not divide
     sale = dataclasses.replace(sold_half_of_gme(), gave=Amount(third, 18, GME))
-    left = ledger.basis([*events, sale], GME, book="paper")
+    left = basis_of([*events, sale], GME)
     from fractions import Fraction
     exact = Fraction(total) * (2 * QUOTES[1].buy.raw - third) / (2 * QUOTES[1].buy.raw)
     assert abs(Fraction(left) - exact) <= Fraction(1, 2 * 10 ** 30)
@@ -232,10 +246,11 @@ def test_a_fee_is_its_own_cost_never_basis_and_paying_it_disposes_at_average_cos
     fee = ledger.Fee("paper", Amount(250_000, 6, USDG), usd_mark(USDG, USDG_MARK), "venue fee",
                      order_id=SIX[0].order_id)
     events = [OPEN_PAPER, SIX[0], fee]
-    assert ledger.basis(events, GME, book="paper") == Decimal("18.751447") * USDG_MARK
-    assert ledger.costs(events, book="paper") == Decimal("0.25") * USDG_MARK
-    assert ledger.basis(events, USDG, book="paper") == Decimal("180.998553") * USDG_MARK
-    assert ledger.realised(events, book="paper") == 0  # USDG paid at the mark it came in at
+    paper = book(events)
+    assert basis_of(events, GME) == Decimal("18.751447") * USDG_MARK
+    assert paper.costs_usd == Decimal("0.25") * USDG_MARK
+    assert basis_of(events, USDG) == Decimal("180.998553") * USDG_MARK
+    assert paper.realised_usd == 0  # USDG paid at the mark it came in at
 
 
 # --- P7: realised and unrealised -------------------------------------------------------------------
@@ -243,18 +258,18 @@ def test_a_fee_is_its_own_cost_never_basis_and_paying_it_disposes_at_average_cos
 def test_a_sale_realises_what_it_received_less_the_basis_it_gave_up():
     events = [OPEN_PAPER, SIX[0], sold_half_of_gme()]
     received = Decimal("9.30") * USDG_MARK
-    assert ledger.realised(events, book="paper") == received - Decimal("18.751447") * USDG_MARK / 2
+    assert book(events).realised_usd == received - Decimal("18.751447") * USDG_MARK / 2
 
 
 def test_unrealised_is_each_holding_at_the_snapshots_mark_less_its_basis():
     events = [OPEN_PAPER, *SIX]
     expected = sum((units(QUOTES[i].buy) * mark_of(QUOTES[i].buy.asset)
                     - units(QUOTES[i].sell) * USDG_MARK for i in APPROVED), Decimal(0))
-    assert ledger.unrealised(events, book="paper", snapshot=SNAPSHOT) == expected
+    assert book(events).unrealised_usd == expected
     unmarked = {**SNAPSHOT, "assets": [a for a in SNAPSHOT["assets"]
                                        if a["asset"]["address"] != GME.address]}
     with pytest.raises(cash.NoMark):
-        ledger.unrealised(events, book="paper", snapshot=unmarked)
+        ledger.value(events, book="paper", snapshot=unmarked)
 
 
 def test_a_book_is_worth_what_opened_it_plus_realised_plus_unrealised_less_costs():
@@ -270,15 +285,16 @@ def test_a_book_is_worth_what_opened_it_plus_realised_plus_unrealised_less_costs
     paper_fee = ledger.Fee("paper", Amount(10_000, 6, USDG), usd_mark(USDG, USDG_MARK), "fee")
     events = [OPEN_PAPER, eth_open, *SIX, usdg_open, sold_half_of_gme(), sold_eth, gas,
               paper_fee, ledger.Inference("risk", Decimal("0.099454"))]
-    for book in ledger.BOOKS:
+    for name in ledger.BOOKS:
+        held = book(events, name)
         nav = sum((units(a) * mark_of(asset) for asset, a in
-                   ledger.holdings(events, book=book).items()), Decimal(0))
-        assert nav == (ledger.opened(events, book=book) + ledger.realised(events, book=book)
-                       + ledger.unrealised(events, book=book, snapshot=SNAPSHOT)
-                       - ledger.costs(events, book=book)), book
-    assert ledger.opened(events, book="real") == Decimal("0.00046") * 2600 + Decimal("0.078742") * Decimal("0.99995")
-    assert ledger.costs(events, book="real") == Decimal("0.000003") * ETH_MARK
-    assert ledger.expenses(events, book="real") == Decimal("0.099454")
+                   ledger.holdings(events, book=name).items()), Decimal(0))
+        assert nav == (held.opened_usd + held.realised_usd + held.unrealised_usd
+                       - held.costs_usd), name
+    real = book(events, "real")
+    assert real.opened_usd == Decimal("0.00046") * 2600 + Decimal("0.078742") * Decimal("0.99995")
+    assert real.costs_usd == Decimal("0.000003") * ETH_MARK
+    assert real.expenses_usd == Decimal("0.099454")
 
 
 # --- P9: the books are never added --------------------------------------------------------------
@@ -298,8 +314,7 @@ def test_every_reader_names_its_book_and_none_has_a_default():
     readers = [f for name, f in vars(ledger).items() if inspect.isfunction(f)
                and not name.startswith("_") and "events" in inspect.signature(f).parameters
                and name != "planner_book"]  # the planner plans the paper book only, by name
-    assert {f.__name__ for f in readers} >= {"holdings", "cash_held", "basis", "realised",
-                                             "unrealised", "opened", "costs", "expenses", "value"}
+    assert {f.__name__ for f in readers} >= {"holdings", "cash_held", "value"}
     for reader in readers:
         book = inspect.signature(reader).parameters.get("book")
         assert book is not None and book.kind is inspect.Parameter.KEYWORD_ONLY, reader.__name__
