@@ -2498,3 +2498,50 @@ accepted, a quorum. Cross-asset-macro is still refused, on `+(-0.09)%`, a
 percentage the parser cannot read.
 **Affects:** 2.2, 2.3, 3.7, 3.8; `agents/schema.py`, `core/record.py`,
 `run/decide.py`.
+
+## 2026-09-19 — DESIGN LESSON: a value that more than one component computes is one function, defined before any of them
+*The operator's reading of the 3.8 sweep, recorded before any fix.*
+
+**What happened.** Three of the sweep's seven real bugs are the money path, and
+they share one cause. The aggregator, the planner and the gates each counted
+cash their own way:
+- the aggregator funded buys from a cut's exact dollars;
+- the planner sold less than that, rounded to the cent with its dust dropped;
+- the gates judged the floor on every order proposed, not on those approved,
+  and judged the per-trade limit on the planner's label, not on what an order
+  sells.
+
+The results:
+- the planner wrote plans its own floor gate refused (R2);
+- a vetoed sell left the buys it funded approved, with cash at −$17.49 (R1);
+- a full exit sold $25.90 under a $25 label (R3).
+
+**This is a design gap, not a batching accident.** The same three definitions
+would have appeared if the units had been built one at a time, only later,
+with real money moving.
+
+**What was done right twice, and not the third time:**
+- **Valuation:** `core/valuation.value()` is the one place a quantity becomes
+  USD (1.4), so nothing else multiplies an amount by a price.
+- **Limits:** `core/gates.py` is the one place a limit is compared (3.1–3.4),
+  and the boundary test refuses a comparison anywhere else.
+- **Cash:** there was no such function. So there were three.
+
+**The rule from here:** a value that more than one component computes is one
+function they all call, and it is defined before any of them is built.
+
+**What it shapes: Phase 4 has the same shape.**
+- Cash, position sizing and order state are each computed in more than one
+  place:
+  - the intent (4.2);
+  - the order states (4.3);
+  - the chokepoint (4.4);
+  - the paper executor (4.5);
+  - the journal and positions (4.6, 4.7).
+- The Phase 4 prompt builds the shared primitives first, and the units call
+  them.
+- Phase 3's cash is fixed that way now, with one definition in `core/cash.py`,
+  before the three bugs are closed.
+
+**Affects:** 3.1, 3.3, 3.4, 3.5; every Phase 4 unit; CODEBASE §1's principle 3,
+"one rule, one location", which this extends from limits to shared values.
