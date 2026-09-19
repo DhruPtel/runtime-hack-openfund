@@ -1200,6 +1200,12 @@ class Order:
                     raise ValueError("the operation was not sent for this wallet")
                 if not op.success.passes:
                     raise ValueError("a confirmed order's operation succeeded")
-            if not any(t.token == self.buy_asset and t.recipient == self.wallet
-                       for t in self.execution.transfers):
+            if not self.buy_asset.is_native and not any(
+                    t.token == self.buy_asset and t.recipient == self.wallet
+                    for t in self.execution.transfers):
                 raise ValueError("confirmed means the bought asset reached the wallet")
+            # A native buy emits no Transfer log. Its evidence is the operation above and
+            # the wallet's own balance across the block, which `treasurer/reconcile.py`
+            # reads (5.3). This rule was written at 1.1, before probe 0.10 found that a
+            # swap arrives as a 4337 operation; the operator approved the exception on
+            # 2026-09-19, when the return leg of the round trip met it.

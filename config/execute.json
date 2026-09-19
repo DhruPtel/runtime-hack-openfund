@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "_status": "provisional (unit 5.1). The endpoint and the request shape are documented (docs.bankr.bot/wallet-api/swap, read 2026-09-17) and were measured once by probe 0.10, which sent one swap and had it deduplicated on a repeat (F0.10.1).",
+
+  "base_url": "https://api.bankr.bot",
+  "path": "/wallet/swap",
+  "chain": "robinhood",
+  "_endpoint_note": "The only endpoint in the repository that moves money. A 200 from it is not a fill: Bankr answers 200 with success:false for a swap that mined and reverted, and charges gas for it (F0.10.3). What was booked is decided from the chain (treasurer/reconcile.py), never from this response (PLAN section 2 invariant 9).",
+
+  "credential": "BANKR_KEY_EXEC",
+  "auth_header": "X-API-Key",
+  "_credential_note": "The only key that can transact, held by the treasurer role and by no other (src/fund/credentials.py). The adapter refuses any credential the treasurer may not hold.",
+
+  "request_timeout_seconds": 120,
+  "_timeout_note": "One send, and the wait is long because the answer is not quick: probe 0.10's first submission took 5,734 ms, and the balance had not moved when it returned. A timeout is not a failure to retry: it is an unknown outcome, and treasurer/reconcile.py reads the chain to settle it.",
+
+  "slippage_bps": 500,
+  "_slippage_note": "What probe 0.3's quotes carried by default (500 bps). The swap is sized in dollars of ten cents; slippage bounds the fill, and the order's own min_buy is what refuses one that came back short.",
+
+  "user_agent": "openfund-exec/5.1"
+}

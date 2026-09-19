@@ -1,4 +1,125 @@
-"""POST /wallet/swap. The only signing path in the repository.
+"""POST `/wallet/swap`: the only path in the repository that can spend (unit 5.1).
 
-Not yet built. Produced by unit 5.1 (see planning/ROADMAP.md).
+Nothing outside `treasurer/` may import this module, and nothing under `agents/` or
+`core/` may reach it at all (CODEBASE §3, `tests/test_boundaries.py`). It holds no
+key: the caller passes the treasurer's secret, and only the treasurer role may load
+one (`credentials.py`).
+
+**A 200 is not a fill.** Bankr answers 200 with `success: false` for a swap that
+mined and reverted, and charges gas for it (F0.10.3). Even `success: true` is a claim
+about a transaction, not evidence that anything moved: what was booked is read from
+the chain by `treasurer/reconcile.py` (PLAN §2 invariant 9), and settlement is
+asynchronous to this reply — probe 0.10's balance had not moved when it returned.
+
+**One send.** This module never retries. A second send under a new key could broadcast
+twice; the same key replayed returns the original result and does not broadcast again
+(F0.10.1), and that is the only safe repeat. It belongs to whoever is resolving an
+unknown outcome, not here.
 """
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Mapping
+
+from fund.adapters import bankr_quote, http
+from fund.core.types import Amount, AssetId, Instant
+from fund.credentials import Role, by_name
+
+EXECUTE_CONFIG = Path(__file__).resolve().parents[3] / "config" / "execute.json"
+
+
+@dataclass(frozen=True)
+class Settings:
+    base_url: str
+    path: str
+    chain: str
+    credential: str
+    auth_header: str
+    timeout_s: float
+    slippage_bps: int
+    user_agent: str
+
+    @classmethod
+    def load(cls, path: Path = EXECUTE_CONFIG) -> Settings:
+        c = json.loads(path.read_text())
+        credential = by_name(c["credential"])
+        if Role.TREASURER not in credential.used_by:
+            raise ValueError(f"{credential.name} is not the treasurer's, and only the treasurer "
+                             "may send a swap")
+        return cls(base_url=c["base_url"], path=c["path"], chain=c["chain"],
+                   credential=credential.name, auth_header=c["auth_header"],
+                   timeout_s=c["request_timeout_seconds"], slippage_bps=c["slippage_bps"],
+                   user_agent=c["user_agent"])
+
+
+@dataclass(frozen=True)
+class SwapRequest:
+    """One swap: sell this amount of one asset for another, under this key."""
+
+    sell: Amount
+    buy: AssetId
+    idempotency_key: str
+
+    def body(self, settings: Settings) -> dict[str, Any]:
+        whole, part = divmod(self.sell.raw, 10 ** self.sell.decimals)
+        human = f"{whole}.{part:0{self.sell.decimals}d}".rstrip("0").rstrip(".")
+        return {"fromChain": settings.chain, "fromToken": self.sell.asset.address,
+                "toChain": settings.chain, "toToken": self.buy.address,
+                "amount": human, "slippageBps": settings.slippage_bps,
+                "idempotencyKey": self.idempotency_key}
+
+
+@dataclass(frozen=True)
+class SwapReply:
+    """What the venue said. Not what happened: that is the chain's to say."""
+
+    status: int
+    success: bool | None          # the body's own `success`, when it has one
+    tx_hash: str | None
+    sent_at: Instant
+    body: Mapping[str, Any]
+    detail: str
+
+    @property
+    def claims_a_transaction(self) -> bool:
+        """A 200 that says it succeeded and names a transaction. Still not a fill."""
+        return self.status == 200 and self.success is True and bool(self.tx_hash)
+
+    @property
+    def reverted(self) -> bool:
+        """200 with `success: false`: it mined, it reverted, and gas was charged."""
+        return self.status == 200 and self.success is False
+
+
+def submit(request: SwapRequest, secret: str, *, settings: Settings | None = None,
+           transport=None, clock=None) -> SwapReply:
+    """Send one swap. Never retried, never looped, and never read as a fill."""
+    settings = settings or Settings.load()
+    if request.sell.raw <= 0:
+        raise ValueError("a swap sells a positive amount")
+    if request.sell.asset == request.buy:
+        raise ValueError("a swap sells one asset for another")
+    if not request.idempotency_key:
+        raise ValueError("a swap carries the order's idempotency key")
+    send = transport or bankr_quote.keyed_transport(settings.user_agent, settings.auth_header,
+                                                    secret)
+    now = clock or (lambda: Instant(__import__("time").time_ns() // 1_000_000))
+    body = json.dumps(request.body(settings)).encode("utf-8")
+    status, answer, _ = send(settings.base_url + settings.path, body, settings.timeout_s)
+    sent_at = now()
+    try:
+        parsed = json.loads(answer.decode("utf-8", "replace"))
+    except ValueError:
+        parsed = {}
+    if not isinstance(parsed, dict):
+        parsed = {}
+    success = parsed.get("success") if isinstance(parsed.get("success"), bool) else None
+    tx_hash = parsed.get("hash") or parsed.get("txHash") or parsed.get("transactionHash")
+    detail = str(parsed.get("message") or parsed.get("error") or "")[:300]
+    return SwapReply(status=status, success=success,
+                     tx_hash=tx_hash if isinstance(tx_hash, str) else None,
+                     sent_at=sent_at, body=parsed,
+                     detail=detail or f"HTTP {status}")
