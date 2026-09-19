@@ -23,18 +23,34 @@ all.
   never on a label the planner wrote.
 - **`cash_after`** is the book's paper cash, less what each buy sells, plus
   what each sell sells, for the orders given. The plan's funding and the floor
-  on the approved orders both use it.
+  on the approved orders both use it. It is a projection: partway through a
+  decision, what has filled counts at what it booked instead (`gates.settle`,
+  4.0 P11).
+- **`cash_leg`** says which asset is cash: USDG. Every other holding is a
+  position, the gas asset ETH included (4.0 P10).
+- **`nav`** is a book's net asset value: its cash plus each position's worth.
+  The planner's book and the ledger's both come from it (4.0 P10).
 
-No limit is compared here. Limits are `gates.py`'s, which calls this module.
+Money here is exact: `worth` and `nav` never round, and an inexact step raises
+(`EXACT`). A limit is never compared here. Limits are `gates.py`'s, which calls
+this module.
 """
 
 from __future__ import annotations
 
-from decimal import ROUND_DOWN, Decimal
+from decimal import (
+    ROUND_DOWN, Context, Decimal, DivisionByZero, Inexact, InvalidOperation, Overflow,
+    localcontext,
+)
 from typing import Any, Iterable, Mapping
 
 from . import valuation
 from .types import USD, Amount, AssetId, Price
+
+
+#: Arithmetic that never rounds: an inexact step raises instead. Money is summed in
+#: it, so a figure is exact or it is an error, never quietly rounded.
+EXACT = Context(prec=100, traps=[Inexact, InvalidOperation, DivisionByZero, Overflow])
 
 
 class NoMark(ValueError):
@@ -42,9 +58,30 @@ class NoMark(ValueError):
 
 
 def worth(amount: Amount, mark: Price) -> Decimal:
-    """An amount at its mark, in USD, exact."""
+    """An amount at its mark, in USD, exact. Built from its digits, never through the
+    context, which rounded any worth past 28 significant digits: a stock position
+    worth $100 or more, at 18 decimals and an 8-decimal mark (fixed at 4.0). No
+    position of the $200 book has reached that."""
     value = valuation.value(amount, mark)
-    return Decimal(value.raw).scaleb(-value.decimals)
+    return Decimal(f"{value.raw}E-{value.decimals}")
+
+
+def cash_leg(snapshot: Mapping[str, Any]) -> tuple[AssetId, int]:
+    """The asset that is cash, and its decimals: the snapshot's one holding of kind
+    `cash`, USDG, pinned by config (F0.8.2). Every other holding is a position, the
+    gas asset ETH included. This is the one place that asks (4.0 P10)."""
+    found = [h["asset"] for h in snapshot["holdings"] if h["asset"]["kind"] == "cash"]
+    if len(found) != 1:
+        raise ValueError(f"a snapshot holds exactly one cash asset, not {len(found)}")
+    return AssetId(snapshot["block"]["chain_id"], found[0]["address"].lower()), found[0]["decimals"]
+
+
+def nav(cash_usd: Decimal, values_usd: Iterable[Decimal]) -> Decimal:
+    """A book's net asset value: its cash plus each position's worth, summed exactly.
+    `plan.book` and `ledger.value` both call it, so the planner and the ledger never
+    disagree about what a book is worth (4.0 P10)."""
+    with localcontext(EXACT):
+        return cash_usd + sum(values_usd, Decimal(0))
 
 
 def units(usd: Decimal, mark: Price, decimals: int) -> int:

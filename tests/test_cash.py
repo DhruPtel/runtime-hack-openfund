@@ -178,3 +178,50 @@ def test_a_rule_is_named_once_among_an_orders_vetoes(tmp_path):
                           limits=dataclasses.replace(LIMITS, context_budget_tokens=20_000),
                           recorded_reply=approve_all(plan))
     assert all(o["vetoed_by"] == ["context-budget"] for o in outcome["decision"]["orders"])
+
+
+# --- 4.0 P10: which holding is cash, and a book's NAV, each defined once -------------------------
+
+def test_worth_is_exact_past_28_significant_digits():
+    """$131 of GME at an 8-decimal mark is a 29-digit product. `worth` said exact, and
+    rounded it at 28 digits until 4.0. No position of the $200 book reaches $100, so
+    nothing it decided was rounded; but the planner's NAV and the ledger's must agree
+    to the last digit, so it is exact now."""
+    from fractions import Fraction
+    from fund.core import cash
+    from fund.core.types import USD, Amount, AssetId, Price
+    gme = AssetId(4663, ADDRESS["GME"])
+    amount, mark = Amount(5_832_497_744_366_588_876, 18, gme), Price(2_253_123_457, 8, gme, USD)
+    value = cash.worth(amount, mark)
+    assert len(value.as_tuple().digits) == 29
+    assert Fraction(value) == Fraction(5_832_497_744_366_588_876 * 2_253_123_457, 10 ** 26)
+
+
+def test_the_one_cash_leg_is_usdg_and_every_other_holding_is_a_position():
+    from fund.core import cash
+    asset, decimals = cash.cash_leg(SNAPSHOT)
+    assert (asset.address, decimals) == (USDG["asset"]["address"], 6)
+    gas = next(h for h in SNAPSHOT["holdings"] if h["asset"]["kind"] == "gas")
+    assert gas["asset"]["symbol"] == "ETH" and asset.address != gas["asset"]["address"]
+    for holdings in ([], [USDG, USDG]):  # none, or two: which would be cash is not known
+        try:
+            cash.cash_leg({**SNAPSHOT, "holdings": holdings})
+        except ValueError as refused:
+            assert "exactly one cash asset" in str(refused)
+        else:
+            raise AssertionError("a snapshot without exactly one cash asset named one")
+
+
+def test_a_books_nav_is_one_function_and_it_is_exact(monkeypatch):
+    """The planner's NAV comes from `cash.nav`: replace it, and `plan.book` follows.
+    `ledger.value` is held to the same in test_ledger.py."""
+    from fund.core import cash, plan
+    assert cash.nav(Decimal("0.1"), [Decimal("1E-40"), Decimal("2")]) == Decimal(
+        "2.1000000000000000000000000000000000000001")
+    from fund.core.types import Amount, AssetId
+    meta = Amount.from_units("0.1", 18, AssetId(4663, ADDRESS["META"]))
+    held = book({"META": meta}, cash="150").holdings
+    assert book({"META": meta}, cash="150").nav_usd == Decimal(150) + Decimal("0.1") * Decimal(
+        ENTRIES[ADDRESS["META"]]["mark"]["price_usd"])
+    monkeypatch.setattr(cash, "nav", lambda cash_usd, values: Decimal("12345"))
+    assert plan.book(held, Decimal("150"), SNAPSHOT).nav_usd == Decimal("12345")

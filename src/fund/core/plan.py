@@ -74,9 +74,8 @@ def _mark(snapshot: Mapping[str, Any], address: str) -> Price:
 
 
 def _cash_leg(snapshot: Mapping[str, Any]) -> tuple[AssetId, int, Price]:
-    entry = next(h for h in snapshot["holdings"] if h["asset"]["kind"] == "cash")
-    mark = _mark(snapshot, entry["asset"]["address"])
-    return mark.base, entry["asset"]["decimals"], mark
+    asset, decimals = cash.cash_leg(snapshot)
+    return asset, decimals, _mark(snapshot, asset.address)
 
 
 # --- 1. the book ---------------------------------------------------------------------------------
@@ -118,7 +117,7 @@ def book(holdings: Mapping[str, Amount], cash_usd: Decimal,
         if address not in entries:
             raise PlanError(f"{address} is held but not in the snapshot, so it cannot be valued")
         values[address] = cash.worth(amount, _mark(snapshot, address))
-    nav = cash_usd + sum(values.values(), Decimal(0))
+    nav = cash.nav(cash_usd, values.values())
     if nav <= 0:
         raise PlanError("the paper book is worth nothing, so no weight can be computed")
     return Book(nav, cash_usd, held, values)
