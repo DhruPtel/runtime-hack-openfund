@@ -1,0 +1,18 @@
+{
+ "seat": "price-integrity",
+ "agent": "unassigned",
+ "snapshot_path": "/home/dhrupatel/bnkr-openfund/fixtures/snapshots/67364057-c06abd9e89f0/snapshot.json",
+ "snapshot_sha256": "c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783",
+ "model": "claude-sonnet-5",
+ "max_tokens": 12000,
+ "transport_timeout_s": 600,
+ "worker_deadline_s": 630,
+ "retry_budget": 0,
+ "gateway_url": "https://llm.bankr.bot",
+ "pricing": {
+  "input": "2",
+  "output": "10",
+  "currency": "usd"
+ },
+ "result_path": "/home/dhrupatel/bnkr-openfund/fixtures/live/cycles/20260919T202259Z/results/price-integrity.json"
+}

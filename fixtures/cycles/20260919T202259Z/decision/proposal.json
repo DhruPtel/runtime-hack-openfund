@@ -1,0 +1,292 @@
+{
+ "cash": {
+  "current": "1",
+  "target": "0.179688"
+ },
+ "confidence_weights": {
+  "high": "0.75",
+  "low": "0.25",
+  "medium": "0.5"
+ },
+ "quorum": {
+  "reason": "4 seat(s) reported, at least the quorum of 3",
+  "rule": "quorum",
+  "value": true
+ },
+ "reason": "quorum met: targets from the calls",
+ "rebalance": true,
+ "reported": [
+  "cross-asset-macro",
+  "execution-quality",
+  "price-integrity",
+  "price-trend"
+ ],
+ "residual": "0.0000005",
+ "rows": [
+  {
+   "address": "0x12f190a9f9d7d37a250758b26824b97ce941bf54",
+   "caution": "0.5",
+   "contributions": [
+    {
+     "confidence": "medium",
+     "kind": "condition",
+     "seat": "execution-quality",
+     "value": "0.5",
+     "word": "caution"
+    },
+    {
+     "confidence": "medium",
+     "kind": "condition",
+     "seat": "price-integrity",
+     "value": "0",
+     "word": "proceed"
+    }
+   ],
+   "current": "0",
+   "direction": null,
+   "score": null,
+   "symbol": "AMZN",
+   "target": "0",
+   "why": "caution with no direction call: kept"
+  },
+  {
+   "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+   "caution": "0",
+   "contributions": [
+    {
+     "confidence": "high",
+     "kind": "direction",
+     "seat": "price-trend",
+     "value": "0.75",
+     "word": "buy"
+    }
+   ],
+   "current": "0",
+   "direction": "0.75",
+   "score": "0.75",
+   "symbol": "GME",
+   "target": "0.1875",
+   "why": "buy: raised by 0.1875"
+  },
+  {
+   "address": "0x894e1ec2d74ffe5aef8dc8a9e84686accb964f2a",
+   "caution": "0",
+   "contributions": [
+    {
+     "confidence": "medium",
+     "kind": "condition",
+     "seat": "price-integrity",
+     "value": "0",
+     "word": "proceed"
+    }
+   ],
+   "current": "0",
+   "direction": null,
+   "score": null,
+   "symbol": "PLTR",
+   "target": "0",
+   "why": "caution with no direction call: kept"
+  },
+  {
+   "address": "0x92fd66527192e3e61d4ddd13322aa222de86f9b5",
+   "caution": "0",
+   "contributions": [
+    {
+     "confidence": "medium",
+     "kind": "direction",
+     "seat": "cross-asset-macro",
+     "value": "0.5",
+     "word": "buy"
+    },
+    {
+     "confidence": "medium",
+     "kind": "condition",
+     "seat": "price-integrity",
+     "value": "0",
+     "word": "proceed"
+    }
+   ],
+   "current": "0",
+   "direction": "0.5",
+   "score": "0.5",
+   "symbol": "SGOV",
+   "target": "0.125",
+   "why": "buy: raised by 0.125"
+  },
+  {
+   "address": "0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344",
+   "caution": "0.25",
+   "contributions": [
+    {
+     "confidence": "low",
+     "kind": "direction",
+     "seat": "cross-asset-macro",
+     "value": "0.25",
+     "word": "buy"
+    },
+    {
+     "confidence": "low",
+     "kind": "condition",
+     "seat": "price-integrity",
+     "value": "0.25",
+     "word": "caution"
+    },
+    {
+     "confidence": "medium",
+     "kind": "direction",
+     "seat": "price-trend",
+     "value": "0.5",
+     "word": "buy"
+    }
+   ],
+   "current": "0",
+   "direction": "0.375",
+   "score": "0.28125",
+   "symbol": "USO",
+   "target": "0.070312",
+   "why": "buy: raised by 0.0703125"
+  },
+  {
+   "address": "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9",
+   "caution": "0",
+   "contributions": [
+    {
+     "confidence": "medium",
+     "kind": "direction",
+     "seat": "price-trend",
+     "value": "0.5",
+     "word": "buy"
+    }
+   ],
+   "current": "0",
+   "direction": "0.5",
+   "score": "0.5",
+   "symbol": "AAPL",
+   "target": "0.125",
+   "why": "buy: raised by 0.125"
+  },
+  {
+   "address": "0xc72b96e0e48ecd4dc75e1e45396e26300bc39681",
+   "caution": "0",
+   "contributions": [
+    {
+     "confidence": "high",
+     "kind": "direction",
+     "seat": "price-trend",
+     "value": "0.75",
+     "word": "buy"
+    }
+   ],
+   "current": "0",
+   "direction": "0.75",
+   "score": "0.75",
+   "symbol": "INTC",
+   "target": "0.1875",
+   "why": "buy: raised by 0.1875"
+  },
+  {
+   "address": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
+   "caution": "0",
+   "contributions": [
+    {
+     "confidence": "medium",
+     "kind": "direction",
+     "seat": "cross-asset-macro",
+     "value": "0",
+     "word": "hold"
+    },
+    {
+     "confidence": "low",
+     "kind": "direction",
+     "seat": "price-trend",
+     "value": "0",
+     "word": "hold"
+    }
+   ],
+   "current": "0",
+   "direction": "0",
+   "score": "0",
+   "symbol": "NVDA",
+   "target": "0",
+   "why": "hold: kept"
+  },
+  {
+   "address": "0xd5f3879160bc7c32ebb4dc785f8a4f505888de68",
+   "caution": "0",
+   "contributions": [
+    {
+     "confidence": "medium",
+     "kind": "direction",
+     "seat": "cross-asset-macro",
+     "value": "0",
+     "word": "hold"
+    }
+   ],
+   "current": "0",
+   "direction": "0",
+   "score": "0",
+   "symbol": "QQQ",
+   "target": "0",
+   "why": "hold: kept"
+  },
+  {
+   "address": "0xec262a75e413fafd0df80480274532c79d42da09",
+   "caution": "0.75",
+   "contributions": [
+    {
+     "confidence": "low",
+     "kind": "direction",
+     "seat": "cross-asset-macro",
+     "value": "0",
+     "word": "hold"
+    },
+    {
+     "confidence": "high",
+     "kind": "condition",
+     "seat": "execution-quality",
+     "value": "0.75",
+     "word": "caution"
+    },
+    {
+     "confidence": "high",
+     "kind": "condition",
+     "seat": "price-integrity",
+     "value": "0.75",
+     "word": "caution"
+    }
+   ],
+   "current": "0",
+   "direction": "0",
+   "score": "0",
+   "symbol": "MSTR",
+   "target": "0",
+   "why": "hold: kept"
+  },
+  {
+   "address": "0xff080c8ce2e5feadaca0da81314ae59d232d4afd",
+   "caution": "0",
+   "contributions": [
+    {
+     "confidence": "medium",
+     "kind": "condition",
+     "seat": "price-integrity",
+     "value": "0",
+     "word": "proceed"
+    },
+    {
+     "confidence": "medium",
+     "kind": "direction",
+     "seat": "price-trend",
+     "value": "0.5",
+     "word": "buy"
+    }
+   ],
+   "current": "0",
+   "direction": "0.5",
+   "score": "0.5",
+   "symbol": "MU",
+   "target": "0.125",
+   "why": "buy: raised by 0.125"
+  }
+ ]
+}

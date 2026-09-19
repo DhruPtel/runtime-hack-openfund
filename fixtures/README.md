@@ -7,8 +7,10 @@ says where and when. A directory is named `<block>-<sha12>` for the snapshot its
 live build produced. When a schema change rebuilds the snapshot from the same
 answers, the name stays, and the manifest's `snapshot.rebuilt` says why.
 `make replay` rebuilds each with the network refused and fails unless it is
-byte-identical. The one committed now is `66852293-253315c0e691`, taken on a
-Saturday inside the closed session, the first to hold the oracle pause flags.
+byte-identical. Two are committed, both taken on Saturday 19 September 2026
+inside the closed session:
+- `66852293-253315c0e691` (06:01Z), the first to hold the oracle pause flags;
+- `67364057-c06abd9e89f0` (20:20Z), the snapshot of Phase 3's exit run.
 `retired/` holds captures the current code cannot replay, because it asks the
 chain something they never recorded. A replay stops at the first such request
 rather than guess an answer. `66812461-8afe38a38b03` is 1.9's checkpoint
@@ -21,6 +23,14 @@ commit `ee9077c`, the last before the build read the flag (`8c7a702`).
   plan, the risk review, and the record's exact bytes with its envelope.
 
 Each is scanned for every declared credential before commit.
+`20260919T202259Z` is the exit run that ended Phase 3, on
+`67364057-c06abd9e89f0`:
+- four reports accepted;
+- live quotes;
+- one live risk call, which vetoed two orders;
+- the record signed with the fund's key, and rebuilt byte for byte offline
+  from this directory. It is 3.9's cycle.
+
 `20260919T171351Z` is 3.8's exit run on the committed capture:
 - four live replies, all refused;
 - so no quorum and no rebalance;

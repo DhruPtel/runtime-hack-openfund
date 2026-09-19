@@ -1,0 +1,7 @@
+{
+ "algorithm": "ed25519",
+ "decision_id": "732161ded89aee8367509069809b34e4fec901035a83011ebbf839d1bbe126fc",
+ "public_key": "1c23243531ff47be0caaf1ce2d73b0b1b705a54fa063f2d50f0bde9b42928c21",
+ "signature": "ab2e954e436e0de23ff7f74f2a66028dd91f9647341ecb3b4e8a5fd5cfb3c2f69db12ce99d78c96959352d33f0d9a0d609962f077a38eaf0ec3ec41992e74606",
+ "signed": true
+}

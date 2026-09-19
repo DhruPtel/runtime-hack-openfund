@@ -1,0 +1,862 @@
+{
+ "judged_at_ms": 1789849487415,
+ "label": "live, read-only",
+ "quotes": [
+  {
+   "index": 1,
+   "observation": {
+    "_type": "Observation",
+    "block": null,
+    "detail": "a price at size, not a fill (F0.3.3, F0.5.1); to.formattedAmount is lossy and not read",
+    "fetch_time": {
+     "_type": "Instant",
+     "epoch_ms": 1789849481102
+    },
+    "source": {
+     "_type": "Source",
+     "locator": "/wallet/swap-quote",
+     "system": "bankr-quote"
+    },
+    "source_ref": "c041bea2-5ee7-40e7-8f3c-f5e5a210bb3c",
+    "source_time": null,
+    "status": "ok",
+    "value": {
+     "_type": "Quote",
+     "buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "832497744366588876"
+     },
+     "buy_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+       "chain_id": 4663
+      },
+      "decimals": 15,
+      "quote_unit": "USD",
+      "raw": "22489965778451296"
+     },
+     "fee": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "0",
+      "unit": "bps"
+     },
+     "fee_waived": false,
+     "max_price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "1500",
+      "unit": "bps"
+     },
+     "min_buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "790872857148259432"
+     },
+     "price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "11",
+      "unit": "bps"
+     },
+     "quote_id": "c041bea2-5ee7-40e7-8f3c-f5e5a210bb3c",
+     "sell": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 6,
+      "raw": "18751447"
+     },
+     "sell_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 16,
+      "quote_unit": "USD",
+      "raw": "9995267145481069"
+     },
+     "slippage": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "500",
+      "unit": "bps"
+     },
+     "swap_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "11",
+      "unit": "bps"
+     }
+    }
+   }
+  },
+  {
+   "index": 2,
+   "observation": {
+    "_type": "Observation",
+    "block": null,
+    "detail": "a price at size, not a fill (F0.3.3, F0.5.1); to.formattedAmount is lossy and not read",
+    "fetch_time": {
+     "_type": "Instant",
+     "epoch_ms": 1789849482066
+    },
+    "source": {
+     "_type": "Source",
+     "locator": "/wallet/swap-quote",
+     "system": "bankr-quote"
+    },
+    "source_ref": "0edf480a-13cb-45d2-9095-04389eed760f",
+    "source_time": null,
+    "status": "ok",
+    "value": {
+     "_type": "Quote",
+     "buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "832497744366588876"
+     },
+     "buy_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+       "chain_id": 4663
+      },
+      "decimals": 15,
+      "quote_unit": "USD",
+      "raw": "22489965778451296"
+     },
+     "fee": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "0",
+      "unit": "bps"
+     },
+     "fee_waived": false,
+     "max_price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "1500",
+      "unit": "bps"
+     },
+     "min_buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "790872857148259432"
+     },
+     "price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "11",
+      "unit": "bps"
+     },
+     "quote_id": "0edf480a-13cb-45d2-9095-04389eed760f",
+     "sell": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 6,
+      "raw": "18751447"
+     },
+     "sell_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 16,
+      "quote_unit": "USD",
+      "raw": "9995267145481069"
+     },
+     "slippage": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "500",
+      "unit": "bps"
+     },
+     "swap_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "11",
+      "unit": "bps"
+     }
+    }
+   }
+  },
+  {
+   "index": 3,
+   "observation": {
+    "_type": "Observation",
+    "block": null,
+    "detail": "a price at size, not a fill (F0.3.3, F0.5.1); to.formattedAmount is lossy and not read",
+    "fetch_time": {
+     "_type": "Instant",
+     "epoch_ms": 1789849482914
+    },
+    "source": {
+     "_type": "Source",
+     "locator": "/wallet/swap-quote",
+     "system": "bankr-quote"
+    },
+    "source_ref": "2a315643-9159-4cc7-9146-6913df4afbdc",
+    "source_time": null,
+    "status": "ok",
+    "value": {
+     "_type": "Quote",
+     "buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x92fd66527192e3e61d4ddd13322aa222de86f9b5",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "247403497172447653"
+     },
+     "buy_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0x92fd66527192e3e61d4ddd13322aa222de86f9b5",
+       "chain_id": 4663
+      },
+      "decimals": 14,
+      "quote_unit": "USD",
+      "raw": "10094965331715306"
+     },
+     "fee": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "0",
+      "unit": "bps"
+     },
+     "fee_waived": false,
+     "max_price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "1500",
+      "unit": "bps"
+     },
+     "min_buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x92fd66527192e3e61d4ddd13322aa222de86f9b5",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "235033322313825270"
+     },
+     "price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "6",
+      "unit": "bps"
+     },
+     "quote_id": "2a315643-9159-4cc7-9146-6913df4afbdc",
+     "sell": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 6,
+      "raw": "25001930"
+     },
+     "sell_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 16,
+      "quote_unit": "USD",
+      "raw": "9995478547412051"
+     },
+     "slippage": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "500",
+      "unit": "bps"
+     },
+     "swap_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "6",
+      "unit": "bps"
+     }
+    }
+   }
+  },
+  {
+   "index": 4,
+   "observation": {
+    "_type": "Observation",
+    "block": null,
+    "detail": "a price at size, not a fill (F0.3.3, F0.5.1); to.formattedAmount is lossy and not read",
+    "fetch_time": {
+     "_type": "Instant",
+     "epoch_ms": 1789849483679
+    },
+    "source": {
+     "_type": "Source",
+     "locator": "/wallet/swap-quote",
+     "system": "bankr-quote"
+    },
+    "source_ref": "7eb2f9df-cd96-407a-b3c5-46c69ba227fe",
+    "source_time": null,
+    "status": "ok",
+    "value": {
+     "_type": "Quote",
+     "buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "91765525505860402"
+     },
+     "buy_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344",
+       "chain_id": 4663
+      },
+      "decimals": 14,
+      "quote_unit": "USD",
+      "raw": "15292865280154857"
+     },
+     "fee": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "0",
+      "unit": "bps"
+     },
+     "fee_waived": false,
+     "max_price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "1500",
+      "unit": "bps"
+     },
+     "min_buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "87177249230567382"
+     },
+     "price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "15",
+      "unit": "bps"
+     },
+     "quote_id": "7eb2f9df-cd96-407a-b3c5-46c69ba227fe",
+     "sell": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 6,
+      "raw": "14061085"
+     },
+     "sell_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 16,
+      "quote_unit": "USD",
+      "raw": "9995365637834869"
+     },
+     "slippage": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "500",
+      "unit": "bps"
+     },
+     "swap_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "15",
+      "unit": "bps"
+     }
+    }
+   }
+  },
+  {
+   "index": 5,
+   "observation": {
+    "_type": "Observation",
+    "block": null,
+    "detail": "a price at size, not a fill (F0.3.3, F0.5.1); to.formattedAmount is lossy and not read",
+    "fetch_time": {
+     "_type": "Instant",
+     "epoch_ms": 1789849484600
+    },
+    "source": {
+     "_type": "Source",
+     "locator": "/wallet/swap-quote",
+     "system": "bankr-quote"
+    },
+    "source_ref": "13ba35ae-e43d-4cbc-9b61-a3d8c3d11a83",
+    "source_time": null,
+    "status": "ok",
+    "value": {
+     "_type": "Quote",
+     "buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "74459857040457257"
+     },
+     "buy_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9",
+       "chain_id": 4663
+      },
+      "decimals": 14,
+      "quote_unit": "USD",
+      "raw": "33533663171515974"
+     },
+     "fee": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "0",
+      "unit": "bps"
+     },
+     "fee_waived": false,
+     "max_price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "1500",
+      "unit": "bps"
+     },
+     "min_buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "70736864188434394"
+     },
+     "price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "9",
+      "unit": "bps"
+     },
+     "quote_id": "13ba35ae-e43d-4cbc-9b61-a3d8c3d11a83",
+     "sell": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 6,
+      "raw": "25001930"
+     },
+     "sell_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 15,
+      "quote_unit": "USD",
+      "raw": "999545404574539"
+     },
+     "slippage": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "500",
+      "unit": "bps"
+     },
+     "swap_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "9",
+      "unit": "bps"
+     }
+    }
+   }
+  },
+  {
+   "index": 6,
+   "observation": {
+    "_type": "Observation",
+    "block": null,
+    "detail": "a price at size, not a fill (F0.3.3, F0.5.1); to.formattedAmount is lossy and not read",
+    "fetch_time": {
+     "_type": "Instant",
+     "epoch_ms": 1789849485428
+    },
+    "source": {
+     "_type": "Source",
+     "locator": "/wallet/swap-quote",
+     "system": "bankr-quote"
+    },
+    "source_ref": "f29ab74e-5bfd-48ef-a91a-855e8519fab0",
+    "source_time": null,
+    "status": "ok",
+    "value": {
+     "_type": "Quote",
+     "buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0xc72b96e0e48ecd4dc75e1e45396e26300bc39681",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "171354017617860979"
+     },
+     "buy_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0xc72b96e0e48ecd4dc75e1e45396e26300bc39681",
+       "chain_id": 4663
+      },
+      "decimals": 13,
+      "quote_unit": "USD",
+      "raw": "1093357822492627"
+     },
+     "fee": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "0",
+      "unit": "bps"
+     },
+     "fee_waived": false,
+     "max_price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "1500",
+      "unit": "bps"
+     },
+     "min_buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0xc72b96e0e48ecd4dc75e1e45396e26300bc39681",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "162786316736967930"
+     },
+     "price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "2",
+      "unit": "bps"
+     },
+     "quote_id": "f29ab74e-5bfd-48ef-a91a-855e8519fab0",
+     "sell": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 6,
+      "raw": "18751447"
+     },
+     "sell_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 16,
+      "quote_unit": "USD",
+      "raw": "9993625183762095"
+     },
+     "slippage": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "500",
+      "unit": "bps"
+     },
+     "swap_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "2",
+      "unit": "bps"
+     }
+    }
+   }
+  },
+  {
+   "index": 7,
+   "observation": {
+    "_type": "Observation",
+    "block": null,
+    "detail": "a price at size, not a fill (F0.3.3, F0.5.1); to.formattedAmount is lossy and not read",
+    "fetch_time": {
+     "_type": "Instant",
+     "epoch_ms": 1789849486429
+    },
+    "source": {
+     "_type": "Source",
+     "locator": "/wallet/swap-quote",
+     "system": "bankr-quote"
+    },
+    "source_ref": "01834306-d14c-4362-9e88-22397ea932fe",
+    "source_time": null,
+    "status": "ok",
+    "value": {
+     "_type": "Quote",
+     "buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0xc72b96e0e48ecd4dc75e1e45396e26300bc39681",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "171453130530155450"
+     },
+     "buy_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0xc72b96e0e48ecd4dc75e1e45396e26300bc39681",
+       "chain_id": 4663
+      },
+      "decimals": 13,
+      "quote_unit": "USD",
+      "raw": "1093357822477813"
+     },
+     "fee": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "0",
+      "unit": "bps"
+     },
+     "fee_waived": false,
+     "max_price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "1500",
+      "unit": "bps"
+     },
+     "min_buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0xc72b96e0e48ecd4dc75e1e45396e26300bc39681",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "162880474003647677"
+     },
+     "price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "-3",
+      "unit": "bps"
+     },
+     "quote_id": "01834306-d14c-4362-9e88-22397ea932fe",
+     "sell": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 6,
+      "raw": "18751447"
+     },
+     "sell_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 16,
+      "quote_unit": "USD",
+      "raw": "9993638204327192"
+     },
+     "slippage": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "500",
+      "unit": "bps"
+     },
+     "swap_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "-3",
+      "unit": "bps"
+     }
+    }
+   }
+  },
+  {
+   "index": 8,
+   "observation": {
+    "_type": "Observation",
+    "block": null,
+    "detail": "a price at size, not a fill (F0.3.3, F0.5.1); to.formattedAmount is lossy and not read",
+    "fetch_time": {
+     "_type": "Instant",
+     "epoch_ms": 1789849487415
+    },
+    "source": {
+     "_type": "Source",
+     "locator": "/wallet/swap-quote",
+     "system": "bankr-quote"
+    },
+    "source_ref": "66ee1a32-bd27-4faa-8435-5945da1a795c",
+    "source_time": null,
+    "status": "ok",
+    "value": {
+     "_type": "Quote",
+     "buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0xff080c8ce2e5feadaca0da81314ae59d232d4afd",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "24727267771935541"
+     },
+     "buy_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0xff080c8ce2e5feadaca0da81314ae59d232d4afd",
+       "chain_id": 4663
+      },
+      "decimals": 13,
+      "quote_unit": "USD",
+      "raw": "10093037959306358"
+     },
+     "fee": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "0",
+      "unit": "bps"
+     },
+     "fee_waived": false,
+     "max_price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "1500",
+      "unit": "bps"
+     },
+     "min_buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0xff080c8ce2e5feadaca0da81314ae59d232d4afd",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "23490904383338764"
+     },
+     "price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "12",
+      "unit": "bps"
+     },
+     "quote_id": "66ee1a32-bd27-4faa-8435-5945da1a795c",
+     "sell": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 6,
+      "raw": "25001930"
+     },
+     "sell_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 16,
+      "quote_unit": "USD",
+      "raw": "9993918464694513"
+     },
+     "slippage": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "500",
+      "unit": "bps"
+     },
+     "swap_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "12",
+      "unit": "bps"
+     }
+    }
+   }
+  }
+ ]
+}

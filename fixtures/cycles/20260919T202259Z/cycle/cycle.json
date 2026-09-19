@@ -1,0 +1,506 @@
+{
+ "cost": {
+  "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+  "basis": "the sum of every analyst call in the cycle, each from its own usage block; a seat killed at its deadline adds calls of unknown cost that are not counted here",
+  "calls": 4,
+  "calls_of_unknown_cost": 0,
+  "is_estimate": true,
+  "usd": "1.043392"
+ },
+ "counts": {
+  "failed": 0,
+  "no_call": 0,
+  "ok": 4
+ },
+ "cycle": "20260919T202259Z-8cbad77d",
+ "failed": [],
+ "partial": false,
+ "seats": {
+  "cross-asset-macro": {
+   "agent": "unassigned",
+   "attempts": [
+    {
+     "at": "2026-09-19T20:23:00.068Z",
+     "attempt": 1,
+     "body": "",
+     "cost": {
+      "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+      "basis": "the reply's own usage block times the listed price (config/models.json)",
+      "input_tokens": 97701,
+      "is_estimate": true,
+      "output_tokens": 8163,
+      "price_per_million": {
+       "currency": "usd",
+       "input": "2",
+       "output": "10"
+      },
+      "usd": "0.277032"
+     },
+     "elapsed_ms": 92354,
+     "error": null,
+     "finish_reason": "stop",
+     "http_status": 200,
+     "refusals": [],
+     "reply_text": "REPORT cross-asset-macro unassigned c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783\n\nThe venue's equities session is shut (`block.closed_sessions: [\"us_equities_24/5\"]`), so every stock mark below is the last pre-close round while GeckoTerminal and the venue continue to trade; several names (AMZN, MSTR, MU, PLTR, SGOV) already show closed-session divergence findings past 100bps. That does not block a co-movement read: 20 daily closes over 30 days is enough to see three clusters. First, SPY and QQQ move almost as one \u2014 over 8/14\u21929/16 SPY fell 1.15% (760.04\u2192751.28) and QQQ fell 1.13% (710.25\u2192702.19) the same two days, so the book cannot buy diversification by holding both. Second, the mega-cap/semis complex (AAPL, GOOGL, NVDA, MU, INTC) rallies together on the same sessions \u2014 on 9/16\u21929/17 NVDA +2.6%, MU +5.5%, INTC +8.2%, AAPL +1.5%, GOOGL +1.4% all moved up the same day \u2014 one correlated tech bet, not five. Third, the macro sleeve diverges from that complex: USO (oil) rose 14.3% over the window while SPY and QQQ were flat to down, and SGOV barely moved at all (+0.18%), both genuinely uncorrelated to the equity beta. MSTR is its own animal, spiking 17.4% on 9/2\u21929/3 while SPY/QQQ moved about 1% \u2014 a single-name, crypto-linked driver, not something the book's other positions already express, but too idiosyncratic and too divergence-flagged to call cleanly.\n\nCALL QQQ 0xd5f3879160bc7c32ebb4dc785f8a4f505888de68 hold medium\nQQQ tracks SPY almost tick-for-tick over the window; owning both index vehicles is one basket-beta bet, not two, so adding here does not diversify the book.\n- QQQ -1.13% from 2026-09-14 to 2026-09-16 (710.245\u2192702.1937) [timeline 2026-09-14, timeline 2026-09-16]\n- SPY -1.15% over the same two days (760.04\u2192751.28) [SPY timeline 2026-09-14, SPY timeline 2026-09-16]\n- QQQ +0.92% over 30 days (713.7894\u2192720.3651) [timeline]\nWrong if: QQQ and SPY start printing opposite-signed daily moves for a week, showing the two indices decoupling.\n\nCALL NVDA 0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec hold medium\nNVDA moves with the same-day mega-cap/semis cluster (AAPL, GOOGL, MU, INTC); adding NVDA on top of that cluster doubles a bet the book already gets from the other names, it does not diversify.\n- NVDA +2.57% on 2026-09-17 (214.17088793\u2192219.67214898) [timeline 2026-09-16, timeline 2026-09-17]\n- MU +5.51%, INTC +8.22%, AAPL +1.49%, GOOGL +1.44% the same day [MU timeline 2026-09-16, MU timeline 2026-09-17, INTC timeline 2026-09-16, INTC timeline 2026-09-17, AAPL timeline 2026-09-16, AAPL timeline 2026-09-17, GOOGL timeline 2026-09-16, GOOGL timeline 2026-09-17]\nWrong if: NVDA prints a session where the rest of that cluster is flat or down, breaking the cluster's shared move.\n\nCALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 buy medium\nSGOV barely moves at all across the window while the equity book's names swing several percent daily; it is the one asset here with no correlation to the tech/index cluster, the cleanest diversifier in the set.\n- +0.18% over 30 days (100.92501538\u2192101.10821255) [timeline 2026-08-21, timeline]\n- range of only ~0.19 across all 20 closes (100.9172\u2192101.1082) [timeline]\n- QQQ moved -1.13% in two days over the same window while SGOV moved essentially zero [QQQ timeline 2026-09-14, QQQ timeline 2026-09-16]\nWrong if: SGOV's daily closes start moving by more than a few bps in step with the equity names, which would say the ballast has broken.\n\nCALL USO 0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344 buy low\nOil ran up hard this window while the equity index legs stayed flat to down, so USO's move this month did not track the book's other risk \u2014 real diversification, not a duplicate of an existing bet.\n- +14.27% over 30 days (135.255\u2192154.54265) [timeline 2026-08-21, timeline 2026-09-18]\n- SPY -0.60% and QQQ +0.92% over the same 30 days [SPY timeline 2026-08-21, SPY timeline, QQQ timeline 2026-08-21, QQQ timeline]\nWrong if: USO starts tracking SPY/QQQ day to day rather than moving on its own path.\n\nCALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 hold low\nMSTR's single-day swings dwarf the index's on the same date, meaning it moves on its own driver, not the book's equity beta \u2014 a genuine diversifier by co-movement, but the size of the moves and its closed-session divergence finding argue for watching rather than sizing up now.\n- +17.36% on 2026-09-03 (123.05705\u2192144.415) [timeline 2026-09-02, timeline 2026-09-03]\n- SPY +1.01% and QQQ +1.07% the same day [SPY timeline 2026-09-02, SPY timeline 2026-09-03, QQQ timeline 2026-09-02, QQQ timeline 2026-09-03]\n- closed-session divergence -384.05 bps recorded against GeckoTerminal [corroboration.divergence_bps]\nWrong if: MSTR's daily moves start lining up in size and direction with SPY/QQQ, showing it has re-joined the equity beta.",
+     "request_id": "chatcmpl-4cKPZ-Sq-G8MyAXMo35oj",
+     "usage": {
+      "buyer_cost_micro": 43020,
+      "completion_tokens": 8163,
+      "completion_tokens_details": {
+       "audio_tokens": 0,
+       "image_tokens": 0,
+       "reasoning_tokens": 6006
+      },
+      "cost": 0.277032,
+      "cost_details": {
+       "upstream_inference_completions_cost": 0.08163,
+       "upstream_inference_cost": 0.277032,
+       "upstream_inference_prompt_cost": 0.195402
+      },
+      "is_byok": false,
+      "prompt_tokens": 97701,
+      "prompt_tokens_details": {
+       "audio_tokens": 0,
+       "cache_write_tokens": 0,
+       "cached_tokens": 0,
+       "video_tokens": 0
+      },
+      "total_tokens": 105864
+     }
+    }
+   ],
+   "brief_files": [
+    "cross-asset-macro.v1.md",
+    "analyst.v1.md"
+   ],
+   "brief_sha256": "0f687eb670a9392f48e662e0e8e3fda7959f94979ec04e8e8490ec952a30b563",
+   "cost": {
+    "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+    "basis": "the sum of this analyst's calls, each from its own usage block",
+    "calls": 1,
+    "calls_of_unknown_cost": 0,
+    "is_estimate": true,
+    "usd": "0.277032"
+   },
+   "detail": null,
+   "environment_names": [
+    "LC_CTYPE",
+    "OPENFUND_GATEWAY_KEY",
+    "PATH",
+    "PYTHONPATH"
+   ],
+   "reason": null,
+   "report": {
+    "agent": "unassigned",
+    "calls": [
+     {
+      "address": "0xd5f3879160bc7c32ebb4dc785f8a4f505888de68",
+      "confidence": "medium",
+      "symbol": "QQQ",
+      "word": "hold"
+     },
+     {
+      "address": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
+      "confidence": "medium",
+      "symbol": "NVDA",
+      "word": "hold"
+     },
+     {
+      "address": "0x92fd66527192e3e61d4ddd13322aa222de86f9b5",
+      "confidence": "medium",
+      "symbol": "SGOV",
+      "word": "buy"
+     },
+     {
+      "address": "0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344",
+      "confidence": "low",
+      "symbol": "USO",
+      "word": "buy"
+     },
+     {
+      "address": "0xec262a75e413fafd0df80480274532c79d42da09",
+      "confidence": "low",
+      "symbol": "MSTR",
+      "word": "hold"
+     }
+    ],
+    "imprecise_citations": [
+     {
+      "cited": "SGOV timeline 2026-08-21",
+      "found": "SGOV mark.price_usd",
+      "line": 20,
+      "why": null,
+      "written": "101.10821255"
+     },
+     {
+      "cited": "USO timeline 2026-08-21, USO timeline 2026-09-18",
+      "found": "USO mark.price_usd",
+      "line": 27,
+      "why": null,
+      "written": "154.54265"
+     }
+    ],
+    "no_calls": false,
+    "seat": "cross-asset-macro",
+    "snapshot": "c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783"
+   },
+   "report_id": "2b64ced0563a95fcf69a5dc61e29d2b2463ac8a08b78edaa72a04fe6df19e41f",
+   "report_text": "REPORT cross-asset-macro unassigned c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783\n\nThe venue's equities session is shut (`block.closed_sessions: [\"us_equities_24/5\"]`), so every stock mark below is the last pre-close round while GeckoTerminal and the venue continue to trade; several names (AMZN, MSTR, MU, PLTR, SGOV) already show closed-session divergence findings past 100bps. That does not block a co-movement read: 20 daily closes over 30 days is enough to see three clusters. First, SPY and QQQ move almost as one \u2014 over 8/14\u21929/16 SPY fell 1.15% (760.04\u2192751.28) and QQQ fell 1.13% (710.25\u2192702.19) the same two days, so the book cannot buy diversification by holding both. Second, the mega-cap/semis complex (AAPL, GOOGL, NVDA, MU, INTC) rallies together on the same sessions \u2014 on 9/16\u21929/17 NVDA +2.6%, MU +5.5%, INTC +8.2%, AAPL +1.5%, GOOGL +1.4% all moved up the same day \u2014 one correlated tech bet, not five. Third, the macro sleeve diverges from that complex: USO (oil) rose 14.3% over the window while SPY and QQQ were flat to down, and SGOV barely moved at all (+0.18%), both genuinely uncorrelated to the equity beta. MSTR is its own animal, spiking 17.4% on 9/2\u21929/3 while SPY/QQQ moved about 1% \u2014 a single-name, crypto-linked driver, not something the book's other positions already express, but too idiosyncratic and too divergence-flagged to call cleanly.\n\nCALL QQQ 0xd5f3879160bc7c32ebb4dc785f8a4f505888de68 hold medium\nQQQ tracks SPY almost tick-for-tick over the window; owning both index vehicles is one basket-beta bet, not two, so adding here does not diversify the book.\n- QQQ -1.13% from 2026-09-14 to 2026-09-16 (710.245\u2192702.1937) [timeline 2026-09-14, timeline 2026-09-16]\n- SPY -1.15% over the same two days (760.04\u2192751.28) [SPY timeline 2026-09-14, SPY timeline 2026-09-16]\n- QQQ +0.92% over 30 days (713.7894\u2192720.3651) [timeline]\nWrong if: QQQ and SPY start printing opposite-signed daily moves for a week, showing the two indices decoupling.\n\nCALL NVDA 0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec hold medium\nNVDA moves with the same-day mega-cap/semis cluster (AAPL, GOOGL, MU, INTC); adding NVDA on top of that cluster doubles a bet the book already gets from the other names, it does not diversify.\n- NVDA +2.57% on 2026-09-17 (214.17088793\u2192219.67214898) [timeline 2026-09-16, timeline 2026-09-17]\n- MU +5.51%, INTC +8.22%, AAPL +1.49%, GOOGL +1.44% the same day [MU timeline 2026-09-16, MU timeline 2026-09-17, INTC timeline 2026-09-16, INTC timeline 2026-09-17, AAPL timeline 2026-09-16, AAPL timeline 2026-09-17, GOOGL timeline 2026-09-16, GOOGL timeline 2026-09-17]\nWrong if: NVDA prints a session where the rest of that cluster is flat or down, breaking the cluster's shared move.\n\nCALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 buy medium\nSGOV barely moves at all across the window while the equity book's names swing several percent daily; it is the one asset here with no correlation to the tech/index cluster, the cleanest diversifier in the set.\n- +0.18% over 30 days (100.92501538\u2192101.10821255) [timeline 2026-08-21, timeline]\n- range of only ~0.19 across all 20 closes (100.9172\u2192101.1082) [timeline]\n- QQQ moved -1.13% in two days over the same window while SGOV moved essentially zero [QQQ timeline 2026-09-14, QQQ timeline 2026-09-16]\nWrong if: SGOV's daily closes start moving by more than a few bps in step with the equity names, which would say the ballast has broken.\n\nCALL USO 0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344 buy low\nOil ran up hard this window while the equity index legs stayed flat to down, so USO's move this month did not track the book's other risk \u2014 real diversification, not a duplicate of an existing bet.\n- +14.27% over 30 days (135.255\u2192154.54265) [timeline 2026-08-21, timeline 2026-09-18]\n- SPY -0.60% and QQQ +0.92% over the same 30 days [SPY timeline 2026-08-21, SPY timeline, QQQ timeline 2026-08-21, QQQ timeline]\nWrong if: USO starts tracking SPY/QQQ day to day rather than moving on its own path.\n\nCALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 hold low\nMSTR's single-day swings dwarf the index's on the same date, meaning it moves on its own driver, not the book's equity beta \u2014 a genuine diversifier by co-movement, but the size of the moves and its closed-session divergence finding argue for watching rather than sizing up now.\n- +17.36% on 2026-09-03 (123.05705\u2192144.415) [timeline 2026-09-02, timeline 2026-09-03]\n- SPY +1.01% and QQQ +1.07% the same day [SPY timeline 2026-09-02, SPY timeline 2026-09-03, QQQ timeline 2026-09-02, QQQ timeline 2026-09-03]\n- closed-session divergence -384.05 bps recorded against GeckoTerminal [corroboration.divergence_bps]\nWrong if: MSTR's daily moves start lining up in size and direction with SPY/QQQ, showing it has re-joined the equity beta.",
+   "seat": "cross-asset-macro",
+   "snapshot_sha256": "c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783",
+   "status": "ok"
+  },
+  "execution-quality": {
+   "agent": "unassigned",
+   "attempts": [
+    {
+     "at": "2026-09-19T20:23:00.074Z",
+     "attempt": 1,
+     "body": "",
+     "cost": {
+      "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+      "basis": "the reply's own usage block times the listed price (config/models.json)",
+      "input_tokens": 97700,
+      "is_estimate": true,
+      "output_tokens": 5582,
+      "price_per_million": {
+       "currency": "usd",
+       "input": "2",
+       "output": "10"
+      },
+      "usd": "0.25122"
+     },
+     "elapsed_ms": 70381,
+     "error": null,
+     "finish_reason": "stop",
+     "http_status": 200,
+     "refusals": [],
+     "reply_text": "REPORT execution-quality unassigned c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783\n\nThe market is shut (`block.closed_sessions` lists `us_equities_24/5`), so every mark is the feed's last pre-close round while the venue and GeckoTerminal keep moving; a buy still fills at the venue's live price but books at that frozen mark, so the fill-to-book gap is the number that matters tonight, not the impact alone. Across the 17 tradeable names the mechanics of the quote itself are uniformly cheap: `fee_bps` is 0 everywhere, quotes are 0.7\u201326s old (well inside the 60s tradeability window), and `swap_impact_bps` sits in the single digits to low tens for all of them, so the venue's own execution cost is not the story. What is the story is the gap between `quote.venue_price_usd` and `mark.price_usd`: most names show 0\u201350 bps of gap (AAPL ~4bps, NVDA ~1bp, SPY ~45bps, GOOGL ~33bps), but Strategy (MSTR) shows a gap of roughly 362bps and Amazon (AMZN) compounds a 19bps venue impact with a 27.7bps fill-to-book gap, both traceable to their feeds being frozen well behind live trading (both also carry closed-session divergence findings). A buyer of MSTR right now pays the venue's live price and is booked ~3.6% worse immediately, before any market move \u2014 that is a pure execution-quality cost, independent of whether the mark itself is \"right.\"\n\nCALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution high\nFilling at the venue's live price and booking at the frozen mark costs about 362 bps on entry alone, even though the quote itself looks clean (low impact, sub-second age).\n- venue_price_usd 158.172427417523 vs mark.price_usd 152.643, a gap of ~362 bps [quote.venue_price_usd, mark.price_usd]\n- swap_impact_bps 10, fee_bps 0, well within limits [quote.swap_impact_bps, quote.fee_bps]\n- quote age 0.735s, essentially instant [quote.age_s]\n- mark last updated 2026-09-18T23:41:26Z, 74346s of feed age with the closed session inferred [mark.updated_at, mark.fresh]\nWrong if: the venue price and the mark converge to within ~50bps at the next fresh round, at which point the entry gap disappears.\n\nCALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 caution medium\nThe venue itself already prices in 19 bps of impact, and on top of that the fill books against a mark that sits 27.7 bps below the venue price, stacking to roughly 47 bps of round-trip-relevant cost for a name whose feed is frozen mid-close.\n- venue_price_usd 254.5649498937818 vs mark.price_usd 253.863, a gap of ~27.7 bps [quote.venue_price_usd, mark.price_usd]\n- swap_impact_bps 19, the highest quoted impact among the tradeable names besides ASML/CLSK-tier exclusions [quote.swap_impact_bps]\n- quote age 24.322s, still within the 60s window but the widest among the low-impact set [quote.age_s]\nWrong if: swap_impact_bps drops back toward single digits and the venue/mark gap narrows below 10 bps on the next quote.",
+     "request_id": "chatcmpl-49OshCtAi9pHsj0Hzpgf2",
+     "usage": {
+      "buyer_cost_micro": 62805,
+      "completion_tokens": 5582,
+      "completion_tokens_details": {
+       "audio_tokens": 0,
+       "image_tokens": 0,
+       "reasoning_tokens": 4388
+      },
+      "cost": 0.25122,
+      "cost_details": {
+       "upstream_inference_completions_cost": 0.05582,
+       "upstream_inference_cost": 0.25122,
+       "upstream_inference_prompt_cost": 0.1954
+      },
+      "is_byok": false,
+      "prompt_tokens": 97700,
+      "prompt_tokens_details": {
+       "audio_tokens": 0,
+       "cache_write_tokens": 0,
+       "cached_tokens": 0,
+       "video_tokens": 0
+      },
+      "total_tokens": 103282
+     }
+    }
+   ],
+   "brief_files": [
+    "execution-quality.v1.md",
+    "analyst.v1.md"
+   ],
+   "brief_sha256": "4bec82733805c122db04e00ed5bae0f09bf64bb73f740350f17dbbc1cad3a92b",
+   "cost": {
+    "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+    "basis": "the sum of this analyst's calls, each from its own usage block",
+    "calls": 1,
+    "calls_of_unknown_cost": 0,
+    "is_estimate": true,
+    "usd": "0.25122"
+   },
+   "detail": null,
+   "environment_names": [
+    "LC_CTYPE",
+    "OPENFUND_GATEWAY_KEY",
+    "PATH",
+    "PYTHONPATH"
+   ],
+   "reason": null,
+   "report": {
+    "agent": "unassigned",
+    "calls": [
+     {
+      "address": "0xec262a75e413fafd0df80480274532c79d42da09",
+      "confidence": "high",
+      "symbol": "MSTR",
+      "word": "caution"
+     },
+     {
+      "address": "0x12f190a9f9d7d37a250758b26824b97ce941bf54",
+      "confidence": "medium",
+      "symbol": "AMZN",
+      "word": "caution"
+     }
+    ],
+    "imprecise_citations": [],
+    "no_calls": false,
+    "seat": "execution-quality",
+    "snapshot": "c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783"
+   },
+   "report_id": "0b50b09e3101fc86635032223191d5d8e3c1e7e179244b31678339633ed41bb3",
+   "report_text": "REPORT execution-quality unassigned c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783\n\nThe market is shut (`block.closed_sessions` lists `us_equities_24/5`), so every mark is the feed's last pre-close round while the venue and GeckoTerminal keep moving; a buy still fills at the venue's live price but books at that frozen mark, so the fill-to-book gap is the number that matters tonight, not the impact alone. Across the 17 tradeable names the mechanics of the quote itself are uniformly cheap: `fee_bps` is 0 everywhere, quotes are 0.7\u201326s old (well inside the 60s tradeability window), and `swap_impact_bps` sits in the single digits to low tens for all of them, so the venue's own execution cost is not the story. What is the story is the gap between `quote.venue_price_usd` and `mark.price_usd`: most names show 0\u201350 bps of gap (AAPL ~4bps, NVDA ~1bp, SPY ~45bps, GOOGL ~33bps), but Strategy (MSTR) shows a gap of roughly 362bps and Amazon (AMZN) compounds a 19bps venue impact with a 27.7bps fill-to-book gap, both traceable to their feeds being frozen well behind live trading (both also carry closed-session divergence findings). A buyer of MSTR right now pays the venue's live price and is booked ~3.6% worse immediately, before any market move \u2014 that is a pure execution-quality cost, independent of whether the mark itself is \"right.\"\n\nCALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution high\nFilling at the venue's live price and booking at the frozen mark costs about 362 bps on entry alone, even though the quote itself looks clean (low impact, sub-second age).\n- venue_price_usd 158.172427417523 vs mark.price_usd 152.643, a gap of ~362 bps [quote.venue_price_usd, mark.price_usd]\n- swap_impact_bps 10, fee_bps 0, well within limits [quote.swap_impact_bps, quote.fee_bps]\n- quote age 0.735s, essentially instant [quote.age_s]\n- mark last updated 2026-09-18T23:41:26Z, 74346s of feed age with the closed session inferred [mark.updated_at, mark.fresh]\nWrong if: the venue price and the mark converge to within ~50bps at the next fresh round, at which point the entry gap disappears.\n\nCALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 caution medium\nThe venue itself already prices in 19 bps of impact, and on top of that the fill books against a mark that sits 27.7 bps below the venue price, stacking to roughly 47 bps of round-trip-relevant cost for a name whose feed is frozen mid-close.\n- venue_price_usd 254.5649498937818 vs mark.price_usd 253.863, a gap of ~27.7 bps [quote.venue_price_usd, mark.price_usd]\n- swap_impact_bps 19, the highest quoted impact among the tradeable names besides ASML/CLSK-tier exclusions [quote.swap_impact_bps]\n- quote age 24.322s, still within the 60s window but the widest among the low-impact set [quote.age_s]\nWrong if: swap_impact_bps drops back toward single digits and the venue/mark gap narrows below 10 bps on the next quote.",
+   "seat": "execution-quality",
+   "snapshot_sha256": "c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783",
+   "status": "ok"
+  },
+  "price-integrity": {
+   "agent": "unassigned",
+   "attempts": [
+    {
+     "at": "2026-09-19T20:23:00.074Z",
+     "attempt": 1,
+     "body": "",
+     "cost": {
+      "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+      "basis": "the reply's own usage block times the listed price (config/models.json)",
+      "input_tokens": 97726,
+      "is_estimate": true,
+      "output_tokens": 7725,
+      "price_per_million": {
+       "currency": "usd",
+       "input": "2",
+       "output": "10"
+      },
+      "usd": "0.272702"
+     },
+     "elapsed_ms": 83334,
+     "error": null,
+     "finish_reason": "stop",
+     "http_status": 200,
+     "refusals": [],
+     "reply_text": "REPORT price-integrity unassigned c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783\n\nThe book is closed (`block.closed_sessions: [\"us_equities_24/5\"]`): every Chainlink mark here is its last pre-close round, while GeckoTerminal and the venue keep pricing live. That is exactly the setting where mark-vs-corroborator divergence is expected and not, by itself, a defect \u2014 the question is whether the venue (also live) sides with the frozen mark or with GeckoTerminal. Five tradeable assets carry closed-session divergence findings; I checked each against the venue. Four of them are not the mark's fault: the venue agrees with the frozen mark and it is GeckoTerminal, not Chainlink, that has moved off. One, MSTR, is the opposite pattern \u2014 venue and GeckoTerminal agree with each other and both sit well away from the mark, which is the real story. I also flag USO, unflagged but showing the same two-against-one shape at lower magnitude.\n\nCALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution high\nThe mark is the outlier: venue and GeckoTerminal agree with each other to within 36bps, but the mark sits ~360bps away from both, on a book that only just closed (99.6% of its round age is closed-session).\n- mark 152.643 [mark.price_usd]\n- venue 158.172427417523, +362bps from mark [quote.venue_price_usd]\n- GeckoTerminal 158.7392617361, -384.05bps from mark [corroboration.price_usd, corroboration.divergence_bps]\nWrong if: the venue price reverts toward 152.6 rather than toward GeckoTerminal's 158.7, which would show the venue itself was the transient outlier.\n\nCALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 proceed medium\nCarries a closed-session divergence finding (-428.73bps vs GeckoTerminal) but the venue confirms the mark, not GeckoTerminal: venue is only ~28bps from the mark. GeckoTerminal is the one that has drifted.\n- mark 253.863 [mark.price_usd]\n- venue 254.5649498937818, ~28bps from mark [quote.venue_price_usd]\n- GeckoTerminal 265.2342975081, -428.73bps from mark [corroboration.price_usd, corroboration.divergence_bps]\nWrong if: the venue price moves to converge on GeckoTerminal's 265 rather than staying near the mark.\n\nCALL MU 0xff080c8ce2e5feadaca0da81314ae59d232d4afd proceed medium\nCarries a closed-session divergence finding (+170.59bps vs GeckoTerminal); venue sits much closer to the mark (~43bps) than to GeckoTerminal (~127bps from venue), so the mark still holds and GeckoTerminal is the stale/thin read here.\n- mark 1014.42589693 [mark.price_usd]\n- venue 1010.0912233694492, ~43bps from mark [quote.venue_price_usd]\n- GeckoTerminal 997.4118039747, +170.59bps from mark [corroboration.price_usd, corroboration.divergence_bps]\nWrong if: the venue price drops toward GeckoTerminal's 997 instead of holding near 1010\u20131014.\n\nCALL PLTR 0x894e1ec2d74ffe5aef8dc8a9e84686accb964f2a proceed medium\nSame shape: a +160.91bps closed-session finding against GeckoTerminal, but the venue is only ~54bps from the mark versus ~106bps from GeckoTerminal, so the mark, not GeckoTerminal, is the one to trust here.\n- mark 177.6031 [mark.price_usd]\n- venue 176.64144579270487, ~54bps from mark [quote.venue_price_usd]\n- GeckoTerminal 174.7906936484, +160.91bps from mark [corroboration.price_usd, corroboration.divergence_bps]\nWrong if: the venue price falls toward GeckoTerminal's 174.8 rather than staying near 176.6\u2013177.6.\n\nCALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 proceed medium\nCarries a +111.97bps closed-session finding, just past the 100bps line, but venue and mark are nearly identical (~8bps apart) while GeckoTerminal sits ~104bps from the venue \u2014 for a cash-like bond ETF that is GeckoTerminal mispricing a thin pool, not the mark drifting.\n- mark 101.10821255 [mark.price_usd]\n- venue 101.02841109470803, ~8bps from mark [quote.venue_price_usd]\n- GeckoTerminal 99.9886955829, +111.97bps from mark [corroboration.price_usd, corroboration.divergence_bps]\nWrong if: the venue price moves down toward GeckoTerminal's 99.99 rather than staying pinned near 101.\n\nCALL USO 0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344 caution low\nUnflagged (mark-vs-gecko divergence is only 67.46bps, under the veto line) but the pattern still points at the mark: venue and GeckoTerminal sit only ~45bps apart from each other, while the mark is ~112bps above the venue and ~67bps above GeckoTerminal \u2014 both live sources agree below the frozen mark.\n- mark 154.54265 [mark.price_usd]\n- venue 152.82654076484644, ~112bps below mark [quote.venue_price_usd]\n- GeckoTerminal 153.5072322941, +67.46bps vs mark [corroboration.price_usd, corroboration.divergence_bps]\nWrong if: the venue price rises to converge on 154.5 rather than GeckoTerminal's 153.5, showing the mark was fine and the venue was lagging.",
+     "request_id": "chatcmpl-WX-eebogBHakkYgyjUXnz",
+     "usage": {
+      "buyer_cost_micro": 68176,
+      "completion_tokens": 7725,
+      "completion_tokens_details": {
+       "audio_tokens": 0,
+       "image_tokens": 0,
+       "reasoning_tokens": 5678
+      },
+      "cost": 0.272702,
+      "cost_details": {
+       "upstream_inference_completions_cost": 0.07725,
+       "upstream_inference_cost": 0.272702,
+       "upstream_inference_prompt_cost": 0.195452
+      },
+      "is_byok": false,
+      "prompt_tokens": 97726,
+      "prompt_tokens_details": {
+       "audio_tokens": 0,
+       "cache_write_tokens": 0,
+       "cached_tokens": 0,
+       "video_tokens": 0
+      },
+      "total_tokens": 105451
+     }
+    }
+   ],
+   "brief_files": [
+    "price-integrity.v1.md",
+    "analyst.v1.md"
+   ],
+   "brief_sha256": "8ee7b840886c3ffcfbfbf253849380eb1977962c7e751b2abb5995ebb556268d",
+   "cost": {
+    "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+    "basis": "the sum of this analyst's calls, each from its own usage block",
+    "calls": 1,
+    "calls_of_unknown_cost": 0,
+    "is_estimate": true,
+    "usd": "0.272702"
+   },
+   "detail": null,
+   "environment_names": [
+    "LC_CTYPE",
+    "OPENFUND_GATEWAY_KEY",
+    "PATH",
+    "PYTHONPATH"
+   ],
+   "reason": null,
+   "report": {
+    "agent": "unassigned",
+    "calls": [
+     {
+      "address": "0xec262a75e413fafd0df80480274532c79d42da09",
+      "confidence": "high",
+      "symbol": "MSTR",
+      "word": "caution"
+     },
+     {
+      "address": "0x12f190a9f9d7d37a250758b26824b97ce941bf54",
+      "confidence": "medium",
+      "symbol": "AMZN",
+      "word": "proceed"
+     },
+     {
+      "address": "0xff080c8ce2e5feadaca0da81314ae59d232d4afd",
+      "confidence": "medium",
+      "symbol": "MU",
+      "word": "proceed"
+     },
+     {
+      "address": "0x894e1ec2d74ffe5aef8dc8a9e84686accb964f2a",
+      "confidence": "medium",
+      "symbol": "PLTR",
+      "word": "proceed"
+     },
+     {
+      "address": "0x92fd66527192e3e61d4ddd13322aa222de86f9b5",
+      "confidence": "medium",
+      "symbol": "SGOV",
+      "word": "proceed"
+     },
+     {
+      "address": "0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344",
+      "confidence": "low",
+      "symbol": "USO",
+      "word": "caution"
+     }
+    ],
+    "imprecise_citations": [],
+    "no_calls": false,
+    "seat": "price-integrity",
+    "snapshot": "c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783"
+   },
+   "report_id": "600d28b2c05510e86858584992b7e21d8fc716110b4ac1d6719098c8f7229148",
+   "report_text": "REPORT price-integrity unassigned c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783\n\nThe book is closed (`block.closed_sessions: [\"us_equities_24/5\"]`): every Chainlink mark here is its last pre-close round, while GeckoTerminal and the venue keep pricing live. That is exactly the setting where mark-vs-corroborator divergence is expected and not, by itself, a defect \u2014 the question is whether the venue (also live) sides with the frozen mark or with GeckoTerminal. Five tradeable assets carry closed-session divergence findings; I checked each against the venue. Four of them are not the mark's fault: the venue agrees with the frozen mark and it is GeckoTerminal, not Chainlink, that has moved off. One, MSTR, is the opposite pattern \u2014 venue and GeckoTerminal agree with each other and both sit well away from the mark, which is the real story. I also flag USO, unflagged but showing the same two-against-one shape at lower magnitude.\n\nCALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution high\nThe mark is the outlier: venue and GeckoTerminal agree with each other to within 36bps, but the mark sits ~360bps away from both, on a book that only just closed (99.6% of its round age is closed-session).\n- mark 152.643 [mark.price_usd]\n- venue 158.172427417523, +362bps from mark [quote.venue_price_usd]\n- GeckoTerminal 158.7392617361, -384.05bps from mark [corroboration.price_usd, corroboration.divergence_bps]\nWrong if: the venue price reverts toward 152.6 rather than toward GeckoTerminal's 158.7, which would show the venue itself was the transient outlier.\n\nCALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 proceed medium\nCarries a closed-session divergence finding (-428.73bps vs GeckoTerminal) but the venue confirms the mark, not GeckoTerminal: venue is only ~28bps from the mark. GeckoTerminal is the one that has drifted.\n- mark 253.863 [mark.price_usd]\n- venue 254.5649498937818, ~28bps from mark [quote.venue_price_usd]\n- GeckoTerminal 265.2342975081, -428.73bps from mark [corroboration.price_usd, corroboration.divergence_bps]\nWrong if: the venue price moves to converge on GeckoTerminal's 265 rather than staying near the mark.\n\nCALL MU 0xff080c8ce2e5feadaca0da81314ae59d232d4afd proceed medium\nCarries a closed-session divergence finding (+170.59bps vs GeckoTerminal); venue sits much closer to the mark (~43bps) than to GeckoTerminal (~127bps from venue), so the mark still holds and GeckoTerminal is the stale/thin read here.\n- mark 1014.42589693 [mark.price_usd]\n- venue 1010.0912233694492, ~43bps from mark [quote.venue_price_usd]\n- GeckoTerminal 997.4118039747, +170.59bps from mark [corroboration.price_usd, corroboration.divergence_bps]\nWrong if: the venue price drops toward GeckoTerminal's 997 instead of holding near 1010\u20131014.\n\nCALL PLTR 0x894e1ec2d74ffe5aef8dc8a9e84686accb964f2a proceed medium\nSame shape: a +160.91bps closed-session finding against GeckoTerminal, but the venue is only ~54bps from the mark versus ~106bps from GeckoTerminal, so the mark, not GeckoTerminal, is the one to trust here.\n- mark 177.6031 [mark.price_usd]\n- venue 176.64144579270487, ~54bps from mark [quote.venue_price_usd]\n- GeckoTerminal 174.7906936484, +160.91bps from mark [corroboration.price_usd, corroboration.divergence_bps]\nWrong if: the venue price falls toward GeckoTerminal's 174.8 rather than staying near 176.6\u2013177.6.\n\nCALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 proceed medium\nCarries a +111.97bps closed-session finding, just past the 100bps line, but venue and mark are nearly identical (~8bps apart) while GeckoTerminal sits ~104bps from the venue \u2014 for a cash-like bond ETF that is GeckoTerminal mispricing a thin pool, not the mark drifting.\n- mark 101.10821255 [mark.price_usd]\n- venue 101.02841109470803, ~8bps from mark [quote.venue_price_usd]\n- GeckoTerminal 99.9886955829, +111.97bps from mark [corroboration.price_usd, corroboration.divergence_bps]\nWrong if: the venue price moves down toward GeckoTerminal's 99.99 rather than staying pinned near 101.\n\nCALL USO 0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344 caution low\nUnflagged (mark-vs-gecko divergence is only 67.46bps, under the veto line) but the pattern still points at the mark: venue and GeckoTerminal sit only ~45bps apart from each other, while the mark is ~112bps above the venue and ~67bps above GeckoTerminal \u2014 both live sources agree below the frozen mark.\n- mark 154.54265 [mark.price_usd]\n- venue 152.82654076484644, ~112bps below mark [quote.venue_price_usd]\n- GeckoTerminal 153.5072322941, +67.46bps vs mark [corroboration.price_usd, corroboration.divergence_bps]\nWrong if: the venue price rises to converge on 154.5 rather than GeckoTerminal's 153.5, showing the mark was fine and the venue was lagging.",
+   "seat": "price-integrity",
+   "snapshot_sha256": "c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783",
+   "status": "ok"
+  },
+  "price-trend": {
+   "agent": "unassigned",
+   "attempts": [
+    {
+     "at": "2026-09-19T20:23:00.065Z",
+     "attempt": 1,
+     "body": "",
+     "cost": {
+      "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+      "basis": "the reply's own usage block times the listed price (config/models.json)",
+      "input_tokens": 97644,
+      "is_estimate": true,
+      "output_tokens": 4715,
+      "price_per_million": {
+       "currency": "usd",
+       "input": "2",
+       "output": "10"
+      },
+      "usd": "0.242438"
+     },
+     "elapsed_ms": 59115,
+     "error": null,
+     "finish_reason": "stop",
+     "http_status": 200,
+     "refusals": [],
+     "reply_text": "REPORT price-trend unassigned c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783\n\nThe market is shut (us_equities_24/5 closed), so every stock's mark is its last round before the weekend while GeckoTerminal and the venue keep pricing off-feed; the 30-day closes and the latest round are still the cleanest read of trend, but the \"latest round\" figure for a few names sits well off the corroborator (AMZN, MSTR, MU, PLTR, SGOV per findings) \u2014 a price-integrity matter, not mine, but it means I lean on the close series more than the single latest print. Most names are simply chopping inside a range; a handful show a genuine, sustained slope worth acting on.\n\nCALL AAPL 0xaf3d76f1834a1d425780943c99ea8a608f8a93f9 buy medium\nApple has climbed almost the whole month, with a shallow pullback mid-month that held above 315 before pushing to new highs.\n- 308.93973568 close on 2026-08-21, the 30-day low [timeline 2026-08-21]\n- 337.05904445 close on 2026-09-17, the 30-day high [timeline 2026-09-17]\n- 335.3847472 latest mark, +8.6% over the window [mark.price_usd, timeline 2026-08-21]\nWrong if: it closes back below 315.69360675, the 2026-09-09 pullback low [timeline 2026-09-09].\n\nCALL GME 0x1b0e319c6a659f002271b69db8a7df2f911c153e buy high\nGameStop's closes are the cleanest trend on the sheet: a near-monotonic climb from 18 to nearly 23 with no material give-back.\n- 18.00445 close on 2026-08-24, the low of the window [timeline 2026-08-24]\n- 22.713 close on 2026-09-17, the high [timeline 2026-09-17]\n- 22.55175 latest mark, +25% off the low [mark.price_usd, timeline 2026-08-24]\nWrong if: it closes below 20.445, the 2026-09-10 higher-low that anchors this move [timeline 2026-09-10].\n\nCALL INTC 0xc72b96e0e48ecd4dc75e1e45396e26300bc39681 buy high\nIntel spent three weeks range-bound near 88-92, then broke out in the second half of September and is holding the new range above 100.\n- 87.16499999 close on 2026-08-24, the pre-breakout low [timeline 2026-08-24]\n- 109.205 close on 2026-09-17, the high of the window [timeline 2026-09-17]\n- 109.05 latest mark, +25% off the low [mark.price_usd, timeline 2026-08-24]\nWrong if: it closes back below 97.225, the 2026-09-15 higher-low that held the breakout [timeline 2026-09-15].\n\nCALL MU 0xff080c8ce2e5feadaca0da81314ae59d232d4afd buy medium\nMicron dipped into mid-September, then broke to a new 30-day high on the last two closes.\n- 924.43916433 close on 2026-09-14, the recent low [timeline 2026-09-14]\n- 1014.42589693 close on 2026-09-18, a new high [timeline 2026-09-18]\n- 1014.42589693, +9.7% off the 2026-09-14 low [timeline 2026-09-14, timeline 2026-09-18]\nWrong if: it closes back below 924.43916433, erasing the recent breakout [timeline 2026-09-14].\n\nCALL USO 0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344 buy medium\nOil has trended up all month off the August low, and even the latest pullback from the mid-September high has held well above where it started.\n- 126.33345 close on 2026-08-25, the 30-day low [timeline 2026-08-25]\n- 161.405 close on 2026-09-15, the high [timeline 2026-09-15]\n- 154.54265 latest round, +22% off the low [mark.price_usd, timeline 2026-08-25]\nWrong if: it closes below 141.995, the 2026-09-03 level that marks the start of this leg [timeline 2026-09-03].\n\nCALL NVDA 0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec hold low\nNvidia is still doing what it did a month ago: chopping in the 208-230 band, now sitting mid-range after bouncing off this month's low.\n- 211.92474816 close on 2026-09-15, the recent low [timeline 2026-09-15]\n- 230.23665 close on 2026-09-04, the range high [timeline 2026-09-04]\n- 222.44729849 latest close, roughly mid-range [timeline 2026-09-18]\nWrong if: it closes above 230.23665, a breakout and a buy, or below 207.91, the August low, and a sell [timeline 2026-09-04, timeline 2026-08-24].",
+     "request_id": "chatcmpl-FiXiZN10LJ49bKio-yj7r",
+     "usage": {
+      "buyer_cost_micro": 60610,
+      "completion_tokens": 4715,
+      "completion_tokens_details": {
+       "audio_tokens": 0,
+       "image_tokens": 0,
+       "reasoning_tokens": 3021
+      },
+      "cost": 0.242438,
+      "cost_details": {
+       "upstream_inference_completions_cost": 0.04715,
+       "upstream_inference_cost": 0.242438,
+       "upstream_inference_prompt_cost": 0.195288
+      },
+      "is_byok": false,
+      "prompt_tokens": 97644,
+      "prompt_tokens_details": {
+       "audio_tokens": 0,
+       "cache_write_tokens": 0,
+       "cached_tokens": 0,
+       "video_tokens": 0
+      },
+      "total_tokens": 102359
+     }
+    }
+   ],
+   "brief_files": [
+    "price-trend.v1.md",
+    "analyst.v1.md"
+   ],
+   "brief_sha256": "b6f93fc5e43a587e3697d21c786aa79ce17781e6f07f9841771cd4b7d87990d7",
+   "cost": {
+    "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+    "basis": "the sum of this analyst's calls, each from its own usage block",
+    "calls": 1,
+    "calls_of_unknown_cost": 0,
+    "is_estimate": true,
+    "usd": "0.242438"
+   },
+   "detail": null,
+   "environment_names": [
+    "LC_CTYPE",
+    "OPENFUND_GATEWAY_KEY",
+    "PATH",
+    "PYTHONPATH"
+   ],
+   "reason": null,
+   "report": {
+    "agent": "unassigned",
+    "calls": [
+     {
+      "address": "0xaf3d76f1834a1d425780943c99ea8a608f8a93f9",
+      "confidence": "medium",
+      "symbol": "AAPL",
+      "word": "buy"
+     },
+     {
+      "address": "0x1b0e319c6a659f002271b69db8a7df2f911c153e",
+      "confidence": "high",
+      "symbol": "GME",
+      "word": "buy"
+     },
+     {
+      "address": "0xc72b96e0e48ecd4dc75e1e45396e26300bc39681",
+      "confidence": "high",
+      "symbol": "INTC",
+      "word": "buy"
+     },
+     {
+      "address": "0xff080c8ce2e5feadaca0da81314ae59d232d4afd",
+      "confidence": "medium",
+      "symbol": "MU",
+      "word": "buy"
+     },
+     {
+      "address": "0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344",
+      "confidence": "medium",
+      "symbol": "USO",
+      "word": "buy"
+     },
+     {
+      "address": "0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec",
+      "confidence": "low",
+      "symbol": "NVDA",
+      "word": "hold"
+     }
+    ],
+    "imprecise_citations": [],
+    "no_calls": false,
+    "seat": "price-trend",
+    "snapshot": "c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783"
+   },
+   "report_id": "f9c2ab617e469c28a5cf88768ab3ff0899ed062609dd78096698cade95938bb6",
+   "report_text": "REPORT price-trend unassigned c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783\n\nThe market is shut (us_equities_24/5 closed), so every stock's mark is its last round before the weekend while GeckoTerminal and the venue keep pricing off-feed; the 30-day closes and the latest round are still the cleanest read of trend, but the \"latest round\" figure for a few names sits well off the corroborator (AMZN, MSTR, MU, PLTR, SGOV per findings) \u2014 a price-integrity matter, not mine, but it means I lean on the close series more than the single latest print. Most names are simply chopping inside a range; a handful show a genuine, sustained slope worth acting on.\n\nCALL AAPL 0xaf3d76f1834a1d425780943c99ea8a608f8a93f9 buy medium\nApple has climbed almost the whole month, with a shallow pullback mid-month that held above 315 before pushing to new highs.\n- 308.93973568 close on 2026-08-21, the 30-day low [timeline 2026-08-21]\n- 337.05904445 close on 2026-09-17, the 30-day high [timeline 2026-09-17]\n- 335.3847472 latest mark, +8.6% over the window [mark.price_usd, timeline 2026-08-21]\nWrong if: it closes back below 315.69360675, the 2026-09-09 pullback low [timeline 2026-09-09].\n\nCALL GME 0x1b0e319c6a659f002271b69db8a7df2f911c153e buy high\nGameStop's closes are the cleanest trend on the sheet: a near-monotonic climb from 18 to nearly 23 with no material give-back.\n- 18.00445 close on 2026-08-24, the low of the window [timeline 2026-08-24]\n- 22.713 close on 2026-09-17, the high [timeline 2026-09-17]\n- 22.55175 latest mark, +25% off the low [mark.price_usd, timeline 2026-08-24]\nWrong if: it closes below 20.445, the 2026-09-10 higher-low that anchors this move [timeline 2026-09-10].\n\nCALL INTC 0xc72b96e0e48ecd4dc75e1e45396e26300bc39681 buy high\nIntel spent three weeks range-bound near 88-92, then broke out in the second half of September and is holding the new range above 100.\n- 87.16499999 close on 2026-08-24, the pre-breakout low [timeline 2026-08-24]\n- 109.205 close on 2026-09-17, the high of the window [timeline 2026-09-17]\n- 109.05 latest mark, +25% off the low [mark.price_usd, timeline 2026-08-24]\nWrong if: it closes back below 97.225, the 2026-09-15 higher-low that held the breakout [timeline 2026-09-15].\n\nCALL MU 0xff080c8ce2e5feadaca0da81314ae59d232d4afd buy medium\nMicron dipped into mid-September, then broke to a new 30-day high on the last two closes.\n- 924.43916433 close on 2026-09-14, the recent low [timeline 2026-09-14]\n- 1014.42589693 close on 2026-09-18, a new high [timeline 2026-09-18]\n- 1014.42589693, +9.7% off the 2026-09-14 low [timeline 2026-09-14, timeline 2026-09-18]\nWrong if: it closes back below 924.43916433, erasing the recent breakout [timeline 2026-09-14].\n\nCALL USO 0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344 buy medium\nOil has trended up all month off the August low, and even the latest pullback from the mid-September high has held well above where it started.\n- 126.33345 close on 2026-08-25, the 30-day low [timeline 2026-08-25]\n- 161.405 close on 2026-09-15, the high [timeline 2026-09-15]\n- 154.54265 latest round, +22% off the low [mark.price_usd, timeline 2026-08-25]\nWrong if: it closes below 141.995, the 2026-09-03 level that marks the start of this leg [timeline 2026-09-03].\n\nCALL NVDA 0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec hold low\nNvidia is still doing what it did a month ago: chopping in the 208-230 band, now sitting mid-range after bouncing off this month's low.\n- 211.92474816 close on 2026-09-15, the recent low [timeline 2026-09-15]\n- 230.23665 close on 2026-09-04, the range high [timeline 2026-09-04]\n- 222.44729849 latest close, roughly mid-range [timeline 2026-09-18]\nWrong if: it closes above 230.23665, a breakout and a buy, or below 207.91, the August low, and a sell [timeline 2026-09-04, timeline 2026-08-24].",
+   "seat": "price-trend",
+   "snapshot_sha256": "c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783",
+   "status": "ok"
+  }
+ },
+ "snapshot_sha256": "c06abd9e89f007c5c665dc5fdd1104b6824c6a05f0c47a76058b3e0bce729783"
+}

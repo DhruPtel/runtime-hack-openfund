@@ -1,0 +1,19 @@
+4 of 4 seats reported · 4 seat(s) reported, at least the quorum of 3
+rebalance: quorum met: targets from the calls
+confidence: low 0.25, medium 0.5, high 0.75 · a score moves a weight by score x the position limit
+
+asset  price-trend     cross-asset-macro  execution-quality  price-integrity    direction  caution  score     now  target    change $
+AMZN   ·               ·                  caution med 0.5    proceed med 0      ·          0.5      ·         0    0         ·
+GME    buy high +0.75  ·                  ·                  ·                  +0.75      ·        +0.75     0    0.1875    +37.50
+PLTR   ·               ·                  ·                  proceed med 0      ·          ·        ·         0    0         ·
+SGOV   ·               buy med +0.5       ·                  proceed med 0      +0.5       ·        +0.5      0    0.125     +25.00
+USO    buy med +0.5    buy low +0.25      ·                  caution low 0.25   +0.375     0.25     +0.28125  0    0.070312  +14.06
+AAPL   buy med +0.5    ·                  ·                  ·                  +0.5       ·        +0.5      0    0.125     +25.00
+INTC   buy high +0.75  ·                  ·                  ·                  +0.75      ·        +0.75     0    0.1875    +37.50
+NVDA   hold low 0      hold med 0         ·                  ·                  0          ·        0         0    0         ·
+QQQ    ·               hold med 0         ·                  ·                  0          ·        0         0    0         ·
+MSTR   ·               hold low 0         caution high 0.75  caution high 0.75  0          0.75     0         0    0         ·
+MU     buy med +0.5    ·                  ·                  proceed med 0      +0.5       ·        +0.5      0    0.125     +25.00
+cash                                                                                                          1    0.179688  -164.06
+
+residual 0.0000005: what rounding each change toward zero left in cash · targets are what the calls want; the plan funds raises only from cash above the floor

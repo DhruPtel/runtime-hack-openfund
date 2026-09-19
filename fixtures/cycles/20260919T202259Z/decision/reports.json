@@ -1,0 +1,25 @@
+{
+ "accepted": [
+  {
+   "agent": "unassigned",
+   "seat": "cross-asset-macro",
+   "source": "runner cycle 20260919T202259Z"
+  },
+  {
+   "agent": "unassigned",
+   "seat": "execution-quality",
+   "source": "runner cycle 20260919T202259Z"
+  },
+  {
+   "agent": "unassigned",
+   "seat": "price-integrity",
+   "source": "runner cycle 20260919T202259Z"
+  },
+  {
+   "agent": "unassigned",
+   "seat": "price-trend",
+   "source": "runner cycle 20260919T202259Z"
+  }
+ ],
+ "refused": []
+}
