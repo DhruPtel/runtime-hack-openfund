@@ -27,7 +27,8 @@ def client(endpoints, transport) -> http.HttpClient:
 
 def live_run():
     """A 429 then a 200 for one request, a refused second request, and one clock read."""
-    replies = iter([(429, b"busy", {"retry-after": "0"}), (200, b'{"result":"0x1"}', {"x-a": "b"})])
+    replies = iter([(429, b"busy", {"retry-after": "0"}),
+                    (200, b'{"result":"0x1"}', {"x-a": "b", "Set-Cookie": "session=abc"})])
 
     def wire(url, body, timeout):
         if body == b'{"id":2}':
@@ -49,6 +50,7 @@ def test_an_exchange_is_kept_by_endpoint_name_and_never_by_url():
     assert [e.get("status") for e in recorder.exchanges] == [429, 200, None, None]
     assert "secret-key" not in json.dumps(recorder.exchanges)
     assert "<RPC_4663_MAINNET>" in recorder.exchanges[2]["raised"]["message"]
+    assert recorder.exchanges[1]["headers"] == {"x-a": "b"}  # a session cookie is not kept
 
 
 def test_a_replay_serves_the_same_answers_and_failures_in_order():
@@ -56,7 +58,8 @@ def test_a_replay_serves_the_same_answers_and_failures_in_order():
     replayer = cache.Replayer("chain", REPLAY, recorder.exchanges, recorder.readings)
     rpc = client(REPLAY, replayer.transport())
     again = rpc.send(b'{"id":1}')  # the 429, retried, then the 200: as it happened live
-    assert (again.status, again.body, dict(again.headers)) == (answer.status, answer.body, dict(answer.headers))
+    assert (again.status, again.body) == (answer.status, answer.body)
+    assert dict(again.headers) == {k: v for k, v in answer.headers.items() if k != "set-cookie"}
     with pytest.raises(http.Unavailable) as replayed:
         rpc.send(b'{"id":2}')
     assert str(replayed.value) == failure

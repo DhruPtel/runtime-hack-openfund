@@ -19,8 +19,10 @@ layer, for anything that would bypass the transports.
 On disk, one directory per capture:
 - `manifest.json`: the block, the endpoints, when it was captured and by which
   commit, each file's sha256, and the snapshot the live build produced;
-- `<source>.jsonl.gz`: one exchange per line, in the order it began;
-- `clock.json`: each source's clock readings, in order;
+- `<source>.jsonl.gz`: one exchange per line, in the order it began, its
+  headers as sent except `Set-Cookie`, a server's session cookie, which no
+  adapter reads and which does not belong in a repository;
+- `clock.json.gz`: each source's clock readings, in order;
 - `config/`: the config files the build read. The registry and the feed
   directory are referenced by sha256, not copied: they are already pinned in
   `config/registry/` under their hashes (1.2);
@@ -50,7 +52,8 @@ from fund.core.types import Instant
 
 FORMAT = "openfund.capture/1"
 MANIFEST = "manifest.json"
-CLOCK = "clock.json"
+CLOCK = "clock.json.gz"
+DROPPED_HEADERS = ("set-cookie",)
 SNAPSHOT = "snapshot.json"
 CONFIG_DIR = "config"
 
@@ -160,9 +163,11 @@ class Recorder:
                                "message": _named(str(error), self.endpoints)}}
                 raise
             status, reply, *rest = result
+            headers = ({k: v for k, v in rest[0].items() if k.lower() not in DROPPED_HEADERS}
+                       if rest else None)
             self.exchanges[n] = record | {
                 "n": n, "received_at": _ms(), "elapsed_ms": int((time.monotonic() - started) * 1000),
-                "status": status, "headers": dict(rest[0]) if rest else None, "body": _text(reply)}
+                "status": status, "headers": headers, "body": _text(reply)}
             return result
         return send
 
@@ -248,7 +253,8 @@ def write(directory: Path, *, recorders: Mapping[str, Recorder], manifest: Mappi
         return out
 
     files: dict[str, bytes] = {}
-    for source, recorder in recorders.items():
+    talkers = {source: r for source, r in recorders.items() if r.endpoints}  # a clock alone has none
+    for source, recorder in talkers.items():
         records = json.loads(clean(json.dumps(recorder.exchanges)))
         files[f"{source}.jsonl.gz"] = _lines(records)
     files[CLOCK] = _pretty({source: r.readings for source, r in recorders.items()})
@@ -260,7 +266,8 @@ def write(directory: Path, *, recorders: Mapping[str, Recorder], manifest: Mappi
         "format": FORMAT,
         "files": {name: {"sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}
                   for name, data in sorted(files.items())},
-        "exchanges": {source: len(r.exchanges) for source, r in recorders.items()},
+        "exchanges": {source: len(r.exchanges) for source, r in talkers.items()},
+        "headers_dropped": list(DROPPED_HEADERS),
         "clock_readings": {source: len(r.readings) for source, r in recorders.items()},
         "redaction": {"credentials_checked": sorted(set(redaction.build_denylist().values())),
                       "strings_masked": masked},
@@ -300,7 +307,8 @@ class Capture:
         return gzip.decompress(path.read_bytes()) if name.endswith(".gz") else path.read_bytes()
 
     def exchanges(self, source: str) -> list[dict]:
-        return [json.loads(line) for line in self._files[f"{source}.jsonl.gz"].splitlines()]
+        data = self._files.get(f"{source}.jsonl.gz", b"")
+        return [json.loads(line) for line in data.splitlines()]
 
     def config_files(self) -> dict[str, bytes]:
         prefix = CONFIG_DIR + "/"
