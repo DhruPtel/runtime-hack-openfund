@@ -436,7 +436,7 @@ def replay_main(directory: Path) -> int:
         print(f"== replay of {directory} stopped: {type(stopped).__name__}: {stopped}")
         return 1
     m = r.capture.manifest
-    print(f"== replay of {directory}")
+    print(f"== replay of {directory.relative_to(ROOT) if directory.is_relative_to(ROOT) else directory}")
     print(f"   block {m['block']['number']} at {m['block']['time']}, captured "
           f"{m['captured']['started_at']} by commit {str(m['captured'].get('commit'))[:12]}")
     print("   every answer served from the capture, every clock read from its tape, every "
