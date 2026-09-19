@@ -846,9 +846,24 @@ settled, never as a before-and-after delta. `tests/test_cost.py` (10)
 reproduces 1.8a's $0.264272 to the digit, and reconciles the recorded settled
 window against its six recorded calls exactly: $1.105746.
 
+## 2.6 ▶ — The first real analyst report
+**Date:** 2026-09-19 · **Commit:** 8d5c026
+
+With `BANKR_LLM_KEY` measured first as refused by the Wallet API and the Agent
+API, the runner's new `--confirm` entry point sent one price-integrity call on
+the committed capture: $0.273156, 78.6 s, 98,438 tokens in and 7,628 out, 77%
+of the output reasoning. `research/findings.md` §2.6 holds the report unedited,
+byte-identical to the recorded reply. It was refused on its first line, where
+it filled the unassigned `0x…` with the fund's wallet, and on five correct
+computed bps figures that 2.2's bps rule wrongly checks; no figure was
+fabricated, and with the rule corrected in a scratch copy only the header
+refusal remains. Judged a real view reached mechanically: the same five calls
+as the hand-written example, thinner, and with two unsupported prose claims.
+**Shown, and waiting for the operator.**
+
 ---
 
-## State at close — 2026-09-19, 2.2–2.5 built offline; live runs wait on the keys
+## State at close — 2026-09-19, 2.6 run once live; the first report was refused
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -874,6 +889,10 @@ closed session, Sat 00:05Z to Sun 23:55Z.
 - `git log --oneline -15` and `git status -sb`.
 - `make test`: 436 passed when this was written, about 12 s. The runner tests
   start real subprocesses against a fake gateway on 127.0.0.1.
+- `python3 -m fund.agents.runner --snapshot <path> [--seats …] [--retries N]`
+  prints what it would run. It **spends** only with `--confirm`.
+- `python3 -m probes.keymap`: each key's measured capabilities, read-only.
+  Run it before any live call.
 - `make replay`: rebuilds the committed capture offline, byte for byte, in
   under a second. Needs no credential.
 - `make check-env`: which credentials are present, by name only.
@@ -902,8 +921,10 @@ closed session, Sat 00:05Z to Sun 23:55Z.
   the reproducible part, and a live cycle, the purchase and the explorer for the
   rest (8.4's approved minimal version).
 - **2.1, approved:** `planning/REPORT-FORMAT.md` is the format.
-- **2.2 to 2.5, built and proven offline** (entries above). Nothing has run
-  live.
+- **2.2 to 2.5, built and proven offline** (entries above).
+- **The keys, fixed by the operator and measured.** `BANKR_LLM_KEY` is refused
+  by the Wallet API and the Agent API.
+- **2.6, run once live** on one seat: refused, and shown (entry above).
 - **What is built.** Under `src/fund/`:
   - `config.py`, `credentials.py`, `redaction.py`;
   - `core/types.py`, `core/universe.py`, `core/valuation.py`,
@@ -918,33 +939,31 @@ closed session, Sat 00:05Z to Sun 23:55Z.
   Every other module is a stub: `grep -l "Not yet built" -r src/` lists 23.
 
 ### Next
-- **2.6, the first real report, waits on a key that is safe to use.**
-  `BANKR_LLM_KEY` was still not read-only, with the Agent API on, when the
-  2.2–2.5 batch began (`probes/keymap.py`). Until the operator fixes it in the
-  dashboard, or 2.0's choice gives each agent its own gateway key, nothing
-  runs live.
-  - The runner has no live entry point yet. 2.6 adds one.
-  - Its key source is a parameter, `PerAgentKeys` or `SharedGatewayKey`.
+- **The operator reads 2.6** (`research/findings.md` §2.6).
+- **Owed from 2.6, each needing a path the 2.6 pass did not have:**
+  - **2.2's bps rule:** check a bps figure only when its line cites a `_bps`
+    field. Add the test with it. Paths: `src/fund/agents/schema.py`, `tests/`.
+  - **The unassigned agent `0x…`** reads as an address to fill in. It needs a
+    token that cannot be, or real agent addresses (2.0's choice). Paths: the
+    runner, the brief.
+  - **Tests for the runner's `main()`.** Path: `tests/`.
+  - **The settled `/v1/usage` cross-check** for the 15:39Z call, once the window
+    has been closed for 3,600 s.
 - **2.0's choice is still open:**
   - (a) email sign-ups with `--llm`, untested;
   - (b) the dashboard, unknown for a SIWE account;
-  - (c) own wallets with inference on the fund's key. Unsafe while
-    `BANKR_LLM_KEY` can sign.
-
-  One shared wallet is ruled out.
-- **Then, in order:**
-  - the page slice, if the operator approves it;
-  - 2.6;
+  - (c) own wallets with inference on the fund's key. Safe as the keys now
+    stand.
+- **Then:**
+  - the page slice, if approved;
   - 2.7, the report store;
-  - 2.8, the failure drill. Its three offline cases already exist as 2.4's
-    tests;
-  - the exit run.
-- **The keys, measured** (LESSONS 2026-09-19, the fund's keys):
-  - `BANKR_LLM_KEY` is **not read-only**;
-  - the **Agent API is on** for all three fund keys;
-  - `BANKR_KEY_EXEC` has the gateway on.
-
-  Invariant 1 is false as measured until the operator changes those settings.
+  - 2.8, the failure drill, whose three cases exist as 2.4's tests;
+  - the exit run of four seats, about $1.10.
+- **The keys, measured on 2026-09-19 after the fix:**
+  - `BANKR_LLM_KEY` is refused by the Wallet API and the Agent API;
+  - `BANKR_KEY_READ` is read-only, with the gateway and Agent API off;
+  - `BANKR_KEY_EXEC` is read-write, with the gateway and Agent API off;
+  - token launch is not measurable on any of them.
 - **Where the agent account's secrets live:** `~/.openfund/agents/price-integrity/`,
   mode 0600, outside the repository:
   - `siwe.key`, the sign-in key;
@@ -1010,8 +1029,10 @@ closed session, Sat 00:05Z to Sun 23:55Z.
   `fixtures/snapshots/`.
 - **Selftest:** 235 addresses in about 102 s.
 - **Analyst call:** $0.264 at Sonnet 5, uncached. A cycle is about $1.11.
-- **LLM credits:** $15.791107 in the fund's account, read 2026-09-19 by
-  `probes/keymap.py`. Credits were bought after the $0.937148 on record.
+- **LLM credits:** $15.791107 read by `probes/keymap.py` before 2.6. 2.6 then
+  spent $0.273156, which is the reply's own figure. The balance was not re-read.
+- **One real analyst call:** $0.273156, 78.6 s, 98,438 tokens in and 7,628 out,
+  77% of the output reasoning (§2.6).
 - **Wallet:** about $1.29, as 0.078742 USDG and 0.000460 ETH on 4663
   (`PHASE-1-GATE.md` §2).
 
@@ -1032,9 +1053,9 @@ closed session, Sat 00:05Z to Sun 23:55Z.
   `expires_at`, and an empty `allowed_assets`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `dea96ac`, pushed by the
-operator after 2.1. Every commit from `3290a6c` (the 2.2–2.5 batch) to the one
-that last changed this note is committed and **not pushed**.
+Checked locally, with no fetch. `origin/main` is `fd0a6f2`, the 2.2–2.5
+batch, pushed by the operator. Every commit from `e2d9e3d` (2.6's entry point)
+to the one that last changed this note is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** It does not restate any in full; LESSONS holds them.
