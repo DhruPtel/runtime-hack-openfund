@@ -203,6 +203,51 @@ Each phase has numbered units, three **playtime checkpoints** (marked ▶) where
 you get a real artifact to look at, and an exit gate. At the end of each phase we
 re-evaluate before detailing the next.
 
+> **From Phase 2 on, every unit is built at its minimal version**
+> (DECISION, LESSONS 2026-09-19). Phases 0 and 1 were built at full depth; the
+> pivot came after the Phase 1 gate, with the deadline about 16 hours away.
+>
+> - **What gets built.** Each unit's minimal version, as
+>   [`SIMPLIFICATION.md`](SIMPLIFICATION.md) states it. That file also records
+>   each unit's full version and what the minimal one gives up. **The unit
+>   descriptions below are the full versions.** Where they differ, the minimal
+>   version is what gets built. ROADMAP carries a one-line minimal on every
+>   unit.
+> - **Reduced depth, not fewer components.** Nothing is deleted. The
+>   components, flow and boundaries stay, and so does the phase and unit
+>   order. What changes:
+>   - scope narrows to the main path;
+>   - verification covers the main path only;
+>   - output is the few lines that carry the claim: a NAV and four lines, and
+>     reports of a summary plus key values;
+>   - unlikely edge cases are recorded, not handled.
+> - **The exception: keys, signing and spend authority keep their guard.**
+>   - The treasurer is the only writer and signer.
+>   - No agent key can transact or sign.
+>   - Orders are written before they are sent.
+>   - Secrets stay redacted.
+>
+>   Only ceremony goes, such as the mandate's hash-and-replay.
+> - **Ten units are equal,** because a reduced version would be a different
+>   thing: 3.7, 4.2, 4.3, 4.7, 4.12, 5.2, 5.4, 7.4, 7.5 and 8.2.
+> - **Stops:** 3.8, 5.4, 6.6, 7.5 and 8.5. The report format, which was 2.1's
+>   stop, was approved with the pivot. Every other ▶ is shown, not stopped.
+> - **Decided with it** (LESSONS 2026-09-19):
+>   - reports use two vocabularies: direction (buy, hold, sell) and condition
+>     (proceed, caution);
+>   - the fourth seat is `price-integrity`;
+>   - each analyst and the risk agent get their own Bankr wallet through
+>     `bankr login siwe`. **This is unverified; prove it before Phase 2
+>     depends on it.** They never transact or sign;
+>   - the ETH↔USDG leg is a demonstration of the money path that no analyst
+>     chose;
+>   - the paid endpoint sells the full record, and a preview is public;
+>   - execution comes before the sale, in unit order.
+> - **The judging criteria** are in
+>   [`JUDGING-CRITERIA.md`](JUDGING-CRITERIA.md).
+> - **Where this contradicts text above,** it is marked in place rather than
+>   reconciled: §1, §2 invariant 4, §5, §6, §11, §12 and §13.
+
 ### Phase 0 — probes (no product code)
 
 - **0.1** Repo skeleton, config loader, `.env`, secret redaction derived from the
