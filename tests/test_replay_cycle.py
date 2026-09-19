@@ -10,6 +10,8 @@ invariant 7). Nothing is asked of a model and nothing touches the network.
 - **The layout:** the plan is written in the layout the record's schema names
   (`core/plan.py` LAYOUTS). So the record rebuilds by its own layout after the
   plan's presentation changed (F3.8.12).
+- **The gates:** the schema also names the gate set the plan was judged by
+  (`core/gates.py` GATE_SETS), so S10 and S11 (4.4) cannot change this rebuild.
 - **The config:** the record names each config file's sha256. A replay reads the
   cycle's copy, never the working tree, so tuning config later (4.1's mandate,
   S11's limit, the confidence weights) cannot change this rebuild. Until then the
@@ -28,7 +30,7 @@ from pathlib import Path
 import pytest
 
 from fund import config
-from fund.core import plan, record
+from fund.core import gates, plan, record
 from fund.run import decide
 from fund.treasurer import sign
 
@@ -48,9 +50,9 @@ def no_network(monkeypatch):
     monkeypatch.setattr(socket, "create_connection", refused)
 
 
-def rebuild(tmp_path: Path, *, cycle: Path = CYCLE, layout: int | None = None) -> bytes:
+def rebuild(tmp_path: Path, *, cycle: Path = CYCLE, schema: str | None = None) -> bytes:
     """The record, rebuilt from the cycle's own recorded inputs alone."""
-    return decide.replay(cycle, SNAPSHOT, tmp_path / "out", layout=layout)
+    return decide.replay(cycle, SNAPSHOT, tmp_path / "out", schema=schema)
 
 
 def copied(tmp_path: Path) -> Path:
@@ -134,7 +136,40 @@ def test_the_current_layout_is_not_the_recorded_one(tmp_path):
     """Written in today's layout, the plan shows each part of GME's and INTC's split
     move, so the bytes differ. That is why a record names its layout."""
     assert plan.LAYOUT == 2
-    rebuilt = json.loads(rebuild(tmp_path, layout=2))
+    rebuilt = json.loads(rebuild(tmp_path, schema="openfund.decision/2"))
     assert rebuilt["schema"] == "openfund.decision/2"
     gme = [o for o in rebuilt["plan"]["orders"] if o["asset"]["symbol"] == "GME"]
     assert [o["move"]["part"] for o in gme] == [1, 2]
+
+
+def test_every_schema_names_a_layout_and_a_gate_set_the_code_defines():
+    assert {(f.layout, f.gate_set) for f in record.SCHEMAS.values()} <= {
+        (layout, gate_set) for layout in plan.LAYOUTS for gate_set in gates.GATE_SETS}
+    assert record.SCHEMAS[record.SCHEMA] == record.Schema(plan.LAYOUT, gates.GATE_SET)
+    assert record.SCHEMAS[json.loads(RECORDED)["schema"]].gate_set == 1
+
+
+def test_a_gate_set_added_later_judges_new_decisions_but_not_this_record(tmp_path, monkeypatch):
+    """S10 and S11 will change what the gates check (4.4). Here a later set 2 adds a
+    plan gate that refuses, as S11's would refuse a stale snapshot, and set 2 becomes
+    today's. The exit run's record names set 1, so its rebuild is still byte for
+    byte. Rebuilt under today's schema, the same inputs meet the new gate."""
+    original = gates.evaluate
+
+    def with_set_2(plan_, *, limits, extra=(), **rest):
+        if limits.gate_set == 2:
+            extra = [*extra, gates.Gate("added-in-set-2", False, "constructed: a later gate")]
+        return original(plan_, limits=limits, extra=extra, **rest)
+
+    later = "openfund.decision/test-later"
+    monkeypatch.setattr(gates, "evaluate", with_set_2)
+    monkeypatch.setattr(gates, "GATE_SETS", (1, 2))
+    monkeypatch.setattr(gates, "GATE_SET", 2)
+    monkeypatch.setitem(record.SCHEMAS, later, record.Schema(layout=2, gate_set=2))
+    monkeypatch.setattr(record, "SCHEMA", later)
+
+    assert rebuild(tmp_path / "a") == RECORDED
+    today = json.loads(rebuild(tmp_path / "b", schema=record.SCHEMA))
+    assert today["schema"] == later
+    assert "added-in-set-2" in [g["rule"] for g in today["gates"]["plan"]]
+    assert all("added-in-set-2" in o["blocked_by"] for o in today["gates"]["orders"])

@@ -31,17 +31,30 @@ their sha256. `treasurer/sign.py` signs exactly those bytes.
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
 from .types import document_bytes, document_id
 
-#: A record's schema names the layout its plan is written in (`plan.LAYOUTS`), so a
-#: replay rebuilds it by the same layout. `/1` is the 3.8 exit run's record, the
-#: first 3.9 replays; `/2` shows each part of a split move (after F3.8.12). The 3.8
-#: no-op record of 17:13Z also says `/1` but predates the sweep's changes: it is
-#: history, and nothing rebuilds it.
-SCHEMAS = {1: "openfund.decision/1", 2: "openfund.decision/2"}
-SCHEMA = SCHEMAS[2]
+
+@dataclass(frozen=True)
+class Schema:
+    """What a record's schema name fixes: the layout its plan is written in
+    (`plan.LAYOUTS`) and the gate set it was judged by (`gates.GATE_SETS`)."""
+
+    layout: int
+    gate_set: int
+
+
+#: A record's schema names its plan's layout and its gate set, so a replay rebuilds
+#: it by the same layout and judges it by the same gates, whatever changed since.
+#: `/1` is the 3.8 exit run's record, the first 3.9 replays; `/2` shows each part of
+#: a split move (after F3.8.12). Both were judged by gate set 1. The 3.8 no-op
+#: record of 17:13Z also says `/1` but predates the sweep's changes: it is history,
+#: and nothing rebuilds it.
+SCHEMAS = {"openfund.decision/1": Schema(layout=1, gate_set=1),
+           "openfund.decision/2": Schema(layout=2, gate_set=1)}
+SCHEMA = "openfund.decision/2"
 
 #: The config files a decision reads.
 CONFIG_FILES = ("analysts.json", "mandate.json", "models.json", "thresholds.json")

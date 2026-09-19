@@ -223,7 +223,7 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
            risk_credential: runner.SeatCredential | None, risk_agent: str,
            environ: Mapping[str, str],
            recorded_reply: str | None, store: report_store.ReportStore,
-           env_file: Path | None, layout: int = plan.LAYOUT,
+           env_file: Path | None, schema: str = record.SCHEMA,
            config_dir: Path | None = None) -> dict[str, Any]:
     """The whole path from calls to a signed record. Returns what it wrote.
 
@@ -231,6 +231,9 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
     its cycle carries, and a copy of what was read is written beside the record as
     `config/`. The record holds each file's sha256, so a replay can rebuild it
     from the cycle alone, whatever the working tree's config says by then (3.9).
+
+    `schema` fixes the plan's layout and the gate set the plan is judged by. A new
+    decision takes today's; a replay takes the one its record names.
 
     `risk_agent` is the risk seat's identity from its key source, the same whether
     the vote is asked live or read from a recording. Until the 3.8 sweep it was
@@ -249,7 +252,8 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
     for name, data in config_bytes.items():
         (carried / name).write_bytes(data)
     accepted, refused = check(offered, snapshot, snapshot_sha256, analysts)
-    limits = gates.Limits.from_config(thresholds, mandate, models)
+    fixed = record.SCHEMAS[schema]
+    limits = gates.Limits.from_config(thresholds, mandate, models, gate_set=fixed.gate_set)
 
     the_book = plan.book(holdings, cash_usd, snapshot)
     symbols = {a["asset"]["address"].lower(): a["asset"]["symbol"] for a in snapshot["assets"]}
@@ -266,7 +270,7 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
     _write(out_dir / "quotes.json", quotes_file(observations, judged_at, quote_label))
     written = plan.write(intents, judge(intents, observations, judged_at, thresholds),
                          proposal=proposal, the_book=the_book, snapshot=snapshot,
-                         snapshot_sha256=snapshot_sha256, judged_at=judged_at, layout=layout)
+                         snapshot_sha256=snapshot_sha256, judged_at=judged_at, layout=fixed.layout)
     plan_sha256 = document_id(written)
 
     outcome = risk.review(written, plan_sha256, snapshot=snapshot, mandate=mandate,
@@ -283,7 +287,7 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
                  for o, v in accepted],
         config_sha256=config_sha256, proposal=proposal.as_dict(), plan=written, review=outcome,
         risk_agent=risk_agent,
-        risk_reply=outcome["reply_text"], schema=record.SCHEMAS[layout])
+        risk_reply=outcome["reply_text"], schema=schema)
     record_path = out_dir / "record.json"
     record_path.write_bytes(record.encode(the_record))
     envelope = signed(record_path, out_dir / "envelope.json", env_file)
@@ -311,17 +315,18 @@ class ReplayError(ValueError):
 
 
 def replay(cycle_dir: Path, snapshot_path: Path, out_dir: Path, *,
-           layout: int | None = None) -> bytes:
+           schema: str | None = None) -> bytes:
     """A recorded cycle's decision record, rebuilt from the cycle's own recorded inputs
     alone: the snapshot, the reports, the quotes and their judging instant, the risk
     reply, and the config it was decided under, which the cycle carries in
     `decision/config/`. Nothing is read from the working tree's `config/`, so config
     tuned later never changes an earlier record's rebuild. The snapshot and each
     carried file must hash to what the record names, or the replay refuses. A replay
-    never signs.
+    never signs. The plan is written in the layout, and judged by the gate set, that
+    the record's schema names.
 
-    `layout` writes the plan in another layout than the record names, to show that
-    the layout matters."""
+    `schema` rebuilds under another schema than the record names, to show that the
+    schema matters."""
     decision = cycle_dir / "decision"
     recorded = json.loads((decision / "record.json").read_text())
     snapshot_bytes = snapshot_path.read_bytes()
@@ -348,9 +353,7 @@ def replay(cycle_dir: Path, snapshot_path: Path, out_dir: Path, *,
         recorded_reply=recorded["risk"]["reply_text"],
         store=report_store.ReportStore(out_dir / "store"),
         env_file=out_dir / "absent.env",  # no key file: a replay never signs
-        layout=layout or next(n for n, name in record.SCHEMAS.items()
-                              if name == recorded["schema"]),
-        config_dir=carried)
+        schema=schema or recorded["schema"], config_dir=carried)
     if done["envelope"]["signed"]:
         raise ReplayError("a replay signed its record")
     return (out_dir / "record.json").read_bytes()
