@@ -1,5 +1,12 @@
 # Working on openfund
 
+## Build mode from Phase 2: minimal versions (operator, 2026-09-19)
+
+Before building any unit from 2.1 on, read its row in
+`planning/SIMPLIFICATION.md` and build the minimal version. PLAN §8 states the
+pivot. Keys, signing and spend authority keep their full guard. Stop only at
+3.8, 5.4, 6.6, 7.5 and 8.5.
+
 ## Verification scales with risk (operator, 2026-09-18, at the Phase 1 gate)
 
 **High risk: keep the full discipline.** Money, identity, spend authority and
@@ -30,5 +37,6 @@ quickly, stop and say so.
   Scan it for every declared credential value, then commit it beside the
   weekend capture, which stays.
 
-The plan is `planning/` (PLAN, ROADMAP, PHASE-0-1). The history is `tracker/`:
-LOGS records what was built, LESSONS what changed and why.
+The plan is `planning/` (PLAN, ROADMAP, PHASE-0-1, SIMPLIFICATION;
+JUDGING-CRITERIA for the submission). The history is `tracker/`: LOGS records
+what was built, LESSONS what changed and why.
