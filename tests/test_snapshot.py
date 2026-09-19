@@ -286,13 +286,40 @@ def test_everything_registry_listed_without_a_feed_is_listed_as_outside_the_univ
 
 # --- refusals, each at its rule ------------------------------------------------------------------
 
-def test_a_reading_from_another_block_is_refused_at_block_pin():
+def elsewhere(observation: Observation) -> Observation:
+    """The same value, read at the block before the pinned one."""
+    return dataclasses.replace(observation, block=BlockRef(CHAIN, BLOCK.number - 1, BLOCK.timestamp,
+                                                           "0x" + "cd" * 32))
+
+
+def mixed(where: str) -> snapshot.Inputs:
     first = stock("NVDA")
-    elsewhere = dataclasses.replace(first.reading, block=BlockRef(CHAIN, BLOCK.number - 1,
-                                                                  BLOCK.timestamp, "0x" + "cd" * 32))
+    if where == "mark":
+        return inputs(dataclasses.replace(first, reading=elsewhere(first.reading)))
+    if where == "series":  # the whole series from one other block, so the type accepts it
+        series = dataclasses.replace(first.series, points=tuple(map(elsewhere, first.series.points)))
+        return inputs(dataclasses.replace(first, series=series))
+    built = inputs(first)
+    if where == "cash":
+        return dataclasses.replace(built, cash=dataclasses.replace(
+            built.cash, reading=elsewhere(built.cash.reading)))
+    return dataclasses.replace(built, balances=dict(built.balances) | {
+        U.cash_leg: elsewhere(built.balances[U.cash_leg])})
+
+
+# 1.11: each place a chain value enters the builder has its own guard, and before
+# this only the first was attacked. The name says which guard refused.
+@pytest.mark.parametrize("where, named", [
+    ("mark", "NVDA's feed reading"),
+    ("series", "NVDA's round 1000"),
+    ("cash", "USDG's feed reading"),
+    ("balance", f"the balance of {U.cash_leg.address}"),
+])
+def test_a_chain_value_from_another_block_is_refused_at_block_pin_wherever_it_enters(where, named):
     with pytest.raises(snapshot.SnapshotRefused) as refused:
-        snapshot.build(inputs(dataclasses.replace(first, reading=elsewhere)), U)
+        snapshot.build(mixed(where), U)
     assert refused.value.rule == snapshot.RULE_BLOCK_PIN
+    assert f"{named} was read at {BLOCK.number - 1}, not the pinned block" in str(refused.value)
 
 
 def test_a_round_dated_after_the_pinned_block_is_refused_at_after_pin():
