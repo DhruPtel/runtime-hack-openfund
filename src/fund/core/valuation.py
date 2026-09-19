@@ -36,10 +36,11 @@ volume while feed and quote agreed to 20 bps (F0.4.5), and the veto fires there.
 **Absent corroboration is undetermined, not agreement.** A corroborator that
 did not answer blocks. It never becomes a divergence of zero.
 
-**Open, not decided: where these two comparisons live.** CODEBASE §3 reserves
-threshold comparisons to `core/gates.py`, which is 3.4's. 1.4 is told to gate by
-the tier, so the comparisons are made here and recorded as an open question
-(LESSONS 2026-09-18). They read their thresholds as arguments, never literals.
+**A named exception until 3.4.** CODEBASE §3 reserves threshold comparisons to
+`core/gates.py`, which is 3.4's. The tier's two comparisons stay here, where the
+plan put them, and 3.4 sweeps them into `gates.py` with the other two named
+exceptions (DECISION, LESSONS 2026-09-18). They read their thresholds as
+arguments, never literals.
 
 `core/` imports nothing from `adapters/`: every reading, verdict and threshold
 arrives as an argument.
