@@ -4,6 +4,12 @@ Unit-level detail for the first two phases. Every unit states its goal, what
 gets built, the artifact it leaves behind, its done condition, and the risk that
 could derail it.
 
+**Both phases are closed, and were built at full depth.** From Phase 2 on,
+each unit is built at its minimal version (DECISION, LESSONS 2026-09-19; stated
+in PLAN §8; per unit in `SIMPLIFICATION.md`). Where a unit below promises
+something to a later unit, the later unit's minimal version is what will
+deliver it. Where that differs, it is marked in place.
+
 Conventions:
 - Probes live in `probes/` and are throwaway. Nothing in `src/` depends on them.
 - Every probe writes its result to `research/findings.md` marked **measured**,
@@ -192,7 +198,8 @@ available in your region."}`, before anything was broadcast and at no gas cost
 in this repository; they are now pinned in `probes/execute.py`, six quoted from
 Bankr's Errors table and the seventh reconstructed (F0.5.4). Second, the body is
 prose with no machine-readable cause, so 5.6's decoder fails closed on any 403 it
-does not recognise (F0.5.3). Third, the location gate fired first, so this does
+does not recognise (F0.5.3). *(2026-09-19: minimal 5.6 decodes this recorded
+body. No fresh 403 is sent.)* Third, the location gate fired first, so this does
 **not** show that `BANKR_KEY_EXEC` can transact (F0.5.5), and Phase 5's live leg
 is not de-risked until an ungated swap with that key settles.
 
@@ -632,6 +639,8 @@ included.
   **Where the comparison lives.** It stays in the adapter, as the first of
   three named exceptions to "gates exist once", and 3.4 sweeps it into
   `gates.py` (DECISIONs, LESSONS 2026-09-18; CODEBASE §3; PLAN §2 invariant 4).
+  *Contradicted 2026-09-19:* minimal 3.4 calls it from `gates.py` without
+  moving it. The sweep is 3.4's full version.
 - **The price series** (invariant 2). This unit chose the series and its
   window, under the no-archive rule. **Chosen:** the feed's own rounds, read
   at the pinned block via `getRoundData` (DECISION, LESSONS 2026-09-18). They
@@ -768,6 +777,7 @@ tier comes from config.
   decision (1.3 above).
 - **A named exception:** the tier's two comparisons sit in `valuation.py`,
   outside `gates.py`, until 3.4 sweeps them in (DECISION, LESSONS 2026-09-18).
+  *Contradicted 2026-09-19:* minimal 3.4 calls them without moving them.
 - **Changed after 1.4, not yet in code:** in a closed session the divergence
   is a finding, not a veto, and it reaches the decision record (DECISION,
   LESSONS 2026-09-18). `cross_check()` still vetoes there; the change is owed
@@ -829,7 +839,8 @@ USDG→stock at the **$25 intended size**, never a token size.
   blocks.
 - **Where its two comparisons live:** quote age and impact are compared in
   this adapter, the third named exception, until 3.4 sweeps them into
-  `gates.py` (DECISION, LESSONS 2026-09-18).
+  `gates.py` (DECISION, LESSONS 2026-09-18). *Contradicted 2026-09-19:*
+  minimal 3.4 calls them without moving them.
 - **Impact is signed** and gated as `impact > impact_max_bps` (50), never
   `abs(impact)`, because negative impact is price improvement (F0.3.4). The field
   that gates is `swapImpactBps` (documented). The two impact fields have never
@@ -888,7 +899,9 @@ about liquidity". The record does not support that, for two reasons:
 
 So funding does not turn these numbers into evidence about liquidity, and nothing
 in Phase 1 can. What the unfunded wallet does block is 3.3's sizing against
-reconciled holdings, and Phase 5's volume.
+reconciled holdings, and Phase 5's volume. *(2026-09-19: minimal 3.3 sizes stock
+legs against paper capital, so the unfunded wallet no longer blocks it. It
+still bounds the live leg.)*
 
 The same reasoning applies to the impact fields. F0.3.4 said separating them
 "needs a funded wallet". F0.3.3 suggested a larger quote prices unfunded, and
@@ -1249,6 +1262,9 @@ from fixtures versus live.
   capture is to be committed beside it, not in place of it: the weekend one is
   the only evidence of the closed-session path. None exists yet (LOGS).
 - **Not answered:** how much of the demo runs from fixtures and how much live.
+  *Answered 2026-09-19 by 8.4's approved minimal version:* the committed
+  capture for the reproducible part, and a live cycle, the purchase and the
+  explorer for the rest.
 
 **Changed by:** the 2026-09-17 RPC lesson, the price-history decision, 1.2's
 pinned snapshots, and 0.1's redaction. **Size:** bigger than drafted, by the
@@ -1538,3 +1554,8 @@ At the end of Phase 1, before detailing Phase 2, we answer:
 
 **Answered in [`PHASE-1-GATE.md`](PHASE-1-GATE.md)** (2026-09-18). Phase 2 is
 detailed after the operator reads it.
+
+**Followed by the scope pivot** (2026-09-19). Phase 2 onward is built at minimal
+depth, in the same unit order. The gate's cut list is replaced: every unit is
+kept, and its depth is cut instead (PLAN §8, `SIMPLIFICATION.md`, LESSONS
+2026-09-19).
