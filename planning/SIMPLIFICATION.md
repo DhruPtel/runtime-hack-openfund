@@ -59,9 +59,10 @@ units; this keeps every unit and cuts its depth.
 - **Output.** Reports are a summary and a few key values. Books are a NAV and
   four lines.
 - **Edge cases.** Handled if likely. Recorded here if not.
-- **Stops,** as the unit rows below set them: 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1's
-  stop was spent on approving this analysis. Every other ▶ is shown, not
-  stopped.
+- **Stops:** 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1 is the report format, and the
+  operator reads it before any code consumes it. This corrects an earlier line
+  here that called 2.1's stop spent (LESSONS 2026-09-19). Every other ▶ is shown,
+  not stopped.
 - **Records.** Each decision is written once. The other documents point at it.
 
 ---
@@ -257,7 +258,8 @@ it later.
 
 | Unit | Minimal: what gets built | Full: recorded | Given up |
 |---|---|---|---|
-| **2.1 ▶** Format · L | The format below. Two seat kinds, a three-sentence summary, up to eight calls, and field paths whose values code fills in. The format was approved with this analysis on 2026-09-19, so 2.1's stop is spent; its work is still to do. | Sections, depth, evidence citation, conviction told from speculation. Hand-written and approved at its own stop before code. | Depth. A report is a view with its key numbers, not research. No horizon per call, and no "what would change my mind". |
+| **2.0** SIWE wallet · **H** | Added 2026-09-19 (`PHASE-2.md`). One agent account made with `bankr login siwe` under a separate CLI config, then measured: its own address, the key's flags as the API reports them, the gateway reached, and a transaction refused. | A scripted onboarding for N agents, with permissions verified live and keys rotated. | Four of the five accounts, until one is proven. |
+| **2.1 ▶** Format · L | **A stop.** Four hand-written example reports, one per seat, read and approved before any code consumes them. The sketch below is where 2.1 starts, not its answer. | Sections, depth, evidence citation, conviction told from speculation. Hand-written and approved at its own stop before code. | Depth. A report is a view with its key numbers, not research. No horizon per call, and no "what would change my mind". |
 | **2.2** Schema · L | One validator: required fields and types; the call from its seat kind's set; confidence 0–1; every asset address in the snapshot's tradeable set (tickers never resolve an asset); every field path present in the snapshot; the snapshot hash echoed back and equal. A failure is a named rejection. | Hard validation of every field; out-of-scope assertions refused per seat; address-scoped claims (§9 analyst contract). | Scope enforcement per seat. Numbers in the prose are the model's and are not checked. Only the key-values table is the snapshot's. |
 | **2.3** Brief · L | One versioned file, `briefs/analyst.v1.md`: the seat's question from `analysts.json`, the rules 0.9's brief states, the schema, and the snapshot's bytes. Every seat sees the whole universe and differs in question. | Mandate, explicit scope boundaries, snapshot bytes, schema, effort scaling; assets partitioned in config. | Asset partitioning and effort scaling. Overlap is prevented by question only. |
 | **2.4** Runner · L; isolation **H** | Four analyst processes started in parallel. Each environment holds only its own key. The snapshot is passed as a file. Worker deadline 630 s and transport 600 s (set). One retry on a malformed reply, then a failed worker. A partial-failure flag. Every step writes an event to the cycle's log, which the page reads. | Bounded width, per-worker deadline, transport timeout, retry budget, pre-allocated slots, per-worker fallback, partial-failure disclosure. | Fallback models, and retry budgets beyond one. A timed-out call is still billed (F0.9.3). It is recorded as spend with no report, and nothing tries to cancel it. |
@@ -460,7 +462,7 @@ Proposals, not written. Each is provisional, and none is set until approved.
 | `cadence.retry_budget_per_worker` | 1 | §9: malformed output retries once. |
 | `cadence.confirmation_depth` | set at 5.3 | The record has no reorg measurement for 4663. |
 | `models.risk_model` | `claude-sonnet-5` | 1.7 measured a risk call on it: $0.048, 7.7 s. |
-| `models.context_budget_tokens` | 60,000 | Four replies at the 12,000-token cap plus a plan. Over is a veto. |
+| `models.context_budget_tokens` | 70,000 | Four replies at the 12,000-token cap, a plan, and risk's own reply at its 12,000 cap. Over is a veto. Corrected from 60,000, which left out the risk reply (`PHASE-2.md`). |
 | `thresholds.quorum_min_analysts` | 3 | One failed seat still decides. |
 | `thresholds.max_position_weight` | 0.25 | Two $25 orders in one name at $200. |
 | `thresholds.cash_floor_usd` | 20 | 10% of the paper capital. |
@@ -514,7 +516,8 @@ are how they are meant to fit. Nothing on record shows that pace is reachable.
 - **PLAN §8, before Phase 0:** the pivot, read before the units. Contradictions
   are marked in place in §1, §2 invariant 4, §5, §6, §11, §12 and §13, and at
   7.7 and 8.6.
-- **ROADMAP:** a minimal line on every unit from 2.1, and the five stops.
+- **ROADMAP:** a minimal line on every unit from 2.1, and the stops (2.1, 3.8,
+  5.4, 6.6, 7.5 and 8.5, with 2.1 restored on 2026-09-19).
 - **PHASE-0-1:** the pivot at the top, and the forward references it changes
   (0.5 on 5.6, 1.3 to 1.5 on 3.4's sweep, 1.5 on 3.3, 1.9 on 8.4).
 - **`JUDGING-CRITERIA.md`:** the six criteria and the bonus.

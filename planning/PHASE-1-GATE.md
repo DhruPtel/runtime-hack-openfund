@@ -6,7 +6,7 @@ The re-evaluation gate `PHASE-0-1.md` sets before Phase 2 is detailed. Written
 **Superseded in part on 2026-09-19.** The cut-or-fold list in §5 is replaced by
 the scope pivot. Every unit is kept and built at minimal depth instead (PLAN §8,
 `SIMPLIFICATION.md`, LESSONS 2026-09-19). The "Fewer stops" advice survives as
-five stops: 3.8, 5.4, 6.6, 7.5 and 8.5. The rest of this report stands.
+six stops: 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5. The rest of this report stands.
 
 **The state it describes:**
 - 362 tests pass offline.
