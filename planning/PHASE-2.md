@@ -256,3 +256,249 @@ LESSONS, and 2.2 and 2.3 are built from what was approved.
 **Full version:** sections, depth, evidence citation and conviction told from
 speculation, approved at its own stop (PLAN §8 2.1). The minimal version keeps
 the stop and shortens the report: a summary and key values, not research.
+
+### 2.2 Output schema · L
+
+**Goal:** a reply is accepted only in the shape 2.1 approved, and refused by
+name otherwise.
+
+**Build:** `agents/schema.py`, stdlib only, like `core/types.py`. One validator
+for the approved shape. It checks:
+- required fields and their types;
+- that each call comes from its seat's vocabulary;
+- that confidence is between 0 and 1;
+- that every asset is named by `(chain_id, address)` inside the snapshot's
+  tradeable set, since tickers never resolve an asset;
+- that every cited field path exists in the snapshot;
+- that the snapshot hash is echoed back and equal;
+- that a whole-report `NO_CALL` is accepted (invariant 6).
+
+Each refusal names its rule.
+
+**Artifact:** `agents/schema.py` and `tests/test_schema.py`, built from recorded
+replies where they exist. 1.8's price-trend reply named assets by symbol and
+called below-line names, so it is a real refusal at the address rule.
+
+**Done when:** the approved example passes, and each rule refuses a recorded or
+constructed bad reply at its own rule.
+
+**Full version:** hard validation of every field, out-of-scope claims refused
+per seat, and values checked as well as paths (§9 analyst contract).
+
+### 2.3 Brief · L
+
+**Goal:** every seat gets the same snapshot bytes and a question of its own.
+
+**Build:**
+- **`agents/briefs/analyst.v1.md`,** versioned in its filename. It holds:
+  - the seat's question from `config/analysts.json`;
+  - the rules 0.9's brief states: answer only from the snapshot, respect
+    `NO_CALL`, cite fields, and no sizing, execution or spend authority;
+  - the approved format;
+  - the snapshot's bytes, appended verbatim.
+- **`config/analysts.json` to version 2:**
+  - the fourth seat becomes `price-integrity`;
+  - each seat's vocabulary;
+  - every seat universe-wide, disjoint in question.
+
+**Artifact:** the brief, `analysts.json` v2, and a test that the four rendered
+briefs carry a byte-identical snapshot section with the same hash. That is §9's
+"all analysts provably received the same snapshot".
+
+**Done when:** that test passes, and a seat with no question in config refuses
+to render.
+
+**Full version:** mandate text, explicit scope boundaries, effort scaling, and
+assets partitioned per seat.
+
+### 2.4 Runner · **H**
+
+**Goal:** four analyst processes on one snapshot, each bounded, and each
+outcome disclosed.
+
+**Build:**
+- **`agents/runner.py` starts four analyst processes in parallel.**
+- **Each child's environment is built from nothing:** its own gateway key, plus
+  `PATH` and `PYTHONPATH`.
+  - The runner never calls `load_environment()`, and never passes its own
+    environment through.
+  - Children never read `.env`, and take their one credential from their
+    environment only.
+  - This is what keeps `BANKR_KEY_EXEC`, `SIGNING_KEY` and every other agent's
+    key out of each analyst process (finding 2).
+  - `.env` is still readable on disk from any process on this machine.
+    Separating the files is 4.12's work.
+  - **The claim is about the environment, not the filesystem.**
+- **`agents/analyst.py`:** brief, call, parse, validate (2.2), write the result.
+- **`adapters/bankr_llm.py`:**
+  - one attempt at the transport, with a 600 s timeout and no endpoint
+    rotation;
+  - the refusal's body kept (finding 3);
+  - the `usage` block captured;
+  - never retries a timeout, because a timeout is billed (F0.9.3).
+- **The retry:** once, and only for a reply that arrived and failed 2.2. Its
+  timeout is what remains of the worker's 630 s, less a margin. Everything
+  else is a failed worker with its reason: timeout, transport, refused or
+  invalid.
+- **The result:** each seat is `ok`, `no_call` or `failed`, and the cycle is
+  `partial` if any seat failed. Whether a partial cycle may decide is Phase 3's
+  quorum.
+- **The event log,** `runs/<cycle>/events.jsonl`, has one line per start,
+  finish or failure: seat, agent address, latency, cost and status. It carries
+  no secret, since redaction is installed.
+- **`credentials.py`:** five new rows, four analysts and risk.
+  - Each is loadable only by its own new role.
+  - Each has `can_transact=False`.
+  - Each has the scope measured at 2.0.
+- **`.env.example`:** the five names.
+- **Config:** the four values below.
+
+**Artifact:** the runner, the analyst worker, the LLM client, and the
+credential rows, with tests on a fake gateway.
+
+**Done when, offline:**
+- four processes run in parallel within their deadlines;
+- a hung worker is cut at its deadline and the cycle completes;
+- a malformed reply retries once, then fails with its rule named;
+- the cycle says `partial` when a seat failed.
+
+**The H proof, each rule broken in a copy and shown to fail a test:**
+- inside each child, every declared credential except its own is absent from
+  the environment. Break it by passing the runner's environment through;
+- the deadline;
+- the single retry;
+- the partial flag.
+
+**Full version:** bounded width from config, fallback models, pre-allocated
+result slots, retry budgets per failure kind, and deployed isolation across
+hosts with files per role (PLAN §8 2.4, 4.12).
+
+### 7.6, first slice: the swarm on a page · L · *recommended, not yet approved*
+
+See "The page" below. If approved, it lands here.
+
+**Goal:** the swarm's first real run is watched, not read from files.
+
+**Build:** one static HTML file with plain JavaScript, no build step and no
+dependency. It is served locally by the standard library's `http.server` from
+the run directory, and polls `events.jsonl` and the results every few seconds.
+It shows:
+- four seat cards: the seat, the agent's address, and a status (waiting,
+  thinking with elapsed time, done, `NO_CALL`, or failed with its reason);
+- latency and cost;
+- then the summary and calls, with the key values shown;
+- a banner when the cycle is partial.
+
+It reads nothing outside the run directory.
+
+**Artifact:** `surfaces/page/index.html`.
+
+**Done when:** a fake-gateway run shows all four states, including a failed
+seat.
+
+**Full version:** 7.6's public page over published previews, with every later
+panel.
+
+### 2.5 Token accounting · L
+
+**Goal:** every call's cost is recorded where it happens, against the agent
+that paid.
+
+**Build:** per call, in the worker's result and the event log:
+- the response's `usage` block;
+- the price at the published rate, with where the rate came from;
+- the agent account's `/v1/credits` before and after.
+
+A timed-out call is recorded as billed with no report, its cost known only from
+the balance. `/v1/usage` is not used, because it was seen going backwards
+(F0.9.2).
+
+**Artifact:** cost fields in results and events.
+
+**Done when:** they are computed on the fake gateway. Then, live at 2.6, the
+rate, the `usage` block and the balance agree, as they did at 0.9, or the gap
+is recorded.
+
+**Full version:** per-call counts reconciled to `/v1/usage` in settled windows,
+aggregate to aggregate (F0.6.4).
+
+A balance delta is that agent's spend only while nothing else uses the
+account, because credits are wallet-scoped (F0.6.6). One account per agent is
+what makes that hold.
+
+### 2.6 ▶ First real report · L · shown, not stopped
+
+**Goal:** one real analyst report on a real snapshot, with its cost and
+latency.
+
+**Build:** nothing new. Run one seat through the runner on the committed
+capture:
+- **the seat is `price-integrity`:** it is new, and the closed-session risk
+  moment rests on it (SIMPLIFICATION.md, Q2);
+- **the key is its own account's,** if 2.0 passed;
+- **if 2.0 has not passed,** it runs on the fund's key, labelled as such. It is
+  only a quality check and never the swarm. $0.937 covers about three calls.
+
+**Artifact:** the report, its raw reply, cost, latency and events, on the page
+if the slice was pulled forward.
+
+**Done when:**
+- it validates;
+- its key values resolve to the snapshot;
+- its cost is within 1.8a's range, or the difference is explained;
+- how far it sits from 2.1's example is written down.
+
+**Full version:** a stop to judge the gap from 2.1.
+
+### 2.7 Report store · L
+
+**Goal:** a report is kept once, under its own hash, as the record every later
+unit cites.
+
+**Build:** each result written once as canonical JSON named by its sha256. It
+holds:
+- the parsed report;
+- the raw reply;
+- the `usage` block;
+- the seat;
+- the agent's address;
+- the snapshot hash.
+
+A second write of the same name must match, or it fails. Keeping the raw reply
+is what lets 3.9 replay from recorded outputs (invariant 7).
+
+**Artifact:** the store, and the exit run's reports committed as a fixture after
+a scan for every declared credential. 3.x and 3.9 replay from that fixture.
+
+**Done when:** a rewrite with different bytes is refused, and the fixture
+round-trips.
+
+**Full version:** a content-addressed store in SQLite, queryable (PLAN §5).
+
+### 2.8 ▶ Failure drill · L · shown, not stopped
+
+**Goal:** a broken worker is disclosed, and the cycle completes.
+
+**Build:** three offline tests on the fake gateway:
+- **malformed:** it retries once, then fails with its rule named;
+- **hung:** it is cut at its deadline;
+- **`NO_CALL`:** accepted and counted as an abstention.
+
+Each ends with the cycle complete and marked `partial` where a seat failed. The
+page shows a failed seat.
+
+**Artifact:** the tests.
+
+**Done when:** all three pass.
+
+**Full version:** a live drill of all three.
+
+### The exit run
+
+**The phase's exit:** all four seats produce valid reports from one snapshot id,
+each on its own account; failures are visible and non-fatal; and the format was
+approved at 2.1.
+
+**The run:** four calls, about $1.06, on the committed capture or a fresh live
+snapshot. Whether the gateway serves four accounts' calls at once without
+throttling is unmeasured, and this run measures it.
