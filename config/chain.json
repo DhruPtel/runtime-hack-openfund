@@ -14,7 +14,7 @@
   "_request_timeout_note": "A whole-request deadline, not just a socket timeout: a hang advances to the next attempt. Measured reads take 140-300 ms; a 215-read Multicall3 took ~290 ms.",
   "attempts_per_endpoint": 3,
   "backoff_seconds": 2,
-  "_backoff_note": "Doubles per retry: 2, 4 s. The RPC's 429 is a JSON-RPC error via Cloudflare with NO Retry-After, so there is no server hint to honour (measured).",
+  "_backoff_note": "Doubles per retry: 2, 4 s. The RPC's 429 is a JSON-RPC error via Cloudflare with NO Retry-After, so there is no server hint to honour (measured). A '-32000 historical state ... not available' for the pinned block is retried the same way: seen once, never in 326 reads of one block over 9 minutes, and safe because every read is by block hash.",
   "min_request_interval_ms": 500,
   "_min_request_interval_note": "A batch of 100 eth_calls drew an immediate 429; single Multicall3 calls one second apart never did (measured).",
 
@@ -24,7 +24,7 @@
 
   "series_window_seconds": 604800,
   "series_max_rounds": 1000,
-  "_series_note": "Seven days of Chainlink rounds up to the pinned block. Rounds per day run from ~1.5 (SPY) to ~80 (SNDK), so the window is by time with a round cap; hitting the cap makes the series visibly short. History is readable at a recent block without archive: 645 of 645 AAPL rounds (measured).",
+  "_series_note": "Seven days of Chainlink rounds up to the pinned block. Rounds per day run from ~1.5 (SPY) to ~80 (SNDK), so the window is by time with a round cap; hitting the cap makes the series visibly short. History is readable at a recent block without archive: 645 of 645 AAPL rounds (measured). At block 66651154 all 37 feeds covered the window, with 7 (SGOV) to 361 (CLSK) points.",
   "series_scale_break_ratio": 10000,
   "_scale_break_note": "Consecutive answers differing by this factor or more are a scale break, not a price move. 32 of 37 mapped feeds began life reporting answers ~1e8 larger than their 8 decimals (measured); a series stops at the break and says so.",
 
