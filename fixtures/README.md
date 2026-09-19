@@ -31,7 +31,12 @@ Each is scanned for every declared credential before commit.
 - the record signed with the fund's key, and rebuilt byte for byte offline
   from this directory. It is 3.9's cycle.
 
-`20260919T171351Z` is 3.8's exit run on the committed capture:
+`tests/test_replay_cycle.py` (3.9) rebuilds `20260919T202259Z`'s record byte for
+byte with the network refused, by the plan layout its schema names.
+
+`20260919T171351Z` is history, not replayable: its record says `/1` but predates the
+sweep's changes to what a record holds. It is 3.8's first exit run on the committed
+capture:
 - four live replies, all refused;
 - so no quorum and no rebalance;
 - the record signed with the fund's key.
