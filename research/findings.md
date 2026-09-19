@@ -3662,5 +3662,10 @@ and read-only might refuse it too.
   balance.
 - **Not tried:** `/wallet/submit`, `/wallet/transfer`, typed-data signing.
   F2.0.3's body says read-only refuses "messages or transactions".
+- **F2.0.4's prompt call ran once and was then removed from the probe.**
+  `tests/test_boundaries.py` forbids any call to that endpoint under `probes/`
+  (0.2's done-condition), and it failed on the probe as it should. The call was
+  taken out rather than disguised, so the rule holds and the answer stays here.
+  Re-measuring it needs the rule relaxed by name, which is the operator's call.
 - **Spent: $0.** Nothing was bought, nothing moved, and every attempt was sent
   once.

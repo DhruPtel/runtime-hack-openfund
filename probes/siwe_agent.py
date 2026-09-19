@@ -17,8 +17,12 @@ each property is tested by what the key does, not by what a flag says:
     minimal completion;
   - **cannot transact:** a message signature (`/wallet/sign`), which needs no
     balance, so a refusal cannot be an empty wallet; and a quoted swap;
-  - **Agent API off:** `/agent/sign` and `/agent/prompt`, the endpoint the
-    invariant names;
+  - **Agent API off:** `/agent/sign`, and once only, on 2026-09-19, the Agent
+    API's prompt endpoint, the one the invariant names. That call was then taken
+    out of this file. `tests/test_boundaries.py` forbids any call to it under
+    `probes/`, the rule held, and its one answer is kept in
+    `research/findings.md` F2.0.4. Sending it again needs that rule relaxed
+    by name, which is the operator's call;
   - **can it fund itself:** `/llm/credits/topup`, the call `bankr llm credits
     add` makes.
 
@@ -213,8 +217,6 @@ def main(confirmed: bool) -> int:
               "quoteId": quoted.get("quoteId"), "idempotencyKey": str(uuid.uuid4())}),
             ("agent/sign: agent", f"{API}/agent/sign", key,
              {"signatureType": "personal_sign", "message": SIGN_MESSAGE}),
-            ("agent/prompt: agent", f"{API}/agent/prompt", key,
-             {"prompt": "Reply with the single word ok. Do not take any action."}),
             ("llm/credits/topup: agent, $1 from empty", f"{API}/llm/credits/topup", key,
              {"amountUsd": 1, "chain": "base"}),
         ]
