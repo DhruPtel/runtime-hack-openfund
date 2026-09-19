@@ -220,7 +220,7 @@ Make the money path correct before it touches money.
 | 4.7 | Positions derived from journal; one valuation function | **Equal.** Derived from the journal, with one valuation function. |
 | 4.8 ▶ | A full paper cycle end to end | `make cycle-demo` end to end. Shown, not stopped. |
 | 4.9 | Startup reconciliation and single-owner lock | Unresolved orders resolved before a new cycle, and one lock row. |
-| 4.10 ▶ | Crash drill | One offline test: killed after `submitted`, resolved once. Shown, not stopped. |
+| 4.10 ▶ | Single-owner lock | **Rescoped** (the operator, 2026-09-19): one lock row, a second runner refuses. The crash drill it was is covered by the kill drills at 4.3 and 4.8. Shown, not stopped. |
 | 4.11 ▶ | Known-answer accounting fixture | **Stop** (the operator, 2026-09-19). A small fixture checked for positions, cash, basis and value by hand. 6.1 adds the four lines. |
 | 4.12 | Treasurer as its own process with its own credentials; deployed-isolation test | **Equal in substance.** Its own process with the execution and signing keys; isolation tests from every agent's environment. One machine, no separate host. |
 

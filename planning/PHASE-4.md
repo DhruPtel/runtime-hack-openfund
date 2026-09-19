@@ -1,10 +1,11 @@
 # Phase 4: the treasurer and the ledger
 
-**Status, 2026-09-19:** **4.0 and Batch B (4.1 to 4.8) are built** (LOGS). The fund
-now acts on paper: a mandate authorizes it, orders are written before they are
-attempted, a chokepoint refuses what does not belong, fills are booked, and
-`make cycle-demo` takes the committed capture to a reconciling book. Next is Batch C,
-4.9 and 4.10, then the stop at 4.11. Phase 3 closed with 3.9: the exit run's
+**Status, 2026-09-19:** **Phase 4 is built.** 4.0, then 4.1 to 4.8, then the audit's
+cuts, then 4.9, 4.10 and 4.12, and now 4.11, which is **a stop and is waiting for the
+operator**. The fund acts on paper: a mandate authorizes it, orders are written before
+they are attempted, a chokepoint refuses what does not belong, fills are booked,
+`make cycle-demo` takes the committed capture to a reconciling book, and the ledger
+meets a hand-computed answer figure by figure. Phase 3 closed with 3.9: the exit run's
 signed decision rebuilds byte for byte (`tests/test_replay_cycle.py`). Before 4.0,
 the replay was made to read the config its cycle carries and to judge by the gate
 set its record names (LOGS, "3.9 hardened"), because 4.1 and 4.4 change both.
@@ -94,7 +95,7 @@ and its rule. All are **H**. Each rule is broken in a copy and a test must fail.
   - 4.4 reads them (only `prepared` may be sent);
   - 4.5 moves an order through them;
   - 4.9 resolves `submitted` and `unknown`;
-  - 4.10 drills a crash between two of them.
+  - 4.10 holds the lock while they move.
 - **One definition:** `core/orders.py`, `transition(order, to, reason=…) -> Order`.
   It is a pure table of the allowed moves, and any other move is refused by
   name:
@@ -423,14 +424,17 @@ has moved since.
 - **Full:** startup reconciliation and a single-owner lock, with the in-flight
   `409` path.
 
-### 4.10 ▶ Crash · H · shown, not stopped
-- **Goal:** a crash between writing `submitted` and hearing back leaves no
-  double fill.
-- **Build:** one offline test on the fake executor: killed after `submitted`,
-  restarted, resolved once.
-- **Artifact:** the test.
-- **Done when:** the order is booked once, under one key.
-- **Full:** a live kill mid-submission.
+### 4.10 ▶ Single-owner lock · H · shown, not stopped
+**Rescoped by the operator, 2026-09-19.** It was the crash drill; the kill drills at
+4.3 and 4.8 cover that — a process killed after the write leaves the state on disk and
+nothing booked — so 4.10 is the lock instead.
+- **Goal:** two runners cannot both spend (PLAN §4).
+- **Build:** one lock row in `run/startup.py`, beside 4.9's resolution, because both
+  are what a runner does before a cycle is accepted.
+- **Artifact:** the lock and its tests.
+- **Done when:** a second runner refuses while the first holds it, and a row left by a
+  process that died on this host is taken over, never one from another host.
+- **Full:** a live kill mid-submission, and a lease with a heartbeat.
 
 ### 4.11 ▶ Known answer · H · **a stop**
 - **Goal:** the ledger tells the economic truth on a case worked by hand.
@@ -474,7 +478,7 @@ has moved since.
 |---|---|---|---|
 | **A** | 4.0 | The definitions every later unit calls. Built alone, so nothing else is computing the same values while they are. | Built |
 | **B** | 4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 4.7 → 4.8 | Each consumes the one before: mandate, intent, state, admission, fill, ledger, positions, the cycle. Every shared value is 4.0's, so no two units define one. | Built; 4.8 shown |
-| **C** | 4.9 → 4.10 | Recovery over the states 4.3 writes and the fills 4.5 books. | 4.10, shown |
+| **C** | 4.9 → 4.10 | Recovery over the states 4.3 writes and the fills 4.5 books. | Built; 4.10 shown |
 | **stop** | **4.11** | The known answer: every primitive, checked by hand. | **Waits for the operator** |
 | **D** | 4.12 | It moves keys and splits `.env`: spend authority, with a live refused-swap test that needs authorizing. It goes after the stop, so the ledger is known-good first. | Shown |
 
@@ -510,7 +514,9 @@ booked.
 | `config.load()` merges all of `.env` into the caller | LOGS open item 3 | 4.12 | open |
 | `cumulative_budget_usd` and `confirmation_depth` are null | `config/` | Phase 5 | open: the null live budget blocks every live order, which is what it is for until 5.2 |
 | 4.11 is a stop, but `CLAUDE.md`'s list does not say so | the operator, 2026-09-19 | `CLAUDE.md` | owed: outside this batch's paths, again |
-| The paper book opens with `capital_usd` of USDG: 200 USDG, worth $199.98 at the exit run's mark | 4.8 | the operator | open: chosen at 4.8 because paper cash is USDG; 4.11's fixture will use the same rule |
+| The paper book opens with `capital_usd` of USDG: 200 USDG, worth $199.98 at the exit run's mark | 4.8 | the operator | open: chosen at 4.8 because paper cash is USDG |
+| Settled revenue has no event, and the identity has no line for it | 4.11 | 6.1, with 7.2's settlement evidence | open: an x402 sale that settles is income, not capital, so it cannot be a transfer in |
+| The journal's schema keeps four kinds; a transfer is the fifth | 4.11 | 4.6's full version | open: the ledger computes a transfer, the store cannot keep one |
 
 ## What Phase 4 ends with
 
