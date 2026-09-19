@@ -250,6 +250,29 @@ def _figures(block: Sequence[tuple[int, str]]) -> tuple[Figure, ...]:
     return tuple(Figure(text=f[1], line=f[0]) for f in figures if f is not None)
 
 
+#: Emphasis a model may wrap a line in: `**CALL …**`, `` `CALL …` ``.
+_WRAPPERS = ("**", "__", "`", "*", "_")
+
+
+def _bare(line: str) -> str:
+    """A line as code reads it: no indentation, and no emphasis wrapped around it."""
+    bare = line.strip()
+    changed = True
+    while changed:
+        changed = False
+        for mark in _WRAPPERS:
+            if len(bare) > 2 * len(mark) and bare.startswith(mark) and bare.endswith(mark):
+                bare, changed = bare[len(mark):-len(mark)].strip(), True
+    return bare
+
+
+def _dedent(line: str, indent: int) -> str:
+    """A line of an indented CALL block, with the block's indentation removed, so its
+    figure lines and their continuations read as they would unindented."""
+    lead = len(line) - len(line.lstrip(" "))
+    return line[min(lead, indent):]
+
+
 def parse(text: str) -> tuple[Report | None, tuple[Refusal, ...]]:
     """Read the report's shape. Returns the report (None only when there is no
     header to read) and the refusals the shape alone earns."""
@@ -270,10 +293,14 @@ def parse(text: str) -> tuple[Report | None, tuple[Refusal, ...]]:
     opening: list[str] = []
     no_calls: list[int] = []
     current: list[tuple[int, str]] | None = None
+    indent = 0
     for index in range(first + 1, len(lines)):
         line = lines[index].rstrip()
-        if line.startswith("CALL ") or line == "CALL":
-            match = _CALL.match(line)
+        bare = _bare(line)
+        if bare.startswith("CALL ") or bare == "CALL":
+            # Indented, as the brief's own template is, or wrapped in emphasis, a CALL
+            # line is still a call. At the sweep it was silently prose (R6).
+            match = _CALL.match(bare)
             if match is None:
                 refusals.append(Refusal("call-shape", "a CALL line must be 'CALL <SYMBOL> "
                                         f"<0x address> <word> <confidence>', not {line[:100]!r}",
@@ -281,6 +308,7 @@ def parse(text: str) -> tuple[Report | None, tuple[Refusal, ...]]:
                 current = None
                 continue
             current = []
+            indent = len(line) - len(line.lstrip(" "))
             blocks.append((index + 1, match, current))
         elif line.strip() == NO_CALLS:
             no_calls.append(index + 1)
@@ -288,7 +316,7 @@ def parse(text: str) -> tuple[Report | None, tuple[Refusal, ...]]:
         elif current is None:
             opening.append(line)
         else:
-            current.append((index + 1, line))
+            current.append((index + 1, _dedent(line, indent)))
 
     has_call_line = bool(blocks) or any(r.rule == "call-shape" for r in refusals)
     if not has_call_line and not no_calls:
@@ -299,7 +327,7 @@ def parse(text: str) -> tuple[Report | None, tuple[Refusal, ...]]:
     calls = tuple(
         Call(symbol=m.group(1), address=m.group(2).lower(), word=m.group(3),
              confidence=m.group(4), line=number, figures=_figures(block),
-             text="\n".join([lines[number - 1].rstrip()] + [line for _, line in block]))
+             text="\n".join([_bare(lines[number - 1])] + [line for _, line in block]))
         for number, m, block in blocks)
     report = Report(seat=seat, agent=agent, snapshot=snapshot, calls=calls,
                     no_calls=bool(no_calls) and not has_call_line,

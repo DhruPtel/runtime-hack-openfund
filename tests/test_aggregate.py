@@ -164,3 +164,13 @@ def test_the_table_shows_each_seat_the_weights_cash_and_residual():
     assert lines[-1].startswith("residual 0:") and "the plan funds raises" in lines[-1]
     held = aggregate.table(run(FOUR[:2], current={"NVDA": "0.1"}), SEATS)
     assert "NO REBALANCE" in held
+
+
+def test_an_indented_call_reaches_the_aggregator():
+    """R6: META's block indented as the brief's own template is. At the sweep its call
+    was silently prose, and META got no weight."""
+    from test_schema import _indented_meta, example as approved_text, verdict as checked
+    text = _indented_meta(approved_text("price-trend"))
+    parsed = checked(text).as_dict()
+    others = [r for r in FOUR if r["seat"] != "price-trend"]
+    assert targets(run(others + [parsed]))["META"] == "0.125"

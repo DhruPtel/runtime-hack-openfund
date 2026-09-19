@@ -389,3 +389,40 @@ def test_a_figure_with_no_citation_or_before_a_full_stop_is_still_checked(line, 
     assert v.ok is ok, v.refusals
     if not ok:
         assert "999.99" in next(r for r in v.refusals if r.rule == "figure").detail
+
+
+# --- R6: an indented or bolded CALL line is a call, and its figures are checked -------------------
+
+META_BLOCK = """CALL META 0xc0d6457c16cc70d6790dd43521c899c87ce02f35 buy medium"""
+
+
+def _indented_meta(text: str, prefix: str = "    ") -> str:
+    """META's whole block indented, as the brief's template is."""
+    start = text.index(META_BLOCK)
+    end = text.index("\n\nCALL INTC")
+    block = "\n".join(prefix + line if line else line for line in text[start:end].split("\n"))
+    return text[:start] + block + text[end:]
+
+
+@pytest.mark.parametrize("dress", ["indented", "bold", "backticks"])
+def test_an_indented_or_bolded_call_is_a_call_the_aggregator_sees(dress):
+    """At the sweep an indented or bolded CALL line was silently prose: the aggregator
+    never saw the call, while the risk agent and a buyer read it."""
+    text = example("price-trend")
+    if dress == "indented":
+        text = _indented_meta(text)
+    else:
+        mark = "**" if dress == "bold" else "`"
+        text = text.replace(META_BLOCK, f"{mark}{META_BLOCK}{mark}", 1)
+    v = verdict(text)
+    assert v.ok, v.refusals
+    assert "META" in [c["symbol"] for c in v.as_dict()["calls"]]
+    meta = next(c for c in v.report.calls if c.symbol == "META")
+    assert len(meta.figures) == 3
+
+
+def test_a_fabricated_figure_under_an_indented_call_still_refuses():
+    text = _indented_meta(example("price-trend")).replace(
+        "- 644.00, the last pullback low", "- 641.00, the last pullback low", 1)
+    assert "    - 641.00" in text
+    assert "figure" in rules(verdict(text))
