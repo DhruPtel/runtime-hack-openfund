@@ -207,3 +207,200 @@ class Settings:
                                  transport=transport or http.urllib_transport(self.user_agent))
         return Gecko(client, network=self.network, batch_size=self.batch_size,
                      clock=clock or (lambda: Instant(time.time_ns() // 1_000_000)))
+
+
+# --- the live proof: `python -m fund.adapters.gecko --prove` -----------------------------
+
+#: F0.4.5's liquid-name case, as probe 0.4 recorded it (`probes/out/feed.json`,
+#: block 66354932): AMZN's feed answer and GeckoTerminal's price and volume.
+RECORDED_AMZN = {"block": 66354932, "feed_answer": 25260000000, "round": "18446744073709552407",
+                 "updated_at": 1789745950, "gecko_price": "265.87982073",
+                 "gecko_volume": "2193251.17210313"}
+
+
+def prove() -> int:
+    """1.4 live and read-only: every markable asset's mark, corroboration,
+    divergence, volume and tier verdict at one pinned block. It composes the
+    chain adapter, this adapter and `core/valuation` the way 1.6's snapshot
+    builder will; the chain import is the proof's own, inside this function.
+    Spends nothing."""
+    from decimal import Decimal
+
+    from fund import config
+    from fund.adapters import chain_4663 as chain
+    from fund.core import universe, valuation
+    from fund.core.types import Amount, BlockRef, Check, UniverseStatus
+    from fund.credentials import Role
+
+    def usd(quantity, places=4) -> str:  # display only
+        return f"{Decimal(quantity.raw).scaleb(-quantity.decimals):,.{places}f}"
+
+    cfg = config.load(Role.ANALYST, require=False)
+    cs, gs = chain.Settings.load(), Settings.load()
+    rule = valuation.DivergenceRule.from_thresholds(json.loads(chain.THRESHOLDS.read_text()))
+    margin, sessions = cs.staleness_margin_s, cs.sessions
+    u = universe.load()
+    wallet = chain.ChainAddress(cs.chain_id, json.loads(
+        (chain.CHAIN_CONFIG.parent / "mandate.json").read_text())["execution_wallet"])
+    symbol = {a: (u.records[a].symbol if a in u.records else f.name.split(" / ")[0])
+              for a, f in u.feeds.items()}  # display only
+    rpc = cs.client(cfg.secret)
+    block = chain.pin_block(rpc, cs.chain_id, cs.block_tag)
+    read = cs.reader(rpc, block)
+    print(f"== pinned block {block.number} at {chain._iso(block.timestamp)}; every chain read is at it")
+    print(f"   rule: veto past {usd(rule.max_bps, 0)} bps above ${usd(rule.min_volume_usd, 0)} of 24h "
+          f"volume, excluded below it (config/thresholds.json)\n")
+
+    rounds = read.latest_rounds(dict(u.feeds))
+    fresh = {a: chain.freshness(rounds[a], f, block.timestamp, margin, sessions)
+             for a, f in u.feeds.items()}
+
+    print("== 1. the closed session, and what it does to freshness at this block")
+    for label, closure in sessions.items():
+        print(f"   {label}: closed {closure.describe()}, inferred from the feeds' own rounds "
+              f"(config/sessions.json; evidence: chain_4663 --sessions)")
+        inside = closure.contains(block.timestamp.epoch_ms // 1000)
+        print(f"   the pinned block is {'inside' if inside else 'outside'} that span")
+    equity = [a for a, f in u.feeds.items() if f.market_hours in sessions]
+    wall = {a: chain.freshness(rounds[a], u.feeds[a], block.timestamp, margin) for a in equity}
+    print(f"   {len(equity)} equity feeds at the block: fresh {sum(fresh[a].passes for a in equity)} "
+          f"counting open session, fresh {sum(wall[a].passes for a in equity)} counting every second")
+    closure = next(iter(sessions.values()))
+    last_minute = ((block.timestamp.epoch_ms // 1000 - chain.MONDAY_OFFSET_S) // chain.WEEK_S
+                   * chain.WEEK_S + chain.MONDAY_OFFSET_S + closure.end_s - 60)
+    later = chain.Instant.from_seconds(last_minute)
+    if later > block.timestamp:
+        what_if = {a: (chain.freshness(rounds[a], u.feeds[a], later, margin, sessions),
+                       chain.freshness(rounds[a], u.feeds[a], later, margin)) for a in equity}
+        print(f"   the same real readings judged at {chain._iso(later)}, the span's last minute, had no "
+              f"round come (a what-if): fresh {sum(v[0].passes for v in what_if.values())} counting open "
+              f"session, fresh {sum(v[1].passes for v in what_if.values())} counting every second")
+    sample = equity[0]
+    print(f"   e.g. {symbol[sample]}: {fresh[sample].reason}\n")
+
+    stocks = sorted((a for a in u.feeds if a in u.records), key=lambda a: symbol[a])
+    beacon = Check(None, "not read by this proof; chain_4663 --prove reads all 35")
+    assets = {a: u.stock(a, beacon) for a in stocks}
+    marks = {a: valuation.mark(assets[a], rounds[a], fresh[a]) for a in stocks}
+    g = gs.gecko()
+    batches = g.fetch(stocks)
+    corroborated = {}
+    for b in batches:
+        corroborated.update(parse(b, g.network))
+    checks = {a: valuation.cross_check(marks[a], corroborated[a].price, corroborated[a].volume_24h,
+                                       rule, independent=INDEPENDENT_OF_VENUE) for a in stocks}
+
+    print(f"== 2. {len(stocks)} markable stocks: Chainlink mark, GeckoTerminal corroboration, "
+          f"divergence, 24h volume, tier")
+    print(f"   {'asset':6} {'mark (USD)':>12} {'gecko (USD)':>14} {'div bps':>9} {'24h vol (USD)':>17} "
+          f"{'tier':10} verdict")
+    for a in stocks:
+        c, m = checks[a], marks[a]
+        seen = corroborated[a]
+        print(f"   {symbol[a]:6} {usd(m.price) if m.price else '-':>12} "
+              f"{usd(seen.price.value) if seen.price.ok else seen.price.status.value:>14} "
+              f"{usd(c.divergence, 2) if c.divergence else '-':>9} "
+              f"{usd(seen.volume_24h.value, 0) if seen.volume_24h.ok else seen.volume_24h.status.value:>17} "
+              f"{c.tier or '-':10} {'pass' if c.verdict.passes else c.verdict.value} "
+              f"{'' if c.rule is None else '[' + c.rule + ']'}")
+    tally: dict[str, int] = {}
+    for c in checks.values():
+        key = "pass" if c.verdict.passes else f"{c.rule} ({c.verdict.value})"
+        tally[key] = tally.get(key, 0) + 1
+    print(f"   verdicts: {tally}; independent of the venue: {INDEPENDENT_OF_VENUE} "
+          f"(pool prices, not Bankr's RFQ); corroborating responses: "
+          + "; ".join(f"{len(b.assets)} assets, {'HTTP ' + str(b.reply.status) if b.reply else b.failure}"
+                      for b in batches) + "\n")
+
+    print("== 3. the veto on a liquid name")
+    live = [a for a in stocks if checks[a].rule == valuation.RULE_DIVERGENCE]
+    for a in live:
+        print(f"   live: {symbol[a]}: {checks[a].verdict.reason}")
+    if not live:
+        print("   live: no name above the line diverges past the limit at this block")
+    amzn = next(a for a in stocks if symbol[a] == "AMZN")
+    r = RECORDED_AMZN
+    old_block = BlockRef(cs.chain_id, r["block"])
+    old_reading = Observation(
+        value=Price(r["feed_answer"], 8, amzn, USD),
+        source=Source("chainlink-feed", u.feeds[amzn].proxy.address),
+        source_time=Instant.from_seconds(r["updated_at"]), fetch_time=Instant.from_seconds(r["updated_at"]),
+        block=old_block, status=FetchStatus.OK, source_ref=r["round"])
+    old_source = _source(gs.network, amzn)
+    old_price = Observation(value=Price.parse(r["gecko_price"], amzn, USD), source=old_source,
+                            source_time=None, fetch_time=old_reading.fetch_time, block=None,
+                            status=FetchStatus.OK, detail="probe 0.4's capture")
+    old_volume = Observation(value=Fixed.parse(r["gecko_volume"], USD), source=old_source,
+                             source_time=None, fetch_time=old_reading.fetch_time, block=None,
+                             status=FetchStatus.OK, detail="probe 0.4's capture")
+    recorded = valuation.cross_check(
+        valuation.mark(assets[amzn], old_reading, Check(True, "fresh when probe 0.4 read it")),
+        old_price, old_volume, rule, independent=True)
+    print(f"   recorded (probe 0.4, block {r['block']}, F0.4.5): AMZN feed 252.60 against GeckoTerminal "
+          f"{r['gecko_price']} on ${usd(old_volume.value, 0)}: tier {recorded.tier}; "
+          f"{recorded.verdict.reason}\n")
+
+    print("== 4. cash and gas, marked by their own feeds, and the fund wallet's balances")
+    extra = next((a for a in u.records if a not in u.feeds and u.records[a].symbol == "CRM"), None)
+    held = read.balances(wallet, {u.gas_asset: u.gas_decimals, u.cash_leg: u.cash_decimals,
+                                  **({extra: 18} if extra else {})})
+    for asset_, status, reason in ((u.cash(), UniverseStatus.NOT_A_STOCK, "cash leg"),
+                                   (u.gas(), UniverseStatus.NOT_A_STOCK, "gas")):
+        the_mark = valuation.mark(asset_, rounds[asset_.id], fresh[asset_.id])
+        holding = valuation.value_holding(asset_, held[asset_.id], the_mark, universe_status=status,
+                                          universe_reason=reason)
+        print(f"   {asset_.symbol:4} mark ${usd(the_mark.price, 8) if the_mark.price else '-'} "
+              f"({u.feeds[asset_.id].name}, {fresh[asset_.id].reason}); balance "
+              f"{usd(held[asset_.id].value, asset_.decimals) if held[asset_.id].ok else '-'}; value "
+              f"${usd(holding.value, 6) if holding.value is not None else '-'} "
+              f"{holding.value_reason or ''}")
+    print()
+
+    print("== 5. an asset with no feed, carried as a holding")
+    if extra is None:
+        print("   no registry asset named CRM without a feed; nothing to show")
+    else:
+        slots = read.beacon_slots([extra])
+        crm = u.stock(extra, u.cross_check_beacons(slots)[extra])
+        admitted = u.admission(crm)
+        no_mark = valuation.mark(crm, None, Check(None, "no feed to read"))
+        real = valuation.value_holding(crm, held[extra], no_mark, universe_status=admitted.universe_status,
+                                       universe_reason=admitted.decision.reason)
+        constructed = Observation(value=Amount.from_units("1", crm.decimals, extra),
+                                  source=Source("constructed", extra.address), source_time=None,
+                                  fetch_time=held[extra].fetch_time, block=None, status=FetchStatus.OK,
+                                  detail="constructed for this proof: the wallet holds no CRM")
+        one = valuation.value_holding(crm, constructed, no_mark, universe_status=admitted.universe_status,
+                                      universe_reason=admitted.decision.reason)
+        print(f"   CRM {extra.address}: identity {crm.identity.value}, markability {crm.markability.value}, "
+              f"beacon {crm.beacon.value}; universe status {admitted.universe_status.value}")
+        print(f"   live balance {held[extra].value.raw if held[extra].ok else held[extra].status.value} "
+              f"raw: value {real.value}; {real.value_reason}")
+        print(f"   constructed balance of 1 CRM: value {one.value}; {one.value_reason}\n")
+
+    print("== 6. absent corroboration: the first live response, with one token's entry removed")
+    first = next((b for b in batches if b.reply is not None), None)
+    target = next((a for a in stocks if symbol[a] == "AAPL"), stocks[0])
+    if first is None or target not in first.assets:
+        print("   no live response carrying AAPL to edit")
+        return 0
+    body = json.loads(first.reply.body)
+    body["data"] = [e for e in body["data"]
+                    if str((e.get("attributes") or {}).get("address", "")).lower() != target.address]
+    edited = Batch(first.assets, first.fetch_time, http.Reply(200, json.dumps(body).encode(),
+                                                              first.reply.headers), None)
+    missing = parse(edited, g.network)[target]
+    gone = valuation.cross_check(marks[target], missing.price, missing.volume_24h, rule,
+                                 independent=INDEPENDENT_OF_VENUE)
+    print(f"   {symbol[target]}: corroboration {missing.price.status.value}; divergence {gone.divergence}; "
+          f"verdict {gone.verdict.value} (is False: {gone.verdict.value is False}); {gone.verdict.reason}")
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+
+    if sys.argv[1:] != ["--prove"]:
+        print("usage: python -m fund.adapters.gecko --prove")
+        sys.exit(2)
+    sys.exit(prove())
