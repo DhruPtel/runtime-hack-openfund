@@ -1121,3 +1121,54 @@ CODEBASE says `http.py` also handles Retry-After, which the inline client never
 did, because the 4663 RPC sends none. Whether GeckoTerminal does was unmeasured,
 so it is measured first and handled if so.
 **Affects:** 1.3, 1.4, 1.5; `planning/CODEBASE.md` §2.
+
+## 2026-09-18 — Twelve weekends measured: every equity feed stops by Sat 00:02Z and restarts at Mon 00:00Z, and both holidays closed a whole session
+The weekend decision required measuring the pattern before writing a rule.
+`python -m fund.adapters.chain_4663 --sessions` read every round of all 35
+`us_equities_24/5` feeds at block 66681376: 86,606 rounds from 2026-06-23 13:50Z,
+when the launch regime's scale break ends, to 2026-09-19 00:01Z.
+- **Pooled over every week, no round was ever published between Sat 00:01:45Z
+  and Mon 00:00:16Z.** That held in each of 12 complete weeks. The last round
+  before the gap fell between Fri 23:13Z and Sat 00:01:45Z (SGOV's heartbeat
+  lands just after 00:00Z). The first round after it fell between Mon 00:00:16Z
+  and 00:00:24Z, most feeds within the first minute. That is Friday 20:00 to
+  Sunday 20:00 in New York, in daylight time.
+- **The proposed span is Sat 00:05Z to Sun 23:55Z.** The quiet span is shrunk
+  by a 60 s guard on each side, then to whole 5 minutes. That counts 10 minutes
+  a week less as closed, which fails closed.
+- **Both holidays in range closed a whole session.** Fri 3 July (Independence
+  Day observed) and Mon 7 September (Labor Day) each silenced every feed for 24
+  more hours: 72.0 h and 72.6 h quiet. Replayed over all history, the rule with
+  the span is never stale on any weekday or weekend except these two holidays:
+  - on 3 July, 29 of 35 feeds were stale from Friday afternoon until Monday's
+    open;
+  - on 7 September, 34 of 35 were stale for the last 1–23 h of Monday.
+
+  Without the span, all 35 go stale every weekend.
+- **Daylight saving is unmeasured.** Every week observed is daylight time. If
+  the schedule follows New York time, both edges move to 01:00Z on 1 November
+  2026. The Saturday side would then put rounds inside the span, which the
+  rule treats as a contradiction. The Monday side would add an hour of open
+  time.
+- **Crypto feeds need no span.** The widest gap between two rounds of ETH/USD
+  or USDG/USD is 24h01m, inside heartbeat plus margin.
+
+The inference is clean enough to build the rule on. Holidays still read as a
+stale open session, as the decision said they would.
+**Affects:** 1.3's `freshness()`, 1.4, 1.6, 1.8, 1.11; PLAN §13; `config/sessions.json`.
+
+## 2026-09-18 — GeckoTerminal's 429 says `Retry-After: 0`, and its limit is a handful of requests
+Measured on the batch tokens endpoint, 2026-09-19 01:01Z:
+- **A burst hit the limit fast.** The sixth request inside 0.5 s drew a 429.
+  The body names the error, and the header `Retry-After: 0` says nothing.
+- **Recovery took seconds.** Polls a second apart stayed 429 for 4.3 s.
+- **Paced requests still ran out.** At 2.1 s spacing, 5 requests passed, then
+  10 were refused over about 21 s.
+
+So the limit is roughly five requests before a refusal that lasts seconds to
+tens of seconds, recorded as observed, not as a published number. The shared
+client therefore reads Retry-After but treats 0 as no hint, and falls back to
+its doubling backoff. The response also carries `Cache-Control: max-age=30,
+s-maxage=60` and no timestamp for the price. So a corroborating price can be
+up to a minute old at the edge, and its source time is unknown.
+**Affects:** 1.4; `adapters/http.py`, `config/gecko.json`.
