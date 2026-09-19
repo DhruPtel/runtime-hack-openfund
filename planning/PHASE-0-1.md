@@ -644,6 +644,14 @@ included.
   - **Scale breaks.** A 10,000× step between consecutive answers stops the
     walk. 32 of 37 feeds began life about 1e8 too large.
   - **GeckoTerminal OHLCV** was not measured and is not ruled out for 1.4.
+  - **Since 1.8: daily closes over 30 days** (DECISION after 1.7, adopted on
+    measurement, findings §1.8a). A close is the round in effect at 20:00Z.
+    - A day whose cut falls in the closed session has no close, and neither
+      has a day with no new round since the previous close, such as a
+      holiday.
+    - The latest round is always last.
+    - The walk above supplies the rounds, now up to 5,000 over 30 days.
+    - `missing trie node … layer stale` is now retried as missing state.
 
   Historical points are not staleness-checked; they are history.
 - **Balances over RPC only.** `/wallet/portfolio` returned an empty
@@ -942,9 +950,12 @@ refused.
   `Finding` carried in the entry, and the docstring names the tier's
   comparisons a named exception.
 - **The status order.** Each asset's status is the first rule that does not
-  pass: identity, standing, beacon, markability, mark, corroboration,
-  corroborator line, divergence, tradeability. Three statuses were added:
-  `no_mark`, `uncorroborated` and `divergence_veto`.
+  pass: identity, standing, beacon, markability, mark, history,
+  corroboration, corroborator line, divergence, tradeability. Four statuses
+  were added:
+  - `no_mark`, `uncorroborated` and `divergence_veto` at 1.6;
+  - `short_history` at 1.8, after 1.7's SPCX showed that a series cut short
+    left its asset tradeable (LESSONS 2026-09-18).
 - **Hashing.** Chain values carry their block and not their fetch time, so a
   re-read at the same block hashes the same.
 

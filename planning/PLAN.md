@@ -290,7 +290,9 @@ what each finding changed, is in `PHASE-0-1.md`.*
   loudly; no archive read is assumed. Failover over an endpoint list is built,
   but with one endpoint it is not claimed. Reads a **price series** ending at
   the pinned block (invariant 2): 1.3 chose the feed's own rounds over 7 days,
-  with coverage stated (LESSONS 2026-09-18). Staleness binds the newest point:
+  with coverage stated. Since 1.8 it is one close a day over 30 days, adopted
+  on measurement, with no close invented across a weekend or a holiday
+  (LESSONS 2026-09-18). Staleness binds the newest point:
   each feed's own heartbeat plus a configured margin. Balances are read over
   RPC, and the wallet is not an EOA on 4663.
 - **1.4** Price cross-check: Chainlink as the accounting mark, corroboration from
@@ -599,11 +601,14 @@ half-running it. Auto top-up, if enabled, is spend authority and stays under the
 mandate.
 
 **Measured at 1.7** (findings §1.7): at `claude-sonnet-5`, uncached, a cycle of
-four analysts and one risk call is **$1.87**, and $56 over 30 days. The snapshot's
-timeline is 53% of that. The levers, each priced and none yet pulled:
-- the model, a 180× span per call;
-- caching the shared snapshot, about $0.96 a cycle, untested;
-- a shorter history, about $0.50 a cycle saved by halving it.
+four analysts and one risk call was **$1.87**, and $56 over 30 days, with the
+snapshot's timeline 53% of it. The levers:
+- **the history,** pulled at 1.8: daily closes over 30 days bring a cycle to
+  **$1.11**, $33 over 30 days, and the reports use history as much as before
+  (findings §1.8a);
+- **caching the shared snapshot:** tested at 1.8, and the gateway does not
+  honour it, so there is no saving on this path (F1.8a.4);
+- **the model:** a 180× span per call, which is 2.4's.
 
 ---
 
