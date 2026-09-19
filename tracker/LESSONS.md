@@ -2731,3 +2731,27 @@ and its cash leg, cash partway through a decision, and a refused order's state.
 The same class as the three cash bugs of the 3.8 sweep. They join 4.0 as P8 to
 P12 (`planning/PHASE-4.md`).
 **Affects:** 4.0 to 4.12, 6.1, 6.2; `planning/PHASE-4.md`.
+
+## 2026-09-19 — 4.0: what building the twelve primitives found
+Each primitive was attacked as it was built: 60 rules broken in a copy across
+3.9's hardening and 4.0, each caught by the test written for it (LOGS, 4.0).
+- **A real bug, fixed.** `cash.worth` said exact and rounded at 28 significant
+  digits, which a stock position reaches at $100. No position of the $200 book
+  has, so nothing decided was rounded. It had to be exact, because the planner's
+  NAV and the ledger's now come from one sum and must agree to the last digit.
+- **Strict, not wrong.** The planner funds buys to within cents of the floor. So
+  at the chokepoint, a sell that books even 2% below its mark drops the last buy
+  (P11's test). In a closed session, where the venue drifts from the marks, expect
+  it. A funding margin is tuning, not a fix.
+- **What the decisions mean in numbers.** 200 USDG is $199.98 at the exit run's
+  mark, so its $73.44 of paper cash would be $73.42 held as USDG. And with every
+  asset at average cost, a move in USDG's own mark is P&L. Whether the paper book
+  opens with 200 USDG or $200 of it is 4.8's and 4.11's to set.
+- **Owned by later units:**
+  - a quote matches an order in two shapes: `gates.fresh_quote` on the record's
+    plan, `orders.quote_is_for` on an `Order`. 4.4 calls the second;
+  - a `prepared` order found at startup was never sent: 4.9 admits or refuses it;
+  - the ledger's events have no stored encoding yet: 4.6's;
+  - 4.8 cannot replay the exit run's risk reply, which names the layout-1 plan's
+    hash. It needs the fake venue and a scripted reply, as 3.7 did.
+**Affects:** 4.4, 4.6, 4.8, 4.9, 4.11; `core/cash.py`.
