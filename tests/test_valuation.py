@@ -83,11 +83,16 @@ def test_value_refuses_another_assets_price():
 
 
 def test_value_does_not_apply_the_multiplier_again():
-    # Every registry asset carries a multiplier; the value ignores it, because the
-    # feed answer already incorporates it per the documentation (F0.4.4).
-    assert AMZN.registry.current_multiplier is not None
-    worth = valuation.value(Amount.from_units("1", 18, AMZN.id), Price(25260000000, 8, AMZN.id, USD))
-    assert worth.same_value(Fixed.parse("252.6", USD))
+    # The feed's answer already incorporates the multiplier, per the documentation
+    # (F0.4.4). NVDA's is 1.000775..., not 1, so applying it anywhere between the
+    # feed and the holding's value would move the number.
+    nvda = U.stock(listed("NVDA"), BEACON)
+    multiplier = nvda.registry.current_multiplier
+    assert multiplier.raw != 10 ** multiplier.decimals
+    held = valuation.value_holding(nvda, balance(nvda, 10**18),
+                                   valuation.mark(nvda, reading(nvda, 25260000000), FRESH),
+                                   universe_status=UniverseStatus.TRADEABLE, universe_reason=None)
+    assert held.value.same_value(Fixed.parse("252.6", USD))
 
 
 # --- the mark -----------------------------------------------------------------------------
