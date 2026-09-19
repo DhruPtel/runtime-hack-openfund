@@ -585,107 +585,99 @@ was verified in four ways:
 
 ---
 
-## State at close — 2026-09-18, after 1.7
+## State at close — 2026-09-18, after 1.8
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
 commits, this note is older than the code, so read those commits before trusting
 it. Where this note and git disagree, git is right.
 
-**Two things wait on the operator.**
-- **1.6's ▶ checkpoint** was shown and answered with changes: findings only
-  past the limit, and an offline test. Both are done.
-- **1.7's "done when"** needs the operator to confirm or revise the $0.05 price
-  against §1.7's numbers. It has not happened.
-
 **Check it in a minute.** Nothing here spends.
 - `git log --oneline -15` and `git status -sb`.
-- `make test`: 317 passed when this was written.
+- `make test`: 354 passed when this was written.
 - `make check-env`: which credentials are present, by name only.
 - `PYTHONPATH=src python3 -m fund.run.snapshot --prove` builds a live snapshot
-  into `fixtures/live/` and rebuilds it at the same block. It takes about 3
-  minutes. `make snapshot` is not wired.
-- `probes/analyst_cost.py` **spends** about $1.08 with `--confirm`. Without it,
-  it only prints a preflight.
+  in about 2.5 minutes. The 30-day walks made it longer. `make snapshot` is
+  not wired.
+- `probes/analyst_cost.py` **spends** with `--confirm`, in its default,
+  `--one` or `--cache` mode.
 
-### Done, through 1.7
-- **Phase 0, the Phase 1 replan, and units 1.1-1.7,** with 1.7's price
-  decision pending.
+### Done, through 1.8
+- **Phase 0, the Phase 1 replan, and units 1.1-1.8.**
 - **Decisions this far into Phase 1:**
   - staleness in open-session time, with sessions inferred from rounds;
   - the shared `adapters/http.py`;
-  - closed-session divergence is a finding, and only past the limit;
+  - closed-session divergence is a finding, only past the limit;
   - three named threshold exceptions, which 3.4 sweeps into `gates.py`;
-  - the live read lives in `run/snapshot.py`.
+  - the live read lives in `run/snapshot.py`;
+  - the price is $0.25, provisional;
+  - the timeouts are 600 s and 630 s, with a 12,000-token output cap;
+  - the series is daily closes over 30 days, adopted on measurement.
 - **The whole of what is built.** Under `src/fund/`: `config.py`,
   `credentials.py`, `redaction.py`, `core/types.py`, `core/universe.py`,
   `core/valuation.py`, `core/snapshot.py`, `adapters/http.py`,
   `adapters/chain_4663.py`, `adapters/gecko.py`, `adapters/bankr_quote.py` and
-  `run/snapshot.py`. Every other module is a stub whose docstring says "Not yet
-  built" and names its unit; `grep -l "Not yet built" -r src/` lists 29.
+  `run/snapshot.py`. Every other module is a stub; `grep -l "Not yet built" -r
+  src/` lists 29.
 
-### 1.7's numbers (`research/findings.md` §1.7)
-- **Snapshot measured:** `7eba62122aab…`, block 66728957, 335,294 bytes,
-  4,628 rounds. It is gitignored, in `fixtures/live/`, and only on this machine.
-- **Analyst call:** $0.454.
-- **Cycle:** $1.87, $56 over 30 days, and 37 records at $0.05 to cover one.
-- **Timeline:** 66.8% of input and 53% of a cycle.
-- **Caching:** priced at about $0.96 a cycle, untested, and not automatic.
-- **Timeouts:** they cover today's 62–75 s. Recommended: `max_output_tokens`
-  about 12,000, transport at least 600 s, and a worker deadline at least that
-  plus a margin. None is set.
+### The numbers that stand
+- **Snapshot:** schema `openfund.snapshot/2`, about 189 KB with 763 daily
+  closes. The last live one is `6a835421…` at block 66750551, only on this
+  machine.
+- **Analyst call:** $0.264 at Sonnet 5, uncached (§1.8a).
+- **Cycle:** about $1.11, $33 over 30 days, covered by 4.4 records at $0.25.
+- **Caching:** not honoured by the gateway, measured.
+- **LLM credits:** $0.937148 left, after 1.7 and 1.8 spent $1.862828.
 
-### Next: unit 1.8, held-but-untradeable, after the operator's price answer
-Not started.
+### Next: unit 1.9 ▶, fixtures and offline replay
+Not started. It is a checkpoint.
+- It records a live run's offchain answers, GeckoTerminal and the quotes, so
+  a rebuild from fixtures is byte-identical.
+- The chain is already byte-identical when re-read at the same block.
+- `tests/test_run_snapshot.py` already runs the live path offline over
+  recorded-shape transports. That is not a replay of a recorded run.
 
 ### Open items, none resolved
-1. **The $0.05 price,** against 37 records a cycle (0.7, 1.7).
-2. **Thinning the history,** worth about $0.50 a cycle if halved. That is the
-   operator's decision.
-3. **The timeouts and `max_output_tokens`,** recommended at 1.7 and set at 2.4.
-4. **Explicit prompt caching,** untested.
-5. **Owed in code:** two changes to `http.py`, `make snapshot`, the
-   missing-state retry wording in `chain_4663.py`, and `valuation.py`'s
-   docstring (LESSONS preamble).
-6. **A short series leaves an asset's status unchanged.** SPCX stayed
-   `tradeable` with one point. Whether coverage should affect status is open.
-7. **About 37–50% of billed analyst output does not appear in the reply.**
-   Inferred to be hidden reasoning.
-8. **AMZN's GeckoTerminal price alternates** between about $254 and $265. Its
-   "finding" may be pool switching; unresolved.
-9. **$25 is sized at USDG's Chainlink mark,** a 1.5 choice for the operator to
-   overrule.
-10. **The quote-age budget.** The oldest quote was 18–29 s old at `built_at`,
-    out of 60.
-11. **Holidays fail closed,** by decision. Daylight saving is unmeasured:
-    re-derive the span after 2026-11-01.
-12. **Unchanged from earlier notes:** paused-oracle detection; the unowned
-    registry refresh fetch; six types waiting for 2.1-6.1; one RPC endpoint;
-    the unexplained beacon reads at 1.3; which impact field gates; and the
-    stale README line 9.
+1. **Owed in code:** two `http.py` changes, and `make snapshot` (LESSONS
+   preamble).
+2. **The daily cut's daylight saving.** 20:00Z is 16:00 New York only in
+   daylight time. The closed span needs re-deriving after 2026-11-01.
+3. **Holidays fail closed,** by decision. Daily closes skip them honestly.
+4. **Exit is not assessed** for ETH and stocks: no sell quote is read in
+   Phase 1.
+5. **One daily-close call** was set against 1.7's two. The report-shape proxy
+   is not a grade.
+6. **Caching in other request shapes** is untested.
+7. **About 37–50% of billed analyst output does not appear in the reply,**
+   inferred to be hidden reasoning.
+8. **AMZN's GeckoTerminal price alternates** between two levels; unresolved.
+9. **$25 is sized at USDG's Chainlink mark,** a 1.5 choice for the operator.
+10. **The quote-age budget.** The oldest quote was 21–25 s old at `built_at`.
+11. **Unchanged:** paused-oracle detection; the unowned registry refresh fetch;
+    six types waiting for 2.1-6.1; one RPC endpoint; which impact field gates;
+    the stale README line 9.
 
 ### Config
-- **Unchanged in value since 1.5.** `models.json`'s notes now carry 1.7's
-  measurements and recommendations.
+- **Changed in 1.8's pass:**
+  - `models.json`: `max_output_tokens` 12000, transport 600 s, worker
+    deadline 630 s;
+  - `chain.json`: `series_sampling` `daily_close`, window 30 days, 5,000
+    rounds, cut 20:00Z;
+  - `registry/pins.json`: an empty `carried` list.
 - **Still null, which blocks whatever reads it:**
   - `cadence.json`: `confirmation_depth`, `cycle_deadline_seconds` and
     `retry_budget_per_worker`;
-  - `models.json`: `risk_model`, `max_output_tokens` and
-    `context_budget_tokens`;
+  - `models.json`: `risk_model` and `context_budget_tokens`;
   - `thresholds.json`: `max_position_weight`, `turnover_max_bps`,
     `cash_floor_usd` and `quorum_min_analysts`;
   - `mandate.json`: `cumulative_budget_usd`, `approved_by`, `approved_at`,
     `expires_at`, and an empty `allowed_assets`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `51318d8`, the end of 1.6,
-pushed at 19:25 −0700. No session pushed it. Every commit after it, from
-`3fc5c8f` to the one that adds this note, is committed and **not pushed**. To
+Checked locally, with no fetch. `origin/main` is `66a8acb`, the end of 1.7,
+pushed at 19:48 −0700. No session pushed it. Every commit after it, from
+`2ef3ab2` to the one that adds this note, is committed and **not pushed**. To
 re-check, run `git fetch` and then `git log origin/main..HEAD`.
-
-### Funding
-- **Wallet:** unchanged, 0.078742 USDG and 0.000460 ETH.
-- **LLM credits:** $1.719862, after 1.7 spent $1.080114.
 
 ### What this note does not cover
 - **Decisions.** It does not restate any in full; LESSONS holds them.
