@@ -17,8 +17,8 @@ from fund.core.types import (
     Asset, AssetKind, Check, Deployment, Execution, ExecutionMode, FeedRef, FetchStatus,
     Fixed, Holding, Instant, Order, OrderState, TokenTransfer, TransactionRef,
     UserOperationRef,
-    Observation, PinnedInput, Price, Quote, RegistryRecord, Series, Snapshot,
-    SnapshotEntry, Source, TradingCapability,
+    Observation, PinnedInput, Price, Quote, RegistryRecord, Series,
+    Source, TradingCapability,
     UniverseStatus, content_id, from_canonical, to_canonical,
 )
 
@@ -510,38 +510,7 @@ def test_an_unreadable_balance_is_kept_not_dropped():
     roundtrip(held)
 
 
-# --- the snapshot --------------------------------------------------------------
-
-def crm_entry() -> SnapshotEntry:
-    crm = Asset(id=CRM, kind=AssetKind.STOCK, symbol="CRM", decimals=18,
-                identity=Check(True), markability=Check(False, "no feed"),
-                beacon=Check(True), registry=registry_record(CRM, "CRM"))
-    return SnapshotEntry(asset=crm, feed_reading=None, series=(), corroboration=None,
-                         corroborator_volume=None, divergence=None, quote=None,
-                         universe_status=UniverseStatus.UNMARKABLE,
-                         universe_reason="no Chainlink feed")
-
-
-def tsla_entry(impact_bps: int = -15) -> SnapshotEntry:
-    tsla = Asset(id=TSLA, kind=AssetKind.STOCK, symbol="TSLA", decimals=18,
-                 identity=Check(True),
-                 markability=Check(True),
-                 beacon=Check.undetermined("beacon slot read timed out"),
-                 registry=RegistryRecord(  # a stand-in record; TSLA's was not re-read here
-                     registry_id="0x" + "0" * 63 + "1", symbol="TSLA", name="Tesla",
-                     isin="US88160R1014", status="ASSET_STATUS_ACTIVE", decimals=18,
-                     deployments=(Deployment(contract=ChainAddress(CHAIN, TSLA.address),
-                                             network_name="Robinhood Chain"),),
-                     current_multiplier=Fixed(1, 0, MULTIPLE), pending_multiplier=None),
-                 feed=equity_feed("0x" + "33" * 20, "Robinhood TSLA / USD"))
-    quote = Observation(value=tsla_quote(impact_bps), source=QUOTES, source_time=None,
-                        fetch_time=Instant.from_seconds(T0), block=None,
-                        status=FetchStatus.OK)
-    return SnapshotEntry(asset=tsla, feed_reading=None, series=(), corroboration=None,
-                         corroborator_volume=None, divergence=Fixed(-47, 1, BPS),
-                         quote=quote, universe_status=UniverseStatus.NOT_TRADEABLE,
-                         universe_reason="beacon undetermined: blocks")
-
+# --- pinned inputs ------------------------------------------------------------
 
 # 0.8's recorded registry hash, used as a stand-in value: its bytes were not kept,
 # so 1.2 will pin a fresh one (LESSONS 2026-09-18).
@@ -550,31 +519,8 @@ REGISTRY_INPUT = PinnedInput(name="rhj-registry", locator="api.robinhood.com/rhj
                              byte_count=154_149, fetch_time=Instant.from_seconds(T0))
 
 
-def snapshot(entries) -> Snapshot:
-    return Snapshot(pinned_block=PINNED, inputs=(REGISTRY_INPUT,), config_version="1",
-                    entries=entries, holdings=())
-
-
-def test_a_snapshot_roundtrips_byte_for_byte():
-    roundtrip(snapshot((crm_entry(), tsla_entry())))
-
-
-def test_identical_inputs_give_one_hash_whatever_the_order():
-    a = snapshot((crm_entry(), tsla_entry()))
-    b = snapshot((tsla_entry(), crm_entry()))
-    assert a.snapshot_id == b.snapshot_id
-
-
-def test_any_field_change_changes_the_hash():
-    assert snapshot((tsla_entry(-15),)).snapshot_id != snapshot((tsla_entry(-14),)).snapshot_id
-
-
-def test_a_snapshot_refuses_duplicates_and_needs_its_block_time():
-    with pytest.raises(ValueError):
-        snapshot((crm_entry(), crm_entry()))
-    with pytest.raises(ValueError):
-        Snapshot(pinned_block=BlockRef(CHAIN, 1), inputs=(), config_version="1",
-                 entries=(), holdings=())
+def test_a_pinned_input_roundtrips():
+    roundtrip(REGISTRY_INPUT)
 
 
 # --- orders: the swap probe 0.10 made, as the chain recorded it ------------------
@@ -677,18 +623,13 @@ def test_core_types_imports_only_the_standard_library():
     assert imported <= set(sys.stdlib_module_names), imported - set(sys.stdlib_module_names)
 
 
-def test_the_five_measured_cases_live_together_in_one_hashed_snapshot():
-    """The measured cases, together:
-
-    - a holding with no feed;
-    - a quote with negative impact;
-    - a week of history whose newest point is fresh;
-    - a source that was unreachable rather than false.
-
-    All four sit in one snapshot and survive the canonical round trip. The
-    fifth, the order executed via a bundler, is not snapshot data and is
-    round-tripped alongside it.
-    """
+def test_the_measured_cases_each_survive_the_canonical_round_trip():
+    """1.1's measured cases, each round-tripped: a week of history whose newest
+    point is fresh, a source that was unreachable rather than false, a held
+    asset with no feed, a quote with negative impact, and the order executed via
+    a bundler. Their life together in one hashed snapshot is 1.6's
+    (tests/test_snapshot.py), since the snapshot is now a readable document
+    built from these types rather than a type of its own."""
     week = Series(asset=TSLA, source=FEED, fetch_time=Instant.from_seconds(T0 + 12),
                   status=FetchStatus.OK,
                   points=tuple(Observation(
@@ -700,27 +641,16 @@ def test_the_five_measured_cases_live_together_in_one_hashed_snapshot():
                               source_time=None, fetch_time=Instant.from_seconds(T0),
                               block=None, status=FetchStatus.UNREACHABLE,
                               detail="timeout after 20 s")
-    base = tsla_entry(-15)
-    tsla = SnapshotEntry(asset=base.asset, feed_reading=None, series=(week,),
-                         corroboration=unreachable, corroborator_volume=None,
-                         divergence=None, quote=base.quote,
-                         universe_status=UniverseStatus.NOT_TRADEABLE,
-                         universe_reason="corroborator unreachable: divergence unknown")
     crm_held = Holding(asset=CRM, balance=balance_of(CRM, 10**17, 18),
                        universe_status=UniverseStatus.UNMARKABLE,
                        universe_reason="no Chainlink feed", mark=None, value=None,
                        value_reason="no mark independent of the venue")
-    whole = Snapshot(pinned_block=PINNED, inputs=(REGISTRY_INPUT,), config_version="1",
-                     entries=(tsla, crm_entry()), holdings=(crm_held,))
-    blob = roundtrip(whole)
-    # Entries are in canonical order (by address), so look them up by identity.
-    by_asset = {entry.asset.id: entry for entry in whole.entries}
-    assert [e.asset.id for e in whole.entries] == sorted(by_asset)
-    assert by_asset[TSLA].quote.value.swap_impact == Fixed(-15, 0, BPS)
-    assert by_asset[TSLA].series[0].age_of_newest_ms(Instant.from_seconds(T0 + 12)) == 12_000
-    assert not by_asset[TSLA].corroboration.ok
-    assert all(not isinstance(v, float) for v in _leaves(json.loads(blob)))
-    roundtrip(swap_order(execution=swap_execution()))
+    quote = Observation(value=tsla_quote(-15), source=QUOTES, source_time=None,
+                        fetch_time=Instant.from_seconds(T0), block=None, status=FetchStatus.OK)
+    for case in (week, unreachable, crm_held, quote, swap_order(execution=swap_execution())):
+        blob = roundtrip(case)
+        assert all(not isinstance(v, float) for v in _leaves(json.loads(blob)))
+    assert week.age_of_newest_ms(Instant.from_seconds(T0 + 12)) == 12_000
 
 
 def _leaves(node):
@@ -732,25 +662,6 @@ def _leaves(node):
             yield from _leaves(value)
     else:
         yield node
-
-
-def test_corroborator_volume_must_be_usd():
-    gecko = Source("geckoterminal", "/networks/robinhood/tokens/multi")
-    def volume(value):
-        return Observation(value=value, source=gecko, source_time=None,
-                           fetch_time=Instant.from_seconds(T0), block=None,
-                           status=FetchStatus.OK)
-    base = tsla_entry()
-    ok = SnapshotEntry(asset=base.asset, feed_reading=None, series=(), corroboration=None,
-                       corroborator_volume=volume(Fixed.parse("2190000", USD)),
-                       divergence=None, quote=None,
-                       universe_status=UniverseStatus.NOT_TRADEABLE, universe_reason="no quote")
-    roundtrip(ok)
-    with pytest.raises(ValueError):
-        SnapshotEntry(asset=base.asset, feed_reading=None, series=(), corroboration=None,
-                      corroborator_volume=volume(Amount(1, 18, TSLA)), divergence=None,
-                      quote=None, universe_status=UniverseStatus.NOT_TRADEABLE,
-                      universe_reason="no quote")
 
 
 

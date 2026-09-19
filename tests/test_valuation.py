@@ -303,3 +303,13 @@ def test_a_closed_session_changes_nothing_below_the_line_or_without_corroboratio
     absent = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
                                    missing, missing, RULE, independent=True, closed_session=True)
     assert absent.rule == valuation.RULE_CORROBORATION and absent.verdict.value is None
+
+
+def test_a_corroborator_volume_that_is_not_usd_is_refused():
+    # 1.1 asserted this on its SnapshotEntry; since 1.6 the rule lives where the tier reads it.
+    price, _ = gecko(AMZN, "252.60")
+    tokens = Observation(value=Amount(1, 18, AMZN.id), source=price.source, source_time=None,
+                         fetch_time=FETCHED, block=None, status=FetchStatus.OK)
+    with pytest.raises(TypeError, match="USD"):
+        valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
+                              price, tokens, RULE, independent=True)
