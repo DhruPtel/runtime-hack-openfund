@@ -228,3 +228,15 @@ def test_a_bps_figure_that_names_a_bps_field_is_still_checked():
                         snapshot_sha256=SHA)
     refusal = next(r for r in v.refusals if r.rule == "figure")
     assert "-440.32bps" in refusal.detail and "corroboration.divergence_bps = -450.32" in refusal.detail
+
+
+# --- 3.8's recorded replies: what the live run showed the validator got wrong --------------------
+
+def test_a_figure_with_thousands_separators_is_the_same_number():
+    """3.8: price-integrity wrote AMZN's volume `$2,101,924.28`, and the comma split it."""
+    text = example("price-integrity").replace("on $2.10M [corroboration.price_usd,",
+                                              "on $2,101,924.28 [corroboration.price_usd,", 1)
+    assert "$2,101,924.28" in text and verdict(text, "price-integrity").ok
+    wrong = text.replace("$2,101,924.28", "$2,201,924.28", 1)
+    refusal = next(r for r in verdict(wrong, "price-integrity").refusals if r.rule == "figure")
+    assert "2201924.28" in refusal.detail

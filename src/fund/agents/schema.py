@@ -46,6 +46,10 @@ error, not the report's.
 it cited, such as `~136bps`. An earlier version of this rule checked every bps
 figure against a bps field, and refused all five correct figures.
 
+**A figure written with thousands separators is the same number.**
+`$2,101,924.28` is 2101924.28. Until 3.8's live run found it, the comma split it,
+and `924.28` was refused against the field.
+
 One leniency: a single code fence wrapped around the whole reply is removed
 before parsing. It is transport, not content. Nothing else is forgiven.
 """
@@ -72,6 +76,9 @@ _ITEM_FIELD = re.compile(
 _MILLIONS = re.compile(r"\$(\d+(?:\.\d+)?)M")
 _BPS = re.compile(r"(?<![\d.])(-?\d+(?:\.\d+)?) ?bps\b")
 _PERCENT = re.compile(r"[+-]?\d+(?:\.\d+)?%")
+#: A number written with thousands separators, such as `2,101,924.28`: groups of
+#: three after a first group of one to three, never after a decimal point.
+_GROUPED = re.compile(r"(?<![\d.,])\d{1,3}(?:,\d{3})+(?![\d,])")
 _DECIMAL = re.compile(r"(?<![\d.])(-?\d+\.\d+)(?![\d.])")
 
 _MISSING = object()
@@ -344,6 +351,7 @@ def _claims(text: str) -> list[tuple[str, str, Decimal]]:
     Percentages are computed, and integers are dates or counts; neither is a claim.
     Whether a bps figure is a claim depends on what the line cites (_check_figure)."""
     body = _BRACKET.sub(" ", text).replace("−", "-")
+    body = _GROUPED.sub(lambda m: m.group(0).replace(",", ""), body)  # 2,101,924.28 is one number
     claims: list[tuple[str, str, Decimal]] = []
     for kind, pattern in (("millions", _MILLIONS), ("bps", _BPS)):
         claims += [(kind, m.group(0), Decimal(m.group(1))) for m in pattern.finditer(body)]
