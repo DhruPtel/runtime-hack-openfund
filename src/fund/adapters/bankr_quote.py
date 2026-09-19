@@ -435,3 +435,146 @@ def tradeability(quote: Observation, asked: Amount, as_of: Instant, limits: Limi
     return verdict(True, None, f"quoted at the size asked; age {age / 1000:.1f}s within "
                                f"{_shown(limits.max_age)}s; swapImpactBps {_shown(impact)}{improvement} "
                                f"within {_shown(limits.max_impact)}, compared signed", age)
+
+
+# --- the live proof: `python -m fund.adapters.bankr_quote --prove` ------------------------
+
+def prove() -> int:
+    """1.5 live and read-only: every markable stock quoted at the nominal size,
+    judged at one instant, and one failure per rule. It sizes the order at the
+    cash leg's Chainlink mark, which it reads through the chain adapter inside
+    this function, the way 1.6's builder will compose them. Nothing is signed,
+    submitted or spent."""
+    import socket
+    from decimal import Decimal
+
+    from fund import config
+    from fund.adapters import chain_4663 as chain
+    from fund.core import universe, valuation
+
+    def dec(raw: int, decimals: int, places: int) -> str:  # display only
+        return f"{Decimal(raw).scaleb(-decimals):,.{places}f}"
+
+    def now() -> Instant:
+        return Instant(time.time_ns() // 1_000_000)
+
+    cfg = config.load(Role.ANALYST, require=False)
+    settings = Settings.load()
+    limits = Limits.from_thresholds(json.loads(THRESHOLDS.read_text()))
+    u = universe.load()
+    symbol = {a: u.records[a].symbol for a in u.feeds if a in u.records}  # display only
+    stocks = sorted(symbol, key=lambda a: symbol[a])
+
+    cs = chain.Settings.load()
+    rpc = cs.client(cfg.secret)
+    block = chain.pin_block(rpc, cs.chain_id, cs.block_tag)
+    cash_feed = u.feeds[u.cash_leg]
+    reading = cs.reader(rpc, block).latest_rounds({u.cash_leg: cash_feed})[u.cash_leg]
+    cash_mark = valuation.mark(u.cash(), reading, chain.freshness(
+        reading, cash_feed, block.timestamp, cs.staleness_margin_s, cs.sessions))
+    if not cash_mark.check.passes:
+        print(f"no cash mark, so no size to quote at: {cash_mark.check.reason}")
+        return 1
+    sell = nominal_sell(limits.nominal, cash_mark.price, u.cash_decimals)
+    print(f"== nominal size ${_shown(limits.nominal)} at USDG's own mark "
+          f"${dec(cash_mark.price.raw, cash_mark.price.decimals, 8)} (block {block.number}, "
+          f"{cash_feed.name}) = {human(sell)} USDG, rounded down")
+    print(f"   limits from config/thresholds.json: quote age {_shown(limits.max_age)}s, "
+          f"swapImpactBps {_shown(limits.max_impact)} compared signed\n")
+
+    quotes = settings.adapter(cfg.secret)
+    seen = {a: quotes.quote(QuoteRequest(sell=sell, buy=a, buy_decimals=u.records[a].decimals))
+            for a in stocks}
+    as_of = now()
+    verdicts = {a: tradeability(seen[a], sell, as_of, limits) for a in stocks}
+
+    print(f"== 1. {len(stocks)} markable stocks quoted at {human(sell)} USDG, judged together at "
+          f"{time.strftime('%H:%M:%SZ', time.gmtime(as_of.epoch_ms // 1000))}")
+    print(f"   {'asset':6} {'bought':>22} {'USDG/token':>12} {'venue $/tok':>12} {'age s':>6} "
+          f"{'swap bps':>8} {'price bps':>9} verdict")
+    for a in stocks:
+        o, t = seen[a], verdicts[a]
+        if not o.ok:
+            print(f"   {symbol[a]:6} {o.status.value}: {o.detail[:90]}  -> {t.verdict.value} [{t.rule}]")
+            continue
+        q = o.value
+        per = Decimal(q.sell.raw).scaleb(-q.sell.decimals) / Decimal(q.buy.raw).scaleb(-q.buy.decimals)
+        print(f"   {symbol[a]:6} {human(q.buy):>22} {per:>12,.4f} "
+              f"{dec(q.buy_price.raw, q.buy_price.decimals, 4) if q.buy_price else 'null':>12} "
+              f"{t.age_ms / 1000:>6.1f} {_shown(q.swap_impact) if q.swap_impact else 'null':>8} "
+              f"{_shown(q.price_impact) if q.price_impact else 'null':>9} "
+              f"{'tradeable' if t.verdict.passes else t.verdict.value} "
+              f"{'' if t.rule is None else '[' + t.rule + ']'}")
+    tally: dict[str, int] = {}
+    for t in verdicts.values():
+        key = "tradeable" if t.verdict.passes else f"{t.rule} ({t.verdict.value})"
+        tally[key] = tally.get(key, 0) + 1
+    differ = [symbol[a] for a in stocks if seen[a].ok
+              and seen[a].value.swap_impact != seen[a].value.price_impact]
+    print(f"   verdicts: {tally}; swapImpactBps and priceImpactBps differ on: {differ or 'none'}")
+    sample = next((t for t in verdicts.values() if t.verdict.passes), None)
+    if sample:
+        print(f"   every verdict also carries executable={sample.executable.value}: "
+              f"{sample.executable.reason}\n")
+
+    print("== 2. negative impact, admitted")
+    improved = [a for a in stocks if seen[a].ok and seen[a].value.swap_impact is not None
+                and seen[a].value.swap_impact.raw < 0]
+    for a in improved:
+        print(f"   {symbol[a]}: {verdicts[a].verdict.reason}")
+    if not improved:
+        print("   no quote came back with negative impact at this moment")
+    print()
+
+    print("== 3. failures, each refused at the rule it tests, the other conditions passing")
+    for a in (a for a in stocks if verdicts[a].rule == RULE_IMPACT):
+        print(f"   impact, at the nominal size: {symbol[a]}: {verdicts[a].verdict.value} "
+              f"{verdicts[a].verdict.reason}")
+    first = stocks[0]
+    wait = (limits.max_age.raw / 10 ** limits.max_age.decimals + 1
+            - (now().epoch_ms - seen[first].fetch_time.epoch_ms) / 1000)
+    if wait > 0:
+        time.sleep(wait)
+    late = tradeability(seen[first], sell, now(), limits)
+    print(f"   quote-age: {symbol[first]}'s own quote, tradeable above, judged again after "
+          f"waiting: {late.verdict.value} {late.verdict.reason}")
+    tiny = Amount(1, u.cash_decimals, u.cash_leg)
+    t = tradeability(quotes.quote(QuoteRequest(sell=tiny, buy=first, buy_decimals=18)), tiny, now(),
+                     limits)
+    print(f"   quote, the venue declining: {symbol[first]} at {human(tiny)} USDG: {t.verdict.value} "
+          f"{t.verdict.reason}")
+    closed = socket.socket()
+    closed.bind(("127.0.0.1", 0))
+    port = closed.getsockname()[1]
+    closed.close()  # nothing listens here now
+    dead = Settings(**{**settings.__dict__, "base_url": f"http://127.0.0.1:{port}", "attempts": 1})
+    t = tradeability(dead.adapter(cfg.secret).quote(QuoteRequest(sell=sell, buy=first, buy_decimals=18)),
+                     sell, now(), limits)
+    print(f"   quote, no answer at all: {symbol[first]} via a refused local port: {t.verdict.value} "
+          f"(is False: {t.verdict.value is False}) {t.verdict.reason[:170]}\n")
+
+    print("== 4. F0.3.4 re-run: do swapImpactBps and priceImpactBps ever differ? The three widest")
+    print("   impacts above, at 25000 USDG, read-only; the venue's own cap is maxPriceImpactBps")
+    big = Amount.from_units("25000", u.cash_decimals, u.cash_leg)
+    widest = sorted((a for a in stocks if seen[a].ok and seen[a].value.swap_impact is not None),
+                    key=lambda a: -seen[a].value.swap_impact.raw)[:3]
+    for a in widest:
+        o = quotes.quote(QuoteRequest(sell=big, buy=a, buy_decimals=u.records[a].decimals))
+        if not o.ok:
+            print(f"   {symbol[a]}: {o.status.value}: {o.detail[:120]}")
+            continue
+        q = o.value
+        print(f"   {symbol[a]}: swapImpactBps {_shown(q.swap_impact) if q.swap_impact else 'null'}, "
+              f"priceImpactBps {_shown(q.price_impact) if q.price_impact else 'null'}, "
+              f"maxPriceImpactBps {_shown(q.max_price_impact) if q.max_price_impact else 'null'}; "
+              f"verdict {tradeability(o, big, now(), limits).verdict.value}")
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+
+    if sys.argv[1:] != ["--prove"]:
+        print("usage: python -m fund.adapters.bankr_quote --prove")
+        sys.exit(2)
+    sys.exit(prove())
