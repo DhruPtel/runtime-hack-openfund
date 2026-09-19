@@ -9,18 +9,19 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds into the plan docs: none, as of 2026-09-18, after 1.5.** Every
-1.5 entry and both DECISIONs taken before it were folded in 1.5's pass.
+**Pending folds into the plan docs: none, as of 2026-09-18, after 1.6.** Every
+1.6 entry was folded in 1.6's pass.
 
-**Owed in code, outside 1.5's paths.** Two things are recorded and folded but
+**Owed in code, outside 1.6's paths.** Two things are recorded and folded but
 not yet true in the code:
-1. **`core/valuation.py` still vetoes divergence in a closed session.** A
-   DECISION makes it a finding that reaches the decision record. Its docstring
-   also still calls the tier's location "open, not decided", which the
-   named-exception DECISION settled.
-2. **`adapters/http.py` owes two changes**, found by 1.5: a caller-named
+1. **`adapters/http.py` owes two changes**, found by 1.5: a caller-named
    status returned as an answer without retries, and caller headers on
    `urllib_transport`. 1.5 works around both inside its own module.
+2. **The Makefile's `make snapshot`** still prints "not built yet". The live
+   read is `python -m fund.run.snapshot` (1.6).
+
+The two `core/valuation.py` items owed after 1.5, the closed-session finding
+and the stale docstring, were done in 1.6.
 
 Every earlier entry was checked as folded: the 1.2 and 1.3 entries in their own
 passes, and the older ones entry by entry before unit 1.1.
