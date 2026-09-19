@@ -2656,3 +2656,31 @@ time.
   already rebuilds byte for byte offline.
 **Affects:** 2.2, 2.3, 3.3, 3.4, 3.5, 3.9; `agents/risk.py`, `core/gates.py`,
 `agents/schema.py`.
+
+## 2026-09-19 — Phase 3 closed: a record names its own layout, so a replay stays a guarantee
+**The split-order fix changed what a record holds, so the replay had to be
+versioned.** The split-order presentation (F3.8.12) is fixed: each part of a
+split move now shows its part and the weight after that order. But that changes
+the plan, and the plan is inside the signed record, so the old code alone could
+not rebuild the 3.8 exit run's record. The recorded risk reply even names the
+old plan's hash.
+- **What was done:**
+  - the plan's layout is versioned (`plan.LAYOUTS`), and the record's `schema`
+    names it: `openfund.decision/1` for the exit run, `/2` from now on;
+  - a replay writes the plan in the layout its record names;
+  - 3.9's test rebuilds the `/1` record byte for byte, network refused.
+  Otherwise each presentation change would break the replay of every earlier
+  record.
+- **Which fixture is replayable.** `fixtures/cycles/20260919T202259Z/` is. The
+  3.8 no-op of 17:13Z also says `/1`, but predates the sweep's changes to what a
+  record holds, so it is history, and nothing rebuilds it. The fixtures README
+  would say so, but `fixtures/` was outside this pass's paths, and a note there
+  was written and reverted.
+- **The example replaced.** Price-trend reproduced the NVDA example twice,
+  relabelled or not. The shared example is now a caution on ORCL, outside the
+  buy universe in both captures, so no seat can make it. Its figures check
+  against the capture, and its only refusal is the asset.
+- **Phase 4 is planned primitives first** (`planning/PHASE-4.md`), and 4.11 is
+  a stop, at the operator's word. `CLAUDE.md`'s stop list does not say so yet:
+  it is outside this pass's paths, and is owed.
+**Affects:** 3.3, 3.7, 3.9, 2.3; every later record; Phase 4; `CLAUDE.md`.
