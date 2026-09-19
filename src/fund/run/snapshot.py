@@ -115,6 +115,9 @@ def read_chain(settings: chain_4663.Settings, rpc: chain_4663.RpcClient, u: univ
     series = {a: series_of(a) for a in stocks}
     tokens = {u.cash_leg: u.cash_decimals, u.gas_asset: u.gas_decimals}
     tokens |= {a: r.decimals for a, r in u.records.items() if a.chain_id == block.chain_id}
+    # Assets the registry dropped while held are still read: a holding never
+    # leaves the book because its asset left the registry (1.8).
+    tokens |= {a: c.decimals for a, c in u.carried.items() if a.chain_id == block.chain_id}
     balances = read.balances(wallet, tokens)
     # Beacons are read for the universe, and for any stock held outside it: an
     # unread beacon would put a held unmarkable stock at identity_in_doubt.
@@ -232,11 +235,15 @@ def assemble(chain: ChainRead, offchain: OffchainRead, u: universe.Universe,
                                                                 u.feeds[asset.id], block.timestamp,
                                                                 margin, sessions))
 
-    held_outside = {a: u.held_asset(a, u.records[a].decimals,
+    def decimals(a: AssetId) -> int:
+        return u.records[a].decimals if a in u.records else u.carried[a].decimals
+
+    held_outside = {a: u.held_asset(a, decimals(a),
                                     chain.beacons.get(a, Check(None, "not read: the balance was "
                                                                      "not read either")))
                     for a, b in chain.balances.items()
-                    if a in u.records and a not in u.feeds and (not b.ok or b.value.raw > 0)}
+                    if (a in u.records or a in u.carried) and a not in u.feeds
+                    and (not b.ok or b.value.raw > 0)}
     return snapshot.Inputs(
         block=block, built_at=offchain.built_at, stocks=tuple(stocks), cash=marked(u.cash()),
         gas=marked(u.gas()), wallet=wallet, balances=chain.balances, held_outside=held_outside,

@@ -281,3 +281,23 @@ def test_with_daily_closes_the_live_path_takes_one_close_a_day_and_none_at_the_w
     assert "2 days fell in the closed session and have no close" in t["coverage"]["reason"]
     assert entry(built, "NVDA")["status"]["value"] == "tradeable"
     assert "One close a day over 7 days" in built.snapshot.document["rules"]["timeline"]
+
+
+def test_a_holding_the_registry_dropped_is_still_read_and_carried_in_doubt():
+    """The quiet way out of the book: the registry stops listing a held asset.
+    It is carried (1.8), so the live read still asks for its balance."""
+    carried = universe.CarriedAsset(asset=CRM, symbol="CRM", name="Salesforce", decimals=18,
+                                    removed_in="0" * 64)
+    dropped = dataclasses.replace(
+        SMALL, records=MappingProxyType({a: SMALL.records[a] for a in (NVDA, AMZN, CLSK)}),
+        carried=MappingProxyType({CRM: carried}))
+    chain, clock = RecordedChain(), ticking(BLOCK_TIME + 30)
+    built = run.read_and_build(sources(chain, clock), settings=chain_4663.Settings.load(), u=dropped,
+                               rule=valuation.DivergenceRule.from_thresholds(THRESHOLDS),
+                               limits=bankr_quote.Limits.from_thresholds(THRESHOLDS),
+                               wallet=WALLET, clock=clock)
+    [row] = [h for h in built.snapshot.document["holdings"] if h["asset"]["address"] == CRM.address]
+    assert row["asset"]["symbol"] == "CRM" and row["balance"] == "1"
+    assert row["universe_status"]["value"] == "identity_in_doubt"
+    assert "while held, and carried" in row["universe_status"]["reason"]
+    assert row["value_usd"] is None and row["holding_status"]["valued"]["verdict"] is False
