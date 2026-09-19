@@ -454,6 +454,30 @@ at 1.3's close.
 
 ---
 
+## 1.4 — Price cross-check
+**Date:** 2026-09-18 · **Commit:** 6200d18
+
+Built, on two operator decisions recorded first: `adapters/http.py`, the shared
+transport lifted from 1.3 (GeckoTerminal's measured `Retry-After: 0` read as
+no hint); staleness in open-session time, with the closed session (Sat 00:05Z
+to Sun 23:55Z) inferred by `chain_4663 --sessions` from 86,606 rounds over
+twelve weeks; `adapters/gecko.py`; and `core/valuation.py`, whose `value()` is
+the only place a quantity becomes USD, whose `mark()` takes only the fresh
+answer of the feed pinned to the asset's address, and whose `cross_check()`
+excludes below the $1M line and vetoes past 100 bps above it. The artifact is
+`python -m fund.adapters.gecko --prove` at block 66689567, inside the closed
+session: all 35 markable stocks carried a mark, corroboration, divergence,
+volume and tier; 19 passed, 15 fell below the line, MSTR was vetoed at
+−122.87 bps on $4.76M and the recorded AMZN case at −499.47 bps; USDG marked
+at $0.99995, CRM was carried with no value, and a removed GeckoTerminal entry
+was undetermined at `corroboration`. Verified by 78 new offline tests, each
+refusal asserted at its own rule, and by 1.3's `--prove` matching its pre-move
+output line for line after the HTTP move; replayed over history, the new
+staleness rule is stale only on the two holidays in range, and the tier's
+comparisons sitting outside `gates.py` are recorded open.
+
+---
+
 ## State at close — 2026-09-18, after 1.3's close-out
 
 **Read this first.** This note describes the repository at the commit that last
