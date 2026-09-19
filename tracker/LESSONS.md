@@ -9,12 +9,21 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds: none, as of 2026-09-18, before unit 1.1.** The Phase 1 replan
-could write only to `planning/PHASE-0-1.md`, `config/` and `tracker/`, so three
-entries below carry a *fold pending* marker. Those folds were made in the next
-pass, into PLAN §8, §9, §12 and the Phase 5 text, and into ROADMAP's Phase 1 and
-Phase 5 text. The claim above was then re-checked entry by entry. The markers
-are left in place as the record of when each fold was late. An
+**Pending folds: two, as of 2026-09-18, after 1.3's close-out.** Both belong in
+`planning/PHASE-0-1.md` 1.3, which that pass could not write:
+1. **The staleness-exception DECISION.** 1.3's text still calls the
+   comparison's location open.
+2. **The schedule-not-session entry.** 1.3's text says "the session is named in
+   the verdict". What the verdict names is the feed's schedule label.
+
+Every earlier entry was checked as folded: the 1.2 and 1.3 entries in their own
+passes, and the older ones entry by entry before unit 1.1.
+
+That older check has its own history. The Phase 1 replan could write only to
+`planning/PHASE-0-1.md`, `config/` and `tracker/`, so three entries below carry
+a *fold pending* marker. Those folds were made in the next pass, into PLAN §8,
+§9, §12 and the Phase 5 text, and into ROADMAP's Phase 1 and Phase 5 text. The
+markers are left in place as the record of when each fold was late. An
 entry says what we believed, what reality said, and what we did about it — it is
 the record a judge reads to see whether the plan bent when it should have.
 
