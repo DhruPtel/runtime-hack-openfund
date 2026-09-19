@@ -1179,6 +1179,62 @@ disabled.
 **Checkpoint:** you watch it build offline. Judge how much of the demo should run
 from fixtures versus live.
 
+**Built:**
+- **`adapters/cache.py`**, the module CODEBASE names for raw source responses.
+  It records at the transport every adapter already takes, so no adapter
+  changed shape.
+  - Each exchange keeps its endpoint by name, never its URL, with its request
+    and answer as they crossed the wire, when it was sent and received, and the
+    block it addressed.
+  - Each source's clock readings go on a tape.
+- **`run/snapshot.py`.** Every live build captures, writes the capture beside
+  its snapshot, and replays it before it reports. `--replay DIR` rebuilds from
+  a capture alone:
+  - the capture's own copies of the eight config files the snapshot names by
+    hash;
+  - the registry and feed directory, referenced by sha256 in `config/registry/`
+    rather than copied;
+  - each source's answers and clock tape;
+  - every socket refused;
+  - pacing and backoff set to zero, because they only decide waits.
+- **Where captures live** (DECISION, as delegated; LESSONS 2026-09-18).
+  - Every live build's capture goes to `fixtures/live/captures/`, which is
+    never committed.
+  - A capture chosen for the repository is taken with `--capture
+    fixtures/snapshots`, checked for every declared credential, and committed.
+  - `make replay` and the tests rebuild every capture there.
+- **What a replay refuses.** A request the capture does not hold, or a clock
+  read past its tape, raises `ReplayMiss`, which no adapter can catch as an
+  unreachable source. A replay passes only if three things hold:
+  - the snapshot is the captured one, byte for byte;
+  - every capture file matches its manifest;
+  - every answer and clock reading was used.
+- **Redaction.** A capture passes the credential redactor, then is checked for
+  every declared credential value the environment holds. `Set-Cookie` headers
+  are dropped: the venue sent a load-balancer cookie.
+
+**Shown, and waiting for the operator:**
+- **The capture.** `fixtures/snapshots/66812461-8afe38a38b03/`, at block
+  66812461, Sat 04:54Z, inside the closed session. It is 1,030,789 bytes on
+  disk; the chain's answers are 23.6 MB before gzip.
+  - 189 chain, 2 GeckoTerminal and 35 quote exchanges;
+  - 20,036 clock readings;
+  - snapshot `8afe38a3…`, 189,098 bytes;
+  - none of the six declared credentials.
+- **The replay.** It rebuilds that snapshot byte for byte in 0.4 s, inside a
+  network namespace with no route (`unshare -rn`) and an empty environment. A
+  live build in the same namespace fails at its first RPC call.
+- **A changed byte.** One byte changed in the chain's, GeckoTerminal's or the
+  venue's answers, or in the clock tape, changes the rebuilt hash. A changed
+  byte the snapshot does not carry, such as a response header, cannot move the
+  hash. The manifest check names the file, and the replay fails (LESSONS
+  2026-09-18).
+- **Limits.** Two are known:
+  - an HTTP-date `Retry-After` would be judged against the replay's own wall
+    clock, since the shared client reads it; no source has sent one;
+  - newer code replaying an old capture can differ where the code changed, and
+    the manifest names the commit that captured.
+
 **Changed by:** the 2026-09-17 RPC lesson, the price-history decision, 1.2's
 pinned snapshots, and 0.1's redaction. **Size:** bigger than drafted, by the
 series.
