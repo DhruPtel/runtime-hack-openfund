@@ -1,0 +1,39 @@
+{
+  "_about": "What the universe pins (unit 1.2). `inputs` are third-party bytes stored beside this file under their sha256, which is their version (0.8 decision). A version bump is an explicit edit, made through core/universe.py accept(); the loader never refreshes. `issuer_beacon`, `cash_leg` and `gas` are our own pins, each with its provenance. `carried` lists assets the registry dropped while the fund held them, with their last record; accept() writes it, and their balances are still read so a holding never leaves the book (1.8).",
+  "carried": {},
+  "cash_leg": {
+    "_provenance": "USDG. decimals() read on chain at block 65,979,130, agreeing with the quote response and the CoinGecko list; two documented sources said 18 (findings F0.3.1). Genuine, and not a registry asset: every stock check rejects it as a stock (F0.8.2).",
+    "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+    "chain_id": 4663,
+    "decimals": 6,
+    "symbol": "USDG"
+  },
+  "gas": {
+    "_provenance": "The chain's native token, keyed by the native sentinel (core/types.py AssetId.native). Since the 0.11 decision it is also the live leg's sell asset.",
+    "chain_id": 4663,
+    "decimals": 18,
+    "symbol": "ETH"
+  },
+  "inputs": {
+    "chainlink_directory": {
+      "byte_count": 81235,
+      "fetch_time_ms": 1789774397453,
+      "file": "chainlink_directory.2ae1ea5f432cab06904134759033d7c6434c323171f954120c4933fdde42e85d.json",
+      "locator": "reference-data-directory.vercel.app/feeds-robinhood-mainnet.json",
+      "sha256": "2ae1ea5f432cab06904134759033d7c6434c323171f954120c4933fdde42e85d"
+    },
+    "rhj_assets": {
+      "byte_count": 154149,
+      "fetch_time_ms": 1789774397060,
+      "file": "rhj_assets.442718b5843e448e46a3deceab9f2d92f8719c0a4b1a77942d5d6da8098c8b4b.json",
+      "locator": "api.robinhood.com/rhj/assets",
+      "sha256": "442718b5843e448e46a3deceab9f2d92f8719c0a4b1a77942d5d6da8098c8b4b"
+    }
+  },
+  "issuer_beacon": {
+    "_provenance": "The EIP-1967 beacon behind the genuine GME, re-confirmed on mainnet by probe 0.8 rather than carried over from testnet (findings F0.8.2); all 194 registry assets resolve to it (F0.8.4).",
+    "address": "0xe10b6f6b275de231345c20d14ab812db62151b00",
+    "chain_id": 4663
+  },
+  "version": 1
+}

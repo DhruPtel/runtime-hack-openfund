@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "_status": "provisional (unit 1.4). Every value here was chosen against a measurement taken on 2026-09-19 UTC, and each note says which.",
+
+  "base_url": "https://api.geckoterminal.com/api/v2",
+  "network": "robinhood",
+  "_network_note": "GeckoTerminal's slug for chain 4663. It priced 32 of 32 addressable stock tokens off real AMM pools (findings F0.4.2-F0.4.3), so it is independent of the execution venue, which quotes by RFQ. The base URL is public, not a credential.",
+
+  "batch_size": 30,
+  "_batch_note": "The documented ceiling for the batch tokens endpoint (probes/feed.py). 35 markable stocks take two requests. The batch response lists only one of a token's pools in top_pools, where the single-token endpoint lists six (F0.4 limitations), so that count is a floor.",
+
+  "request_timeout_seconds": 20,
+  "attempts": 4,
+  "backoff_seconds": 5,
+  "min_request_interval_ms": 2000,
+  "_rate_note": "A burst drew a 429 on its sixth request inside 0.5 s; at 2.1 s spacing 5 requests passed and the next 10 were refused over ~21 s; after a burst, recovery took 4.3 s (measured 2026-09-19 UTC). The 429 carries Retry-After: 0, which adapters/http.py treats as no hint, so these passes wait 5, 10 and 20 s. Two requests a snapshot sit well inside the limit.",
+
+  "user_agent": "openfund-gecko/1.4",
+  "_user_agent_note": "Three discovery sources returned 403 to a bare urllib request (probe 0.3); every request sends one."
+}

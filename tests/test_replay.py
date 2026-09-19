@@ -16,7 +16,7 @@ from fund.adapters import cache
 from fund.run import snapshot as run
 
 CAPTURES = sorted(p for p in run.SNAPSHOTS.iterdir() if (p / cache.MANIFEST).exists())
-CAPTURE = run.SNAPSHOTS / "66812461-8afe38a38b03"
+CAPTURE = run.SNAPSHOTS / "66852293-253315c0e691"
 
 
 @pytest.fixture(autouse=True)
@@ -49,9 +49,9 @@ def changed(tmp_path, name: str, before: bytes, after: bytes) -> run.Replayed:
 
 @pytest.mark.parametrize("name, before, after", [
     ("chain.jsonl.gz", b"0x1a283ed8c1999", b"0x1a283ed8c1998"),   # the wallet's ETH balance
-    ("gecko.jsonl.gz", b"763.8019212075", b"763.8019212076"),     # one GeckoTerminal price
-    ("venue.jsonl.gz", b'swapImpactBps\\":1054', b'swapImpactBps\\":1055'),  # one quote's impact
-    ("clock.json.gz", b"1789793799259", b"1789793799258"),        # when the first quote came back
+    ("gecko.jsonl.gz", b"763.6608160369", b"763.6608160368"),     # one GeckoTerminal price
+    ("venue.jsonl.gz", b'swapImpactBps\\":947', b'swapImpactBps\\":948'),  # one quote's impact
+    ("clock.json.gz", b"1789797823760", b"1789797823761"),        # when the first quote came back
     ("gecko.jsonl.gz", b'"MISS"', b'"MIST"'),                     # a header the snapshot never reads
 ], ids=["chain", "gecko", "venue", "clock", "unread-header"])
 def test_a_changed_byte_in_any_source_changes_the_rebuilt_hash(tmp_path, name, before, after):
@@ -108,7 +108,7 @@ def test_a_capture_carries_its_provenance_and_names_the_rpc_only_by_name():
     capture = cache.Capture(CAPTURE)
     manifest = capture.manifest
     block = manifest["block"]
-    assert (block["number"], block["time"]) == (66812461, "2026-09-19T04:54:53Z")
+    assert (block["number"], block["time"]) == (66852293, "2026-09-19T06:01:49Z")
     assert manifest["captured"]["commit"] and "started_at" in manifest["captured"]
     assert manifest["endpoints"]["RPC_4663_MAINNET"] == "a declared credential: kept by name only"
     assert set(manifest["redaction"]["credentials_checked"]) == {
@@ -116,8 +116,12 @@ def test_a_capture_carries_its_provenance_and_names_the_rpc_only_by_name():
     chain = capture.exchanges("chain")
     assert {(r["endpoint"], r["path"]) for r in chain} == {("RPC_4663_MAINNET", "")}
     pinned = [r for r in chain if r["block"] is not None]
-    assert len(pinned) == 187 and {r["block"] for r in pinned} == {block["hash"]}
+    assert len(pinned) == 189 and {r["block"] for r in pinned} == {block["hash"]}
     for source in ("chain", "gecko", "venue"):
-        for r in capture.exchanges(source):
-            assert r["sent_at"] <= r["received_at"] and r["status"] == 200
+        exchanges = capture.exchanges(source)
+        for r, after in zip(exchanges, exchanges[1:] + [None]):
+            assert r["sent_at"] <= r["received_at"]
             assert "set-cookie" not in {k.lower() for k in r["headers"]}
+            if r["status"] != 200:  # the RPC's one 429 here, retried; a replay serves both
+                assert r["status"] == 429 and after["request"] == r["request"]
+                assert after["status"] == 200

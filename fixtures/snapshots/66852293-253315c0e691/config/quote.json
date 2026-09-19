@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "_status": "provisional (unit 1.5). The endpoint and request shape are documented (docs.bankr.bot/wallet-api/swap, read 2026-09-17) and demonstrably work (probe 0.3); the pacing values are chosen against the measurements each note names.",
+
+  "base_url": "https://api.bankr.bot",
+  "path": "/wallet/swap-quote",
+  "chain": "robinhood",
+  "_endpoint_note": "Read-only: a quote is a price, not an order. The endpoint answers every malformed body with an identical {\"message\":\"Invalid request body\"} and leaks no schema (probe 0.3), so the adapter validates its own request instead of probing shapes.",
+
+  "credential": "BANKR_KEY_READ",
+  "auth_header": "X-API-Key",
+  "_credential_note": "The read key, Read Only ON, held by the analyst role only. Probe 0.3 quoted with it. The adapter refuses to load any credential that can transact (src/fund/credentials.py). Either auth header works (F0.2.1); X-API-Key is what production clients send.",
+
+  "request_timeout_seconds": 20,
+  "attempts": 3,
+  "backoff_seconds": 2,
+  "min_request_interval_ms": 500,
+  "_pacing_note": "Quotes took 0.6-1.1 s (probe 0.3; 574 ms on 2026-09-19 UTC). 150 reads in 4.1 s drew no 429 and no rate-limit header (F0.10.5), so these are a courtesy, not a measured budget.",
+
+  "user_agent": "openfund-quote/1.5"
+}
