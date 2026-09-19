@@ -66,9 +66,9 @@ daily swing, cites the fields it was computed from, so a reader can redo it.
 
 ## One call, as it should look
 
-Written by hand against the snapshot you are reading, to show the shape of a
-call. It is not a view to adopt. If you call NVDA, the call must come from your
-own reading.
+Written by hand against the weekend capture of 19 September 2026, to show the
+shape of a call. It is not a view to adopt. If you call NVDA, the call must come
+from your own reading.
 
     CALL NVDA 0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec hold low
     Nvidia has gone nowhere for a month. It sits in a 208–230 range, about
