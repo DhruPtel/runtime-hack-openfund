@@ -89,13 +89,31 @@ def test_the_brief_ends_with_the_exact_first_line_its_report_must_carry(seat):
     assert b.user.endswith(b.header + "\n")
 
 
-def test_the_example_in_the_shared_brief_is_the_approved_one():
-    approved = (REPO / "planning" / "REPORT-FORMAT.md").read_text()
-    nvda = approved.split("CALL NVDA", 1)[1].split("\n\nCALL", 1)[0]
+def test_the_shared_example_is_a_call_no_seat_can_copy_as_its_own_answer():
+    """At 3.8 price-trend reproduced the brief's NVDA example twice, relabelled or
+    not: the same "hold low" in the same 208-230 band. The example is now a condition
+    call on an asset outside the buy universe in both committed captures, so no seat
+    can make it: price-trend's vocabulary has no caution, and a condition call on an
+    untradeable asset is refused."""
+    from fund.agents import schema
     shared = (analyst.BRIEFS / "analyst.v1.md").read_text()
-    indented = "\n".join("    " + line if line else line
-                         for line in ("CALL NVDA" + nvda).splitlines())
-    assert indented in shared
+    assert "CALL NVDA" not in shared and "208" not in shared
+    line = next(l.strip() for l in shared.splitlines()
+                if l.strip().startswith("CALL ") and " 0x" in l)  # the example, not the template
+    symbol, address, word = line.split()[1:4]
+    assert word in ANALYSTS["vocabularies"]["condition"]
+    for capture in ("66852293-253315c0e691", "67364057-c06abd9e89f0"):
+        document = json.loads((REPO / "fixtures" / "snapshots" / capture / "snapshot.json")
+                              .read_text())
+        entry = next(a for a in document["assets"] if a["asset"]["address"] == address)
+        assert entry["asset"]["symbol"] == symbol and entry["status"]["value"] != "tradeable"
+    # Its figures are the 06:01Z capture's.
+    morning = json.loads(SNAPSHOT)
+    orcl = next(a for a in morning["assets"] if a["asset"]["address"] == address)
+    assert orcl["corroboration"]["divergence_bps"] == "205.31"
+    assert round(float(orcl["corroboration"]["volume_24h_usd"]) / 1e6, 2) == 0.04
+    assert round(float(orcl["quote"]["venue_price_usd"]), 2) == 146.84
+    assert round(float(orcl["mark"]["price_usd"]), 2) == 147.96
 
 
 def test_a_seat_the_config_does_not_define_or_question_is_refused():
@@ -105,3 +123,19 @@ def test_a_seat_the_config_does_not_define_or_question_is_refused():
     vague["analysts"][0]["question"] = ""
     with pytest.raises(ValueError):
         analyst.render("price-trend", SNAPSHOT, "0x…", analysts=vague)
+
+
+def test_the_shared_example_is_refused_only_for_its_asset_and_its_figures_check():
+    """Run through the validator against the capture it was written on: every figure
+    is the field it cites, and the one refusal is that no seat may call the asset."""
+    from fund.agents import schema
+    shared = (analyst.BRIEFS / "analyst.v1.md").read_text()
+    block = shared.split("    CALL ORCL", 1)[1].split("\n\n", 1)[0]
+    example = "\n".join(line[4:] if line.startswith("    ") else line
+                        for line in ("    CALL ORCL" + block).splitlines())
+    sha = hashlib.sha256(SNAPSHOT).hexdigest()
+    report = f"REPORT price-integrity unassigned {sha}\n\nThe example alone.\n\n{example}\n"
+    v = schema.validate(report, json.loads(SNAPSHOT),
+                        contract=schema.Contract.load("price-integrity"), agent="unassigned",
+                        snapshot_sha256=sha)
+    assert [r.rule for r in v.refusals] == ["asset"] and "not tradeable" in v.refusals[0].detail

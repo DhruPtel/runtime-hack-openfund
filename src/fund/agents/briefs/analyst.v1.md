@@ -66,21 +66,21 @@ daily swing, cites the fields it was computed from, so a reader can redo it.
 
 ## One call, as it should look
 
-Written by hand against the weekend capture of 19 September 2026, to show the
-shape of a call. It is not a view to adopt. If you call NVDA, the call must come
-from your own reading.
+This one is about ORCL, which was outside the buy universe in the weekend capture
+of 19 September 2026, where it was written: its GeckoTerminal pool traded below
+the corroborator line. No seat may call such an asset except to sell it, so this
+shows the shape of a call, not an answer to reuse. Its figures are that
+capture's.
 
-    CALL NVDA 0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec hold low
-    Nvidia has gone nowhere for a month. It sits in a 208–230 range, about
-    two-thirds of the way up, after bouncing 5% off 211.92 this week. The chip rally
-    is happening in AMD and Intel, not here. I would neither add nor cut until it
-    leaves the range.
-    - 222.45, Friday's close [mark.price_usd]
-    - 207.91 low on 24 August, 230.24 high on 4 September [timeline 2026-08-24,
-      timeline 2026-09-04]
-    - +2.6% over 30 days [timeline 2026-08-20]
-    Wrong if: it closes above 230.24, a breakout and a buy, or below 207.91, where
-    the range breaks and it becomes a sell.
+    CALL ORCL 0xb0992820e760d836549ba69bc7598b4af75dee03 caution medium
+    GeckoTerminal's ORCL pool is far too thin to check the mark: it traded a few
+    percent of the $1M the fund asks of a corroborator, so its 2% gap to the mark
+    says little on its own. The venue's price sits 0.8% below the mark.
+    - $0.04M of 24-hour volume [corroboration.volume_24h_usd]
+    - 205.31 bps between the mark and GeckoTerminal [corroboration.divergence_bps]
+    - venue 146.84 against mark 147.96 [quote.venue_price_usd, mark.price_usd]
+    Wrong if: GeckoTerminal's volume clears $1M and its price comes back within
+    100 bps of the mark.
 
 ## What you are not
 
