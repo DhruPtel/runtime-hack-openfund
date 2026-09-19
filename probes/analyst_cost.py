@@ -32,7 +32,19 @@ measurements compare; the real brief is 2.1's. The analyst covers every asset in
 the snapshot. That is right for the universe-wide roles and an upper bound for
 the asset-partitioned ones (`config/analysts.json`).
 
-Run:  PYTHONPATH=src python3 -m probes.analyst_cost fixtures/live/snapshot-<sha256>.json [--confirm]
+**Two narrower modes, added after 1.7** (DECISIONs, LESSONS 2026-09-18):
+- `--one`: a single analyst call, for measuring another snapshot shape against
+  1.7's (daily closes). Its report is compared with 1.7's on how it uses
+  history: whether reports cite the timeline, quote dated points and more
+  than one price level, and how many abstain. That is a proxy for quality,
+  stated as one.
+- `--cache`: two calls on the Anthropic-shaped `/v1/messages`, with the
+  system prompt and the snapshot marked `cache_control`. The first writes the
+  cache. The second reads it under a *different* analyst's scope, as four
+  analysts sharing one snapshot would. It measures whether the gateway honours
+  cache control, and what that saves.
+
+Run:  PYTHONPATH=src python3 -m probes.analyst_cost fixtures/live/snapshot-<sha256>.json [--one | --cache] [--confirm]
 """
 
 from __future__ import annotations
@@ -40,6 +52,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import re
 import sys
 import time
 
@@ -57,6 +70,7 @@ MODEL = json.loads((ROOT / "config" / "models.json").read_text())["analyst_model
 MODELS = json.loads((ROOT / "config" / "models.json").read_text())
 CLIENT_TIMEOUT_S = 900
 MAX_TOKENS = 16_000
+CAPPED_TOKENS = MODELS["max_output_tokens"]  # 12,000 since the DECISION after 1.7
 ANALYSTS_PER_CYCLE, RISK_CALLS_PER_CYCLE, CYCLES_PER_DAY = 4, 1, 1
 X402_PRICE_USD = 0.05
 
@@ -149,10 +163,73 @@ def cost(usage: dict, price: dict) -> float:
             + (usage.get("completion_tokens") or 0) * price["output"]) / 1e6
 
 
+# --- how a report uses history: a proxy, stated as one --------------------------------------
+
+_DATED = re.compile(r"\b\d{1,2}/\d{1,2}\b|\b2026-\d{2}-\d{2}\b|\b(?:Aug|Sep)\w*\.? \d{1,2}\b")
+_PRICE = re.compile(r"\b\d{1,5}\.\d{1,4}\b")
+
+
+def report_shape(text: str) -> dict:
+    """Counts from one analyst reply: how many reports, how many abstain or
+    say NO_CALL, and how many cite the timeline, quote dated points, and name
+    more than one price level. A proxy for using history, not a grade."""
+    body = re.sub(r"^```(?:json)?|```$", "", text.strip()).strip()
+    try:
+        parsed = json.loads(body)
+    except ValueError as error:
+        return {"parsed": False, "error": str(error)}
+    reports = parsed.get("reports") or []
+    reasoning = [str(r.get("reasoning", "")) for r in reports]
+    calls: dict[str, int] = {}
+    for r in reports:
+        calls[r.get("call")] = calls.get(r.get("call"), 0) + 1
+    return {
+        "parsed": True, "reports": len(reports), "abstained": len(parsed.get("abstained") or []),
+        "calls": calls,
+        "cite_timeline": sum(any("timeline" in c for c in (r.get("cites") or [])) for r in reports),
+        "quote_dated_points": sum(bool(_DATED.search(t)) for t in reasoning),
+        "name_two_price_levels": sum(len(set(_PRICE.findall(t))) >= 2 for t in reasoning),
+        "reasoning_chars_mean": round(sum(map(len, reasoning)) / len(reasoning)) if reasoning else 0,
+    }
+
+
+def messages(label: str, key: str, cached: str, rest: str, max_tokens: int) -> dict:
+    """One call on the Anthropic-shaped endpoint, with the system prompt and
+    `cached` marked for caching and `rest` after it."""
+    before = balance(key)
+    started = time.monotonic()
+    capture = _capture.call(
+        label=label, url=f"{GATEWAY}/messages", header_name="X-API-Key", header_value=key,
+        timeout=CLIENT_TIMEOUT_S, max_body_chars=400_000,
+        json_body={"model": MODEL, "max_tokens": max_tokens, "temperature": 0,
+                   "system": [{"type": "text", "text": SYSTEM_PROMPT}],
+                   "messages": [{"role": "user", "content": [
+                       {"type": "text", "text": cached, "cache_control": {"type": "ephemeral"}},
+                       {"type": "text", "text": rest}]}]})
+    latency_ms = int((time.monotonic() - started) * 1000)
+    parsed = _capture.as_json(capture) or {}
+    time.sleep(3)
+    text = "".join(b.get("text", "") for b in (parsed.get("content") or []) if isinstance(b, dict))
+    return {"label": label, "status": capture.status, "latency_ms": latency_ms,
+            "transport_error": capture.transport_error, "usage": parsed.get("usage") or {},
+            "stop_reason": parsed.get("stop_reason"), "text": text,
+            "error": None if capture.status == 200 else capture.body[:800],
+            "balance_before": before, "balance_after": balance(key),
+            "extra": {k: v for k, v in parsed.items() if k not in ("content", "usage")}}
+
+
+def cached_cost(usage: dict, price: dict) -> float:
+    return ((usage.get("input_tokens") or 0) * price["input"]
+            + (usage.get("cache_creation_input_tokens") or 0) * price.get("cache_write", price["input"])
+            + (usage.get("cache_read_input_tokens") or 0) * price.get("cache_read", price["input"])
+            + (usage.get("output_tokens") or 0) * price["output"]) / 1e6
+
+
 def main() -> int:
-    args = [a for a in sys.argv[1:] if a != "--confirm"]
-    confirmed = "--confirm" in sys.argv
-    if len(args) != 1:
+    flags = {"--confirm", "--one", "--cache"}
+    args = [a for a in sys.argv[1:] if a not in flags]
+    confirmed, one, cache = ("--confirm" in sys.argv, "--one" in sys.argv, "--cache" in sys.argv)
+    if len(args) != 1 or (one and cache):
         print(__doc__.strip().splitlines()[-1])
         return 2
     path = ROOT / args[0]
@@ -207,8 +284,13 @@ def main() -> int:
         print("the balance does not cover the worst case. Stopping.")
         return 1
     if not confirmed:
-        print("\nPre-flight only. Nothing spent. Re-run with --confirm.")
+        print(f"\nPre-flight only{' (--one: 1 call)' if one else ' (--cache: 2 calls)' if cache else ''}. "
+              f"Nothing spent. Re-run with --confirm.")
         return 0
+    if one:
+        return run_one(key, user, price, path, sha256, document, rounds, len(body))
+    if cache:
+        return run_cache(key, body, sha256, price, path)
 
     calls = []
     for n in (1, 2):
@@ -287,6 +369,64 @@ def main() -> int:
     print(f"  /v1/usage, one settled window: {json.dumps(settled)[:600]}")
     print(f"\nwritten to {out}")
     return 0
+
+
+def run_one(key: str, user: str, price: dict, path: pathlib.Path, sha256: str, document: dict,
+            rounds: int, size: int) -> int:
+    """One analyst call against this snapshot, set beside 1.7's."""
+    call = chat("analyst-one", key, SYSTEM_PROMPT, user, CAPPED_TOKENS)
+    call["cost_usd"] = cost(call["usage"], price)
+    call["report_shape"] = report_shape(call["text"])
+    before = json.loads((OUT_DIR / "analyst_cost.json").read_text())
+    earlier = before["calls"][:2]  # 1.7's two identical calls: they differ, so both are the baseline
+    result = {"snapshot": {"path": str(path.relative_to(ROOT)), "sha256": sha256, "bytes": size,
+                           "rounds": rounds, "block": document["block"]},
+              "call": call, "compared_with": {"snapshot": before["snapshot"], "calls": earlier,
+                                              "report_shapes": [report_shape(c["text"]) for c in earlier]}}
+    (OUT_DIR / "analyst_cost_one.json").write_text(json.dumps(result, indent=2, sort_keys=True),
+                                                   encoding="utf-8")
+    u = call["usage"]
+    print(f"analyst: HTTP {call['status']} in {call['latency_ms']:,} ms; in {u.get('prompt_tokens')} out "
+          f"{u.get('completion_tokens')} finish {call['finish_reason']}; ${call['cost_usd']:.6f}; "
+          f"balance {call['balance_before']} -> {call['balance_after']}")
+    print(f"  this snapshot  {size:,} bytes, {rounds:,} points: {json.dumps(call['report_shape'])}")
+    for n, c in enumerate(earlier, 1):
+        eu = c["usage"]
+        print(f"  1.7's call {n}   {before['snapshot']['bytes']:,} bytes, {before['snapshot']['rounds']:,} "
+              f"points; in {eu.get('prompt_tokens')} out {eu.get('completion_tokens')} "
+              f"${c['cost_usd']:.6f}: {json.dumps(report_shape(c['text']))}")
+    return 0 if call["status"] == 200 else 1
+
+
+def run_cache(key: str, body: bytes, sha256: str, price: dict, path: pathlib.Path) -> int:
+    """Two calls sharing one cached prefix: the system prompt and the snapshot."""
+    cached = (f"## Snapshot\n\nThis is the complete set of facts. Its sha256 is {sha256}. Its own "
+              f"`about` and `rules` fields say how to read it.\n\n{body.decode('utf-8')}")
+    schema = USER_TEMPLATE.split("## Required output", 1)[1]
+    scopes = [("price-trend", "recent price action and trend for the assets assigned to you."),
+              ("execution-quality", "quote age, impact, spread and tradeability, per asset.")]
+    calls = []
+    for n, (analyst, objective) in enumerate(scopes, 1):
+        rest = (f"## Your scope\n\nAnalyst id: {analyst}\nObjective: {objective}\nAssigned assets: "
+                f"every asset in the snapshot's `assets` list.\n\n## Required output{schema}")
+        calls.append(messages(f"cache-{n}-{analyst}", key, cached, rest, CAPPED_TOKENS))
+        c = calls[-1]
+        c["cost_usd"] = cached_cost(c["usage"], price)
+        print(f"cache {n} ({analyst}): HTTP {c['status']} in {c['latency_ms']:,} ms; usage "
+              f"{json.dumps(c['usage'])}; stop {c['stop_reason']}; ${c['cost_usd']:.6f}; balance "
+              f"{c['balance_before']} -> {c['balance_after']}")
+        if c["status"] != 200:
+            print(c["error"] or c["transport_error"])
+            break
+    time.sleep(20)
+    settled = balance(key)
+    (OUT_DIR / "analyst_cost_cache.json").write_text(json.dumps(
+        {"snapshot": {"path": str(path.relative_to(ROOT)), "sha256": sha256, "bytes": len(body)},
+         "pricing_per_million": price, "calls": calls, "balance_settled": settled},
+        indent=2, sort_keys=True), encoding="utf-8")
+    print(f"  balance settled at {settled}; costs at listed prices: "
+          + ", ".join(f"${c['cost_usd']:.6f}" for c in calls))
+    return 0 if all(c["status"] == 200 for c in calls) else 1
 
 
 if __name__ == "__main__":
