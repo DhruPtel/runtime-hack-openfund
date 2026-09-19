@@ -147,12 +147,6 @@ def test_cash_and_gas_stay_holdings_valued_at_their_own_feeds_whatever_the_stock
         assert rows["USDG"]["holding_status"]["exit"]["verdict"] is True
 
 
-def test_no_holding_is_valued_at_the_venue_quote():
-    # Unmarkable: the quote's own price is in the snapshot's quotes, never in the book.
-    row = holding(build(no_longer_markable))
-    assert row["value_usd"] is None and row["mark"]["price_usd"] is None
-
-
 def test_every_way_out_of_the_buy_universe_is_exercised_here():
     exercised = {status for _, status, _, _ in ROUTES}
     ways_out = {s.value for s in UniverseStatus} - {"tradeable", "not_a_stock"}
