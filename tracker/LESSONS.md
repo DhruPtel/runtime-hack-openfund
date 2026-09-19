@@ -9,11 +9,20 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds into the plan docs: none, as of 2026-09-18, after 1.11's
-checkpoint.** Its entries and the two decisions were folded into PHASE-0-1
-1.11, PLAN §8, §9 and §13, `config/sessions.json` and `CLAUDE.md`. F0.4.1 in
-`research/findings.md` still says every equity feed is named `Robinhood <TICKER> /
-USD`. That file is research, not plan, and was outside 1.10's pass.
+**Pending folds into the plan docs: none, as of 2026-09-19, after the scope
+pivot.** The 2026-09-19 decisions are folded into PLAN §8, where the phase list
+begins, with markers in §1, §2, §5, §6, §11, §12 and §13. They also sit in the
+ROADMAP unit tables, PHASE-0-1, `planning/SIMPLIFICATION.md`,
+`planning/JUDGING-CRITERIA.md` and `CLAUDE.md`.
+
+**Owed outside the plan docs, because they sit outside that pass's paths:**
+- `config/analysts.json`: the fourth seat and the two vocabularies, with 2.1;
+- `credentials.py` and `.env.example`: five agent keys, once SIWE is verified;
+- the README status line.
+
+F0.4.1 in `research/findings.md` still says every equity feed is named
+`Robinhood <TICKER> / USD`. That file is research, not plan, and was outside
+1.10's pass.
 
 **Owed in code, outside the paths of the passes that found them:**
 1. **`adapters/http.py`, two changes** (found by 1.5): return a caller-named
@@ -1827,3 +1836,171 @@ so its replay stops with `ReplayMiss` at the pause read. It must not guess.
   true of the old capture only.
 
 **Affects:** 1.3, 1.6, 1.9 (fixtures), the demo's fixture; `fixtures/README.md`.
+
+## 2026-09-19 — DECISION: from Phase 2, every unit is built at its minimal version
+*The operator's, after the Phase 1 gate, with the deadline about 16 hours away.*
+The plan was written for a fund that runs unattended with real capital, and
+Phases 0 and 1 were built that way. From 2.1 on, each unit is built at the
+minimal version `planning/SIMPLIFICATION.md` gives it. Its full version is
+recorded there so it can be built later.
+- **Nothing is deleted.** The components, flow and boundaries stay, and so does
+  the phase and unit order. What shrinks is depth:
+  - scope narrows to the main path;
+  - verification covers the main path only;
+  - output is the few lines that carry the claim;
+  - unlikely edge cases are recorded, not handled.
+- **The exception.** Keys, signing and spend authority keep their guard. What
+  goes is the ceremony around a guarantee, such as the mandate's hash and
+  replay, never the guarantee itself.
+- **Ten units are equal,** because a reduced version would be a different
+  thing: 3.7, 4.2, 4.3, 4.7, 4.12, 5.2, 5.4, 7.4, 7.5 and 8.2.
+- **Not adopted:** SIMPLIFICATION's five-stage build order. It was a second map
+  of the same units. The work follows the unit order, and that section is marked
+  superseded.
+- **Stops, as the approved unit rows set them:** 3.8, 5.4, 6.6, 7.5 and 8.5.
+  2.1's stop, approving the report format, was spent on this approval, and 2.1's
+  work is still to do. Every other ▶ is shown, not stopped.
+
+**What it contradicts, marked in place rather than reconciled:**
+- **The 2026-09-18 DECISION that 3.4 sweeps the three named exceptions into
+  `gates.py`.** Minimal 3.4 calls them from there instead, so they outlive 3.4
+  (PLAN §2 invariant 4, CODEBASE §3). The sweep is 3.4's full version.
+- **Work the approved rows put in a stage that no longer exists.** In unit
+  order:
+  - 3.7 builds the signer, and 4.12 moves it into the treasurer's process;
+  - 4.11 checks positions and value against its fixture, and 6.1 adds the four
+    lines;
+  - **the page arrives at 7.6, after four of the five stops.** So 3.8, 5.4, 6.6
+    and 7.5 are shown as files and terminal output. Building 7.6 earlier would
+    move one unit, and that is the operator's call.
+
+**Affects:** every unit from 2.1; PLAN §2 and §8; ROADMAP; PHASE-0-1; CLAUDE.md.
+
+## 2026-09-19 — DECISION: reports speak in two vocabularies, direction and condition
+The one recorded execution-quality report, the second call of 1.8's caching
+test, was asked for buy, hold or sell. It answered `NO_CALL` on all 35 assets,
+because that vocabulary has no answer for "what does trading cost"
+(`probes/out/analyst_cost_cache.json`, gitignored, local only). Under one
+vocabulary, half the seats could only abstain.
+- **Direction seats,** `price-trend` and `cross-asset-macro`: buy, hold or sell,
+  with a confidence.
+- **Condition seats,** `execution-quality` and `price-integrity`: proceed or
+  caution, with a confidence.
+- **The aggregator** combines them as direction × (1 − caution), as
+  "The report format" in SIMPLIFICATION.md sets out.
+
+The key values are snapshot field paths that code resolves, so the model never
+writes the key numbers.
+**Affects:** 2.1, 2.2, 2.3, 3.1; `config/analysts.json`.
+
+## 2026-09-19 — DECISION: the fourth seat becomes price integrity
+The snapshot gives `fundamentals-calendar` nothing but names and ISINs, so it
+would reason from model memory, which no decision record can cite (gate §5). It
+becomes `price-integrity`: does this asset's price hold up today? It compares
+three sources that the snapshot already carries and no other seat compares:
+- the Chainlink mark;
+- GeckoTerminal's price;
+- the venue's price inside the $25 quote.
+
+**Given up:** nobody reasons about the companies themselves, so the fund claims
+no fundamental research (PLAN §13).
+
+**Not yet in config.** `config/analysts.json` still names
+`fundamentals-calendar`. It is outside this pass's paths and changes with 2.1.
+**Affects:** 2.1, 2.3, 3.8; `config/analysts.json`; PLAN §11 and §13.
+
+## 2026-09-19 — DECISION: five agent wallets, from `bankr login siwe`, unverified
+Each analyst and the risk agent gets its own Bankr account and wallet, created
+with `bankr login siwe --private-key` from a locally generated key. Five local
+keys replace five email sign-ups; the docs describe this path as built for
+headless agents.
+- **Each key's permissions:** read-only, LLM gateway on, Agent API off.
+- **What the agents do:** exist, carry an address, and pay for their own
+  inference. They never transact or sign.
+- **The treasurer** keeps the fund's wallet.
+
+**Unverified.** The path must be shown to work before Phase 2 depends on it. If
+it does not work, that is a finding. **Falling back to one shared wallet is
+ruled out,** because it collapses what is being demonstrated.
+
+**What the installed CLI says** (0.3.37, `bankr login siwe --help`; documented,
+not measured):
+- read-only is the default, and `--read-write` turns it off;
+- **the Agent API and the Token Launch API are on by default,** so
+  `--no-agent-api` and `--no-token-launch` must be passed;
+- **no LLM gateway option is listed,** so how an agent key gets gateway access
+  is unknown;
+- `--allowed-ips` and `--allowed-recipients` exist.
+
+**Also unknown:**
+- whether the account's wallet is the SIWE key's own address or a new custodial
+  one;
+- whether credits can be bought in it;
+- whether a login replaces the CLI's current session, which is the fund's. This
+  is inferred, not observed. Check it before the first run.
+
+**The private key is setup material, not an agent credential.** It signs the
+SIWE message. It never enters an agent process or the repository, and the agent
+process holds only its read-only API key. If the wallet turns out to be that
+key's own address, the key controls whatever the wallet holds.
+**Affects:** 2.4, 2.5, 3.5, 4.12, 6.3; PLAN §6 and §13; `credentials.py` and
+`.env.example`, once verified.
+
+## 2026-09-19 — DECISION: the live ETH↔USDG trade is a demonstration of the money path
+Nothing on record said what drives the live leg. It is labelled as what it is: a
+demonstration of the money path that no analyst chose. No decision is
+manufactured to justify it. It passes the same gates, risk agent, signature and
+treasurer as any other order. SIMPLIFICATION.md proposes mechanics for it: one
+small order in each cycle that trades, alternating direction. Those mechanics
+are proposed, not decided.
+**Affects:** 3.3, 5.2, 5.7; PLAN §13; the demo story.
+
+## 2026-09-19 — DECISION: the endpoint sells the full record, and a preview is public
+PLAN §5 put the published record on a public path that the page reads too. As
+written, anyone could read in full what x402 sells.
+- **Public preview:** the basket, the weights, the verdict, and that a veto
+  fired.
+- **Paid:** the full record, with every analyst report and its reasoning.
+
+**Open:** how the handler holds the full record without it being public
+elsewhere. The two options are bundling it into each deploy or a private URL
+only the handler knows. Neither is measured: 0.7d proved that deploys work, not
+how long they take.
+
+**Open, as a consequence of the decision:** the preview as decided names
+neither the decision id nor the hashes and signature.
+- 7.2 serves by id, so a buyer has to learn the id somewhere.
+- Without the hashes, a buyer cannot check that what they bought matches what
+  they saw.
+
+Neither is added here. Both are the operator's call.
+
+**Contradicts,** marked in place: PLAN §1 ("shown on a public page"), §5, and
+7.7's "latest decision and reasoning".
+**Affects:** 7.1, 7.2, 7.6, 7.7; PLAN §1, §5, §8 and §11.
+
+## 2026-09-19 — DECISION: execution before the sale, in the existing unit order
+SIMPLIFICATION.md recommended building the sale before execution. That is not
+adopted, for two reasons:
+- the judging criteria weight onchain potential;
+- probe 0.7e has already proven a sale through a standard client.
+
+The unit order already puts Phases 4 and 5 before Phase 7, so nothing moves.
+**Affects:** the order of work; SIMPLIFICATION.md's build order, superseded.
+
+## 2026-09-19 — The six judging criteria, supplied
+PLAN 8.6 names six judging criteria that were never in the repository. The
+operator supplied them:
+- product;
+- founder-market fit;
+- execution;
+- originality;
+- onchain potential;
+- token design;
+- and bonus consideration for projects built around onchain equities.
+
+They are in `planning/JUDGING-CRITERIA.md`.
+
+**A gap they expose: token design.** PLAN §12 leaves "do we launch a token"
+open, and no unit covers it. Recorded, not resolved.
+**Affects:** 8.6; PLAN §12.
