@@ -25,12 +25,13 @@
 
   "max_position_weight": "0.25",
   "_max_position_weight_note": "A fraction of the paper NAV: two $25 orders in one name at $200. The aggregator never raises a position past it, and a buy's step is a fraction of it (core/aggregate.py). Decimal text, never a float.",
-  "turnover_max_bps": null,
+  "turnover_max_bps": 10000,
+  "_turnover_note": "A cycle may trade at most its paper NAV. Loose, and stated as loose (planning/SIMPLIFICATION.md).",
   "cash_floor_usd": "20",
   "_cash_floor_note": "10% of the $200 paper capital. The aggregator funds new buys only from cash above it; the gate checks the plan against it. Decimal text.",
   "min_order_usd": "1",
   "_min_order_note": "An order under $1 is dust and is dropped when the plan is sized, so an unchanged view means no trade. Decimal text: as an integer, the boundary test would read every `x < 1` in the code as this threshold.",
-  "_position_limits_resolved_by": "max_position_weight and cash_floor_usd set at 3.1, min_order_usd at 3.3 (operator, 2026-09-19, the Phase 3 batch brief, as planning/SIMPLIFICATION.md proposed). Provisional. turnover_max_bps is set at 3.4.",
+  "_position_limits_resolved_by": "max_position_weight and cash_floor_usd set at 3.1, min_order_usd at 3.3, turnover_max_bps at 3.4 (operator, 2026-09-19, the Phase 3 batch brief, as planning/SIMPLIFICATION.md proposed). Provisional.",
 
   "quorum_min_analysts": 3,
   "_quorum_note": "Defined against a roster of 4: one failed seat still decides, two do not. Below it the cycle keeps every holding (core/aggregate.py).",
