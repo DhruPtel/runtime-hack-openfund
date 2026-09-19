@@ -873,9 +873,42 @@ became one: the header its old placeholder provoked, and with that token alone
 restored the report is accepted. The runner's `main()` has its tests; 449 pass,
 and no rule was added.
 
+## 2.6, finished — The other three seats, one call each
+**Date:** 2026-09-19 · **Commit:** 8de9a14
+
+With the key measured first, as before, price-trend, cross-asset-macro and
+execution-quality ran once each on the same capture, at 15:58:33Z.
+`research/findings.md` §2.6, continued, holds the two reports unedited, with a
+table and judgements.
+- **Price-trend: refused, for errors that are its own.** A META address
+  invented after its first 8 digits, GME's feed address given for the token,
+  and a mis-dated GME close. It cost $0.273142 and took 83.3 s. Its NVDA call
+  repeats the brief's own example, which comes from this capture.
+- **Cross-asset-macro: no report.** The gateway returned HTTP 504 after
+  113.3 s. It was not retried.
+- **Execution-quality: accepted,** the first reply to pass. It cost $0.249594
+  and took 58.2 s, and cautions MSTR only.
+
+**Judged:** three different views; the fourth is untested. Both condition seats
+caution MSTR on one gap.
+
+## 2.7 — The report store
+**Date:** 2026-09-19 · **Commits:** b417caa, db51f8d
+
+`store/reports.py` keeps each report once. The file is named by the sha256 of
+its canonical bytes and checked against it on every read. A different byte at a
+known id raises, and nothing is rewritten.
+- **The runner stores every reply that arrives,** accepted or refused, and puts
+  its `report_id` on the seat's result. The live entry point writes to the
+  gitignored `fixtures/live/reports/`.
+- **The three real replies are stored,** each byte-identical to its recording:
+  price-integrity `569d406…`, price-trend `9398838…` and execution-quality
+  `1b9f7a7…`.
+- **Minimal:** storage and retrieval only, with no query layer. 455 tests pass.
+
 ---
 
-## State at close — 2026-09-19, after 2.6: the validator loosened, the report readable
+## State at close — 2026-09-19, after 2.6 and 2.7: three seats heard, their reports stored
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -899,10 +932,13 @@ closed session, Sat 00:05Z to Sun 23:55Z.
 
 **Check it in a minute.** Nothing here spends.
 - `git log --oneline -15` and `git status -sb`.
-- `make test`: 449 passed when this was written, about 12 s. The runner tests
+- `make test`: 455 passed when this was written, about 13 s. The runner tests
   start real subprocesses against a fake gateway on 127.0.0.1.
 - `python3 -m fund.agents.show fixtures/live/cycles/20260919T153900Z` prints
-  2.6's report as the model wrote it.
+  2.6's report as the model wrote it. `…/20260919T155833Z --seat price-trend`
+  (or `execution-quality`) prints the other two.
+- `fixtures/live/reports/` holds the three real replies. Each is read back by
+  id with `ReportStore(path).text(id)`.
 - `python3 -m fund.agents.runner --snapshot <path> [--seats …] [--retries N]`
   prints what it would run. It **spends** only with `--confirm`.
 - `python3 -m probes.keymap`: each key's measured capabilities, read-only.
@@ -938,7 +974,12 @@ closed session, Sat 00:05Z to Sun 23:55Z.
 - **2.2 to 2.5, built and proven offline** (entries above).
 - **The keys, fixed by the operator and measured.** `BANKR_LLM_KEY` is refused
   by the Wallet API and the Agent API.
-- **2.6, run once live** on one seat: refused, and shown (entry above).
+- **2.6, run once live on each seat** (entries above):
+  - price-integrity was refused, on the header only since the fixes;
+  - price-trend was refused, for its own errors;
+  - cross-asset-macro got a gateway 504, with no report;
+  - execution-quality was accepted.
+- **2.7, the report store,** at its minimal version (entry above).
 - **After 2.6** (entry above):
   - the display;
   - the bps rule loosened;
@@ -951,20 +992,24 @@ closed session, Sat 00:05Z to Sun 23:55Z.
   - `adapters/http.py`, `adapters/chain_4663.py`, `adapters/gecko.py`,
     `adapters/bankr_quote.py`, `adapters/cache.py`, `adapters/bankr_llm.py`,
     `adapters/bankr_usage.py`;
-  - `agents/schema.py`, `agents/analyst.py`, `agents/runner.py`, and
-    `agents/briefs/`;
+  - `agents/schema.py`, `agents/analyst.py`, `agents/runner.py`,
+    `agents/show.py`, and `agents/briefs/`;
+  - `store/reports.py`;
   - `run/snapshot.py`, `run/selftest.py`.
 
-  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 23.
+  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 22.
 
 ### Next
-- **The operator reads 2.6** (`research/findings.md` §2.6).
+- **The operator reads §2.6, continued** (`research/findings.md`).
 - **Owed from 2.6:**
-  - **The settled `/v1/usage` cross-check** for the 15:39Z call. The window
-    will have been closed long enough by now; it needs one live read.
-  - **`research/findings.md` §2.6's "What 2.6 changes" table** still lists the
-    bps rule and the placeholder as owed. Both are done (LESSONS); the file was
-    outside this pass's paths.
+  - **The settled `/v1/usage` cross-check** for the 15:39Z and 15:58Z calls.
+    It needs one live read, after the windows settle. It also shows whether the
+    504 was billed: compare the window's request count with the calls recorded.
+  - **One cross-asset-macro call,** if the operator authorises it. It may hit
+    the same limit of about 113 s.
+  - **The brief's example.** `analyst.v1.md` labels the approved NVDA call
+    "From an earlier snapshot", but it comes from the capture every run so far
+    has used. Relabel it, or change it (2.3's).
 - **2.0's choice is still open:**
   - (a) email sign-ups with `--llm`, untested;
   - (b) the dashboard, unknown for a SIWE account;
@@ -972,9 +1017,9 @@ closed session, Sat 00:05Z to Sun 23:55Z.
     stand.
 - **Then:**
   - the page slice, if approved;
-  - 2.7, the report store;
   - 2.8, the failure drill, whose three cases exist as 2.4's tests;
-  - the exit run of four seats, about $1.10.
+  - the exit run of four seats, about $1.10. Three seats have each had one
+    call.
 - **The keys, measured on 2026-09-19 after the fix:**
   - `BANKR_LLM_KEY` is refused by the Wallet API and the Agent API;
   - `BANKR_KEY_READ` is read-only, with the gateway and Agent API off;
@@ -1045,10 +1090,18 @@ closed session, Sat 00:05Z to Sun 23:55Z.
   `fixtures/snapshots/`.
 - **Selftest:** 235 addresses in about 102 s.
 - **Analyst call:** $0.264 at Sonnet 5, uncached. A cycle is about $1.11.
-- **LLM credits:** $15.791107 read by `probes/keymap.py` before 2.6. 2.6 then
-  spent $0.273156, which is the reply's own figure. The balance was not re-read.
-- **One real analyst call:** $0.273156, 78.6 s, 98,438 tokens in and 7,628 out,
-  77% of the output reasoning (§2.6).
+- **LLM credits:** $15.517951 read by `probes/keymap.py` before the three
+  calls, equal to the earlier reading less 2.6's $0.273156. The replies then
+  spent $0.522736 by their own figures, plus whatever the 504 cost, if
+  anything. The balance was not re-read.
+- **Real analyst calls,** in tokens in and out:
+
+  | Seat | Cost | Time | Tokens in | Tokens out | Reasoning |
+  |---|---|---|---|---|---|
+  | price-integrity | $0.273156 | 78.6 s | 98,438 | 7,628 | 77% |
+  | price-trend | $0.273142 | 83.3 s | 98,356 | 7,643 | 76% |
+  | execution-quality | $0.249594 | 58.2 s | 98,412 | 5,277 | 84% |
+  | cross-asset-macro | none | a 504 at 113.3 s | | | |
 - **Wallet:** about $1.29, as 0.078742 USDG and 0.000460 ETH on 4663
   (`PHASE-1-GATE.md` §2).
 
