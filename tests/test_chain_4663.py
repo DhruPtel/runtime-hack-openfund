@@ -791,3 +791,15 @@ def test_settings_load_the_closed_span_and_the_rule_that_uses_it():
     span = s.sessions["us_equities_24/5"]
     assert (span.start_s, span.end_s) == (SAT_0005, SUN_2355)
     assert "Crypto" not in s.sessions
+
+
+def test_a_missing_trie_node_is_missing_state_too_and_is_retried():
+    # The wording 1.7's snapshot met on SPCX's series walk, which was not retried.
+    body = json.dumps({"jsonrpc": "2.0", "id": 1, "error": {"code": -32000, "message":
+                       "[0xcd846d85d33ab63d464d9399be8cde4a4e2a6e4732e8a427bd357395098e0907] layer stale\n"
+                       "missing trie node b6546d9229d5e7b8ae6a6f485d68c46484547fbfc138dc8b322e1673c840fd51 "
+                       "(path 0d) layer stale"}}).encode()
+    replies = iter([(200, body), ok("0x5")])
+    sleeps: list[float] = []
+    assert client("ONLY", transport=lambda *a: next(replies), sleeps=sleeps).call("eth_call", []) == "0x5"
+    assert sleeps == [1.0]

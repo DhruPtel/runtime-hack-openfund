@@ -85,8 +85,12 @@ class RpcError(ChainError):
 # --- JSON-RPC over the shared transport ---------------------------------------------
 
 def _missing_state(error: dict) -> bool:
+    """The node's backend lacks the pinned block's state, in either wording seen.
+    Both are retried; a read by block hash cannot answer from another block."""
     message = str(error.get("message", ""))
-    return error.get("code") == -32000 and "historical state" in message and "not available" in message
+    return error.get("code") == -32000 and (
+        ("historical state" in message and "not available" in message)  # 1.3, 2026-09-19
+        or "missing trie node" in message)                               # 1.7: "... layer stale"
 
 
 class RpcClient:
@@ -96,11 +100,14 @@ class RpcClient:
     on to the next endpoint and is retried on the next pass, after a doubling
     backoff. Two answers inside a 200 are treated the same way here:
     - a JSON-RPC 429;
-    - "historical state ... is not available" for the pinned block: seen once
-      in ~100 reads at a block a minute old, never in 326 reads of one block
-      over 9 minutes (2026-09-19), so a backend's gap, not an age limit. A read
-      by block hash cannot answer from another block, so a retry is safe.
-      "header not found" is not retried: it can mean a reorg.
+    - the pinned block's state missing from the backend, in either wording
+      seen: "historical state ... is not available" (once in ~100 reads at a
+      block a minute old, never in 326 reads of one block over 9 minutes,
+      2026-09-19), and "missing trie node ... layer stale" (once, in 1.7's
+      snapshot, where it cut SPCX's series to one point). Both are a backend's
+      gap, not an age limit. A read by block hash cannot answer from another
+      block, so a retry is safe. "header not found" is not retried: it can mean
+      a reorg.
     Every other JSON-RPC error is an answer, returned as `RpcError`.
     """
 
