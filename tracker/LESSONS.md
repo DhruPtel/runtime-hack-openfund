@@ -9,18 +9,17 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds into the plan docs: none, as of 2026-09-18, after 1.8.** Every
-1.8 entry, and the four DECISIONs taken before it, was folded in 1.8's pass.
+**Pending folds into the plan docs: none, as of 2026-09-18, after 1.9.** Both
+1.9 entries were folded in 1.9's pass.
 
 **Owed in code, outside the paths of the passes that found them:**
 1. **`adapters/http.py`, two changes** (found by 1.5): return a caller-named
    status as an answer without retries, and take caller headers on
    `urllib_transport`. 1.5 works around both in its own module.
-2. **The Makefile's `make snapshot`** still prints "not built yet". The live
-   read is `python -m fund.run.snapshot` (1.6).
 
 Done in 1.8: the chain client's second missing-state wording, and
-`valuation.py`'s docstring on findings.
+`valuation.py`'s docstring on findings. Done in 1.9: `make snapshot`, now the
+live build, which captures.
 
 Every earlier entry was checked as folded: the 1.2 and 1.3 entries in their own
 passes, and the older ones entry by entry before unit 1.1.
@@ -1616,3 +1615,40 @@ The snapshot schema is now `openfund.snapshot/2`, with sampled timelines and
 these rows. Live, at block 66750551, USDG and ETH carry both statuses, and a
 re-read at the same block rebuilt to the identical hash.
 **Affects:** 1.9, 3.3 (sizing reads holdings), 4.x, 6.x.
+
+## 2026-09-18 — DECISION: captures are recorded at the transport, and the repository keeps them in `fixtures/snapshots/`
+*Decided in 1.9, as delegated.* `fixtures/live/` is gitignored, so every
+snapshot so far has existed on one machine. A fixture that cannot be committed
+cannot run in CI or on a judge's machine.
+- **Where.** Every live build writes its capture to `fixtures/live/captures/`,
+  never committed. A capture chosen for the repository is taken with
+  `--capture fixtures/snapshots` and checked for every declared credential
+  value before it is committed. The first is 1 MB, at block 66812461.
+- **At the transport.** The capture is the raw answers, not the adapters'
+  parsed results, so a replay runs the same parsing code the live build did.
+- **The config, copied.** The eight config files the snapshot names by hash
+  are copied, because they change. The registry and feed directory are
+  referenced by sha256, as PHASE-0-1 1.9 asked.
+- **Not kept: `Set-Cookie`.** The venue's answers carried an AWS load-balancer
+  cookie. It is not a declared credential and no adapter reads it, but it does
+  not belong in a repository.
+**Affects:** 1.9, 4.8 (`make cycle-demo`), CI; `fixtures/snapshots/`, `.gitignore`
+(unchanged).
+
+## 2026-09-18 — 1.9: a changed byte the snapshot does not carry cannot change its hash
+The unit asked that a changed byte in any captured response change the rebuilt
+hash.
+- **For bytes the snapshot is built from, it does.** A test changes one byte in
+  the chain's answers, GeckoTerminal's, the venue's, and the clock tape, and
+  each rebuilt hash differs.
+- **For bytes it never reads, nothing can.** A GeckoTerminal cache-status
+  header changed from MISS to MIST rebuilt the identical snapshot. The same
+  goes for a JSON-RPC id, or any header an adapter ignores. Only the snapshot
+  naming its capture by hash would make those move it, and that is a
+  `core/snapshot.py` change, outside 1.9's paths.
+- **What 1.9 does instead.** The manifest holds each file's sha256, and a
+  replay with any altered file fails and names it.
+- **Open:** whether the snapshot should carry its capture's hash, so that a
+  decision record can cite its raw inputs directly. That is the operator's
+  call.
+**Affects:** 1.9, `core/snapshot.py`, 3.7 (decision records citing their inputs).
