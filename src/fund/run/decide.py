@@ -218,6 +218,57 @@ def read_config(config_dir: Path) -> dict[str, bytes]:
     return {name: (config_dir / name).read_bytes() for name in record.CONFIG_FILES}
 
 
+def _prepare(snapshot_path: Path, out_dir: Path, config_dir: Path | None,
+             offered: Sequence[Offered]):
+    """What every decision starts with: the snapshot, the config it reads and carries
+    beside its record, and the reports checked again against that snapshot."""
+    snapshot_bytes = snapshot_path.read_bytes()
+    snapshot = json.loads(snapshot_bytes)
+    snapshot_sha256 = hashlib.sha256(snapshot_bytes).hexdigest()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    config_bytes = read_config(config.CONFIG_DIR if config_dir is None else config_dir)
+    carried = out_dir / "config"
+    carried.mkdir(exist_ok=True)
+    for name, data in config_bytes.items():
+        (carried / name).write_bytes(data)
+    accepted, refused = check(offered, snapshot, snapshot_sha256,
+                              json.loads(config_bytes["analysts.json"]))
+    return snapshot, snapshot_sha256, config_bytes, accepted, refused
+
+
+def _finish(*, out_dir: Path, snapshot: Mapping[str, Any], snapshot_sha256: str,
+            config_bytes: Mapping[str, bytes], accepted, refused, proposal: Mapping[str, Any],
+            plan_document: Mapping[str, Any], review: Mapping[str, Any], risk_agent: str | None,
+            risk_reply: str | None, schema: str, env_file: Path | None,
+            config_dir: Path | None, table: str) -> dict[str, Any]:
+    """What every decision ends with, whether it planned orders or none: the record
+    built, signed by the treasurer's own process, checked against the published key
+    (S13), and written out with the plan and the reports it read."""
+    the_record = record.build(
+        snapshot=snapshot, snapshot_sha256=snapshot_sha256,
+        reports=[{"seat": o.seat, "agent": o.agent, "text": o.text,
+                  "imprecise_citations": [i.as_dict() for i in v.imprecisions]}
+                 for o, v in accepted],
+        config_sha256={name: hashlib.sha256(data).hexdigest()
+                       for name, data in config_bytes.items()},
+        proposal=proposal, plan=plan_document, review=review, risk_agent=risk_agent,
+        risk_reply=risk_reply, schema=schema)
+    record_path = out_dir / "record.json"
+    record_path.write_bytes(record.encode(the_record))
+    envelope = signed(record_path, out_dir / "envelope.json", env_file)
+    check_ = verified(record_path, out_dir / "envelope.json",
+                      config.CONFIG_DIR if config_dir is None else config_dir)
+    _write(out_dir / "plan.json", plan_document)
+    _write(out_dir / "reports.json", {
+        "accepted": [{"seat": o.seat, "agent": o.agent, "source": o.source} for o, _ in accepted],
+        "refused": [{"seat": o.seat, "why": why} for o, why in refused]})
+    return {"snapshot_sha256": snapshot_sha256, "accepted": [o.seat for o, _ in accepted],
+            "refused": [(o.seat, why) for o, why in refused], "table": table,
+            "plan": plan_document, "plan_sha256": document_id(plan_document), "review": review,
+            "record": the_record, "decision_id": record.decision_id(the_record),
+            "envelope": envelope, "authorizes": check_, "out_dir": str(out_dir)}
+
+
 def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping[str, Amount],
            cash_usd: Decimal, out_dir: Path,
            quotes: Callable[[Sequence[plan.Intent]], tuple[dict[int, Observation], Instant]],
@@ -246,19 +297,10 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
     the vote is asked live or read from a recording. Until the 3.8 sweep it was
     taken from the live credential, so a replay recorded none where the live run
     recorded `unassigned`, and the same inputs gave two records (R4)."""
-    snapshot_bytes = snapshot_path.read_bytes()
-    snapshot = json.loads(snapshot_bytes)
-    snapshot_sha256 = hashlib.sha256(snapshot_bytes).hexdigest()
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    config_bytes = read_config(config.CONFIG_DIR if config_dir is None else config_dir)
+    snapshot, snapshot_sha256, config_bytes, accepted, refused = _prepare(
+        snapshot_path, out_dir, config_dir, offered)
     thresholds, mandate, models, analysts = (json.loads(config_bytes[name]) for name in (
         "thresholds.json", "mandate.json", "models.json", "analysts.json"))
-    carried = out_dir / "config"
-    carried.mkdir(exist_ok=True)
-    for name, data in config_bytes.items():
-        (carried / name).write_bytes(data)
-    accepted, refused = check(offered, snapshot, snapshot_sha256, analysts)
     fixed = record.SCHEMAS[schema]
     limits = gates.Limits.from_config(thresholds, mandate, models, gate_set=fixed.gate_set)
 
@@ -287,33 +329,15 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
                           credential=risk_credential, environ=environ,
                           recorded_reply=reply, store=store)
 
-    config_sha256 = {name: hashlib.sha256(data).hexdigest() for name, data in config_bytes.items()}
-    the_record = record.build(
-        snapshot=snapshot, snapshot_sha256=snapshot_sha256,
-        reports=[{"seat": o.seat, "agent": o.agent, "text": o.text,
-                  "imprecise_citations": [i.as_dict() for i in v.imprecisions]}
-                 for o, v in accepted],
-        config_sha256=config_sha256, proposal=proposal.as_dict(), plan=written, review=outcome,
-        risk_agent=risk_agent,
-        risk_reply=outcome["reply_text"], schema=schema)
-    record_path = out_dir / "record.json"
-    record_path.write_bytes(record.encode(the_record))
-    envelope = signed(record_path, out_dir / "envelope.json", env_file)
-    check_ = verified(record_path, out_dir / "envelope.json",
-                      config.CONFIG_DIR if config_dir is None else config_dir)
-
+    done = _finish(out_dir=out_dir, snapshot=snapshot, snapshot_sha256=snapshot_sha256,
+                   config_bytes=config_bytes, accepted=accepted, refused=refused,
+                   proposal=proposal.as_dict(), plan_document=written, review=outcome,
+                   risk_agent=risk_agent, risk_reply=outcome["reply_text"], schema=schema,
+                   env_file=env_file, config_dir=config_dir, table=table)
     (out_dir / "table.txt").write_text(table + "\n")
-    _write(out_dir / "reports.json", {
-        "accepted": [{"seat": o.seat, "agent": o.agent, "source": o.source} for o, _ in accepted],
-        "refused": [{"seat": o.seat, "why": why} for o, why in refused]})
     _write(out_dir / "proposal.json", proposal.as_dict())
-    _write(out_dir / "plan.json", written)
     _write(out_dir / "risk.json", {k: v for k, v in outcome.items() if k != "reply_text"})
-    return {"snapshot_sha256": snapshot_sha256, "accepted": [o.seat for o, _ in accepted],
-            "refused": [(o.seat, why) for o, why in refused], "table": table,
-            "plan": written, "plan_sha256": plan_sha256, "review": outcome,
-            "record": the_record, "decision_id": record.decision_id(the_record),
-            "envelope": envelope, "authorizes": check_, "out_dir": str(out_dir)}
+    return done
 
 
 # --- replay: a recorded cycle, rebuilt from what it recorded (3.9) ------------------------------
@@ -376,19 +400,10 @@ def no_rebalance(*, snapshot_path: Path, offered: Sequence[Offered], out_dir: Pa
     One holding the snapshot cannot mark leaves the fund unable to size anything, and
     3.7's rule is that a cycle says what it decided even when it decided nothing. So
     the record carries the snapshot, the reports, the config and the reason, with no
-    orders, and is signed like any other. Nothing is quoted and no model is asked."""
-    snapshot_bytes = snapshot_path.read_bytes()
-    snapshot = json.loads(snapshot_bytes)
-    snapshot_sha256 = hashlib.sha256(snapshot_bytes).hexdigest()
-    out_dir.mkdir(parents=True, exist_ok=True)
-    config_bytes = read_config(config.CONFIG_DIR if config_dir is None else config_dir)
-    carried = out_dir / "config"
-    carried.mkdir(exist_ok=True)
-    for name, data in config_bytes.items():
-        (carried / name).write_bytes(data)
-    analysts = json.loads(config_bytes["analysts.json"])
-    accepted, refused = check(offered, snapshot, snapshot_sha256, analysts)
-
+    orders, and is signed like any other. Nothing is quoted and no model is asked: the
+    record is built and signed by the same tail every decision ends with."""
+    snapshot, snapshot_sha256, config_bytes, accepted, refused = _prepare(
+        snapshot_path, out_dir, config_dir, offered)
     unvalued = {"rule": "book-unvalued", "value": None, "reason": why}
     plan_document = {
         "snapshot_sha256": snapshot_sha256, "judged_at_ms": at.epoch_ms, "rebalance": False,
@@ -404,29 +419,11 @@ def no_rebalance(*, snapshot_path: Path, offered: Sequence[Offered], out_dir: Pa
         "brief": {"files": [], "sha256": None}, "reply": None, "reply_text": None,
         "decision": {"orders": [], "approved": [], "vetoed": [], "cash_floor": None,
                      "overall": None, "reply_notes": [], "no_votes": unvalued}}
-    the_record = record.build(
-        snapshot=snapshot, snapshot_sha256=snapshot_sha256,
-        reports=[{"seat": o.seat, "agent": o.agent, "text": o.text,
-                  "imprecise_citations": [i.as_dict() for i in v.imprecisions]}
-                 for o, v in accepted],
-        config_sha256={name: hashlib.sha256(data).hexdigest()
-                       for name, data in config_bytes.items()},
-        proposal={"rebalance": False, "rows": [], "reason": why}, plan=plan_document,
-        review=review, risk_agent=None, risk_reply=None, schema=schema)
-    record_path = out_dir / "record.json"
-    record_path.write_bytes(record.encode(the_record))
-    envelope = signed(record_path, out_dir / "envelope.json", env_file)
-    check_ = verified(record_path, out_dir / "envelope.json",
-                      config.CONFIG_DIR if config_dir is None else config_dir)
-    _write(out_dir / "plan.json", plan_document)
-    _write(out_dir / "reports.json", {
-        "accepted": [{"seat": o.seat, "agent": o.agent, "source": o.source} for o, _ in accepted],
-        "refused": [{"seat": o.seat, "why": text} for o, text in refused]})
-    return {"snapshot_sha256": snapshot_sha256, "accepted": [o.seat for o, _ in accepted],
-            "refused": [(o.seat, text) for o, text in refused], "table": why,
-            "plan": plan_document, "plan_sha256": document_id(plan_document), "review": review,
-            "record": the_record, "decision_id": record.decision_id(the_record),
-            "envelope": envelope, "authorizes": check_, "out_dir": str(out_dir)}
+    return _finish(out_dir=out_dir, snapshot=snapshot, snapshot_sha256=snapshot_sha256,
+                   config_bytes=config_bytes, accepted=accepted, refused=refused,
+                   proposal={"rebalance": False, "rows": [], "reason": why},
+                   plan_document=plan_document, review=review, risk_agent=None, risk_reply=None,
+                   schema=schema, env_file=env_file, config_dir=config_dir, table=why)
 
 
 def summary(done: Mapping[str, Any]) -> str:
