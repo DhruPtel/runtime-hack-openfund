@@ -9,8 +9,16 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds into the plan docs: none, as of 2026-09-19, after the scope
-pivot.** The 2026-09-19 decisions are folded into PLAN §8, where the phase list
+**Pending folds into the plan docs, as of 2026-09-19, after the Phase 2 plan:**
+- **2.1 is a stop** again. `CLAUDE.md`, PLAN §8, ROADMAP and SIMPLIFICATION's
+  2.1 row still say it was spent (DECISION below).
+- **Unit 2.0,** the SIWE proof, and the 7.6 slice if approved, go into ROADMAP.
+- **The context budget** in SIMPLIFICATION.md becomes 70,000, not 60,000.
+
+These three sit outside that pass's paths, which were `planning/PHASE-2.md` and
+`tracker/`.
+
+**Folded before that, after the scope pivot:** The 2026-09-19 decisions are folded into PLAN §8, where the phase list
 begins, with markers in §1, §2, §5, §6, §11, §12 and §13. They also sit in the
 ROADMAP unit tables, PHASE-0-1, `planning/SIMPLIFICATION.md`,
 `planning/JUDGING-CRITERIA.md` and `CLAUDE.md`.
@@ -2004,3 +2012,67 @@ They are in `planning/JUDGING-CRITERIA.md`.
 **A gap they expose: token design.** PLAN §12 leaves "do we launch a token"
 open, and no unit covers it. Recorded, not resolved.
 **Affects:** 8.6; PLAN §12.
+
+## 2026-09-19 — DECISION: 2.1 is a stop, contradicting what the pivot recorded
+*The operator's, in the Phase 2 planning brief.* 2.1 is a hand-written example
+report that the operator reads and approves before any code. It is a stop.
+
+**What it contradicts.** The pivot pass recorded 2.1's stop as spent on the
+analysis approval, in four places: `CLAUDE.md` ("Stop only at 3.8, 5.4, 6.6,
+7.5 and 8.5"), PLAN §8, ROADMAP, and SIMPLIFICATION's 2.1 row. That reading
+came from SIMPLIFICATION's own row, which said "approving this document
+approves the format". The operator's approval covered the vocabularies, not a
+format.
+
+**The stops from Phase 2 are 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5.**
+
+**Owed.** The four files are outside the Phase 2 planning pass's paths. Until
+they are fixed, a session following `CLAUDE.md` would not stop at 2.1.
+`planning/PHASE-2.md` and the LOGS state note say so.
+**Affects:** 2.1; `CLAUDE.md`; PLAN §8; ROADMAP; SIMPLIFICATION.md.
+
+## 2026-09-19 — SIWE login, read from the CLI's source: no gateway field, a new wallet, and it overwrites the fund's session
+Read-only, from the installed `@bankr/cli` 0.3.37 (`dist/commands/login.js`,
+`dist/lib/config.js`). Documented by code, not measured.
+- **What the SIWE request sends:**
+  - `readOnly`, true unless `--read-write`;
+  - `walletApiEnabled`, true;
+  - `tokenLaunchApiEnabled`, true;
+  - `agentApiEnabled`, only with `--no-agent-api`;
+  - IP and recipient allowlists.
+- **It never sends `llmGatewayEnabled`.** The email flow sends it with `--llm`.
+  A SIWE key's gateway access is the server's default, which is unknown.
+- **The server "creates a wallet"** and returns `walletAddress` apart from the
+  signer's address. The agent wallet is inferred to be a new Bankr wallet.
+- **The key is written to `~/.bankr/config.json`** unless `--config` or
+  `BANKR_CONFIG` says otherwise. An agent login would replace the fund's CLI
+  session.
+- **`--private-key` on the command line** lands in shell history and the
+  process list.
+- **No command changes a key's permissions later.** `bankr llm credits add`
+  buys credits "from your wallet", which is a write a read-only key may be
+  refused.
+- **The SIWE private key can mint a read-write key for its account,** so it is
+  spend authority over that agent's wallet, and is kept like `SIGNING_KEY`.
+
+What this changes: 2.0 is planned to settle the gateway question before any unit
+assumes five wallets (`planning/PHASE-2.md`).
+**Affects:** 2.0, 2.4, 2.5; the SIWE DECISION above.
+
+## 2026-09-19 — `config.load()` puts the whole `.env` in the caller's environment
+**What `credentials.py` says:** "the analyst role cannot load execution or
+signing secrets even on a single-host development machine". That is true of the
+`Config` object `load()` returns.
+
+**What the code does:** `load()` first calls `load_environment()`, which merges
+every `.env` value into `os.environ`. So a process of any role holds
+`BANKR_KEY_EXEC` and `SIGNING_KEY` in its environment. Two things already
+acknowledge this:
+- `_refuse_leaked_spend_authority`'s docstring names this single-host case;
+- 4.12's deployed split is meant to end it.
+
+**What it changes.** For Phase 2's analyst processes it is a design constraint.
+The runner builds each child's environment from nothing, and children never read
+`.env` (`planning/PHASE-2.md` 2.4). The file itself stays readable on one
+machine until 4.12 splits it.
+**Affects:** 2.4, 4.12; PLAN §2 invariant 1.
