@@ -41,7 +41,7 @@ def built(tmp_path, veto=(), **changes):
 
 def test_the_record_cites_every_input_by_hash_and_carries_every_finding(tmp_path):
     r = built(tmp_path, veto=("AMD",))
-    assert r["schema"] == "openfund.decision/1" and r["snapshot"]["sha256"] == SNAPSHOT_SHA256
+    assert r["schema"] == "openfund.decision/2" and r["snapshot"]["sha256"] == SNAPSHOT_SHA256
     assert sorted(r["hashes"]["reports"]) == sorted(SEATS)
     assert r["hashes"]["reports"]["price-trend"] == hashlib.sha256(
         example_text("price-trend").encode()).hexdigest()

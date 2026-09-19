@@ -102,7 +102,7 @@ def test_each_order_carries_its_fresh_quote_its_verdict_and_the_evidence_risk_re
     assert Decimal(written_plan["cash_after_usd"]) == Decimal(200) - turnover
     amd = written_plan["orders"][0]
     assert amd["asset"]["symbol"] == "AMD"
-    assert amd["weight"]["current"] == "0" and amd["weight"]["target"] == "0.0625"
+    assert amd["weight"]["before"] == "0" and amd["weight"]["target"] == "0.0625"
     assert Decimal("0.062499") < Decimal(amd["weight"]["after"]) <= Decimal("0.0625")
     assert amd["quote"]["tradeable"] == {
         "value": True, "rule": None, "reason": amd["quote"]["tradeable"]["reason"]}
@@ -155,3 +155,50 @@ def test_a_proposal_made_on_a_bigger_book_never_sells_more_than_this_book_holds(
     assert next(r for r in proposal.rows if r.symbol == "AMZN").target > 0
     sells = [i for i in plan.size(proposal, smaller, SNAPSHOT, LIMITS) if i.side == "sell"]
     assert sum(i.sell.raw for i in sells) <= smaller.holdings[ADDRESS["AMZN"]].raw
+
+
+
+# --- a split move shows each order as its part (after F3.8.12) ----------------------------------
+
+GME_UP = [{"seat": "price-trend", "calls": [{"symbol": "GME", "address": ADDRESS["GME"],
+                                             "word": "buy", "confidence": "high"}]},
+          {"seat": "cross-asset-macro", "calls": []}, {"seat": "execution-quality", "calls": []}]
+
+
+def test_each_part_of_a_split_move_shows_its_part_and_the_weight_after_it():
+    """GME buy high: 0.75 x 0.25 = 0.1875 of $200, a $37.50 move split by the $25
+    limit into two orders. At 3.8 each half showed the whole move, from 0 to 0.1875,
+    and a real risk agent read them as two positions of 0.1875 each."""
+    orders = [o for o in written(GME_UP)["orders"] if o["asset"]["symbol"] == "GME"]
+    assert [(o["move"]["part"], o["move"]["of"]) for o in orders] == [(1, 2), (2, 2)]
+    first, second = (o["weight"] for o in orders)
+    assert first["before"] == "0" and first["after"] == second["before"]
+    assert Decimal("0.09374") < Decimal(first["after"]) < Decimal("0.09376")
+    assert Decimal("0.18749") < Decimal(second["after"]) <= Decimal("0.1875")
+    assert first["target"] == second["target"] == "0.1875"
+    assert Decimal(orders[0]["move"]["move_usd"]).quantize(Decimal("0.01")) == Decimal("37.50")
+    says = orders[1]["move"]["says"]
+    assert says.startswith("part 2 of 2 of one buy of $37.50 in GME, taking it from 0.000000 to "
+                           "0.187500")
+    assert "this order alone takes it from 0.093750 to 0.187500" in says
+
+
+def test_a_whole_move_in_one_order_says_so():
+    order = next(o for o in written()["orders"] if o["asset"]["symbol"] == "AMD")
+    assert (order["move"]["part"], order["move"]["of"]) == (1, 1)
+    assert order["move"]["says"].startswith("one buy of $12.50 in AMD, taking it from 0.000000")
+
+
+def test_layout_1_is_the_3_8_exit_runs_and_is_kept_for_replay():
+    """Every order showed its asset's whole move. Only a replay of a /1 record writes it."""
+    the_book = book()
+    proposal = propose(GME_UP, the_book)
+    intents = plan.size(proposal, the_book, SNAPSHOT, LIMITS)
+    old = plan.write(intents, quoted(intents), proposal=proposal, the_book=the_book,
+                     snapshot=SNAPSHOT, snapshot_sha256="0" * 64, judged_at=Instant(1), layout=1)
+    gme = [o for o in old["orders"] if o["asset"]["symbol"] == "GME"]
+    assert all("move" not in o and o["weight"]["current"] == "0" for o in gme)
+    assert gme[0]["weight"]["after"] == gme[1]["weight"]["after"]
+    with pytest.raises(ValueError):
+        plan.write(intents, {}, proposal=proposal, the_book=the_book, snapshot=SNAPSHOT,
+                   snapshot_sha256="0" * 64, judged_at=Instant(1), layout=3)

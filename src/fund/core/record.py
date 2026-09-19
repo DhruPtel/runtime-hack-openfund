@@ -35,7 +35,13 @@ from typing import Any, Mapping, Sequence
 
 from .types import document_bytes, document_id
 
-SCHEMA = "openfund.decision/1"
+#: A record's schema names the layout its plan is written in (`plan.LAYOUTS`), so a
+#: replay rebuilds it by the same layout. `/1` is the 3.8 exit run's record, the
+#: first 3.9 replays; `/2` shows each part of a split move (after F3.8.12). The 3.8
+#: no-op record of 17:13Z also says `/1` but predates the sweep's changes: it is
+#: history, and nothing rebuilds it.
+SCHEMAS = {1: "openfund.decision/1", 2: "openfund.decision/2"}
+SCHEMA = SCHEMAS[2]
 
 #: The config files a decision reads.
 CONFIG_FILES = ("analysts.json", "mandate.json", "models.json", "thresholds.json")
@@ -48,7 +54,8 @@ def _sha256(text: str) -> str:
 def build(*, snapshot: Mapping[str, Any], snapshot_sha256: str,
           reports: Sequence[Mapping[str, str]], config_sha256: Mapping[str, str],
           proposal: Mapping[str, Any], plan: Mapping[str, Any], review: Mapping[str, Any],
-          risk_agent: str | None, risk_reply: str | None) -> dict[str, Any]:
+          risk_agent: str | None, risk_reply: str | None,
+          schema: str = SCHEMA) -> dict[str, Any]:
     """The record, as a plain document. `reports` are the accepted ones, each
     with `seat`, `agent`, `text` and its `imprecise_citations`. `review` is
     `agents/risk.review`'s result."""
@@ -77,7 +84,7 @@ def build(*, snapshot: Mapping[str, Any], snapshot_sha256: str,
             "reply_sha256": None if risk_reply is None else _sha256(risk_reply),
             "decision": decided}
     return {
-        "schema": SCHEMA,
+        "schema": schema,
         "decided_at_ms": plan["judged_at_ms"],
         "snapshot": {"sha256": snapshot_sha256, "schema": snapshot["schema"],
                      "block": snapshot["block"], "built_at": snapshot["built_at"]},

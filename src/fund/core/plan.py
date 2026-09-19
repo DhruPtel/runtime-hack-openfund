@@ -287,35 +287,81 @@ def _evidence(entry: Mapping[str, Any]) -> dict[str, Any]:
         "findings": list(entry.get("findings") or ())}
 
 
+#: The layouts a written plan has had. The record names its layout in its schema
+#: (`core/record.py`), and a replay writes the plan in the layout its record names,
+#: so every record rebuilds byte for byte by its own layout (3.9).
+#: - 1: the 3.8 exit run's. Each order carried its asset's whole move: the weight
+#:   before the first order, the target, and the weight after every order.
+#: - 2: since then. A move the per-trade limit splits shows each order as its part
+#:   of the move, with the weight before and after that order. Read in layout 1,
+#:   two halves of one move looked like two whole positions, and a real risk
+#:   agent vetoed the second of each (research/findings.md F3.8.12).
+LAYOUTS = (1, 2)
+LAYOUT = 2
+
+
+def _move(intent: Intent, part: int, parts: int, move_usd: Decimal, start: Decimal,
+          end: Decimal, before: Decimal, after: Decimal) -> dict[str, Any]:
+    """Layout 2: where one order sits in its asset's move, in figures and in words."""
+    whole = (f"one {intent.side} of ${move_usd:.2f} in {intent.symbol}, taking it from "
+             f"{start:.6f} to {end:.6f} of the NAV")
+    says = (f"part {part} of {parts} of {whole}; this order alone takes it from {before:.6f} "
+            f"to {after:.6f}, and the parts together reach {end:.6f}" if parts > 1 else whole)
+    return {"part": part, "of": parts, "move_usd": _text(move_usd),
+            "move_from": _text(start), "move_to": _text(end), "says": says}
+
+
 def write(intents: Sequence[Intent], quotes: Mapping[int, QuoteSeen], *,
           proposal: Proposal, the_book: Book, snapshot: Mapping[str, Any],
-          snapshot_sha256: str, judged_at: Instant) -> dict[str, Any]:
-    """The plan as the record keeps it and risk reads it. An order with no quote
-    carries None, and the quote gate blocks it. What the plan would leave in cash
-    is `cash.cash_after` of every order, the function the floor is judged with."""
+          snapshot_sha256: str, judged_at: Instant, layout: int = LAYOUT) -> dict[str, Any]:
+    """The plan as the record keeps it and risk reads it, in `layout` (above). An
+    order with no quote carries None, and the quote gate blocks it. What the plan
+    would leave in cash is `cash.cash_after` of every order, the function the floor
+    is judged with."""
+    if layout not in LAYOUTS:
+        raise ValueError(f"no plan layout {layout}")
     entries = _entries(snapshot)
     weights = the_book.weights
     targets = {r.address: r.target for r in proposal.rows}
     moved: dict[str, Decimal] = {}
+    parts = {i.address: sum(j.address == i.address for j in intents) for i in intents}
+    moves = {a: sum((j.usd for j in intents if j.address == a), Decimal(0)) for a in parts}
+    ends = {a: (the_book.values_usd.get(a, Decimal(0)) + sum(
+        (j.usd if j.side == "buy" else -j.usd for j in intents if j.address == a), Decimal(0)))
+        / the_book.nav_usd for a in parts}
+    seen: dict[str, int] = {}
     orders = []
     for intent in intents:
         signed = intent.usd if intent.side == "buy" else -intent.usd
+        start = the_book.values_usd.get(intent.address, Decimal(0))
+        before = (start + moved.get(intent.address, Decimal(0))) / the_book.nav_usd
         moved[intent.address] = moved.get(intent.address, Decimal(0)) + signed
-        orders.append({
+        after_this = (start + moved[intent.address]) / the_book.nav_usd
+        seen[intent.address] = seen.get(intent.address, 0) + 1
+        weight = ({"current": _text(weights.get(intent.address, Decimal(0))),
+                   "target": _text(targets.get(intent.address))} if layout == 1 else
+                  {"before": _text(before), "after": _text(after_this),
+                   "target": _text(targets.get(intent.address))})
+        order = {
             "index": intent.index, "side": intent.side, "usd": _text(intent.usd),
             "asset": {"chain_id": snapshot["block"]["chain_id"], "address": intent.address,
                       "symbol": intent.symbol},
             "sell": {"address": intent.sell.asset.address, "amount": _text(_decimal(intent.sell)),
                      "decimals": intent.sell.decimals},
             "buy": {"address": intent.buy.address, "decimals": intent.buy_decimals},
-            "weight": {"current": _text(weights.get(intent.address, Decimal(0))),
-                       "target": _text(targets.get(intent.address))},
+            "weight": weight,
             "quote": _quote_record(quotes.get(intent.index), intent.side),
-            "evidence": _evidence(entries[intent.address])})
-    after = {a: (the_book.values_usd.get(a, Decimal(0)) + m) / the_book.nav_usd
-             for a, m in moved.items()}
-    for order in orders:
-        order["weight"]["after"] = _text(after[order["asset"]["address"]])
+            "evidence": _evidence(entries[intent.address])}
+        if layout >= 2:
+            order["move"] = _move(intent, seen[intent.address], parts[intent.address],
+                                  moves[intent.address], start / the_book.nav_usd,
+                                  ends[intent.address], before, after_this)
+        orders.append(order)
+    if layout == 1:  # every order of an asset showed the weight after all of them
+        after = {a: (the_book.values_usd.get(a, Decimal(0)) + m) / the_book.nav_usd
+                 for a, m in moved.items()}
+        for order in orders:
+            order["weight"]["after"] = _text(after[order["asset"]["address"]])
     funded = getattr(intents, "funded", None)
     return {"snapshot_sha256": snapshot_sha256, "judged_at_ms": judged_at.epoch_ms,
             "rebalance": proposal.rebalance, "book": the_book.as_dict(), "orders": orders,
