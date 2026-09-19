@@ -117,9 +117,10 @@ def test_native_eth_is_keyed_by_the_sentinel():
 
 # --- quantities ----------------------------------------------------------------
 
-def test_usdg_is_6_decimals_and_stock_tokens_are_18():
-    # F0.3.1: two documented sources said 18 for USDG. Decimals are never
-    # defaulted, so the conversion is explicit per asset.
+def test_a_human_amount_converts_at_the_decimals_given_and_never_rounds():
+    # F0.3.1: two documented sources said 18 for USDG, which is 6, so decimals are
+    # never defaulted. An amount finer than its decimals allow is refused, not
+    # rounded. That the USDG pin says 6 is tested in test_universe.py.
     assert Amount.from_units("24.94", 6, USDG).raw == 24_940_000
     assert Amount.from_units("1", 18, AAPL).raw == 10**18
     with pytest.raises(ValueError):
