@@ -59,7 +59,7 @@ class ChainRead:
     block: BlockRef
     readings: dict[AssetId, Observation]   # every mapped feed's latest round
     series: dict[AssetId, Series]          # each stock's rounds over the window
-    beacons: dict[AssetId, Check]          # each stock's beacon cross-check
+    beacons: dict[AssetId, Check]          # each stock's beacon cross-check, held ones included
     balances: dict[AssetId, Observation]   # the wallet: cash, gas, every registry asset
 
 
@@ -105,10 +105,15 @@ def read_chain(settings: chain_4663.Settings, rpc: chain_4663.RpcClient, u: univ
     series = {a: read.price_series(a, u.feeds[a], window_s=settings.window_s,
                                    max_rounds=settings.max_rounds,
                                    scale_break_ratio=settings.scale_break_ratio) for a in stocks}
-    beacons = u.cross_check_beacons(read.beacon_slots(stocks))  # a disagreement raises here
     tokens = {u.cash_leg: u.cash_decimals, u.gas_asset: u.gas_decimals}
     tokens |= {a: r.decimals for a, r in u.records.items() if a.chain_id == block.chain_id}
-    return ChainRead(block, readings, series, beacons, read.balances(wallet, tokens))
+    balances = read.balances(wallet, tokens)
+    # Beacons are read for the universe, and for any stock held outside it: an
+    # unread beacon would put a held unmarkable stock at identity_in_doubt.
+    held_outside = [a for a, b in balances.items() if a in u.records and a not in u.feeds
+                    and b.ok and b.value.raw > 0]
+    beacons = u.cross_check_beacons(read.beacon_slots(stocks + held_outside))  # disagreement raises
+    return ChainRead(block, readings, series, beacons, balances)
 
 
 def cash_mark(chain: ChainRead, u: universe.Universe, settings: chain_4663.Settings) -> valuation.Mark:
@@ -212,7 +217,8 @@ def assemble(chain: ChainRead, offchain: OffchainRead, u: universe.Universe,
                                                                 margin, sessions))
 
     held_outside = {a: u.held_asset(a, u.records[a].decimals,
-                                    Check(None, "not read: a holding outside the universe"))
+                                    chain.beacons.get(a, Check(None, "not read: the balance was "
+                                                                     "not read either")))
                     for a, b in chain.balances.items()
                     if a in u.records and a not in u.feeds and (not b.ok or b.value.raw > 0)}
     return snapshot.Inputs(
