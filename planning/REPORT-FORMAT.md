@@ -108,7 +108,7 @@ where it began and QQQ rose 1.4% [SPY timeline, QQQ timeline]. Across the 18
 tradeable stocks, daily returns correlate only 0.22 on average [timeline, all
 18]. Two pairs are the exception: MSTR and COIN move as one (0.87), and so do
 AMD and INTC (0.78). Oil runs the other way. USO rose 14.5% while its daily
-moves correlated −0.37 with SPY. Treasury bills paid about 2.9% a year (SGOV
+moves correlated −0.37 with SPY. Treasury bills paid about 2.8% a year (SGOV
 100.88 → 101.11 in 29 days, [SGOV timeline 2026-08-20, SGOV mark.price_usd]).
 There are no new closes since Friday, so nothing here changes over the weekend.
 
@@ -254,11 +254,11 @@ within 0.12%.
 Wrong if: Monday's first round lands near 355.
 
 CALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 proceed high
-A 0–3 month Treasury fund that has not moved more than 0.05% on any day this
+A 0–3 month Treasury fund that has not moved more than 0.06% on any day this
 month has not fallen 1.2% over a weekend. GeckoTerminal's price is wrong, and
 the venue agrees with the mark.
 - iShares 0-3 Month Treasury Bond [asset.name]
-- largest daily move in 30 closes: 0.05% [timeline]
+- largest daily move in 30 closes: 0.06%, on 4 September [timeline]
 - mark 101.11, GeckoTerminal 99.86 (−1.2%), venue 100.88 (−0.22%)
   [mark.price_usd, corroboration.price_usd, quote.venue_price_usd]
 Wrong if: Monday's first round lands near 99.9.
