@@ -263,3 +263,153 @@ the venue agrees with the mark.
   [mark.price_usd, corroboration.price_usd, quote.venue_price_usd]
 Wrong if: Monday's first round lands near 99.9.
 ```
+
+---
+
+## The decisions behind the shape
+
+### Two readers, one text
+
+- **What the aggregator reads.** Two kinds of line and nothing else: the first
+  line, `REPORT <seat> <agent address> <snapshot hash>`, and each call line,
+  `CALL <symbol> <address> <word> <confidence>`. Reading them is splitting
+  lines. No model is involved.
+- **What everything else is for.** It is prose, for people. The risk agent reads
+  all of it, and so does the buyer.
+- **Why one text rather than JSON with prose inside it.** What the buyer reads,
+  what the aggregator parsed, and what the decision record signs are then the
+  same bytes. With JSON, a person reads a rendering, and the rendering is not
+  what was signed. A fixed line is as easy for code as a JSON field.
+- **A broken line refuses the whole report.** 2.2 refuses a report whose lines
+  break their grammar, retries once, and never half-reads it.
+
+### Coverage
+
+- **A report covers only the assets it has something to say about.** At most
+  six calls, and only on assets the snapshot marks tradeable (20 in this
+  capture). The one recorded price-trend reply called all 35, low-volume names
+  included. Without a limit a seat opines on everything, and manufactures the
+  conviction to do it.
+- **For the aggregator, silence is no view:**
+  - an asset that no direction seat calls gets no weight;
+  - a condition seat's silence raises no caution;
+  - a held asset nobody mentions is kept, because no-rebalance preserves
+    holdings (PLAN §11).
+- **Assets outside the tradeable set** may appear in the prose, never on a call
+  line.
+
+### How NO_CALL appears
+
+It is always cheap to say:
+- **On one asset: silence.** There is nothing to write.
+- **Passed on, with a reason: a sentence in the opening paragraph.** Price-trend
+  does this for MSTR and COIN. It is for the reader; the aggregator sees silence.
+- **On the whole report: the line `NO CALLS`** in place of any call. The first
+  line, one sentence, and `NO CALLS` make a complete, valid report:
+
+  ```
+  REPORT cross-asset-macro 0x… 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c
+  Twenty daily returns of a flat, loosely correlated market say nothing about which way it goes next.
+  NO CALLS
+  ```
+
+  `NO CALLS` is required whenever there is no call line, so an empty report is
+  a decision and not a reply cut short.
+
+### The two vocabularies
+
+- **Direction seats say buy, hold or sell.**
+  - `price-trend` is one: "where is this price going" has a direction.
+  - `cross-asset-macro` is one: "what does co-movement favour" ends in add,
+    keep or cut.
+  - **Hold is a view, and it counts.** It says keep, don't add, and it pulls the
+    asset toward no change. Silence does not count.
+- **Condition seats say proceed or caution.**
+  - `execution-quality` and `price-integrity` ask what a trade costs and whether
+    a price holds up. Neither question has a direction.
+  - **Caution** makes the direction calls on that asset worth less.
+  - **Proceed** changes nothing in the arithmetic. It tells the reader the seat
+    looked and found the asset sound, so it is written only when that is news:
+    AMZN is flagged, and the flag turns out to be GeckoTerminal's.
+- **3.1 decides the arithmetic.** The format guarantees it gets, per seat, the
+  asset, the word and the confidence.
+
+### Confidence is three words
+
+`low`, `medium` or `high`. The recorded replies gave 0.55, 0.7, 0.3, 0.25 and
+0.4: precision the model does not have and the aggregator does not need. Three
+words are ordered and honest, and 3.1 maps them to weights.
+
+### How a claim cites its source
+
+- **Every figure ends with the snapshot field it came from,** in brackets:
+  - `[mark.price_usd]` for the call's own asset;
+  - `[SPY mark.price_usd]` for another asset;
+  - `[timeline 2026-09-03]` for one day's close.
+- **A computed figure** (a 30-day change, a correlation, a daily swing) cites
+  the fields it was computed from, so a reader can redo it.
+- **What 2.2 checks:**
+  - that every cited field exists;
+  - that a figure which is a single field, such as `559.42 [mark.price_usd]`,
+    equals that field.
+
+  Computed figures are cited but not checked.
+- **This changes SIMPLIFICATION.md's sketch,** in which code filled in values
+  from field paths. Here the analyst writes the figure and code checks it. That
+  reads better and checks the same thing.
+- **The prose may say anything, but a figure must come from the snapshot.** So
+  the AMZN call cannot mention that GeckoTerminal's AMZN price has been seen
+  alternating between two levels. That is in LESSONS, not in the snapshot. What
+  the report cannot cite, the decision record cannot stand behind.
+
+### The weekend
+
+Each seat's opening paragraph says what the closed session means for its own
+question:
+- **price-trend:** its series ends at Friday's close, and it reads no weekend
+  price;
+- **cross-asset-macro:** there are no new closes, so nothing changes;
+- **execution-quality:** a trade fills at a venue price that is moving and is
+  booked at a mark that is frozen;
+- **price-integrity:** the weekend is its whole question. Its "wrong if" lines
+  name Monday's first round, which is how a weekend view gets tested.
+
+### Left out, on purpose
+
+Each of these would add a field that neither reader needs yet:
+- **a time horizon per call.** The cycle is daily, and the next snapshot tests
+  the call;
+- **target prices and sizes.** Analysts have no sizing authority; the planner
+  sizes;
+- **per-call risk scores, sector tags and sources outside the snapshot;**
+- **a table of all 35 assets;**
+- **an end marker.** A reply cut short is caught from the model call's stop
+  reason at 2.4, not from the text.
+
+### What the four show together
+
+They disagree, and the disagreement is the point:
+- **AMD.** It is price-trend's strongest call, and price-integrity cautions on
+  it: its mark is about 1% stale. Execution-quality does not flag it, because a
+  buy fills below the mark.
+- **MSTR.** Price-trend passes, and both condition seats caution.
+- **NVDA.** Price-trend holds, and execution-quality finds it among the cheapest
+  names to trade.
+
+The aggregator combines the words. The risk agent reads why.
+
+## What the stop decides
+
+- **the shape:**
+  - the first line;
+  - call lines;
+  - a paragraph;
+  - the reasoning, figures and "wrong if" under each call;
+- **coverage:** at most six calls, on tradeable assets only;
+- **`NO CALLS`** as the whole-report abstention;
+- **confidence** in three words;
+- **proceed** written only when it is news;
+- **citations,** and what 2.2 checks of them.
+
+Whatever the operator changes here goes into 2.2 (the validator) and 2.3 (the
+brief). Neither exists yet.
