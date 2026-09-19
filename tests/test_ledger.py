@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from pathlib import Path
 
 import pytest
@@ -41,6 +41,14 @@ USDG = AssetId(CHAIN, HELD["USDG"]["asset"]["address"])
 ETH = AssetId(CHAIN, HELD["ETH"]["asset"]["address"])
 USDG_MARK = Decimal(HELD["USDG"]["mark"]["price_usd"])  # 0.99992279: not a dollar
 ETH_MARK = Decimal(HELD["ETH"]["mark"]["price_usd"])
+
+
+@pytest.fixture(autouse=True)
+def exact_arithmetic():
+    """The tests' own sums are exact too: an inexact step raises, as in the ledger.
+    Python's default context rounds at 28 digits, and a NAV here has 29."""
+    with localcontext(cash.EXACT):
+        yield
 
 
 def usd_mark(asset: AssetId, price: str | Decimal) -> Price:
@@ -288,12 +296,54 @@ def test_each_book_reads_only_its_own_events():
 def test_every_reader_names_its_book_and_none_has_a_default():
     import inspect
     readers = [f for name, f in vars(ledger).items() if inspect.isfunction(f)
-               and not name.startswith("_") and "events" in inspect.signature(f).parameters]
+               and not name.startswith("_") and "events" in inspect.signature(f).parameters
+               and name != "planner_book"]  # the planner plans the paper book only, by name
     assert {f.__name__ for f in readers} >= {"holdings", "cash_held", "basis", "realised",
-                                             "unrealised", "opened", "costs", "expenses"}
+                                             "unrealised", "opened", "costs", "expenses", "value"}
     for reader in readers:
         book = inspect.signature(reader).parameters.get("book")
         assert book is not None and book.kind is inspect.Parameter.KEYWORD_ONLY, reader.__name__
         assert book.default is inspect.Parameter.empty, reader.__name__
     with pytest.raises(ValueError, match="a book is paper or real"):
         ledger.holdings([OPEN_PAPER], book="both")
+
+
+
+# --- P10: a book's NAV, one definition, and the planner's view of the paper book -----------------
+
+def test_a_books_value_is_its_cash_and_every_other_holding_eth_included():
+    eth_open = ledger.Opening("real", Amount(460_000_000_000_000, 18, ETH), usd_mark(ETH, "2600"))
+    usdg_open = ledger.Opening("real", Amount(78_742, 6, USDG), usd_mark(USDG, "0.99995"))
+    real = ledger.value([OPEN_PAPER, eth_open, usdg_open, *SIX], book="real", snapshot=SNAPSHOT)
+    assert real.cash.amount == Amount(78_742, 6, USDG) and set(real.positions) == {ETH}
+    assert real.nav_usd == Decimal("0.078742") * USDG_MARK + Decimal("0.00046") * ETH_MARK
+    assert real.positions[ETH].basis_usd == Decimal("0.00046") * 2600
+    paper = ledger.value([OPEN_PAPER, eth_open, *SIX], book="paper", snapshot=SNAPSHOT)
+    assert set(paper.positions) == {QUOTES[i].buy.asset for i in APPROVED}
+    assert paper.nav_usd == paper.opened_usd + paper.realised_usd + paper.unrealised_usd - paper.costs_usd
+
+
+def test_the_planner_and_the_ledger_agree_on_the_paper_books_nav_to_the_last_digit():
+    events = [OPEN_PAPER, *SIX, sold_half_of_gme()]
+    seen = ledger.planner_book(events, SNAPSHOT)
+    held = ledger.value(events, book="paper", snapshot=SNAPSHOT)
+    assert seen.nav_usd == held.nav_usd and seen.cash_usd == held.cash.value_usd
+    assert set(seen.holdings) == {a.address for a in held.positions}
+    assert USDG.address not in seen.holdings  # cash is cash, not a position the planner weighs
+
+
+def test_a_books_nav_is_cash_nav_so_there_is_one_sum(monkeypatch):
+    monkeypatch.setattr(cash, "nav", lambda cash_usd, values: Decimal("12345"))
+    assert ledger.value([OPEN_PAPER, *SIX], book="paper", snapshot=SNAPSHOT).nav_usd == 12345
+    assert ledger.planner_book([OPEN_PAPER, *SIX], SNAPSHOT).nav_usd == 12345
+
+
+def test_eth_never_reaches_the_planner_and_an_unmarked_holding_is_never_worth_zero():
+    from fund.core import plan
+    eth_in_paper = ledger.Opening("paper", Amount(10 ** 15, 18, ETH), usd_mark(ETH, ETH_MARK))
+    with pytest.raises(plan.PlanError, match="not in the snapshot"):
+        ledger.planner_book([OPEN_PAPER, eth_in_paper], SNAPSHOT)
+    unmarked = {**SNAPSHOT, "assets": [a for a in SNAPSHOT["assets"]
+                                       if a["asset"]["address"] != GME.address]}
+    with pytest.raises(cash.NoMark):
+        ledger.value([OPEN_PAPER, SIX[0]], book="paper", snapshot=unmarked)

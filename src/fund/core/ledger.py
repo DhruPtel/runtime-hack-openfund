@@ -50,7 +50,7 @@ from decimal import (
 )
 from typing import Any, Iterable, Mapping, Union
 
-from . import cash, orders
+from . import cash, orders, plan
 from .types import USD, Amount, AssetId, ExecutionMode, Order, OrderState, Price, Quote
 
 PAPER, REAL = BOOKS = ("paper", "real")
@@ -289,13 +289,33 @@ def holdings(events: Iterable[Event], *, book: str) -> dict[AssetId, Amount]:
     return {asset: amount for asset, (amount, _) in _walk(events, book).held.items()}
 
 
+@dataclass(frozen=True)
+class Position:
+    """One holding at the snapshot's mark, with what it cost."""
+
+    amount: Amount
+    value_usd: Decimal
+    basis_usd: Decimal
+
+    @property
+    def unrealised_usd(self) -> Decimal:
+        with localcontext(cash.EXACT):
+            return self.value_usd - self.basis_usd
+
+
+def _position(amount: Amount, cost: Decimal, snapshot: Mapping[str, Any]) -> Position:
+    """The one way the ledger values a holding: through `cash.worth`, at the
+    snapshot's mark. A holding with no usable mark refuses (`cash.NoMark`)."""
+    return Position(amount, cash.worth(amount, cash.mark_of(snapshot, amount.asset.address)), cost)
+
+
 def cash_held(events: Iterable[Event], *, book: str,
               snapshot: Mapping[str, Any]) -> tuple[Amount, Decimal]:
     """P5: the book's cash, the cash leg it holds (USDG), and what that is worth at
     the cash leg's own mark in the snapshot: never assumed to be a dollar."""
     asset, decimals = cash.cash_leg(snapshot)
-    amount = holdings(events, book=book).get(asset, Amount(0, decimals, asset))
-    return amount, cash.worth(amount, cash.mark_of(snapshot, asset.address))
+    held = _walk(events, book).held.get(asset, (Amount(0, decimals, asset), Decimal(0)))
+    return held[0], _position(*held, snapshot).value_usd
 
 
 def basis(events: Iterable[Event], asset: AssetId, *, book: str) -> Decimal:
@@ -316,8 +336,8 @@ def unrealised(events: Iterable[Event], *, book: str, snapshot: Mapping[str, Any
     mark refuses (`cash.NoMark`): no value is never a value of zero."""
     walked = _walk(events, book)
     with localcontext(cash.EXACT):
-        return sum((cash.worth(amount, cash.mark_of(snapshot, asset.address)) - cost
-                    for asset, (amount, cost) in walked.held.items()), Decimal(0))
+        return sum((_position(amount, cost, snapshot).unrealised_usd
+                    for amount, cost in walked.held.values()), Decimal(0))
 
 
 def opened(events: Iterable[Event], *, book: str) -> Decimal:
@@ -334,3 +354,52 @@ def expenses(events: Iterable[Event], *, book: str) -> Decimal:
     """P8: every inference cost. 6.1's expenses line, beside the NAV, never in it.
     The paper book has none."""
     return _walk(events, book).expenses
+
+
+# --- P10: a book's NAV, and the planner's view of the paper book ---------------------------------
+
+@dataclass(frozen=True)
+class BookValue:
+    """One book at the snapshot's marks: its cash, every other holding as a position
+    (ETH included), its NAV, and the lines that explain it."""
+
+    book: str
+    cash: Position
+    positions: Mapping[AssetId, Position]
+    nav_usd: Decimal
+    opened_usd: Decimal
+    realised_usd: Decimal
+    costs_usd: Decimal
+    expenses_usd: Decimal
+
+    @property
+    def unrealised_usd(self) -> Decimal:
+        with localcontext(cash.EXACT):
+            return self.cash.unrealised_usd + sum(
+                (p.unrealised_usd for p in self.positions.values()), Decimal(0))
+
+
+def value(events: Iterable[Event], *, book: str, snapshot: Mapping[str, Any]) -> BookValue:
+    """P10: the book at the snapshot's marks. The cash leg (`cash.cash_leg`) is its
+    cash, and every other holding a position. Its NAV is `cash.nav`, the sum the
+    planner's book uses too. Refuses if any holding has no usable mark."""
+    walked = _walk(events, book)
+    asset, decimals = cash.cash_leg(snapshot)
+    held = dict(walked.held)
+    money = _position(*held.pop(asset, (Amount(0, decimals, asset), Decimal(0))), snapshot)
+    positions = {a: _position(amount, cost, snapshot) for a, (amount, cost) in held.items()}
+    return BookValue(book=book, cash=money, positions=positions,
+                     nav_usd=cash.nav(money.value_usd, [p.value_usd for p in positions.values()]),
+                     opened_usd=walked.opened, realised_usd=walked.realised,
+                     costs_usd=walked.costs, expenses_usd=walked.expenses)
+
+
+def planner_book(events: Iterable[Event], snapshot: Mapping[str, Any]) -> plan.Book:
+    """P10: the paper book as the planner takes it: its stocks, and its cash as a USD
+    figure at the cash leg's own mark. What 4.8's next cycle plans from. `plan.book`
+    refuses any holding outside the snapshot's assets, so ETH never reaches it."""
+    events = list(events)
+    money, usd = cash_held(events, book=PAPER, snapshot=snapshot)
+    stocks = {asset.address: amount for asset, amount in holdings(events, book=PAPER).items()
+              if asset != money.asset}
+    return plan.book(stocks, usd, snapshot)
