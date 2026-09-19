@@ -66,7 +66,7 @@ CAUTION = "caution"
 QUANTUM = Decimal("0.000001")
 
 
-def _text(value: Decimal | None) -> str | None:
+def decimal_text(value: Decimal | None) -> str | None:
     """Exact decimal text for the record, with no exponent and no trailing zeros."""
     if value is None:
         return None
@@ -86,7 +86,7 @@ class Contribution:
 
     def as_dict(self) -> dict[str, Any]:
         return {"seat": self.seat, "kind": self.kind, "word": self.word,
-                "confidence": self.confidence, "value": _text(self.value)}
+                "confidence": self.confidence, "value": decimal_text(self.value)}
 
 
 @dataclass(frozen=True)
@@ -104,9 +104,9 @@ class Row:
     def as_dict(self) -> dict[str, Any]:
         return {"address": self.address, "symbol": self.symbol,
                 "contributions": [c.as_dict() for c in self.contributions],
-                "direction": _text(self.direction), "caution": _text(self.caution),
-                "score": _text(self.score), "current": _text(self.current),
-                "target": _text(self.target), "why": self.why}
+                "direction": decimal_text(self.direction), "caution": decimal_text(self.caution),
+                "score": decimal_text(self.score), "current": decimal_text(self.current),
+                "target": decimal_text(self.target), "why": self.why}
 
 
 @dataclass(frozen=True)
@@ -129,9 +129,9 @@ class Proposal:
         return {"rebalance": self.rebalance, "reason": self.reason,
                 "reported": list(self.reported), "quorum": self.quorum.as_dict(),
                 "rows": [r.as_dict() for r in self.rows],
-                "cash": {"current": _text(self.cash_current), "target": _text(self.cash_target)},
-                "residual": _text(self.residual), "funded": _text(self.funded),
-                "confidence_weights": {w: _text(v) for w, v in self.confidence_weights.items()}}
+                "cash": {"current": decimal_text(self.cash_current), "target": decimal_text(self.cash_target)},
+                "residual": decimal_text(self.residual), "funded": decimal_text(self.funded),
+                "confidence_weights": {w: decimal_text(v) for w, v in self.confidence_weights.items()}}
 
 
 def _contributions(reports: Sequence[Mapping[str, Any]], kinds: Mapping[str, str],
@@ -208,13 +208,13 @@ def aggregate(reports: Sequence[Mapping[str, Any]], *, kinds: Mapping[str, str],
         if row.score > 0:
             rise = gates.raise_by(row.current, step, limits)
             wanted[row.address] = rise
-            why[row.address] = (f"buy: raised by {_text(rise)}" if rise == step
-                                else f"buy: raised by {_text(rise)}, capped at the position limit"
+            why[row.address] = (f"buy: raised by {decimal_text(rise)}" if rise == step
+                                else f"buy: raised by {decimal_text(rise)}, capped at the position limit"
                                 if rise else "buy: already at the position limit, kept")
         else:
             cut = gates.cut_by(row.current, step)
             wanted[row.address] = -cut
-            why[row.address] = (f"sell: cut by {_text(cut)}" if cut else
+            why[row.address] = (f"sell: cut by {decimal_text(cut)}" if cut else
                                 "sell on an asset not held: nothing to cut")
 
     raises = sum((d for d in wanted.values() if d > 0), Decimal(0))
@@ -231,8 +231,11 @@ def aggregate(reports: Sequence[Mapping[str, Any]], *, kinds: Mapping[str, str],
         note = why[row.address]
         if change > 0 and share < 1:
             change = change * share
-            note += f"; scaled to {_text((share * 100).quantize(Decimal('0.01')))}% by the cash floor"
-        kept = change.quantize(QUANTUM, rounding=ROUND_DOWN)  # toward zero, either way
+            note += f"; scaled to {decimal_text((share * 100).quantize(Decimal('0.01')))}% by the cash floor"
+        if row.current + change == 0:
+            kept = change  # a position cut to zero is left at exactly zero
+        else:
+            kept = change.quantize(QUANTUM, rounding=ROUND_DOWN)  # toward zero, either way
         residual += change - kept
         final.append(Row(row.address, row.symbol, row.contributions, row.direction, row.caution,
                          row.score, row.current, row.current + kept, note))
@@ -247,7 +250,7 @@ def aggregate(reports: Sequence[Mapping[str, Any]], *, kinds: Mapping[str, str],
 def _signed(value: Decimal | None) -> str:
     if value is None:
         return "·"
-    return ("+" if value > 0 else "") + _text(value)
+    return ("+" if value > 0 else "") + decimal_text(value)
 
 
 def _money(value: Decimal) -> str:
@@ -261,7 +264,7 @@ def table(proposal: Proposal, seats: Sequence[str], nav_usd: Decimal | None = No
     each asset moves from and to. Cash and the rounding residual close it. With
     `nav_usd`, each move is also shown in dollars of the paper book."""
     short = {"low": "low", "medium": "med", "high": "high"}
-    words = ", ".join(f"{w} {_text(v)}" for w, v in proposal.confidence_weights.items())
+    words = ", ".join(f"{w} {decimal_text(v)}" for w, v in proposal.confidence_weights.items())
     head = ("rebalance" if proposal.rebalance else "NO REBALANCE") + f": {proposal.reason}"
     lines = [f"{len(proposal.reported)} of {len(seats)} seats reported · {proposal.quorum.reason}",
              head, f"confidence: {words} · a score moves a weight by score x the position limit",
@@ -272,22 +275,22 @@ def table(proposal: Proposal, seats: Sequence[str], nav_usd: Decimal | None = No
     rows = []
     for row in proposal.rows:
         said = {c.seat: f"{c.word} {short[c.confidence]} "
-                        f"{(_signed if c.kind == 'direction' else _text)(c.value)}"
+                        f"{(_signed if c.kind == 'direction' else decimal_text)(c.value)}"
                 for c in row.contributions}
         cells = [row.symbol, *(said.get(seat, "·") for seat in seats), _signed(row.direction),
-                 _text(row.caution) if row.caution else "·", _signed(row.score),
-                 _text(row.current), _text(row.target)]
+                 decimal_text(row.caution) if row.caution else "·", _signed(row.score),
+                 decimal_text(row.current), decimal_text(row.target)]
         if nav_usd is not None:
             cells.append(_money((row.target - row.current) * nav_usd))
         rows.append(cells)
-    cash = ["cash", *("" for _ in seats), "", "", "", _text(proposal.cash_current),
-            _text(proposal.cash_target)]
+    cash = ["cash", *("" for _ in seats), "", "", "", decimal_text(proposal.cash_current),
+            decimal_text(proposal.cash_target)]
     if nav_usd is not None:
         cash.append(_money((proposal.cash_target - proposal.cash_current) * nav_usd))
     rows.append(cash)
     widths = [max(len(str(r[i])) for r in [columns, *rows]) for i in range(len(columns))]
     for cells in [columns, *rows]:
         lines.append("  ".join(str(c).ljust(w) for c, w in zip(cells, widths)).rstrip())
-    lines += ["", f"residual {_text(proposal.residual)}: what rounding each change toward zero "
-              f"left in cash · raises funded {_text((proposal.funded * 100).normalize())}%"]
+    lines += ["", f"residual {decimal_text(proposal.residual)}: what rounding each change toward zero "
+              f"left in cash · raises funded {decimal_text((proposal.funded * 100).normalize())}%"]
     return "\n".join(lines)
