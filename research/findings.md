@@ -2446,7 +2446,8 @@ the issuer's control, not ours.
 > snapshot exists until 1.6. The prompt here carries **6** hand-assembled assets;
 > the admissible universe is **35** markable ones (0.4 decision) out of 194.
 > F0.9.4 extrapolates the gap. Quoting the cost-per-cycle below as "the analyst
-> cost" would mislead.
+> cost" would mislead. **The real number is §1.7:** $0.454 an analyst call and
+> $1.87 a cycle against a real snapshot, 28 times this floor.
 
 ### F0.9.1 — One analyst call: 1,793 in, 982 out, $0.013406, 58 seconds
 
@@ -3106,3 +3107,252 @@ budget.
   the per-key and recovery follow-ups never ran.
 - **Cost:** 0.00003 ETH converted to 0.078742 USDG, gas $0 to us, and 18 gwei
   (~$0.00005) unaccounted for.
+
+---
+
+## 1.7 — Analyst cost against a real snapshot
+
+**Date:** 2026-09-19 UTC · **Method:** `PYTHONPATH=src python3 -m probes.analyst_cost
+fixtures/live/snapshot-7eba62122aab747f911d3001ed7846a7187b346aa1af17877c7bbe12ce3f97dd.json --confirm`
+· **Captures:** `probes/out/analyst_cost.json`
+
+> **This is the number 0.9 deferred to.** The snapshot is a real one:
+> - sha256 `7eba62122aab…`, block 66728957, Sat 02:34Z, 335,294 bytes;
+> - 35 assets and 4,628 rounds;
+> - embedded byte for byte, with the hash checked before any call.
+>
+> One of its series is short (F1.7.8), so its timeline is about 2% lighter than
+> a clean read. The brief is 0.9's, unchanged: the real one is 2.1's. The
+> analyst covered all 35 assets, which is right for the universe-wide roles and
+> an upper bound for the asset-partitioned ones. Four calls were made, at
+> `claude-sonnet-5`.
+
+### F1.7.1 — One analyst call: 185,168 in, 7,725–9,087 out, $0.448–$0.461, 62–75 s
+
+**Confidence: measured, two identical calls.**
+
+| | Call 1 | Call 2 |
+|---|---|---|
+| Input tokens | **185,168** | **185,168** |
+| Output tokens | **9,087** | **7,725** |
+| Latency | **75.0 s** | **62.4 s** |
+| Cost at $2/M in, $10/M out | **$0.461206** | **$0.447586** |
+| Finish | stop | stop |
+| Cached tokens | 0 | 0 |
+
+- **Input is identical,** as it must be for identical bytes.
+- **Output differs by 18%** between two identical calls at temperature 0:
+  1,362 tokens over 7,725, reckoned the way 0.9's 14% was (F0.9.3). Two calls show that the spread exists and
+  is of that order. They do not measure its distribution, and a budget built on
+  them should carry headroom.
+- **Input is 81% of the cost:** $0.370 of $0.454.
+- **The snapshot fits.** 185,168 tokens is 18.5% of the model's 1,000,000-token
+  window. It came to 1.82 characters a token, denser than 0.9's 2.02.
+
+### F1.7.2 — The timeline is two thirds of the input
+
+**Confidence: measured, by difference.** The gateway has no count-tokens
+endpoint (`/v1/messages/count_tokens` returned 404), so a third call sent the
+same prompt with every asset's `timeline` removed, and `max_tokens` 1.
+
+| Part | Input tokens | Share | Per analyst call |
+|---|---|---|---|
+| Timeline, 4,628 rounds | **123,765** | **66.8%** | $0.2475 |
+| Everything else: the other snapshot fields, 0.9's brief, the output schema | 61,403 | 33.2% | $0.1228 |
+| **Total** | **185,168** | | $0.3703 |
+
+By bytes the timeline is 62% (208,518 of 335,294). By tokens it is more,
+because a `[time, price]` pair is dense digits: about **26.7 tokens a round**.
+- **Per cycle,** at four analysts, the timeline's input is **$0.99 of $1.87**:
+  53% of the whole cycle.
+- **What thinning would buy,** as arithmetic: every 1,000 rounds cut saves about
+  26,700 tokens a call, $0.053 a call and $0.21 a cycle. Halving the history
+  saves about $0.50 a cycle, $15 a month.
+
+Whether to thin, and how, is the operator's decision, not this probe's.
+
+### F1.7.3 — A cycle costs $1.87: 28 times the 0.9 floor
+
+**Confidence: the analyst and risk calls measured; the multiplication is
+arithmetic.**
+
+| | 0.9 floor (6 assets) | **1.7 (real snapshot)** |
+|---|---|---|
+| Analyst call | $0.0134 | **$0.4544** (mean of two) |
+| Risk call | priced as an analyst call | **$0.0484** (measured, stand-in reports) |
+| Cycle (4 analysts + 1 risk) | $0.0670 | **$1.8659** |
+| Day (daily cadence) | $0.067 | **$1.87** |
+| 30 days | $2.01 | **$55.98** |
+| x402 records at $0.05 to cover one cycle | 1.3 | **37.3** |
+
+- **The risk call** read four copies of call 1's report, 11,380 visible
+  characters each, plus a five-order stand-in plan: 20,963 in, 643 out, 7.7 s.
+  Its input is a stand-in until Phase 2 produces real, different reports.
+- **The x402 price.** At $0.05 a record, the endpoint must sell **37 records a
+  day** to cover inference alone. That comes before funding overhead and gas,
+  and no third party has yet paid it (F0.7d.8). The price is the operator's to
+  confirm or revise (0.11 decision).
+
+### F1.7.4 — The timeouts cover today's calls, and are not sized for the evidence
+
+**Confidence: latencies measured; the recommendation is inference from them.**
+
+The configuration is `transport_timeout_seconds` 180 and
+`worker_deadline_seconds` 120.
+
+| Call | Output tokens | Latency | Output rate |
+|---|---|---|---|
+| 1.7 analyst 1 | 9,087 | 75.0 s | ~121 tokens/s |
+| 1.7 analyst 2 | 7,725 | 62.4 s | ~124 tokens/s |
+| 1.7 risk | 643 | 7.7 s | — |
+| 1.7 input only, 61k tokens | 16 | 4.0 s | — |
+| 0.9 analyst (F0.9.1) | 982 | 58.1 s | ~17 tokens/s |
+
+**Verdict: not correctly sized.**
+- **Today they suffice.** Both analyst calls finished inside 120 s, the slower
+  with 45 s to spare.
+- **But output is uncapped.** `max_output_tokens` is null, and the replies ran
+  to 9,087 tokens.
+- **And throughput has varied sevenfold.** It ran at ~17 tokens/s at 0.9 and
+  ~121 today. A 9,087-token reply at 0.9's rate takes about 535 s. The 120 s
+  deadline would cut that off, and a call cut off client-side is still billed
+  with no report (F0.9.3).
+- **And the two are inverted.** The 120 s worker deadline fires before the
+  180 s transport timeout, so inside the runner the transport timeout never
+  acts (LESSONS 2026-09-18).
+
+**What they should be,** recommended and not set, since the values are 2.4's
+and the operator's:
+- **`max_output_tokens`: about 12,000,** 1.3 times the largest reply measured.
+  A deadline can only be derived from a cap.
+- **`transport_timeout_seconds`: at least 600.** That covers a 9,000-token
+  reply at the slowest rate measured, 535 s. At a 12,000 cap and that rate the
+  bound would be about 710 s.
+- **`worker_deadline_seconds`: at least the transport timeout plus a margin,**
+  such as 630, so the transport ends a call and the inversion goes.
+
+At daily cadence a ten-minute bound costs nothing. A cut-off call costs a full
+call with no report.
+
+### F1.7.5 — About half the billed output is not in the reply
+
+**Confidence: inferred, not measured.** The `usage` block gives no breakdown.
+
+| Call | Output tokens billed | Visible reply | Characters a token |
+|---|---|---|---|
+| Analyst 1 | 9,087 | 11,380 chars | **1.25** |
+| Analyst 2 | 7,725 | 12,092 chars | **1.57** |
+| Risk | 643 | 1,610 chars | 2.50 |
+
+At the risk reply's 2.5 characters a token, the analyst replies' visible text
+would be about 4,550 and 4,840 tokens. So roughly **37–50% of each analyst
+call's billed output is not in what comes back.** Hidden reasoning is the likely cause, and
+it is not confirmed. It costs about $0.03–0.05 a call, and it counts toward
+latency and toward any output cap.
+
+### F1.7.6 — No automatic caching; explicit caching would roughly halve a cycle
+
+**Confidence: no caching measured; the saving priced from listed rates, not
+measured.**
+- **Nothing was cached.** Two byte-identical calls reported `cached_tokens: 0`
+  both times, so the gateway does not cache automatically on
+  `/v1/chat/completions`.
+- **The price list offers caching.** It lists `cache_write` $2.50/M and
+  `cache_read` $0.20/M for this model.
+- **Four analysts read the same bytes** (PLAN §2 invariant 2). So one cache
+  write and three cache reads would take a cycle's analyst inputs from **$1.48
+  to $0.57**, and the cycle from $1.87 to about **$0.96**.
+- **Untested.** Whether the gateway honours explicit cache control, on
+  `/v1/messages`, and at what time-to-live, is unknown.
+
+### F1.7.7 — 62 of 65 text models hold this prompt; the per-call price spans 180×
+
+**Confidence: measured tokens at listed prices; arithmetic.**
+- **Three models are too small** once a 16,000-token output allowance is
+  added: `deepseek-v3.2` (163,840 window), `claude-haiku-4.5` and
+  `claude-opus-4.5` (200,000 each). The 185,168-token prompt alone fits the
+  last two.
+- **The same measured call ranges from $0.0129 to $2.306.**
+
+| Model | Per analyst call |
+|---|---|
+| `gpt-5-nano` | $0.0129 |
+| `claude-haiku-4.5` | $0.2306 |
+| `claude-sonnet-5` | $0.4612 |
+| `claude-opus-5` | $1.153 |
+| `claude-fable-5.1` | $2.306 |
+
+As at 0.9 (F0.9.5), the model pin is the largest lever. It is 2.4's to pull.
+
+### F1.7.8 — The measured snapshot had one short series: an unretried missing-state error
+
+**Confidence: measured.** SPCX's walk stopped after its newest round:
+
+> `read failed at round 18446744073709554893: [rpc] -32000: … layer stale
+> missing trie node … (path 0d) layer stale`
+
+The snapshot says so:
+- coverage is `null` with that reason;
+- the timeline has one point.
+
+The analyst read that, and abstained on SPCX for exactly that reason. Nothing
+was silent, but the read should not have stopped there.
+- **It is a missing-state error.** 1.3's client retries missing state only when
+  the message says "historical state … not available", and this one is worded
+  differently. A read by block hash is safe to retry either way. The client
+  change is owed in `adapters/chain_4663.py`.
+- **The snapshot still says tradeable.** Its status judges the newest round,
+  not coverage, so SPCX stays tradeable with a one-point history. Whether short
+  coverage should affect status is open.
+
+### Reconciliation
+
+**Confidence: measured.** The three instruments agree to the last digit:
+- **Listed price times tokens:** $1.080114 for the four calls.
+- **Credit balance:** $2.799976 before and $1.719862 once settled, a fall of
+  $1.080114. Deductions lagged by about one call during the run.
+- **`/v1/usage`, one settled window** read after the calls: 6 requests, 456,288
+  input and 19,317 output tokens, $1.105746. That is these four calls plus
+  0.9's two (F0.9.3), exactly. It was not read as a delta around any call.
+
+Two undocumented fields also came back. Their meaning is unresolved:
+- `buyer_cost_micro`, 115,302 against $0.461 charged, a ratio of 4.0 (it was
+  2.2 at 0.9);
+- `"cost": {"diem": 0.691809, "usd": 0}`, with the `/v1/usage` row naming the
+  provider `surplus`.
+
+### What the reports said, as a snapshot-design signal only
+
+At 0.9, one-block data drew `NO_CALL` on all six assets (F0.9.6). Against this
+snapshot, call 1 returned **35 reports**:
+- 16 BUY, 15 HOLD, 3 SELL and 1 NO_CALL, plus one abstention, SPCX, for its
+  missing history;
+- the reasoning cites the timeline, for example "a tight range 330-339 over
+  the week".
+
+This is one call with a draft brief. It shows that the history is read and
+used, not that the calls are any good.
+
+### What 1.7 changes
+
+| Change | Where |
+|---|---|
+| A cycle is $1.87, $56 a month, at Sonnet 5 uncached | 2.4, 6.3, 7.2; the price |
+| The timeline is 67% of input and 53% of a cycle | 1.6 history window, the operator |
+| $0.05 a record needs 37 sales a day to cover inference | 0.7 checkpoint, 7.2 |
+| The timeouts must come from an output cap and the slowest rate, not today's | 2.4; `config/models.json` |
+| Explicit prompt caching could halve a cycle; untested | 2.4 |
+| Missing-state errors come in more than one wording; retry them | 1.3's client |
+| A short series leaves the status unchanged; open | 1.6, 1.11 |
+
+### Method limitations
+
+- **Two analyst calls, one risk call, one model, one brief, one snapshot, and
+  one hour.** The latency and output spreads are what two samples show, not
+  distributions.
+- **The risk call's input is four copies of one report,** not four different
+  ones.
+- **The hidden-output reading (F1.7.5) is inferred** from character ratios.
+- **The measured snapshot's timeline is about 2% light,** because of SPCX
+  (F1.7.8).
+- **Spent: $1.080114.** The balance went from $2.799976 to $1.719862.
