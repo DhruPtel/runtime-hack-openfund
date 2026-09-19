@@ -755,9 +755,43 @@ before and after, and neither secret in the working tree. $0 spent; the verdict
 is that SIWE alone cannot carry the five-wallet plan, and the options are the
 operator's.
 
+## The fund's keys, identified by measurement
+**Date:** 2026-09-19 · **Commit:** c6adedf
+
+For the operator to match the dashboard, `probes/keymap.py` measured each `.env`
+Bankr key with reads alone, plus a message-less sign that cannot sign:
+- the wallet;
+- the gateway, from `/v1/credits`;
+- the Agent API, from `/agent/profile`, calibrated against the 2.0 key whose
+  Agent API was measured off;
+- read-only, from the sign request.
+
+All three keys resolve to `0x93fa…a3da`:
+
+| Key | Read-only | LLM gateway | Agent API |
+|---|---|---|---|
+| `BANKR_KEY_READ` | yes | off | on |
+| `BANKR_KEY_EXEC` | no | on | on |
+| `BANKR_LLM_KEY` | **no** | on | on |
+
+Token launch is not measurable by any read. Two results contradict the plan's
+unmeasured claims: `BANKR_LLM_KEY`, which the analyst role holds, is not
+read-only, and the Agent API is on for all three. Recorded in LESSONS and PLAN
+§6; no setting was changed.
+
+## 2.1 ▶ — The report format, shown
+**Date:** 2026-09-19 · **Commit:** aecf511
+
+`planning/REPORT-FORMAT.md` holds four reports written by hand against the
+weekend capture, one per seat, every figure cited to its snapshot field and
+rechecked against the capture: two figures were corrected. They take two
+vocabularies, a machine-read first line and `CALL` lines, at most six calls on
+tradeable assets, silence or `NO CALLS` to abstain, three-word confidence, and
+a "wrong if" per call. **Shown at the stop and waiting for the operator.**
+
 ---
 
-## State at close — 2026-09-19, 2.0 run; Phase 2 waits on the wallet choice
+## State at close — 2026-09-19, 2.1 at its stop; the keys measured
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -829,9 +863,16 @@ closed session, Sat 00:05Z to Sun 23:55Z.
 
   One shared wallet is ruled out. 2.4's credential rows and every live run
   wait on this choice.
-- **What can proceed without it:**
-  - 2.1, a stop: four hand-written reports;
-  - then 2.2 to 2.4 offline, on a fake gateway.
+- **2.1 is at its stop.** `planning/REPORT-FORMAT.md` waits for the operator.
+  2.2 and 2.3 are built only from what is approved.
+- **The keys, measured** (LESSONS 2026-09-19, the fund's keys):
+  - `BANKR_LLM_KEY` is **not read-only**;
+  - the **Agent API is on** for all three fund keys;
+  - `BANKR_KEY_EXEC` has the gateway on.
+
+  Invariant 1 is false as measured until the operator changes those settings.
+  2.0's option (c) is unsafe until they change. Nothing was changed by this
+  pass.
 - **Where the agent account's secrets live:** `~/.openfund/agents/price-integrity/`,
   mode 0600, outside the repository:
   - `siwe.key`, the sign-in key;
@@ -895,8 +936,8 @@ closed session, Sat 00:05Z to Sun 23:55Z.
   `fixtures/snapshots/`.
 - **Selftest:** 235 addresses in about 102 s.
 - **Analyst call:** $0.264 at Sonnet 5, uncached. A cycle is about $1.11.
-- **LLM credits:** $0.937148 in the fund's account, not re-read since
-  2026-09-18.
+- **LLM credits:** $15.791107 in the fund's account, read 2026-09-19 by
+  `probes/keymap.py`. Credits were bought after the $0.937148 on record.
 - **Wallet:** about $1.29, as 0.078742 USDG and 0.000460 ETH on 4663
   (`PHASE-1-GATE.md` §2).
 
@@ -917,7 +958,8 @@ None is set.
 ### Committed versus pushed
 Checked locally, with no fetch. `origin/main` is `4c13b7e`, the Phase 2 plan
 pushed by the operator. Every commit from `db62557` (the 2.1 fix) to the one
-that last changed this note is committed and **not pushed**.
+that last changed this note is committed and **not pushed**. That includes 2.0,
+the key identification and 2.1.
 
 ### What this note does not cover
 - **Decisions.** It does not restate any in full; LESSONS holds them.
