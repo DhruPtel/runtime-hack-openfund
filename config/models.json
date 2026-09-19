@@ -2,19 +2,27 @@
   "version": 1,
   "_status": "unresolved. Model ids are pinned before any analyst runs (unit 2.4).",
   "_replay_note": "Deterministic replay comes from recorded model outputs, including the risk output. Seeds apply to our own code only and prove nothing about model determinism. See LESSONS 2026-09-17.",
-
   "analyst_model": "claude-sonnet-5",
   "_analyst_model_note": "Provisional. It is the model 0.9 measured (findings F0.9.1). The final choice is made at unit 2.4, where the 139x cost spread across the gateway's models (F0.9.5) is tested against output quality.",
-  "risk_model": null,
-  "_model_resolved_by": "unit 2.4, informed by unit 1.7 and by the 0.9 floor, which priced the same tokens across the catalogue (findings F0.9.5)",
-
+  "risk_model": "claude-sonnet-5",
+  "_model_resolved_by": "risk_model set at 2.4 (2026-09-19): 1.7 measured a risk call on it ($0.048, 7.7 s), and one model for both roles keeps one pricing basis. analyst_model stays provisional; the model spread (F1.7.7) is a later lever, pulled with evidence.",
   "max_output_tokens": 12000,
   "_max_output_tokens_note": "Set to 12,000 (DECISION after 1.7, tracker/LESSONS.md 2026-09-18), about 1.3 times the largest reply 1.7 measured: 9,087 output tokens billed, about 37-50% of it absent from the reply text (inferred: hidden reasoning, research/findings.md F1.7.5). The deadlines below are derived from it.",
   "worker_deadline_seconds": 630,
   "_worker_deadline_note": "Set to 630 s (DECISION after 1.7). It exceeds transport_timeout_seconds, so the transport ends a call and the worker still has time to record it: the old 120 s fired before the 180 s transport timeout could. 1.7 measured analyst calls at 62.4 and 75.0 s at ~121 output tokens/s; 0.9 measured ~17/s (F0.9.1), and a 9,087-token reply at that rate takes ~535 s (F1.7.4).",
   "transport_timeout_seconds": 600,
   "_transport_timeout_note": "Set to 600 s (DECISION after 1.7). A call cut off on our side is still billed and returns nothing (F0.9.3), so this must exceed the real call, not the hoped-for one: 600 s covers a 9,000-token reply at the slowest rate measured, 535 s. At the full 12,000-token cap and that rate the bound would be ~710 s; the cap is the backstop, not the expectation (F1.7.4).",
-  "context_budget_tokens": null,
-  "_context_budget_note": "Must cover every accepted full report plus the sized plan and the risk output. If the bundle does not fit, the cycle vetoes rather than summarizing (planning/PLAN.md section 2 invariant 3).",
-  "_budgets_resolved_by": "units 2.4 and 3.6, informed by unit 1.7"
+  "context_budget_tokens": 70000,
+  "_context_budget_note": "Set at 2.4 (planning/PHASE-2.md). Invariant 3's bundle is every accepted report, the sized plan and the risk output: four replies at the 12,000-token cap (48,000), a plan of at most 8 orders with their evidence and the risk brief (about 8,000), and risk's own reply at its 12,000 cap. About 68,000 in all. Over budget, the cycle vetoes rather than summarizing. Measured from bytes / 1.8, the lower of the two measured ratios (1.7, 1.8a), because the gateway has no token-count endpoint (F1.7.2).",
+  "_budgets_resolved_by": "units 2.4 and 3.6, informed by unit 1.7",
+  "pricing_per_million": {
+    "claude-sonnet-5": {
+      "input": "2",
+      "output": "10",
+      "currency": "usd"
+    }
+  },
+  "_pricing_note": "The gateway's listed price per million tokens, as recorded from its model listing at 1.7 (probes/out/analyst_cost.json). It reproduces 1.8a's $0.2643 exactly: 94,716 input and 7,484 output tokens. A per-call cost from it is our estimate. The provider attributes spend only per key, model and day window (F0.6.4).",
+  "usage_settle_seconds": 3600,
+  "_usage_settle_note": "Set at 2.5. A /v1/usage window is compared with our own per-call costs only when it closed at least this long after the last call in it. /v1/usage was seen going backwards around single calls (F0.9.2), so a before-and-after delta is never used. Provisional: the record shows windows settling within the session, but not how fast."
 }

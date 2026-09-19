@@ -3,13 +3,12 @@
   "schedule": "daily",
   "manual_trigger_enabled": true,
   "_manual_trigger_note": "Runs the identical code path as the scheduled cycle. It is a trigger, not a demo mode.",
-
   "confirmation_depth": null,
   "_confirmation_depth_resolved_by": "unit 5.3",
-
-  "cycle_deadline_seconds": null,
-  "_cycle_deadline_resolved_by": "unit 2.4, informed by unit 1.7",
-
-  "retry_budget_per_worker": null,
-  "_retry_budget_resolved_by": "unit 2.4"
+  "cycle_deadline_seconds": 1800,
+  "_cycle_deadline_resolved_by": "Set at 2.4 (2026-09-19, planning/PHASE-2.md). The whole cycle's bound: a snapshot build of about 150 s, the analysts in parallel within the 630 s worker deadline, risk within another 630 s, and margin. A typical cycle is about 4 minutes; this binds only in the tail.",
+  "retry_budget_per_worker": 1,
+  "_retry_budget_resolved_by": "Set at 2.4. One retry, and only for a reply that arrived and was refused as malformed (PLAN §9). Never for a timeout or a dropped connection: a client-side timeout is still billed (F0.9.3). The retry must fit in what remains of the worker deadline.",
+  "max_parallel_workers": 4,
+  "_max_parallel_workers_note": "Set at 2.4. The runner's bounded width: how many analyst processes run at once. Four seats, four at once. Whether the gateway serves four accounts' calls at once without throttling is unmeasured."
 }
