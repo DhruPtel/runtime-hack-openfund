@@ -4,10 +4,13 @@ version = "0.0.0"
 description = "An onchain fund that holds tokenized equities on Robinhood Chain and shows its work"
 requires-python = ">=3.11"
 
-# No runtime dependencies yet. Unit 0.1 is stdlib only. Dependencies are added
-# by the unit that first needs them, pinned exactly, so the dependency list
-# stays readable as a record of what the system actually reaches for.
-dependencies = []
+# Dependencies are added by the unit that first needs them, pinned exactly, so
+# the dependency list stays readable as a record of what the system actually
+# reaches for. Unit 0.1 was stdlib only.
+dependencies = [
+    # 3.7: ed25519 for the decision record's signature, in treasurer/sign.py only.
+    "cryptography==46.0.3",
+]
 
 [project.optional-dependencies]
 dev = [
