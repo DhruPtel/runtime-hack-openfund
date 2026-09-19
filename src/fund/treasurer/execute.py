@@ -33,6 +33,13 @@ why. It never books and never moves a state; the caller does both, in one write.
   the key, and answers the same way: `confirmed` with the chain evidence and the fill
   its `Transfer` logs show (5.3), `failed` on `success: false`, `unknown` on a timeout
   or a 409. Nothing that calls an executor knows which it has.
+
+**`run_order`** is the caller both share: it takes one `prepared` order, admits it or
+refuses it by name, writes `submitted` before the act, sends it, and writes the fill
+and the order's new state in one transaction, so a crash can never leave a fill
+without its order or an order confirmed without its fill. An order already finished
+is not sent again and books nothing; one left `submitted` or `unknown` is 4.9's to
+resolve, and `run_order` leaves it alone.
 """
 
 from __future__ import annotations
@@ -49,6 +56,7 @@ from fund.core import cash, gates, ledger, orders, plan
 from fund.core.types import (
     Amount, AssetId, Execution, ExecutionMode, Instant, Observation, Order, OrderState, Quote,
 )
+from fund.store.db import transaction
 from fund.treasurer import sign
 
 RULE_SIGNATURE = "signature"
@@ -239,3 +247,57 @@ class PaperExecutor:
             outcome = Outcome(OrderState.FAILED, str(refused))
         self.sent[order.idempotency_key] = outcome
         return outcome
+
+
+# --- one order, from prepared to its end ----------------------------------------------------------
+
+@dataclass(frozen=True)
+class Done:
+    """What became of one order: it was admitted or refused, and if admitted, what the
+    submission came to."""
+
+    order: Order
+    admission: Admission | None
+    outcome: Outcome | None
+
+    @property
+    def booked(self) -> bool:
+        return self.outcome is not None and self.outcome.fill is not None
+
+
+def _index(order_id: str) -> int:
+    return int(order_id.rpartition("/")[2])
+
+
+def run_order(order_id: str, *, decision: Decision, public_key: str | None,
+              mandate: Mapping[str, Any], limits: gates.Limits, thresholds: Mapping[str, Any],
+              venue: Venue, executor: Executor, store: Any, journal: Any, at: Instant,
+              checkpoint: Any = None) -> Done:
+    """One order through the chokepoint and, if it passes, to the venue and the books."""
+    order = store.get(order_id)
+    if order is None:
+        raise ValueError(f"no order {order_id} is written: nothing is sent unprepared")
+    if order.state is not OrderState.PREPARED:
+        return Done(order, None, None)  # finished, or in flight and 4.9's to resolve
+
+    mine = [o for o in store.all() if o.order_id.rpartition("/")[0] == order_id.rpartition("/")[0]]
+    filled = [_index(o.order_id) for o in mine if o.state is OrderState.CONFIRMED]
+    gone = [_index(o.order_id) for o in mine
+            if o.state in (OrderState.REFUSED, OrderState.FAILED)]
+    fresh = requote(order, venue, at, thresholds)
+    admission = admit(order, decision, public_key=public_key, mandate=mandate, limits=limits,
+                      fresh=fresh, at=at, events=journal.events(), filled=filled, refused=gone)
+    if not admission.admitted:
+        return Done(store.move(order_id, OrderState.REFUSED, reason=admission.reason),
+                    admission, None)
+
+    order = store.move(order_id, OrderState.SUBMITTED)  # durable, before the act
+    if checkpoint is not None:
+        checkpoint("submitted", order)
+    outcome = executor.submit(order, fresh.observation.value)
+    with transaction(store.conn):  # the fill and the state it belongs to, one write
+        if outcome.fill is not None:
+            journal.append(outcome.fill)
+        order = store.move(order_id, outcome.state, reason=outcome.reason,
+                           execution=outcome.execution)
+    return Done(order, admission, outcome)
