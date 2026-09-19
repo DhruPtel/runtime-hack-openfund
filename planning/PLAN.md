@@ -339,7 +339,9 @@ what each finding changed, is in `PHASE-0-1.md`.*
   capture's answers by hash, and a weekday capture is owed.
 - **1.10** Adapter selftest attesting every address in the table against chain,
   beacon included; the execution wallet is expected to carry its 7702
-  delegation on 4663.
+  delegation on 4663. *Built:* `make selftest` attests 235 addresses at one
+  block in about 100 s, green. The GameStop counterfeit put in GME's place
+  fails at the beacon, named.
 - **1.11** ▶ **Skew rejection:** *Show: six named refusals — mixed blocks, a
   stale newest point, a replayed body, an observation from after the pinned
   block, a paused feed, a holiday gap in an open session — and two

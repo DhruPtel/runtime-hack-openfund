@@ -146,6 +146,7 @@ fund/
 │   │
 │   └── run/
 │       ├── snapshot.py         the live read: every adapter at one pinned block → core/snapshot (1.6)
+│       ├── selftest.py         every address in config attested against the chain (1.10)
 │       ├── cycle.py            the pipeline: snapshot → analysts → aggregate → plan → risk → decide
 │       ├── schedule.py         cheap tick, overlap fencing, kill switch
 │       └── startup.py          reconcile unresolved intents before accepting a cycle

@@ -9,8 +9,11 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds into the plan docs: none, as of 2026-09-18, after 1.9.** Both
-1.9 entries were folded in 1.9's pass.
+**Pending folds into the plan docs: none, as of 2026-09-18, after 1.10.** The
+capture-hash decision and the feed-description entry were folded in 1.10's pass,
+into PHASE-0-1 1.9 and 1.10 and PLAN §8. F0.4.1 in `research/findings.md` still
+says every equity feed is named `Robinhood <TICKER> / USD`. That file is research,
+not plan, and was outside the pass.
 
 **Owed in code, outside the paths of the passes that found them:**
 1. **`adapters/http.py`, two changes** (found by 1.5): return a caller-named
@@ -1676,3 +1679,17 @@ answers it came from, not only the snapshot built from them.
 **Affects:** 1.9, `core/snapshot.py`, `adapters/cache.py`, `fixtures/snapshots/`,
 3.7.
 
+## 2026-09-18 — 1.10: nine feeds describe themselves `RH<ticker> / USD`, not as the directory names them
+F0.4.1 recorded the equity feeds as named `Robinhood <TICKER> / USD`, read from
+Chainlink's directory. The selftest's first live run read each proxy's own
+`description()`. Nine answer `RH<TICKER> / USD`: AMD, INTC, MSFT, MU, NVDA,
+SNDK, SPY, TSLA and USO. The directory's names and the chain's disagree on
+correct values.
+- **What 1.10 did.** A description names its asset by the registry symbol or
+  by `RH` and the symbol. The check against the directory's name was dropped,
+  because it failed on correct values. It was redundant anyway: the asset check
+  already catches a swapped proxy.
+- **Nothing else reads a description.** The feed map is keyed by address and
+  checks names against the directory only.
+- **Not folded:** `research/findings.md` F0.4.1 is outside this pass's paths.
+**Affects:** 1.10, F0.4.1, anything that would match a feed by its name.

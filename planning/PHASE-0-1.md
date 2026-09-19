@@ -1282,6 +1282,44 @@ identity weight (0.8 decision).
 **Done when:** it runs green, and flipping one address to a wrong value turns it
 red.
 
+**Built:** `run/selftest.py`, run by `make selftest`. It reads 235 addresses at
+one pinned block, and each row passes or fails with its reason:
+- **194 registry tokens:** `decimals()` and `symbol()` against the record, and
+  the beacon slot against the issuer's beacon. Membership is the table itself;
+  whether the pin matches its bytes stays 1.2's `load()`.
+- **37 feed proxies**, 35 stocks plus USDG and ETH: `decimals()` against the
+  directory, and the feed's own `description()` naming the asset the map pins
+  it to. Nine describe themselves `RH<ticker> / USD`, where the directory says
+  `Robinhood <ticker> / USD`, so either form names the asset (LESSONS
+  2026-09-18).
+- **USDG:** 6 decimals and its symbol.
+- **The issuer's beacon:** `implementation()` names an address with code.
+- **Multicall3:** `getChainId()` is 4663. Every token and feed read goes
+  through it.
+- **The execution wallet:** its code is the 7702 designator for the delegate
+  now pinned in `mandate.json`. "Records the delegate and flags any change" is
+  built as a pin that fails on change.
+- **Undetermined fails.** A value that could not be read does not pass.
+
+**Shown:**
+- **Green.** At block 66827900, all 235 pass in 102.4 s, and again through
+  `make selftest` at block 66834963 in 102.3 s. Each run is 204 RPC requests,
+  every one HTTP 200, paced at 500 ms. The pacing sets the time, and
+  the public RPC's limit was not reached: no 429 and no retry.
+- **Red.** GME's address pointed at probe 0.8's GameStop counterfeit, run live
+  at block 66833753. One row fails, named: `registry token GME`, beacon wrong,
+  passed decimals and symbol. The other 234 pass.
+- **Plausible wrong values.** Offline tests show each check fails a plausible
+  wrong value:
+  - a genuine token at another's address fails only at symbol;
+  - the counterfeit only at the beacon;
+  - swapped feeds at their description;
+  - USDG's documented 18 at decimals;
+  - a changed delegation, a wrong beacon pin, and Multicall3 on another chain
+    each fail their own row.
+  Each of the seven checks was broken in a copy, and so was the rule that
+  undetermined fails. Each of the eight breaks failed a test.
+
 **Changed by:** F0.3.1, F0.4.7, F0.8.1–F0.8.2, 0.8's decisions, and F0.10.3.
 **Size:** about as drafted.
 
