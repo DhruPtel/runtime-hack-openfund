@@ -237,6 +237,18 @@ One shared wallet stays ruled out. **2.4's credential rows and every live run
 wait on the operator's choice.** 2.1, a stop, and the offline work in 2.2–2.4
 do not.
 
+**Measured later the same day, and it bears on (c)** (LESSONS 2026-09-19,
+`probes/keymap.py`):
+- `BANKR_LLM_KEY` is **not read-only**;
+- the **Agent API is on** for all three fund keys.
+
+Option (c) would put that key in every analyst process. As the keys stand, that
+breaks invariant 1. Before (c) could be taken, the operator would have to change
+`BANKR_LLM_KEY` to read-only with the Agent API off.
+
+**2.1 shown, 2026-09-19:** `planning/REPORT-FORMAT.md`, four hand-written
+reports and the decisions behind them. It waits at its stop.
+
 ### 2.1 ▶ The report format · L · **a stop**
 
 **Goal:** a report the operator would pay for, written by hand before any code.
