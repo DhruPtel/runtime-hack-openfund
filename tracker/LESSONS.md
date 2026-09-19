@@ -2169,3 +2169,45 @@ changed none. Marked in PLAN §6. `credentials.py`'s scope text and
   be off.
 **Affects:** invariant 1; PLAN §6 and §13; `credentials.py`; 2.0's option (c);
 2.4; 4.12.
+
+## 2026-09-19 — DECISION: a brief file per seat, and costs checked against a settled window rather than balance deltas
+*The operator's, in the batch brief for 2.2 to 2.5.* Two changes to the approved
+minimal versions:
+- **2.3: one versioned brief file per seat,** `briefs/<seat>.v1.md`, plus a
+  shared output contract. The earlier minimal version had one file for all
+  seats. Each seat's question comes from `config/analysts.json` and is written
+  in at render time, so the file and the config cannot drift apart.
+- **2.5: never a before-and-after delta.** Each call's cost comes from its own
+  usage block, and every figure is labelled an estimate. The aggregate is
+  checked against a settled `/v1/usage` window.
+  - The earlier minimal version read each agent's `/v1/credits` before and
+    after its call. The operator ruled deltas out because `/v1/usage` was seen
+    going backwards around single calls (F0.9.2).
+  - **What it gives up:** the per-agent balance as evidence that each agent
+    paid. That now rests on each call being made with its agent's key.
+  - **It moves 6.3 too,** whose minimal version totalled each agent from its
+    own balance.
+**Affects:** 2.3, 2.5, 6.3; ROADMAP and SIMPLIFICATION rows; `planning/PHASE-2.md`.
+
+## 2026-09-19 — 2.2–2.5: what building against the record found
+- **The approved examples caught a wrong rule, in the validator, not the
+  report.** AMZN's 28 August close is exactly 266.085, and the approved report
+  writes 266.08. Strict round-half-up says 266.09 and refused it. USO's 161.405,
+  written 161.41, rounds the other way.
+  - **Now:** a figure is the field when the field lies within half a unit of
+    the figure's last digit, the midpoint included.
+  - **The check still has teeth.** 266.07 is refused, and so is 569.42 against
+    559.42.
+- **A gateway reply carries its own request id** (`chatcmpl-…`, recorded at
+  1.7), though `/v1/usage` has none (F0.6.4). Each call's record keeps it. If the
+  provider ever gives per-request rows, the calls can be matched.
+- **The reply also carries cost fields nothing explains:**
+  `usage.buyer_cost_micro` (115,302 for a call that cost $0.461206) and
+  `cost.diem` (0.691809, beside `cost.usd: 0`). They are kept raw and not used.
+  The listed price reproduces the balance to the last digit (1.8a); these do
+  not.
+- **`BANKR_LLM_KEY` was still not read-only, with the Agent API on,** when this
+  batch began (`probes/keymap.py`). The whole batch was built and proven offline
+  against a fake gateway. Nothing ran live, and the runner has no live entry
+  point yet.
+**Affects:** 2.2's figure rule; 2.5; 2.6 and every live run.
