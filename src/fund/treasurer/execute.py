@@ -21,6 +21,18 @@ them:
 `quote(QuoteRequest) -> Observation`: the live adapter's, or the fake venue's for a
 paper cycle. The quote is judged at `at` by the one definition of quote age and
 impact, `adapters/bankr_quote.tradeability`.
+
+**The executor** (4.5) is anything with `submit(order, quote) -> Outcome`. It sends an
+admitted, submitted order at its fresh quote, under the order's idempotency key, and
+says what came of it: `confirmed` with its fill, `failed` with why, or `unknown` with
+why. It never books and never moves a state; the caller does both, in one write.
+- `PaperExecutor` fills a stock leg at its quote's amounts exactly, marked paper
+  (4.0, P3). A repeat under the same key returns the first outcome, as Bankr's
+  `idempotencyKey` does (F0.10.1). A paper submission is never `unknown`.
+- The live executor (5.1) takes the same order and quote, sends `/wallet/swap` with
+  the key, and answers the same way: `confirmed` with the chain evidence and the fill
+  its `Transfer` logs show (5.3), `failed` on `success: false`, `unknown` on a timeout
+  or a 409. Nothing that calls an executor knows which it has.
 """
 
 from __future__ import annotations
@@ -34,7 +46,9 @@ from typing import Any, Collection, Mapping, Protocol, Sequence
 
 from fund.adapters import bankr_quote
 from fund.core import cash, gates, ledger, orders, plan
-from fund.core.types import Amount, AssetId, ExecutionMode, Instant, Observation, Order
+from fund.core.types import (
+    Amount, AssetId, Execution, ExecutionMode, Instant, Observation, Order, OrderState, Quote,
+)
 from fund.treasurer import sign
 
 RULE_SIGNATURE = "signature"
@@ -174,3 +188,54 @@ def _planned(order: Order, record: Mapping[str, Any], decision_id: str) -> Mappi
                                                 AssetId(chain, sold["address"]))
             and order.buy_asset == AssetId(chain, planned["buy"]["address"]))
     return planned if same else None
+
+
+# --- the executor (4.5) --------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class Outcome:
+    """What came of one submission: the state the order moves to, why, and what it
+    booked. Confirmed carries a fill; failed and unknown carry a reason."""
+
+    state: OrderState
+    reason: str | None
+    fill: ledger.Fill | None = None
+    execution: Execution | None = None
+
+    def __post_init__(self):
+        if self.state not in (OrderState.CONFIRMED, OrderState.FAILED, OrderState.UNKNOWN):
+            raise ValueError("a submission ends confirmed, failed or unknown")
+        if (self.state is OrderState.CONFIRMED) != (self.fill is not None):
+            raise ValueError("a fill, and only a confirmed submission's")
+
+
+class Executor(Protocol):
+    """Sends a submitted order at its quote, under its idempotency key."""
+
+    mode: ExecutionMode
+
+    def submit(self, order: Order, quote: Quote) -> Outcome: ...
+
+
+class PaperExecutor:
+    """A stock leg filled on paper at its quote's amounts, never sent (PLAN §13)."""
+
+    mode = ExecutionMode.PAPER
+
+    def __init__(self, snapshot: Mapping[str, Any]):
+        self.snapshot = snapshot
+        self.sent: dict[str, Outcome] = {}
+
+    def submit(self, order: Order, quote: Quote) -> Outcome:
+        if order.mode is not self.mode:
+            raise ValueError(f"order {order.order_id} is {order.mode.value}: the paper "
+                             "executor fills paper orders only")
+        if order.idempotency_key in self.sent:  # the key deduplicates, as Bankr's does
+            return self.sent[order.idempotency_key]
+        try:
+            outcome = Outcome(OrderState.CONFIRMED, "filled on paper at its quote",
+                              fill=ledger.paper_fill(order, quote, self.snapshot))
+        except ledger.LedgerError as refused:
+            outcome = Outcome(OrderState.FAILED, str(refused))
+        self.sent[order.idempotency_key] = outcome
+        return outcome
