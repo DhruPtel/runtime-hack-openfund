@@ -54,9 +54,11 @@ from fund.agents import analyst
 
 SRC = Path(__file__).resolve().parents[2]
 
-#: The header's agent field for a seat that has no wallet of its own yet. It is
-#: the form the approved examples use (planning/REPORT-FORMAT.md).
-UNASSIGNED_AGENT = "0x…"
+#: The header's agent field for a seat that has no wallet of its own yet. A word,
+#: never anything shaped like an address. The approved examples wrote `0x…`, and
+#: at 2.6 the model read that as an elided address and filled in the fund's
+#: wallet, the only address in the snapshot (research/findings.md F2.6.1).
+UNASSIGNED_AGENT = "unassigned"
 
 
 class SpendAuthorityError(Exception):
@@ -291,8 +293,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     process starts.
 
     The key source is the shared `BANKR_LLM_KEY`. 2.0's per-agent choice is open.
-    Each seat's report therefore carries the unassigned agent address: no agent's
-    own account paid for it. Before a live run, `probes/keymap.py` must show this
+    Each seat's report therefore carries `UNASSIGNED_AGENT` in place of an agent
+    address: no agent's own account paid for it. Before a live run, `probes/keymap.py` must show this
     key refused by the Wallet API and the Agent API (LESSONS 2026-09-19).
     """
     import argparse

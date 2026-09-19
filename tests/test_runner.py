@@ -30,13 +30,18 @@ ALLOWED_NAMES = {"PATH", "PYTHONPATH", analyst.KEY_VARIABLE, "LC_CTYPE"}  # LC_C
 
 
 def example(seat):
-    return FORMAT.split(f". {seat}\n", 1)[1].split("```\n", 2)[1]
+    """The approved report, with the header's agent as the runner now assigns it: the
+    approved examples wrote `0x…` for a seat with no wallet, and the runner writes
+    UNASSIGNED_AGENT."""
+    text = FORMAT.split(f". {seat}\n", 1)[1].split("```\n", 2)[1]
+    return text.replace(f"REPORT {seat} 0x… ", f"REPORT {seat} {runner.UNASSIGNED_AGENT} ", 1)
 
 
 def no_calls(seat):
     block = FORMAT.split("### How NO_CALL appears", 1)[1].split("```\n", 2)[1]
     text = "\n".join(line[2:] if line.startswith("  ") else line for line in block.splitlines())
-    return text.replace("REPORT cross-asset-macro", f"REPORT {seat}", 1)
+    return text.replace("REPORT cross-asset-macro 0x…",
+                        f"REPORT {seat} {runner.UNASSIGNED_AGENT}", 1)
 
 
 MALFORMED = "CALL MSTR caution high\nThe header is missing and this line is short.\n"
@@ -247,7 +252,7 @@ def test_no_analyst_module_loads_the_environment_file():
 
 # --- the retry rule, one worker in-process ---------------------------------------------------------
 
-def job(tmp_path, seat="price-trend", agent="0x…"):
+def job(tmp_path, seat="price-trend", agent=runner.UNASSIGNED_AGENT):
     import hashlib
     return {"seat": seat, "agent": agent, "snapshot_path": str(SNAPSHOT),
             "snapshot_sha256": hashlib.sha256(SNAPSHOT.read_bytes()).hexdigest(),
@@ -301,3 +306,12 @@ def test_a_retry_that_would_outrun_the_deadline_is_not_sent(tmp_path):
     send, sent = scripted((200, completion(MALFORMED)))
     result = analyst.run(job(tmp_path), "bk_fake", send=send, clock=lambda: next(ticks))
     assert result["reason"] == "no time" and len(sent) == 1
+
+
+def test_the_unassigned_agent_cannot_be_read_as_an_address():
+    """2.6: `0x…` read as an elided address, and the model filled in the fund's wallet."""
+    token = runner.UNASSIGNED_AGENT
+    assert not token.startswith("0x") and not re.search(r"[0-9a-fA-F]{6}", token)
+    assert token.isalpha() and token.isascii()
+    header = analyst.render("price-integrity", SNAPSHOT.read_bytes(), token).header
+    assert header.split()[2] == token and header.startswith(f"REPORT price-integrity {token} ")
