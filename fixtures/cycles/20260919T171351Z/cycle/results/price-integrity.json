@@ -1,0 +1,87 @@
+{
+ "agent": "unassigned",
+ "attempts": [
+  {
+   "at": "2026-09-19T17:13:51.558Z",
+   "attempt": 1,
+   "body": "",
+   "cost": {
+    "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+    "basis": "the reply's own usage block times the listed price (config/models.json)",
+    "input_tokens": 98469,
+    "is_estimate": true,
+    "output_tokens": 6868,
+    "price_per_million": {
+     "currency": "usd",
+     "input": "2",
+     "output": "10"
+    },
+    "usd": "0.265618"
+   },
+   "elapsed_ms": 71896,
+   "error": null,
+   "finish_reason": "stop",
+   "http_status": 200,
+   "refusals": [
+    "citation: cannot read the citation '\"us_equities_24/5\"'",
+    "figure: 924.28 matches none of the fields it cites: AMZN corroboration.price_usd = 265.8339854153; AMZN corroboration.divergence_bps = -450.32; AMZN corroboration.volume_24h_usd = 2101924.2836966 (line 14)",
+    "figure: 068.67 matches none of the fields it cites: GOOGL corroboration.price_usd = 355.171284689; GOOGL corroboration.divergence_bps = -132.33; GOOGL corroboration.volume_24h_usd = 11953068.6682724 (line 20)",
+    "figure: 606.90 matches none of the fields it cites: SGOV corroboration.price_usd = 99.8629967858; SGOV corroboration.divergence_bps = 124.7; SGOV corroboration.volume_24h_usd = 2349606.90275319 (line 32)"
+   ],
+   "reply_text": "REPORT price-integrity unassigned 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c\n\nThe US equities session is closed (`block.closed_sessions: [\"us_equities_24/5\"]`), so every stock's Chainlink mark is frozen at its last pre-close round while GeckoTerminal and the venue quote keep trading. That means most of the closed-session divergences the snapshot flags are expected and don't by themselves say the mark is wrong \u2014 what tells the story is which two of the three prices agree. Five tradeable assets carry an explicit closed-session-divergence finding (AMD, AMZN, GOOGL, MSTR, SGOV); for each I checked whether the mark or the corroborator is the odd one out against the venue quote, which is the one price still being made live.\n\nCALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc caution medium\nThe mark sits well above both the other two reads, which cluster together, so the frozen Chainlink round looks like the stale side of this divergence, not GeckoTerminal.\n- mark 559.42445 vs corroboration 553.5582086607, a 105.98 bps gap [mark.price_usd, corroboration.price_usd, corroboration.divergence_bps]\n- venue 551.9120935475604 is only ~30 bps from GeckoTerminal's 553.5582086607, much tighter than either is to the mark [quote.venue_price_usd, corroboration.price_usd]\nWrong if: the venue price rises to meet the mark rather than staying near GeckoTerminal.\n\nCALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 proceed medium\nThe finding reads -450.32 bps mark-vs-GeckoTerminal, but the venue quote \u2014 which trades live through the close \u2014 sits close to the mark, so the mark holds up; GeckoTerminal looks like the outlier here, not the book price.\n- mark 253.863 vs venue 253.28085544501803, roughly 23 bps apart [mark.price_usd, quote.venue_price_usd]\n- corroboration 265.8339854153 is the away price, -450.32 bps from mark on $2,101,924.28 of 24h volume [corroboration.price_usd, corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: the venue price drifts toward GeckoTerminal's 265.83, which would show both mark and venue were stale together.\n\nCALL GOOGL 0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3 proceed medium\nSame shape as AMZN: mark and venue agree closely while GeckoTerminal is the one that has moved away, so the -132.33 bps finding is not the mark's fault.\n- mark 350.47135177 vs venue 350.04082044804966, about 12 bps apart [mark.price_usd, quote.venue_price_usd]\n- corroboration 355.171284689 is -132.33 bps from mark on $11,953,068.67 of 24h volume [corroboration.price_usd, corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: the venue price converges toward GeckoTerminal's 355.17 instead of the mark.\n\nCALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution medium\nHere the mark is the odd one out again: venue and GeckoTerminal sit closer to each other than either does to the frozen mark, and the mark's own freshness note shows it updated right at the close (only ~1,414s of open-session time), consistent with it lagging a move that continued after close.\n- mark 152.643 vs corroboration 155.5016463786, -183.84 bps [mark.price_usd, corroboration.price_usd, corroboration.divergence_bps]\n- venue 154.65896270001573 is only ~54 bps from GeckoTerminal, versus ~132-187 bps from the mark [quote.venue_price_usd, corroboration.price_usd, mark.price_usd]\nWrong if: the venue price falls back to meet the mark near 152.6 rather than tracking GeckoTerminal.\n\nCALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 proceed high\nSGOV is a cash-like Treasury-bill fund that should barely move; mark and venue agree within a quarter of a percent while GeckoTerminal is off by over a point, so the +124.7 bps finding is GeckoTerminal's problem, not the mark's.\n- mark 101.10821255 vs venue 100.88197839075325, about 22 bps apart [mark.price_usd, quote.venue_price_usd]\n- corroboration 99.8629967858 is 124.7 bps from mark on $2,349,606.90 of 24h volume [corroboration.price_usd, corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: the venue price drops toward GeckoTerminal's 99.86, which would make GeckoTerminal the one that was right.",
+   "request_id": "chatcmpl-2FMO3U6LrSqpef7vR3_24",
+   "usage": {
+    "buyer_cost_micro": 43301,
+    "completion_tokens": 6868,
+    "completion_tokens_details": {
+     "audio_tokens": 0,
+     "image_tokens": 0,
+     "reasoning_tokens": 5142
+    },
+    "cost": 0.265618,
+    "cost_details": {
+     "upstream_inference_completions_cost": 0.06868,
+     "upstream_inference_cost": 0.265618,
+     "upstream_inference_prompt_cost": 0.196938
+    },
+    "is_byok": false,
+    "prompt_tokens": 98469,
+    "prompt_tokens_details": {
+     "audio_tokens": 0,
+     "cache_write_tokens": 0,
+     "cached_tokens": 0,
+     "video_tokens": 0
+    },
+    "total_tokens": 105337
+   }
+  }
+ ],
+ "brief_files": [
+  "price-integrity.v1.md",
+  "analyst.v1.md"
+ ],
+ "brief_sha256": "2eaf8de70e986f2963c46399f8f4f6dd364194b9fad1fad181118225da81303b",
+ "cost": {
+  "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+  "basis": "the sum of this analyst's calls, each from its own usage block",
+  "calls": 1,
+  "calls_of_unknown_cost": 0,
+  "is_estimate": true,
+  "usd": "0.265618"
+ },
+ "detail": "citation: cannot read the citation '\"us_equities_24/5\"'; figure: 924.28 matches none of the fields it cites: AMZN corroboration.price_usd = 265.8339854153; AMZN corroboration.divergence_bps = -450.32; AMZN corroboration.volume_24h_usd = 2101924.2836966 (line 14); figure: 068.67 matches none of the fields it cites: GOOGL corroboration.price_usd = 355.171284689; GOOGL corroboration.divergence_bps = -132.33; GOOGL corroboration.volume_24h_usd = 11953068.6682724 (line 20); figure: 606.90 matches none of the fields it cites: SGOV corroboration.price_usd = 99.8629967858; SGOV corroboration.divergence_bps = 124.7; SGOV corroboration.volume_24h_usd = 2349606.90275319 (line 32)",
+ "environment_names": [
+  "LC_CTYPE",
+  "OPENFUND_GATEWAY_KEY",
+  "PATH",
+  "PYTHONPATH"
+ ],
+ "last_reply_text": "REPORT price-integrity unassigned 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c\n\nThe US equities session is closed (`block.closed_sessions: [\"us_equities_24/5\"]`), so every stock's Chainlink mark is frozen at its last pre-close round while GeckoTerminal and the venue quote keep trading. That means most of the closed-session divergences the snapshot flags are expected and don't by themselves say the mark is wrong \u2014 what tells the story is which two of the three prices agree. Five tradeable assets carry an explicit closed-session-divergence finding (AMD, AMZN, GOOGL, MSTR, SGOV); for each I checked whether the mark or the corroborator is the odd one out against the venue quote, which is the one price still being made live.\n\nCALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc caution medium\nThe mark sits well above both the other two reads, which cluster together, so the frozen Chainlink round looks like the stale side of this divergence, not GeckoTerminal.\n- mark 559.42445 vs corroboration 553.5582086607, a 105.98 bps gap [mark.price_usd, corroboration.price_usd, corroboration.divergence_bps]\n- venue 551.9120935475604 is only ~30 bps from GeckoTerminal's 553.5582086607, much tighter than either is to the mark [quote.venue_price_usd, corroboration.price_usd]\nWrong if: the venue price rises to meet the mark rather than staying near GeckoTerminal.\n\nCALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 proceed medium\nThe finding reads -450.32 bps mark-vs-GeckoTerminal, but the venue quote \u2014 which trades live through the close \u2014 sits close to the mark, so the mark holds up; GeckoTerminal looks like the outlier here, not the book price.\n- mark 253.863 vs venue 253.28085544501803, roughly 23 bps apart [mark.price_usd, quote.venue_price_usd]\n- corroboration 265.8339854153 is the away price, -450.32 bps from mark on $2,101,924.28 of 24h volume [corroboration.price_usd, corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: the venue price drifts toward GeckoTerminal's 265.83, which would show both mark and venue were stale together.\n\nCALL GOOGL 0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3 proceed medium\nSame shape as AMZN: mark and venue agree closely while GeckoTerminal is the one that has moved away, so the -132.33 bps finding is not the mark's fault.\n- mark 350.47135177 vs venue 350.04082044804966, about 12 bps apart [mark.price_usd, quote.venue_price_usd]\n- corroboration 355.171284689 is -132.33 bps from mark on $11,953,068.67 of 24h volume [corroboration.price_usd, corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: the venue price converges toward GeckoTerminal's 355.17 instead of the mark.\n\nCALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution medium\nHere the mark is the odd one out again: venue and GeckoTerminal sit closer to each other than either does to the frozen mark, and the mark's own freshness note shows it updated right at the close (only ~1,414s of open-session time), consistent with it lagging a move that continued after close.\n- mark 152.643 vs corroboration 155.5016463786, -183.84 bps [mark.price_usd, corroboration.price_usd, corroboration.divergence_bps]\n- venue 154.65896270001573 is only ~54 bps from GeckoTerminal, versus ~132-187 bps from the mark [quote.venue_price_usd, corroboration.price_usd, mark.price_usd]\nWrong if: the venue price falls back to meet the mark near 152.6 rather than tracking GeckoTerminal.\n\nCALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 proceed high\nSGOV is a cash-like Treasury-bill fund that should barely move; mark and venue agree within a quarter of a percent while GeckoTerminal is off by over a point, so the +124.7 bps finding is GeckoTerminal's problem, not the mark's.\n- mark 101.10821255 vs venue 100.88197839075325, about 22 bps apart [mark.price_usd, quote.venue_price_usd]\n- corroboration 99.8629967858 is 124.7 bps from mark on $2,349,606.90 of 24h volume [corroboration.price_usd, corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: the venue price drops toward GeckoTerminal's 99.86, which would make GeckoTerminal the one that was right.",
+ "reason": "invalid",
+ "report": null,
+ "report_id": "fe9d8677380bcf56629beaff537dcafb8269c66b4b801b5900d468e4eb0849c9",
+ "report_text": null,
+ "seat": "price-integrity",
+ "snapshot_sha256": "253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c",
+ "status": "failed"
+}

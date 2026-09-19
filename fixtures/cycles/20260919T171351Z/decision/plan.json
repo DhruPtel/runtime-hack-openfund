@@ -1,0 +1,15 @@
+{
+ "book": {
+  "cash_usd": "200",
+  "label": "paper: stocks at their Chainlink marks plus paper cash",
+  "nav_usd": "200",
+  "positions": {}
+ },
+ "cash_after_usd": "200",
+ "judged_at_ms": 1789838241896,
+ "not_planned": "the live ETH<->USDG leg, a demonstration of the money path that no analyst chose, is Phase 5's (operator, 2026-09-19)",
+ "orders": [],
+ "rebalance": false,
+ "snapshot_sha256": "253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c",
+ "turnover_usd": "0"
+}

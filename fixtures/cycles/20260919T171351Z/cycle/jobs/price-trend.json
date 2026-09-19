@@ -1,0 +1,18 @@
+{
+ "seat": "price-trend",
+ "agent": "unassigned",
+ "snapshot_path": "/home/dhrupatel/bnkr-openfund/fixtures/snapshots/66852293-253315c0e691/snapshot.json",
+ "snapshot_sha256": "253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c",
+ "model": "claude-sonnet-5",
+ "max_tokens": 12000,
+ "transport_timeout_s": 600,
+ "worker_deadline_s": 630,
+ "retry_budget": 0,
+ "gateway_url": "https://llm.bankr.bot",
+ "pricing": {
+  "input": "2",
+  "output": "10",
+  "currency": "usd"
+ },
+ "result_path": "/home/dhrupatel/bnkr-openfund/fixtures/live/cycles/20260919T171351Z/results/price-trend.json"
+}

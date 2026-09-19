@@ -1,0 +1,62 @@
+{
+ "brief": {
+  "files": [
+   "risk.v1.md"
+  ],
+  "sha256": "7fd4956fd18f644fd9628889d08445f14ab4dd6a2b9ab24cc1386c9a0da84a2b"
+ },
+ "budget": {
+  "basis": "bytes over the lower measured ratio, rounded up, plus the reply's whole output cap; the gateway has no token count (F1.7.2)",
+  "bytes_per_token": "1.8",
+  "gate": {
+   "reason": "about 14099 tokens, within the budget of 70000",
+   "rule": "context-budget",
+   "value": true
+  },
+  "is_estimate": true,
+  "prompt_bytes": 3777,
+  "prompt_tokens": 2099,
+  "reserved_tokens": 12000,
+  "tokens": 14099
+ },
+ "decision": {
+  "approved": [],
+  "no_votes": {
+   "rule": "no-orders",
+   "why": "the plan has no orders, so there is nothing to vote on"
+  },
+  "orders": [],
+  "overall": null,
+  "vetoed": []
+ },
+ "gates": {
+  "cash_after_usd": "200",
+  "orders": [],
+  "plan": [
+   {
+    "reason": "0 seat(s) reported, below the quorum of 3",
+    "rule": "quorum",
+    "value": false
+   },
+   {
+    "reason": "the plan leaves $200.00 of paper cash, at least the floor of $20",
+    "rule": "cash-floor",
+    "value": true
+   },
+   {
+    "reason": "$0 traded, within 10000 bps of the NAV ($200.00)",
+    "rule": "turnover",
+    "value": true
+   },
+   {
+    "reason": "about 14099 tokens, within the budget of 70000",
+    "rule": "context-budget",
+    "value": true
+   }
+  ],
+  "plan_clear": false,
+  "turnover_usd": "0"
+ },
+ "reply": null,
+ "reply_sha256": null
+}

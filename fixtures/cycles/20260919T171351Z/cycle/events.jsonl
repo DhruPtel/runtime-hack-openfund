@@ -1,0 +1,10 @@
+{"at": "2026-09-19T17:13:51.498Z", "cycle": "20260919T171351Z-202fefd4", "event": "cycle started", "keys": {"cross-asset-macro": "BANKR_LLM_KEY (shared)", "execution-quality": "BANKR_LLM_KEY (shared)", "price-integrity": "BANKR_LLM_KEY (shared)", "price-trend": "BANKR_LLM_KEY (shared)"}, "seats": ["price-trend", "cross-asset-macro", "execution-quality", "price-integrity"], "snapshot": "253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c"}
+{"agent": "unassigned", "at": "2026-09-19T17:13:51.499Z", "event": "started", "seat": "price-trend"}
+{"agent": "unassigned", "at": "2026-09-19T17:13:51.499Z", "event": "started", "seat": "cross-asset-macro"}
+{"agent": "unassigned", "at": "2026-09-19T17:13:51.500Z", "event": "started", "seat": "execution-quality"}
+{"agent": "unassigned", "at": "2026-09-19T17:13:51.500Z", "event": "started", "seat": "price-integrity"}
+{"agent": "unassigned", "at": "2026-09-19T17:15:03.472Z", "attempts": 1, "event": "finished", "reason": "invalid", "seat": "price-integrity", "status": "failed"}
+{"agent": "unassigned", "at": "2026-09-19T17:15:08.092Z", "attempts": 1, "event": "finished", "reason": "invalid", "seat": "price-trend", "status": "failed"}
+{"agent": "unassigned", "at": "2026-09-19T17:15:21.049Z", "attempts": 1, "event": "finished", "reason": "invalid", "seat": "cross-asset-macro", "status": "failed"}
+{"agent": "unassigned", "at": "2026-09-19T17:15:35.215Z", "attempts": 1, "event": "finished", "reason": "invalid", "seat": "execution-quality", "status": "failed"}
+{"at": "2026-09-19T17:15:35.266Z", "counts": {"failed": 4, "no_call": 0, "ok": 0}, "cycle": "20260919T171351Z-202fefd4", "event": "cycle finished", "partial": true}

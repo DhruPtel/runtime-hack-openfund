@@ -1,0 +1,8 @@
+0 of 4 seats reported · 0 seat(s) reported, below the quorum of 3
+NO REBALANCE: 0 seat(s) reported, below the quorum of 3
+confidence: low 0.25, medium 0.5, high 0.75 · a score moves a weight by score x the position limit
+
+asset  price-trend  cross-asset-macro  execution-quality  price-integrity  direction  caution  score  now  target  change $
+cash                                                                                                  1    1       ·
+
+residual 0: what rounding each change toward zero left in cash · raises funded 0%

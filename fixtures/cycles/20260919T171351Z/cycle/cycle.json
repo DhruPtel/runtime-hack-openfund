@@ -1,0 +1,375 @@
+{
+ "cost": {
+  "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+  "basis": "the sum of every analyst call in the cycle, each from its own usage block; a seat killed at its deadline adds calls of unknown cost that are not counted here",
+  "calls": 4,
+  "calls_of_unknown_cost": 0,
+  "is_estimate": true,
+  "usd": "1.087706"
+ },
+ "counts": {
+  "failed": 4,
+  "no_call": 0,
+  "ok": 0
+ },
+ "cycle": "20260919T171351Z-202fefd4",
+ "failed": [
+  "price-trend",
+  "cross-asset-macro",
+  "execution-quality",
+  "price-integrity"
+ ],
+ "partial": true,
+ "seats": {
+  "cross-asset-macro": {
+   "agent": "unassigned",
+   "attempts": [
+    {
+     "at": "2026-09-19T17:13:51.565Z",
+     "attempt": 1,
+     "body": "",
+     "cost": {
+      "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+      "basis": "the reply's own usage block times the listed price (config/models.json)",
+      "input_tokens": 98444,
+      "is_estimate": true,
+      "output_tokens": 7631,
+      "price_per_million": {
+       "currency": "usd",
+       "input": "2",
+       "output": "10"
+      },
+      "usd": "0.273198"
+     },
+     "elapsed_ms": 89443,
+     "error": null,
+     "finish_reason": "stop",
+     "http_status": 200,
+     "refusals": [
+      "figure: -0.09 matches none of the fields it cites: SPY timeline 2026-08-20 = 762.21; SPY timeline 2026-09-18 = 761.55079369 (line 7)",
+      "figure: 544.70535 matches none of the fields it cites: QQQ timeline 2026-08-20 = 710.195; QQQ timeline 2026-09-18 = 720.3651 (line 14)",
+      "figure: 92.425 matches none of the fields it cites: AMD timeline 2026-08-20 = 468.2354; AMD timeline 2026-09-18 = 559.42445 (line 20)",
+      "figure: 216.7739 matches none of the fields it cites: AMD timeline 2026-08-20 = 468.2354; AMD timeline 2026-09-18 = 559.42445 (line 21)",
+      "figure: 751.28 matches none of the fields it cites: SGOV timeline 2026-09-16 = 101.04790643 (line 27)",
+      "figure: 154.54265 matches none of the fields it cites: USO timeline 2026-08-20 = 134.96975; USO timeline 2026-09-18 = 153.38275 (line 32)",
+      "figure: 751.28 matches none of the fields it cites: USO timeline 2026-09-15 = 161.405; USO timeline 2026-09-16 = 155.99 (line 33)"
+     ],
+     "reply_text": "REPORT cross-asset-macro unassigned 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c\n\nThe market is shut (block.closed_sessions lists us_equities_24/5), so every stock mark below is the last Chainlink round before the close while GeckoTerminal pools kept trading; several tickers (AMD, AMZN, GOOGL, MSTR, SGOV) already show closed-session divergence findings against that live pool price. That freezes tonight's exact level, but the 30-day daily-close series is unaffected by the close and is what this seat reads. Two clusters stand out. First, a chip/semis group (NVDA, AMD, MU, INTC) traced the same wave shape all month: a trough around 8/24, a peak near 9/3-9/4, a second trough mid-September (9/14-9/15), then a sharp jump into 9/17-9/18 \u2014 the timing lines up even though the amplitudes differ hugely (NVDA +2.6% vs AMD +19.5%, INTC +18.0%, MU +3.9%). Second, SPY and QQQ, the index holdings, moved far less than their own largest constituents: SPY is flat over 30 days (-0.09%) and QQQ only +1.4%, while several of the book's individual megacap and chip holdings ran 10-25% higher \u2014 the indices are diluted mirrors of names the book already owns directly. Away from equities, SGOV (bills) barely moved (+0.22%) and did not track any of the equity swings, and USO (oil) rose steadily and mostly independently of the SPY chop, including a divergence in mid-September when SPY fell into 9/16 while USO was still near its highs. Confidence throughout is modest: twenty-odd daily closes are thin for correlation claims, and several instruments here are frozen marks in a closed session.\n\nCALL SPY 0x117cc2133c37b721f49de2a7a74833232b3b4c0c hold medium\nSPY is flat over the window while several of the book's own megacap holdings (AAPL, META, AMD, INTC) ran far ahead of it; SPY is a diluted echo of exposure the book already carries directly, so adding it doubles that bet rather than diversifying.\n- SPY +(-0.09)% over 30 days: 762.21 to 761.55079369 [timeline 2026-08-20, timeline 2026-09-18]\n- SPY's own low of 751.28 on 9/16 vs its 771.19 high on 9/3, a 2.6% range while book names moved 10-25% [timeline 2026-09-16, timeline 2026-09-03]\nWrong if: SPY starts moving with a magnitude the book's individual names aren't already producing, i.e. it decouples upward from its constituents rather than trailing them.\n\nCALL QQQ 0xd5f3879160bc7c32ebb4dc785f8a4f505888de68 hold medium\nQQQ's +1.4% over 30 days is a muted version of the far larger moves already sitting in the book's own tech names (META +22%, AMD +19.5%, INTC +18%); it does not add a distinct risk, it re-buys a slice of what is already held.\n- QQQ +1.4%: 710.195 to 720.3651 [timeline 2026-08-20, timeline 2026-09-18]\n- META over the same window: 544.70535 to 666.7615, +22.4% [timeline 2026-08-20, timeline 2026-09-18]\nWrong if: QQQ's daily moves stop tracking its megacap tech constituents and start showing an independent pattern.\n\nCALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc hold low\nAMD, MU and INTC traced the same trough-peak-trough-spike shape all month (troughs near 8/24 and 9/14-15, peaks near 9/3-4 and 9/17-18); AMD is the loudest voice in a chip-beta cluster the book already holds through NVDA, INTC and MU, so it looks like the same bet run larger rather than a new one.\n- AMD +19.5% over 30 days: 468.2354 to 559.42445 [timeline 2026-08-20, timeline 2026-09-18]\n- INTC's matching shape, +18.0% over the same window: 92.425 to 109.05 [timeline 2026-08-20, timeline 2026-09-18]\n- NVDA's smaller but same-timed wave, +2.6%: 216.7739 to 222.44729849 [timeline 2026-08-20, timeline 2026-09-18]\nWrong if: AMD's path clearly detaches from INTC/MU/NVDA's timing (its own troughs and peaks stop lining up with theirs), which would make it a distinct bet worth adding rather than doubling.\n\nCALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 buy medium\nSGOV moved almost nothing over 30 days and shows no relation to the equity swings elsewhere in the book (it kept climbing gently through the mid-September equity dip); this is the one instrument that plainly diversifies rather than doubling an existing bet.\n- SGOV +0.22% over 30 days: 100.88489612 to 101.10821255 [timeline 2026-08-20, timeline 2026-09-18]\n- SPY fell to 751.28 on 9/16 while SGOV was still rising, at 101.04790643 that same day [timeline 2026-09-16]\nWrong if: SGOV's daily closes start moving with the size and direction of the equity book, which would erase the diversification case.\n\nCALL USO 0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344 buy low\nUSO climbed steadily and largely apart from the equity chop: SPY fell into its 9/16 low while USO was still near its 9/15 high, and USO's 30-day gain (+14.5%) has no equivalent shape in SPY or QQQ. It reads as a source of return with its own driver, which is what a diversifier should look like.\n- USO +14.5% over 30 days: 134.96975 to 154.54265 [timeline 2026-08-20, timeline 2026-09-18]\n- USO near its high, 161.405, on 9/15 while SPY was falling toward 751.28 on 9/16 [timeline 2026-09-15, timeline 2026-09-16]\nWrong if: USO's daily path starts moving in lockstep with SPY/QQQ's swings rather than on its own schedule.",
+     "request_id": "chatcmpl-Vhgn4FGs0zuPrElkDswON",
+     "usage": {
+      "buyer_cost_micro": 44537,
+      "completion_tokens": 7631,
+      "completion_tokens_details": {
+       "audio_tokens": 0,
+       "image_tokens": 0,
+       "reasoning_tokens": 5442
+      },
+      "cost": 0.273198,
+      "cost_details": {
+       "upstream_inference_completions_cost": 0.07631,
+       "upstream_inference_cost": 0.273198,
+       "upstream_inference_prompt_cost": 0.196888
+      },
+      "is_byok": false,
+      "prompt_tokens": 98444,
+      "prompt_tokens_details": {
+       "audio_tokens": 0,
+       "cache_write_tokens": 0,
+       "cached_tokens": 0,
+       "video_tokens": 0
+      },
+      "total_tokens": 106075
+     }
+    }
+   ],
+   "brief_files": [
+    "cross-asset-macro.v1.md",
+    "analyst.v1.md"
+   ],
+   "brief_sha256": "63733468d4d99d70907c9c023aa3de9ff0ed4be35414ea990ca65bdd1462ea0e",
+   "cost": {
+    "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+    "basis": "the sum of this analyst's calls, each from its own usage block",
+    "calls": 1,
+    "calls_of_unknown_cost": 0,
+    "is_estimate": true,
+    "usd": "0.273198"
+   },
+   "detail": "figure: -0.09 matches none of the fields it cites: SPY timeline 2026-08-20 = 762.21; SPY timeline 2026-09-18 = 761.55079369 (line 7); figure: 544.70535 matches none of the fields it cites: QQQ timeline 2026-08-20 = 710.195; QQQ timeline 2026-09-18 = 720.3651 (line 14); figure: 92.425 matches none of the fields it cites: AMD timeline 2026-08-20 = 468.2354; AMD timeline 2026-09-18 = 559.42445 (line 20); figure: 216.7739 matches none of the fields it cites: AMD timeline 2026-08-20 = 468.2354; AMD timeline 2026-09-18 = 559.42445 (line 21); figure: 751.28 matches none of the fields it cites: SGOV timeline 2026-09-16 = 101.04790643 (line 27); figure: 154.54265 matches none of the fields it cites: USO timeline 2026-08-20 = 134.96975; USO timeline 2026-09-18 = 153.38275 (line 32); figure: 751.28 matches none of the fields it cites: USO timeline 2026-09-15 = 161.405; USO timeline 2026-09-16 = 155.99 (line 33)",
+   "environment_names": [
+    "LC_CTYPE",
+    "OPENFUND_GATEWAY_KEY",
+    "PATH",
+    "PYTHONPATH"
+   ],
+   "last_reply_text": "REPORT cross-asset-macro unassigned 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c\n\nThe market is shut (block.closed_sessions lists us_equities_24/5), so every stock mark below is the last Chainlink round before the close while GeckoTerminal pools kept trading; several tickers (AMD, AMZN, GOOGL, MSTR, SGOV) already show closed-session divergence findings against that live pool price. That freezes tonight's exact level, but the 30-day daily-close series is unaffected by the close and is what this seat reads. Two clusters stand out. First, a chip/semis group (NVDA, AMD, MU, INTC) traced the same wave shape all month: a trough around 8/24, a peak near 9/3-9/4, a second trough mid-September (9/14-9/15), then a sharp jump into 9/17-9/18 \u2014 the timing lines up even though the amplitudes differ hugely (NVDA +2.6% vs AMD +19.5%, INTC +18.0%, MU +3.9%). Second, SPY and QQQ, the index holdings, moved far less than their own largest constituents: SPY is flat over 30 days (-0.09%) and QQQ only +1.4%, while several of the book's individual megacap and chip holdings ran 10-25% higher \u2014 the indices are diluted mirrors of names the book already owns directly. Away from equities, SGOV (bills) barely moved (+0.22%) and did not track any of the equity swings, and USO (oil) rose steadily and mostly independently of the SPY chop, including a divergence in mid-September when SPY fell into 9/16 while USO was still near its highs. Confidence throughout is modest: twenty-odd daily closes are thin for correlation claims, and several instruments here are frozen marks in a closed session.\n\nCALL SPY 0x117cc2133c37b721f49de2a7a74833232b3b4c0c hold medium\nSPY is flat over the window while several of the book's own megacap holdings (AAPL, META, AMD, INTC) ran far ahead of it; SPY is a diluted echo of exposure the book already carries directly, so adding it doubles that bet rather than diversifying.\n- SPY +(-0.09)% over 30 days: 762.21 to 761.55079369 [timeline 2026-08-20, timeline 2026-09-18]\n- SPY's own low of 751.28 on 9/16 vs its 771.19 high on 9/3, a 2.6% range while book names moved 10-25% [timeline 2026-09-16, timeline 2026-09-03]\nWrong if: SPY starts moving with a magnitude the book's individual names aren't already producing, i.e. it decouples upward from its constituents rather than trailing them.\n\nCALL QQQ 0xd5f3879160bc7c32ebb4dc785f8a4f505888de68 hold medium\nQQQ's +1.4% over 30 days is a muted version of the far larger moves already sitting in the book's own tech names (META +22%, AMD +19.5%, INTC +18%); it does not add a distinct risk, it re-buys a slice of what is already held.\n- QQQ +1.4%: 710.195 to 720.3651 [timeline 2026-08-20, timeline 2026-09-18]\n- META over the same window: 544.70535 to 666.7615, +22.4% [timeline 2026-08-20, timeline 2026-09-18]\nWrong if: QQQ's daily moves stop tracking its megacap tech constituents and start showing an independent pattern.\n\nCALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc hold low\nAMD, MU and INTC traced the same trough-peak-trough-spike shape all month (troughs near 8/24 and 9/14-15, peaks near 9/3-4 and 9/17-18); AMD is the loudest voice in a chip-beta cluster the book already holds through NVDA, INTC and MU, so it looks like the same bet run larger rather than a new one.\n- AMD +19.5% over 30 days: 468.2354 to 559.42445 [timeline 2026-08-20, timeline 2026-09-18]\n- INTC's matching shape, +18.0% over the same window: 92.425 to 109.05 [timeline 2026-08-20, timeline 2026-09-18]\n- NVDA's smaller but same-timed wave, +2.6%: 216.7739 to 222.44729849 [timeline 2026-08-20, timeline 2026-09-18]\nWrong if: AMD's path clearly detaches from INTC/MU/NVDA's timing (its own troughs and peaks stop lining up with theirs), which would make it a distinct bet worth adding rather than doubling.\n\nCALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 buy medium\nSGOV moved almost nothing over 30 days and shows no relation to the equity swings elsewhere in the book (it kept climbing gently through the mid-September equity dip); this is the one instrument that plainly diversifies rather than doubling an existing bet.\n- SGOV +0.22% over 30 days: 100.88489612 to 101.10821255 [timeline 2026-08-20, timeline 2026-09-18]\n- SPY fell to 751.28 on 9/16 while SGOV was still rising, at 101.04790643 that same day [timeline 2026-09-16]\nWrong if: SGOV's daily closes start moving with the size and direction of the equity book, which would erase the diversification case.\n\nCALL USO 0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344 buy low\nUSO climbed steadily and largely apart from the equity chop: SPY fell into its 9/16 low while USO was still near its 9/15 high, and USO's 30-day gain (+14.5%) has no equivalent shape in SPY or QQQ. It reads as a source of return with its own driver, which is what a diversifier should look like.\n- USO +14.5% over 30 days: 134.96975 to 154.54265 [timeline 2026-08-20, timeline 2026-09-18]\n- USO near its high, 161.405, on 9/15 while SPY was falling toward 751.28 on 9/16 [timeline 2026-09-15, timeline 2026-09-16]\nWrong if: USO's daily path starts moving in lockstep with SPY/QQQ's swings rather than on its own schedule.",
+   "reason": "invalid",
+   "report": null,
+   "report_id": "21b8be7f3e4bd3f57423b4ae3bf54a33614db3bc3d709eb7d9bcb30216d546d7",
+   "report_text": null,
+   "seat": "cross-asset-macro",
+   "snapshot_sha256": "253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c",
+   "status": "failed"
+  },
+  "execution-quality": {
+   "agent": "unassigned",
+   "attempts": [
+    {
+     "at": "2026-09-19T17:13:51.564Z",
+     "attempt": 1,
+     "body": "",
+     "cost": {
+      "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+      "basis": "the reply's own usage block times the listed price (config/models.json)",
+      "input_tokens": 98443,
+      "is_estimate": true,
+      "output_tokens": 9144,
+      "price_per_million": {
+       "currency": "usd",
+       "input": "2",
+       "output": "10"
+      },
+      "usd": "0.288326"
+     },
+     "elapsed_ms": 103593,
+     "error": null,
+     "finish_reason": "stop",
+     "http_status": 200,
+     "refusals": [
+      "citation: MSTR has no field swap_impact_bps",
+      "citation: MSTR has no field fee_bps",
+      "citation: AMD has no field swap_impact_bps",
+      "citation: AMD has no field fee_bps",
+      "citation: AMD has no field slippage_bps"
+     ],
+     "reply_text": "REPORT execution-quality unassigned 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c\n\nThe market is shut (`block.closed_sessions` lists us_equities_24/5), so every mark is frozen at its last pre-close round while the venue keeps quoting live. Across all 20 tradeable names the mechanics of a $25 buy are close to free: `fee_bps` is 0 everywhere, `swap_impact_bps` tops out in the low twenties (well inside the 50 bps gate that made ASML, DELL, IONQ, NBIS, RGTI, CLSK etc. untradeable), the venue's allowed `slippage_bps` is a uniform, generous 500, and every quote is under 20 seconds old. Fee and impact are simply not where the cost is right now. The real story is the gap between the venue price a buy actually fills at and the mark it gets booked against: for most names (SPY, TSLA, QQQ, CRCL, GOOGL, AMZN, SGOV, COIN, GME, NVDA, SPCX) that gap sits inside \u00b125 bps, which is noise. Two names stand well outside that band and are worth flagging on cost grounds alone, independent of which way the stock is moving or whether the mark itself is trustworthy.\n\nCALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution medium\nThe venue would fill this buy at a clear premium to the price it books at: paying 154.65896270001573 [quote.venue_price_usd] against a mark of 152.643 [mark.price_usd] is +132 bps, ten times the size of the swap impact the quote itself reports.\n- venue_price_usd 154.65896270001573, mark.price_usd 152.643 \u2192 +132.1 bps gap [quote.venue_price_usd, mark.price_usd]\n- swap_impact_bps 16, fee_bps 0, both look trivial next to the gap [swap_impact_bps, fee_bps]\n- quote age 0.725s, so this isn't a stale-quote artifact [quote.age_s]\nWrong if: the venue_price_usd/mark.price_usd gap narrows back under ~30 bps on a fresh quote.\n\nCALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc proceed low\nAMD's closed-session divergence is flagged elsewhere in the snapshot, which could read as a costly name to trade, but on pure execution terms it is not: fee is 0, swap impact is only 10 bps, and the fill (551.9120935475604) is actually below the mark (559.42445) it would book at, a -134 bps gap that favors the buyer rather than costing them.\n- venue_price_usd 551.9120935475604 vs mark.price_usd 559.42445 \u2192 -134.3 bps [quote.venue_price_usd, mark.price_usd]\n- swap_impact_bps 10, fee_bps 0, slippage_bps allowance 500 [swap_impact_bps, fee_bps, slippage_bps]\n- quote age 11.126s [quote.age_s]\nWrong if: a refreshed quote shows the venue price rising above the mark, turning this favorable gap into a paid premium.\n\nNO CALLS beyond these two: every other tradeable name's fee/impact is negligible and its venue-vs-mark gap sits under roughly 60 bps, not large enough to be the story on its own.",
+     "request_id": "chatcmpl-SjpRNkXhQirFsj9pZwika",
+     "usage": {
+      "buyer_cost_micro": 47003,
+      "completion_tokens": 9144,
+      "completion_tokens_details": {
+       "audio_tokens": 0,
+       "image_tokens": 0,
+       "reasoning_tokens": 7986
+      },
+      "cost": 0.288326,
+      "cost_details": {
+       "upstream_inference_completions_cost": 0.09144,
+       "upstream_inference_cost": 0.288326,
+       "upstream_inference_prompt_cost": 0.196886
+      },
+      "is_byok": false,
+      "prompt_tokens": 98443,
+      "prompt_tokens_details": {
+       "audio_tokens": 0,
+       "cache_write_tokens": 0,
+       "cached_tokens": 0,
+       "video_tokens": 0
+      },
+      "total_tokens": 107587
+     }
+    }
+   ],
+   "brief_files": [
+    "execution-quality.v1.md",
+    "analyst.v1.md"
+   ],
+   "brief_sha256": "37904394554c0ef09885a8c23fa8f7b895fd8f7ff28f324b93c3c7647d08b4f8",
+   "cost": {
+    "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+    "basis": "the sum of this analyst's calls, each from its own usage block",
+    "calls": 1,
+    "calls_of_unknown_cost": 0,
+    "is_estimate": true,
+    "usd": "0.288326"
+   },
+   "detail": "citation: MSTR has no field swap_impact_bps; citation: MSTR has no field fee_bps; citation: AMD has no field swap_impact_bps; citation: AMD has no field fee_bps; citation: AMD has no field slippage_bps",
+   "environment_names": [
+    "LC_CTYPE",
+    "OPENFUND_GATEWAY_KEY",
+    "PATH",
+    "PYTHONPATH"
+   ],
+   "last_reply_text": "REPORT execution-quality unassigned 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c\n\nThe market is shut (`block.closed_sessions` lists us_equities_24/5), so every mark is frozen at its last pre-close round while the venue keeps quoting live. Across all 20 tradeable names the mechanics of a $25 buy are close to free: `fee_bps` is 0 everywhere, `swap_impact_bps` tops out in the low twenties (well inside the 50 bps gate that made ASML, DELL, IONQ, NBIS, RGTI, CLSK etc. untradeable), the venue's allowed `slippage_bps` is a uniform, generous 500, and every quote is under 20 seconds old. Fee and impact are simply not where the cost is right now. The real story is the gap between the venue price a buy actually fills at and the mark it gets booked against: for most names (SPY, TSLA, QQQ, CRCL, GOOGL, AMZN, SGOV, COIN, GME, NVDA, SPCX) that gap sits inside \u00b125 bps, which is noise. Two names stand well outside that band and are worth flagging on cost grounds alone, independent of which way the stock is moving or whether the mark itself is trustworthy.\n\nCALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution medium\nThe venue would fill this buy at a clear premium to the price it books at: paying 154.65896270001573 [quote.venue_price_usd] against a mark of 152.643 [mark.price_usd] is +132 bps, ten times the size of the swap impact the quote itself reports.\n- venue_price_usd 154.65896270001573, mark.price_usd 152.643 \u2192 +132.1 bps gap [quote.venue_price_usd, mark.price_usd]\n- swap_impact_bps 16, fee_bps 0, both look trivial next to the gap [swap_impact_bps, fee_bps]\n- quote age 0.725s, so this isn't a stale-quote artifact [quote.age_s]\nWrong if: the venue_price_usd/mark.price_usd gap narrows back under ~30 bps on a fresh quote.\n\nCALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc proceed low\nAMD's closed-session divergence is flagged elsewhere in the snapshot, which could read as a costly name to trade, but on pure execution terms it is not: fee is 0, swap impact is only 10 bps, and the fill (551.9120935475604) is actually below the mark (559.42445) it would book at, a -134 bps gap that favors the buyer rather than costing them.\n- venue_price_usd 551.9120935475604 vs mark.price_usd 559.42445 \u2192 -134.3 bps [quote.venue_price_usd, mark.price_usd]\n- swap_impact_bps 10, fee_bps 0, slippage_bps allowance 500 [swap_impact_bps, fee_bps, slippage_bps]\n- quote age 11.126s [quote.age_s]\nWrong if: a refreshed quote shows the venue price rising above the mark, turning this favorable gap into a paid premium.\n\nNO CALLS beyond these two: every other tradeable name's fee/impact is negligible and its venue-vs-mark gap sits under roughly 60 bps, not large enough to be the story on its own.",
+   "reason": "invalid",
+   "report": null,
+   "report_id": "23004c0784f4ab19971af59ff4484fda6a4b59182e345824904262a633703b95",
+   "report_text": null,
+   "seat": "execution-quality",
+   "snapshot_sha256": "253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c",
+   "status": "failed"
+  },
+  "price-integrity": {
+   "agent": "unassigned",
+   "attempts": [
+    {
+     "at": "2026-09-19T17:13:51.558Z",
+     "attempt": 1,
+     "body": "",
+     "cost": {
+      "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+      "basis": "the reply's own usage block times the listed price (config/models.json)",
+      "input_tokens": 98469,
+      "is_estimate": true,
+      "output_tokens": 6868,
+      "price_per_million": {
+       "currency": "usd",
+       "input": "2",
+       "output": "10"
+      },
+      "usd": "0.265618"
+     },
+     "elapsed_ms": 71896,
+     "error": null,
+     "finish_reason": "stop",
+     "http_status": 200,
+     "refusals": [
+      "citation: cannot read the citation '\"us_equities_24/5\"'",
+      "figure: 924.28 matches none of the fields it cites: AMZN corroboration.price_usd = 265.8339854153; AMZN corroboration.divergence_bps = -450.32; AMZN corroboration.volume_24h_usd = 2101924.2836966 (line 14)",
+      "figure: 068.67 matches none of the fields it cites: GOOGL corroboration.price_usd = 355.171284689; GOOGL corroboration.divergence_bps = -132.33; GOOGL corroboration.volume_24h_usd = 11953068.6682724 (line 20)",
+      "figure: 606.90 matches none of the fields it cites: SGOV corroboration.price_usd = 99.8629967858; SGOV corroboration.divergence_bps = 124.7; SGOV corroboration.volume_24h_usd = 2349606.90275319 (line 32)"
+     ],
+     "reply_text": "REPORT price-integrity unassigned 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c\n\nThe US equities session is closed (`block.closed_sessions: [\"us_equities_24/5\"]`), so every stock's Chainlink mark is frozen at its last pre-close round while GeckoTerminal and the venue quote keep trading. That means most of the closed-session divergences the snapshot flags are expected and don't by themselves say the mark is wrong \u2014 what tells the story is which two of the three prices agree. Five tradeable assets carry an explicit closed-session-divergence finding (AMD, AMZN, GOOGL, MSTR, SGOV); for each I checked whether the mark or the corroborator is the odd one out against the venue quote, which is the one price still being made live.\n\nCALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc caution medium\nThe mark sits well above both the other two reads, which cluster together, so the frozen Chainlink round looks like the stale side of this divergence, not GeckoTerminal.\n- mark 559.42445 vs corroboration 553.5582086607, a 105.98 bps gap [mark.price_usd, corroboration.price_usd, corroboration.divergence_bps]\n- venue 551.9120935475604 is only ~30 bps from GeckoTerminal's 553.5582086607, much tighter than either is to the mark [quote.venue_price_usd, corroboration.price_usd]\nWrong if: the venue price rises to meet the mark rather than staying near GeckoTerminal.\n\nCALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 proceed medium\nThe finding reads -450.32 bps mark-vs-GeckoTerminal, but the venue quote \u2014 which trades live through the close \u2014 sits close to the mark, so the mark holds up; GeckoTerminal looks like the outlier here, not the book price.\n- mark 253.863 vs venue 253.28085544501803, roughly 23 bps apart [mark.price_usd, quote.venue_price_usd]\n- corroboration 265.8339854153 is the away price, -450.32 bps from mark on $2,101,924.28 of 24h volume [corroboration.price_usd, corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: the venue price drifts toward GeckoTerminal's 265.83, which would show both mark and venue were stale together.\n\nCALL GOOGL 0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3 proceed medium\nSame shape as AMZN: mark and venue agree closely while GeckoTerminal is the one that has moved away, so the -132.33 bps finding is not the mark's fault.\n- mark 350.47135177 vs venue 350.04082044804966, about 12 bps apart [mark.price_usd, quote.venue_price_usd]\n- corroboration 355.171284689 is -132.33 bps from mark on $11,953,068.67 of 24h volume [corroboration.price_usd, corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: the venue price converges toward GeckoTerminal's 355.17 instead of the mark.\n\nCALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution medium\nHere the mark is the odd one out again: venue and GeckoTerminal sit closer to each other than either does to the frozen mark, and the mark's own freshness note shows it updated right at the close (only ~1,414s of open-session time), consistent with it lagging a move that continued after close.\n- mark 152.643 vs corroboration 155.5016463786, -183.84 bps [mark.price_usd, corroboration.price_usd, corroboration.divergence_bps]\n- venue 154.65896270001573 is only ~54 bps from GeckoTerminal, versus ~132-187 bps from the mark [quote.venue_price_usd, corroboration.price_usd, mark.price_usd]\nWrong if: the venue price falls back to meet the mark near 152.6 rather than tracking GeckoTerminal.\n\nCALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 proceed high\nSGOV is a cash-like Treasury-bill fund that should barely move; mark and venue agree within a quarter of a percent while GeckoTerminal is off by over a point, so the +124.7 bps finding is GeckoTerminal's problem, not the mark's.\n- mark 101.10821255 vs venue 100.88197839075325, about 22 bps apart [mark.price_usd, quote.venue_price_usd]\n- corroboration 99.8629967858 is 124.7 bps from mark on $2,349,606.90 of 24h volume [corroboration.price_usd, corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: the venue price drops toward GeckoTerminal's 99.86, which would make GeckoTerminal the one that was right.",
+     "request_id": "chatcmpl-2FMO3U6LrSqpef7vR3_24",
+     "usage": {
+      "buyer_cost_micro": 43301,
+      "completion_tokens": 6868,
+      "completion_tokens_details": {
+       "audio_tokens": 0,
+       "image_tokens": 0,
+       "reasoning_tokens": 5142
+      },
+      "cost": 0.265618,
+      "cost_details": {
+       "upstream_inference_completions_cost": 0.06868,
+       "upstream_inference_cost": 0.265618,
+       "upstream_inference_prompt_cost": 0.196938
+      },
+      "is_byok": false,
+      "prompt_tokens": 98469,
+      "prompt_tokens_details": {
+       "audio_tokens": 0,
+       "cache_write_tokens": 0,
+       "cached_tokens": 0,
+       "video_tokens": 0
+      },
+      "total_tokens": 105337
+     }
+    }
+   ],
+   "brief_files": [
+    "price-integrity.v1.md",
+    "analyst.v1.md"
+   ],
+   "brief_sha256": "2eaf8de70e986f2963c46399f8f4f6dd364194b9fad1fad181118225da81303b",
+   "cost": {
+    "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+    "basis": "the sum of this analyst's calls, each from its own usage block",
+    "calls": 1,
+    "calls_of_unknown_cost": 0,
+    "is_estimate": true,
+    "usd": "0.265618"
+   },
+   "detail": "citation: cannot read the citation '\"us_equities_24/5\"'; figure: 924.28 matches none of the fields it cites: AMZN corroboration.price_usd = 265.8339854153; AMZN corroboration.divergence_bps = -450.32; AMZN corroboration.volume_24h_usd = 2101924.2836966 (line 14); figure: 068.67 matches none of the fields it cites: GOOGL corroboration.price_usd = 355.171284689; GOOGL corroboration.divergence_bps = -132.33; GOOGL corroboration.volume_24h_usd = 11953068.6682724 (line 20); figure: 606.90 matches none of the fields it cites: SGOV corroboration.price_usd = 99.8629967858; SGOV corroboration.divergence_bps = 124.7; SGOV corroboration.volume_24h_usd = 2349606.90275319 (line 32)",
+   "environment_names": [
+    "LC_CTYPE",
+    "OPENFUND_GATEWAY_KEY",
+    "PATH",
+    "PYTHONPATH"
+   ],
+   "last_reply_text": "REPORT price-integrity unassigned 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c\n\nThe US equities session is closed (`block.closed_sessions: [\"us_equities_24/5\"]`), so every stock's Chainlink mark is frozen at its last pre-close round while GeckoTerminal and the venue quote keep trading. That means most of the closed-session divergences the snapshot flags are expected and don't by themselves say the mark is wrong \u2014 what tells the story is which two of the three prices agree. Five tradeable assets carry an explicit closed-session-divergence finding (AMD, AMZN, GOOGL, MSTR, SGOV); for each I checked whether the mark or the corroborator is the odd one out against the venue quote, which is the one price still being made live.\n\nCALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc caution medium\nThe mark sits well above both the other two reads, which cluster together, so the frozen Chainlink round looks like the stale side of this divergence, not GeckoTerminal.\n- mark 559.42445 vs corroboration 553.5582086607, a 105.98 bps gap [mark.price_usd, corroboration.price_usd, corroboration.divergence_bps]\n- venue 551.9120935475604 is only ~30 bps from GeckoTerminal's 553.5582086607, much tighter than either is to the mark [quote.venue_price_usd, corroboration.price_usd]\nWrong if: the venue price rises to meet the mark rather than staying near GeckoTerminal.\n\nCALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 proceed medium\nThe finding reads -450.32 bps mark-vs-GeckoTerminal, but the venue quote \u2014 which trades live through the close \u2014 sits close to the mark, so the mark holds up; GeckoTerminal looks like the outlier here, not the book price.\n- mark 253.863 vs venue 253.28085544501803, roughly 23 bps apart [mark.price_usd, quote.venue_price_usd]\n- corroboration 265.8339854153 is the away price, -450.32 bps from mark on $2,101,924.28 of 24h volume [corroboration.price_usd, corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: the venue price drifts toward GeckoTerminal's 265.83, which would show both mark and venue were stale together.\n\nCALL GOOGL 0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3 proceed medium\nSame shape as AMZN: mark and venue agree closely while GeckoTerminal is the one that has moved away, so the -132.33 bps finding is not the mark's fault.\n- mark 350.47135177 vs venue 350.04082044804966, about 12 bps apart [mark.price_usd, quote.venue_price_usd]\n- corroboration 355.171284689 is -132.33 bps from mark on $11,953,068.67 of 24h volume [corroboration.price_usd, corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: the venue price converges toward GeckoTerminal's 355.17 instead of the mark.\n\nCALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution medium\nHere the mark is the odd one out again: venue and GeckoTerminal sit closer to each other than either does to the frozen mark, and the mark's own freshness note shows it updated right at the close (only ~1,414s of open-session time), consistent with it lagging a move that continued after close.\n- mark 152.643 vs corroboration 155.5016463786, -183.84 bps [mark.price_usd, corroboration.price_usd, corroboration.divergence_bps]\n- venue 154.65896270001573 is only ~54 bps from GeckoTerminal, versus ~132-187 bps from the mark [quote.venue_price_usd, corroboration.price_usd, mark.price_usd]\nWrong if: the venue price falls back to meet the mark near 152.6 rather than tracking GeckoTerminal.\n\nCALL SGOV 0x92fd66527192e3e61d4ddd13322aa222de86f9b5 proceed high\nSGOV is a cash-like Treasury-bill fund that should barely move; mark and venue agree within a quarter of a percent while GeckoTerminal is off by over a point, so the +124.7 bps finding is GeckoTerminal's problem, not the mark's.\n- mark 101.10821255 vs venue 100.88197839075325, about 22 bps apart [mark.price_usd, quote.venue_price_usd]\n- corroboration 99.8629967858 is 124.7 bps from mark on $2,349,606.90 of 24h volume [corroboration.price_usd, corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: the venue price drops toward GeckoTerminal's 99.86, which would make GeckoTerminal the one that was right.",
+   "reason": "invalid",
+   "report": null,
+   "report_id": "fe9d8677380bcf56629beaff537dcafb8269c66b4b801b5900d468e4eb0849c9",
+   "report_text": null,
+   "seat": "price-integrity",
+   "snapshot_sha256": "253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c",
+   "status": "failed"
+  },
+  "price-trend": {
+   "agent": "unassigned",
+   "attempts": [
+    {
+     "at": "2026-09-19T17:13:51.559Z",
+     "attempt": 1,
+     "body": "",
+     "cost": {
+      "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+      "basis": "the reply's own usage block times the listed price (config/models.json)",
+      "input_tokens": 98387,
+      "is_estimate": true,
+      "output_tokens": 6379,
+      "price_per_million": {
+       "currency": "usd",
+       "input": "2",
+       "output": "10"
+      },
+      "usd": "0.260564"
+     },
+     "elapsed_ms": 76480,
+     "error": null,
+     "finish_reason": "stop",
+     "http_status": 200,
+     "refusals": [
+      "figure: 109.05 matches none of the fields it cites: INTC timeline 2026-09-09 = 105.95435; INTC timeline 2026-09-17 = 109.205 (line 34)"
+     ],
+     "reply_text": "REPORT price-trend unassigned 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c\n\nThe US equities session is shut (block.closed_sessions: us_equities_24/5), so every mark below is the feed's last pre-close round, not a live print. That doesn't change what the 30 daily closes say, since venue/GeckoTerminal action after the close isn't part of my series. Reading only the closes plus the latest round, five tradeable names show a real month-long climb (three of them breaking out in just the last week), one is flat-to-choppy in range, and I found no tradeable name showing a clean downtrend worth calling. I limit calls to the clearest six.\n\nCALL AAPL 0xaf3d76f1834a1d425780943c99ea8a608f8a93f9 buy medium\nApple has climbed almost every week for a month and just broke above its prior high to a fresh 30-day peak.\n- 310.85 close on 2026-08-20 vs. 335.38 mark, +7.9% [timeline 2026-08-20, mark.price_usd]\n- prior high 328.80 (2026-09-03) cleared by 337.06 on 2026-09-17 [timeline 2026-09-03, timeline 2026-09-17]\n- pulled back to 320.52 on 2026-09-04 before resuming up [timeline 2026-09-04]\nWrong if: it closes back below 320.52, the last pullback low, undoing the breakout.\n\nCALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc buy medium\nAMD is up almost 20% over the month, and over half of that came in the last four sessions alone.\n- 468.24 close on 2026-08-20 vs. 559.42 mark, +19.5% [timeline 2026-08-20, mark.price_usd]\n- 494.73 close on 2026-09-14 to 559.42 latest, +13.1% in four sessions [timeline 2026-09-14, mark.price_usd]\nWrong if: it closes below 494.73, the base this week's rally launched from.\n\nCALL GME 0x1b0e319c6a659f002271b69db8a7df2f911c153e buy medium\nGameStop's closes form the cleanest staircase in the book: nearly every day higher for three weeks straight.\n- 18.02 close on 2026-08-20 vs. 22.55 mark, +25.2% [timeline 2026-08-20, mark.price_usd]\n- last local low 20.45 on 2026-09-10, never revisited since [timeline 2026-09-10]\nWrong if: it closes below 20.45, breaking the run of higher lows.\n\nCALL META 0xc0d6457c16cc70d6790dd43521c899c87ce02f35 buy medium\nMeta rose in almost a straight line from late August into mid-September, +22% for the month, though the mark sits 2.3% off this week's peak.\n- 544.71 close on 2026-08-20 vs. 666.76 mark, +22.4% [timeline 2026-08-20, mark.price_usd]\n- peak 682.43 on 2026-09-17, mark now 666.76, -2.3% off the top [timeline 2026-09-17, mark.price_usd]\n- last higher-low 646.97 on 2026-09-11 [timeline 2026-09-11]\nWrong if: it closes below 646.97, turning the month's climb into a reversal.\n\nCALL INTC 0xc72b96e0e48ecd4dc75e1e45396e26300bc39681 buy medium\nIntel is up 18% for the month and just broke past both its early-September high and its mid-month pullback low to a fresh peak.\n- 92.43 close on 2026-08-20 vs. 109.05 mark, +18.0% [timeline 2026-08-20, mark.price_usd]\n- prior high 105.95 on 2026-09-09, cleared to 109.20-109.05 on 2026-09-17/18 [timeline 2026-09-09, timeline 2026-09-17]\n- pullback low 97.49 on 2026-09-14 [timeline 2026-09-14]\nWrong if: it closes below 97.49, the pullback that this breakout needs to hold above.\n\nCALL SPCX 0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea buy medium\nSpaceX has climbed steadily for a month with only shallow pullbacks, +14% top to bottom.\n- 134.05 close on 2026-08-20 vs. 152.82 mark, +14.0% [timeline 2026-08-20, mark.price_usd]\n- last pullback low 143.88 on 2026-09-15 [timeline 2026-09-15]\nWrong if: it closes below 143.88, breaking the sequence of higher lows.\n\nMSTR jumped 16% in a single session (132.19 to 153.44, then 152.64 latest) [timeline 2026-09-17, timeline 2026-09-18, mark.price_usd] after three weeks of range-bound chop between roughly 123 and 144 \u2014 a week's spike, not a month's trend, so I make no call there. AMZN, COIN, MSFT, MU, PLTR, QQQ, SPY and TSLA are all range-bound or too choppy over the 30 closes to support a directional call.",
+     "request_id": "chatcmpl-qrcu_V_f_BEFXXCSSc-DX",
+     "usage": {
+      "buyer_cost_micro": 42477,
+      "completion_tokens": 6379,
+      "completion_tokens_details": {
+       "audio_tokens": 0,
+       "image_tokens": 0,
+       "reasoning_tokens": 4598
+      },
+      "cost": 0.260564,
+      "cost_details": {
+       "upstream_inference_completions_cost": 0.06379,
+       "upstream_inference_cost": 0.260564,
+       "upstream_inference_prompt_cost": 0.196774
+      },
+      "is_byok": false,
+      "prompt_tokens": 98387,
+      "prompt_tokens_details": {
+       "audio_tokens": 0,
+       "cache_write_tokens": 0,
+       "cached_tokens": 0,
+       "video_tokens": 0
+      },
+      "total_tokens": 104766
+     }
+    }
+   ],
+   "brief_files": [
+    "price-trend.v1.md",
+    "analyst.v1.md"
+   ],
+   "brief_sha256": "69ddde68a8fa0281c42c55eb0058ccc5e430cd95c720c1eb7308cf091883ff51",
+   "cost": {
+    "attribution": "ours, per call; the provider attributes spend only per key, model and day window, with no per-request row (F0.6.4)",
+    "basis": "the sum of this analyst's calls, each from its own usage block",
+    "calls": 1,
+    "calls_of_unknown_cost": 0,
+    "is_estimate": true,
+    "usd": "0.260564"
+   },
+   "detail": "figure: 109.05 matches none of the fields it cites: INTC timeline 2026-09-09 = 105.95435; INTC timeline 2026-09-17 = 109.205 (line 34)",
+   "environment_names": [
+    "LC_CTYPE",
+    "OPENFUND_GATEWAY_KEY",
+    "PATH",
+    "PYTHONPATH"
+   ],
+   "last_reply_text": "REPORT price-trend unassigned 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c\n\nThe US equities session is shut (block.closed_sessions: us_equities_24/5), so every mark below is the feed's last pre-close round, not a live print. That doesn't change what the 30 daily closes say, since venue/GeckoTerminal action after the close isn't part of my series. Reading only the closes plus the latest round, five tradeable names show a real month-long climb (three of them breaking out in just the last week), one is flat-to-choppy in range, and I found no tradeable name showing a clean downtrend worth calling. I limit calls to the clearest six.\n\nCALL AAPL 0xaf3d76f1834a1d425780943c99ea8a608f8a93f9 buy medium\nApple has climbed almost every week for a month and just broke above its prior high to a fresh 30-day peak.\n- 310.85 close on 2026-08-20 vs. 335.38 mark, +7.9% [timeline 2026-08-20, mark.price_usd]\n- prior high 328.80 (2026-09-03) cleared by 337.06 on 2026-09-17 [timeline 2026-09-03, timeline 2026-09-17]\n- pulled back to 320.52 on 2026-09-04 before resuming up [timeline 2026-09-04]\nWrong if: it closes back below 320.52, the last pullback low, undoing the breakout.\n\nCALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc buy medium\nAMD is up almost 20% over the month, and over half of that came in the last four sessions alone.\n- 468.24 close on 2026-08-20 vs. 559.42 mark, +19.5% [timeline 2026-08-20, mark.price_usd]\n- 494.73 close on 2026-09-14 to 559.42 latest, +13.1% in four sessions [timeline 2026-09-14, mark.price_usd]\nWrong if: it closes below 494.73, the base this week's rally launched from.\n\nCALL GME 0x1b0e319c6a659f002271b69db8a7df2f911c153e buy medium\nGameStop's closes form the cleanest staircase in the book: nearly every day higher for three weeks straight.\n- 18.02 close on 2026-08-20 vs. 22.55 mark, +25.2% [timeline 2026-08-20, mark.price_usd]\n- last local low 20.45 on 2026-09-10, never revisited since [timeline 2026-09-10]\nWrong if: it closes below 20.45, breaking the run of higher lows.\n\nCALL META 0xc0d6457c16cc70d6790dd43521c899c87ce02f35 buy medium\nMeta rose in almost a straight line from late August into mid-September, +22% for the month, though the mark sits 2.3% off this week's peak.\n- 544.71 close on 2026-08-20 vs. 666.76 mark, +22.4% [timeline 2026-08-20, mark.price_usd]\n- peak 682.43 on 2026-09-17, mark now 666.76, -2.3% off the top [timeline 2026-09-17, mark.price_usd]\n- last higher-low 646.97 on 2026-09-11 [timeline 2026-09-11]\nWrong if: it closes below 646.97, turning the month's climb into a reversal.\n\nCALL INTC 0xc72b96e0e48ecd4dc75e1e45396e26300bc39681 buy medium\nIntel is up 18% for the month and just broke past both its early-September high and its mid-month pullback low to a fresh peak.\n- 92.43 close on 2026-08-20 vs. 109.05 mark, +18.0% [timeline 2026-08-20, mark.price_usd]\n- prior high 105.95 on 2026-09-09, cleared to 109.20-109.05 on 2026-09-17/18 [timeline 2026-09-09, timeline 2026-09-17]\n- pullback low 97.49 on 2026-09-14 [timeline 2026-09-14]\nWrong if: it closes below 97.49, the pullback that this breakout needs to hold above.\n\nCALL SPCX 0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea buy medium\nSpaceX has climbed steadily for a month with only shallow pullbacks, +14% top to bottom.\n- 134.05 close on 2026-08-20 vs. 152.82 mark, +14.0% [timeline 2026-08-20, mark.price_usd]\n- last pullback low 143.88 on 2026-09-15 [timeline 2026-09-15]\nWrong if: it closes below 143.88, breaking the sequence of higher lows.\n\nMSTR jumped 16% in a single session (132.19 to 153.44, then 152.64 latest) [timeline 2026-09-17, timeline 2026-09-18, mark.price_usd] after three weeks of range-bound chop between roughly 123 and 144 \u2014 a week's spike, not a month's trend, so I make no call there. AMZN, COIN, MSFT, MU, PLTR, QQQ, SPY and TSLA are all range-bound or too choppy over the 30 closes to support a directional call.",
+   "reason": "invalid",
+   "report": null,
+   "report_id": "a3ce95c38a00ab62d8d9528b708adc43b2d912338505f831226455feedc00ac5",
+   "report_text": null,
+   "seat": "price-trend",
+   "snapshot_sha256": "253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c",
+   "status": "failed"
+  }
+ },
+ "snapshot_sha256": "253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c"
+}

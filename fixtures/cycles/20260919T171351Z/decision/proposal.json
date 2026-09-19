@@ -1,0 +1,22 @@
+{
+ "cash": {
+  "current": "1",
+  "target": "1"
+ },
+ "confidence_weights": {
+  "high": "0.75",
+  "low": "0.25",
+  "medium": "0.5"
+ },
+ "funded": "0",
+ "quorum": {
+  "reason": "0 seat(s) reported, below the quorum of 3",
+  "rule": "quorum",
+  "value": false
+ },
+ "reason": "0 seat(s) reported, below the quorum of 3",
+ "rebalance": false,
+ "reported": [],
+ "residual": "0",
+ "rows": []
+}
