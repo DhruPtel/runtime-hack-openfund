@@ -906,230 +906,305 @@ known id raises, and nothing is rewritten.
   `1b9f7a7…`.
 - **Minimal:** storage and retrieval only, with no query layer. 455 tests pass.
 
+## 3.1 — Aggregator
+**Date:** 2026-09-19 · **Commits:** a4c2bf6, 498f52e, 0d9b388, 7e11edf, 657833b
+
+`core/aggregate.py` scores each asset direction × (1 − caution), with confidence
+words at 0.25, 0.5 and 0.75, and moves the target from the weight held: a buy
+raises it by score × the 0.25 position limit, a sell cuts it, and hold, silence
+and caution alone keep it. Below the quorum of 3, when every seat abstains, or
+with a limit unset, every holding is kept, and new buys are paid only from cash
+above the $20 floor. `tests/test_aggregate.py` (11) runs the four approved
+reports with a non-empty book for cycle two, and the boundary test now refuses a
+comparison with any limit outside `core/gates.py`.
+
+## 3.2 ▶ — The aggregation table, shown
+**Date:** 2026-09-19 · **Commits:** 5b47867, d5560c9
+
+`aggregate.table` prints, per asset, each seat's word and what it adds, the
+direction, caution and score, and the weight moved from and to, in dollars of
+the $200 paper book. Cash and the rounding residual close it. On the four
+approved reports it gives META 12.5%, AMD, INTC and USO 6.25% each, and 68.75%
+cash. Judged a cautious trend tilt a person could hold, but price-trend's view
+with haircuts, and blind to co-movement (LESSONS 2026-09-19); shown, not
+stopped.
+
+## 3.3 — Planner
+**Date:** 2026-09-19 · **Commits:** a1e782a, d577a52
+
+`core/plan.py` values the paper book at the snapshot's marks through
+`valuation.value()` and sizes each move into orders of at most $25, sells
+first, with dust under $1 dropped. It writes each order with its fresh quote
+exactly as fetched, the verdict `bankr_quote.tradeability` gave it at the
+recorded `judged_at`, and the mark, corroboration, venue price and findings risk
+reads. No live leg, which is Phase 5's. Verified H with the tests' fake venue,
+labelled in every quote it makes: six rules broken in a copy and caught. The
+sell guard went uncaught until a test gave the planner a proposal made on
+another book.
+
+## 3.4 — Gates
+**Date:** 2026-09-19 · **Commits:** dbe3295, f7faf77
+
+`gates.evaluate` checks each order:
+- tradeable in the snapshot;
+- allowed by the mandate;
+- within the order size;
+- the fresh quote's own verdict, and that the quote is this order's;
+- position weight.
+
+It checks the plan for quorum, cash floor and turnover, recomputing each figure
+from the book and the orders. Null blocks, and an order clears only if every
+gate passes. The mandate holds the capture's 20 tradeable assets and placeholder
+approvals, provisional until 4.1. Verified H: seven rules broken in a copy and
+caught. One was a limit compared inside `plan.py`, which the boundary test
+refused.
+
+## 3.6 — Context budget
+**Date:** 2026-09-19 · **Commit:** e1d5213
+
+Built before 3.5, as the batch brief ordered. `core/context.measure` estimates
+risk's bundle from its bytes over 1.8, rounded up, plus the reply's
+12,000-token cap, and `gates.context_budget` holds it to 70,000. Over budget,
+no call is made and every order is vetoed. `tests/test_context.py` holds the
+budget to the byte; the four approved reports' bundle is about 32,400 tokens.
+
+## 3.5 — Risk agent
+**Date:** 2026-09-19 · **Commits:** 5865108, ea1dab0, e95cf35
+
+`agents/risk.py` calls `gates.evaluate`, measures the bundle, and asks the model
+in its own process, from an empty environment, for a vote per order and
+overall, with `briefs/risk.v1.md` as its prompt. An order is approved only when
+every gate passed and the model approved both it and the plan. A missing, late,
+refused or misshapen reply vetoes everything and is never retried, and a stored
+reply replays without a call. Verified H on 2.4's fake gateway: six rules broken
+in a copy and caught, among them the model overriding a gate and the child
+inheriting its parent's environment. No real model has seen the brief.
+
+## 3.7 — The signed decision record
+**Date:** 2026-09-19 · **Commits:** 6381ff9, 96aee3f, b352463, 6663c16
+
+`core/record.py` holds:
+- the snapshot, every report, the config, and the proposal, plan, gates and
+  risk reply, with the sha256 of each;
+- every closed-session finding;
+- each order approved or vetoed, by name.
+
+Its only time is the plan's recorded `judged_at`. `treasurer/sign.py` signs its
+exact bytes with ed25519, and nothing unsigned, altered or signed by another key
+authorizes: three rules broken and caught. `python -m fund.run.decide` takes the
+reports to a signed record, with the treasurer's own process signing, and
+executes nothing. Offline, with the fake venue, scripted risk replies and a
+scratch key:
+- AMD was vetoed by risk and three orders approved;
+- in cycle two, NVDA on hold and TSLA unmentioned were not traded, and a stale
+  META quote was vetoed by `quote-age`;
+- with no key the record was `signed: false` and did not authorize;
+- the same inputs gave the same decision id.
+
 ---
 
-## State at close — 2026-09-19, after 2.6 and 2.7: three seats heard, their reports stored
+## State at close — 2026-09-19, after 3.1 to 3.7: the fund decides, offline
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
 commits, this note is older than the code, so read those commits before trusting
 it. Where this note and git disagree, git is right.
 
-**The build mode has changed.** From Phase 2, every unit is built at its
-minimal version.
+**The build mode.** From Phase 2, every unit is built at its minimal version.
 - Each unit's minimal, full and given-up versions are in
   `planning/SIMPLIFICATION.md`. PLAN §8 states the pivot, and `CLAUDE.md`
   carries the rule.
 - Keys, signing and spend authority keep their full guard.
-- The operator is stopped at 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1 was
-  approved on 2026-09-19.
-- Work follows the phase and unit order.
+- The operator is stopped at 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1 was approved.
+  **3.8 is the next stop.**
 
-**The deadline** was given on 2026-09-19 at about 11:00Z as "about 16 hours".
-That puts it at about Sun 2026-09-20 03:00Z. This is the note's arithmetic, not
-a time the operator wrote down. The whole window falls inside the equity feeds'
-closed session, Sat 00:05Z to Sun 23:55Z.
+**The deadline** was given at about 11:00Z on 2026-09-19 as "about 16 hours":
+about Sun 2026-09-20 03:00Z. That is this note's arithmetic, not a time the
+operator wrote down. This note was written at about 17:00Z.
 
-**Check it in a minute.** Nothing here spends.
-- `git log --oneline -15` and `git status -sb`.
-- `make test`: 455 passed when this was written, about 13 s. The runner tests
-  start real subprocesses against a fake gateway on 127.0.0.1.
-- `python3 -m fund.agents.show fixtures/live/cycles/20260919T153900Z` prints
-  2.6's report as the model wrote it. `…/20260919T155833Z --seat price-trend`
-  (or `execution-quality`) prints the other two.
-- `fixtures/live/reports/` holds the three real replies. Each is read back by
-  id with `ReportStore(path).text(id)`.
-- `python3 -m fund.agents.runner --snapshot <path> [--seats …] [--retries N]`
-  prints what it would run. It **spends** only with `--confirm`.
-- `python3 -m probes.keymap`: each key's measured capabilities, read-only.
-  Run it before any live call.
-- `make replay`: rebuilds the committed capture offline, byte for byte, in
-  under a second. Needs no credential.
-- `make check-env`: which credentials are present, by name only.
-- `make selftest` attests every address in config against the chain in about
-  100 s. It needs the RPC URL and spends nothing.
-- `make snapshot` builds a live snapshot in about 2.5 minutes, captures it
-  under `fixtures/live/captures/`, and replays it.
-- `probes/analyst_cost.py` **spends** with `--confirm`.
+**Check it in a minute.** Nothing here spends unless marked. The `python3 -m`
+commands need `PYTHONPATH=src`.
+- `git log --oneline -25` and `git status -sb`.
+- `make test`: 521 passed when this was written, in about 24 s. The runner and
+  risk tests start real subprocesses against a fake gateway on 127.0.0.1.
+- `python3 -m fund.run.decide --snapshot fixtures/snapshots/66852293-253315c0e691
+  --approved-reports --quotes Q --risk-reply R [--env-file E]` takes reports to
+  a signed record and executes nothing. The flags:
+  - offline, it needs a recorded quotes file and a recorded risk reply;
+  - `--live-quotes` reads the venue, read-only;
+  - `--confirm` makes one live risk call, which **spends**;
+  - `--cycle DIR` takes a runner cycle's accepted reports instead.
+
+  It signs with `.env`'s `SIGNING_KEY` unless `--env-file` names another. Do
+  not sign fake inputs with the fund's key.
+- `python3 -m fund.agents.show <cycle dir>` prints a stored report as written.
+- `python3 -m fund.agents.runner --snapshot <path> ...` **spends** with
+  `--confirm`.
+- `python3 -m probes.keymap`: each key's measured capabilities, read-only. Run it
+  before any live call.
+- `make replay` rebuilds the committed capture offline. `make check-env` names
+  the credentials present. `make selftest` needs the RPC URL. `make snapshot`
+  builds a live snapshot in about 2.5 minutes.
 
 ### Done
-- **Phase 0 and all of Phase 1,** at full depth.
-- **The gate report,** `planning/PHASE-1-GATE.md`. Its §5 cut list is
-  superseded by the pivot.
-- **The simplification analysis,** approved 2026-09-19 as analysis. Its build
-  order was not adopted.
-- **Decisions of 2026-09-19** (LESSONS):
-  - the pivot;
-  - two report vocabularies, direction and condition;
-  - the fourth seat is `price-integrity`;
-  - five agent wallets from `bankr login siwe`, unverified;
-  - the ETH↔USDG leg is a demonstration of the money path;
-  - a public preview, with the full record paid;
-  - execution before the sale.
-- **The judging criteria** are in `planning/JUDGING-CRITERIA.md`.
-- **Answered, from 1.9's checkpoint:** the demo runs the committed capture for
-  the reproducible part, and a live cycle, the purchase and the explorer for the
-  rest (8.4's approved minimal version).
-- **2.1, approved:** `planning/REPORT-FORMAT.md` is the format.
-- **2.2 to 2.5, built and proven offline** (entries above).
-- **The keys, fixed by the operator and measured.** `BANKR_LLM_KEY` is refused
-  by the Wallet API and the Agent API.
-- **2.6, run once live on each seat** (entries above):
-  - price-integrity was refused, on the header only since the fixes;
-  - price-trend was refused, for its own errors;
-  - cross-asset-macro got a gateway 504, with no report;
-  - execution-quality was accepted.
-- **2.7, the report store,** at its minimal version (entry above).
-- **After 2.6** (entry above):
-  - the display;
-  - the bps rule loosened;
-  - `unassigned` for a seat with no wallet;
-  - the entry point tested.
-- **What is built.** Under `src/fund/`:
-  - `config.py`, `credentials.py`, `redaction.py`;
-  - `core/types.py`, `core/universe.py`, `core/valuation.py`,
-    `core/snapshot.py`;
-  - `adapters/http.py`, `adapters/chain_4663.py`, `adapters/gecko.py`,
-    `adapters/bankr_quote.py`, `adapters/cache.py`, `adapters/bankr_llm.py`,
-    `adapters/bankr_usage.py`;
-  - `agents/schema.py`, `agents/analyst.py`, `agents/runner.py`,
-    `agents/show.py`, and `agents/briefs/`;
-  - `store/reports.py`;
-  - `run/snapshot.py`, `run/selftest.py`.
+- **Phases 0 and 1,** at full depth.
+- **Phase 2, 2.0 to 2.7.** 2.8 is not closed, though its three cases exist as
+  2.4's tests. The exit run has not happened, so Phase 2's exit is not met: one
+  seat of four has had an accepted real report, and no seat has its own account.
+- **Phase 3, 3.1 to 3.7,** offline, in one pass (entries above). It was built on
+  the four approved reports, the committed capture, a labelled fake venue,
+  scripted risk replies and 2.4's fake gateway. No live call was made.
+- **Decisions of 2026-09-19** (LESSONS): the pivot, and the Phase 2 decisions.
+  Then the Phase 3 batch's:
+  - a target starts at the weight held;
+  - config set;
+  - the mandate provisional;
+  - the live leg is Phase 5's;
+  - 3.6 before 3.5;
+  - three files outside the batch's paths, approved.
+- **What is built,** under `src/fund/`. Phases 0 to 2 as before, plus:
+  - `core/aggregate.py`, `core/plan.py`, `core/gates.py`, `core/context.py`,
+    `core/record.py`;
+  - `agents/risk.py` and `agents/briefs/risk.v1.md`;
+  - `treasurer/sign.py`;
+  - `run/decide.py`.
 
-  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 22.
+  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 17.
 
 ### Next
-- **The operator reads §2.6, continued** (`research/findings.md`).
-- **Owed from 2.6:**
-  - **The settled `/v1/usage` cross-check** for the 15:39Z and 15:58Z calls.
-    It needs one live read, after the windows settle. It also shows whether the
-    504 was billed: compare the window's request count with the calls recorded.
-  - **One cross-asset-macro call,** if the operator authorises it. It may hit
-    the same limit of about 113 s.
-  - **The brief's example.** `analyst.v1.md` labels the approved NVDA call
-    "From an earlier snapshot", but it comes from the capture every run so far
-    has used. Relabel it, or change it (2.3's).
-- **2.0's choice is still open:**
-  - (a) email sign-ups with `--llm`, untested;
-  - (b) the dashboard, unknown for a SIWE account;
-  - (c) own wallets with inference on the fund's key. Safe as the keys now
-    stand.
-- **Then:**
-  - the page slice, if approved;
-  - 2.8, the failure drill, whose three cases exist as 2.4's tests;
-  - the exit run of four seats, about $1.10. Three seats have each had one
-    call.
-- **The keys, measured on 2026-09-19 after the fix:**
-  - `BANKR_LLM_KEY` is refused by the Wallet API and the Agent API;
-  - `BANKR_KEY_READ` is read-only, with the gateway and Agent API off;
-  - `BANKR_KEY_EXEC` is read-write, with the gateway and Agent API off;
-  - token launch is not measurable on any of them.
-- **Where the agent account's secrets live:** `~/.openfund/agents/price-integrity/`,
-  mode 0600, outside the repository:
-  - `siwe.key`, the sign-in key;
-  - `bankr-config.json`, the API key;
-  - `siwe-login.json`, the login's masked answer.
+- **3.8, a stop: a veto from a real recorded cycle.** It needs, each authorized
+  first:
+  - accepted real reports on one snapshot, at least three for the quorum.
+    That is the exit run, about $1.10;
+  - live quotes, read-only;
+  - one live risk call, about $0.05.
 
-  A backup of the fund's own CLI config, taken before the login, sits in
-  `~/.openfund/backup/`. It holds the fund's CLI key, and can be deleted once
-  it is no longer wanted.
+  Then `python3 -m fund.run.decide --cycle <runner cycle dir> --live-quotes
+  --confirm`. The veto story rests on price-integrity naming AMD and MSTR's
+  stale marks. Its only live report was refused on its first line, a placeholder
+  since fixed. A live veto is not guaranteed, and the recorded one is then the
+  one shown.
+- **3.9 after the stop.** One test rebuilds the recorded cycle's record byte for
+  byte. Two offline runs already gave the same decision id.
+- **Owed from Phase 2, unchanged:**
+  - the settled `/v1/usage` cross-check for the 15:39Z and 15:58Z calls, and
+    whether the 504 was billed;
+  - one cross-asset-macro call, if authorised;
+  - the brief's NVDA example, labelled "From an earlier snapshot" but taken
+    from the capture every run uses;
+  - 2.0's choice, (a), (b) or (c);
+  - 2.8;
+  - the page slice.
+- **Owed from Phase 3:**
+  - the mandate is provisional: 4.1 replaces the allowed assets and the
+    placeholder approvals;
+  - the confidence mapping is provisional, to be tuned after a real cycle;
+  - no real model has seen `risk.v1.md`;
+  - `run/decide.py`'s live paths have not run live;
+  - the aggregator is blind to co-movement (LESSONS 2026-09-19).
+- **The keys, measured on 2026-09-19 after the operator's fix:**
+  - `BANKR_LLM_KEY`: the gateway on, refused by the Wallet API and the Agent
+    API;
+  - `BANKR_KEY_READ`: read-only, gateway and Agent API off;
+  - `BANKR_KEY_EXEC`: read-write, gateway and Agent API off.
+- **The agent account's secrets:** `~/.openfund/agents/price-integrity/`, mode
+  0600, four files: `siwe.key`, `bankr-config.json`, `siwe-login.json`,
+  `login-stdout.txt`. The backup of the fund's CLI config in
+  `~/.openfund/backup/`, which an earlier note listed, no longer exists.
 - **Owed, and each a spend:**
-  - agent credits, about $22 plus about 5.8%;
-  - a fresh buyer key with about $1 of USDC on Base (7.5);
+  - agent credits, about $22 plus 5.8%;
+  - a buyer key with about $1 of USDC on Base (7.5);
   - the live round trip (5.2);
-  - one refused-swap attempt per agent key (4.12).
+  - one refused swap per agent key (4.12).
 - **Owed outside the plan docs:**
   - `credentials.py` and `.env.example`: per-agent key names, once 2.0's
-    choice is made. The runner passes each key under one generic variable, so
-    nothing waits on this but live use;
-  - the config values SIMPLIFICATION proposes, each set by its unit.
-- **Dated** (`CLAUDE.md`):
-  - the weekday capture, from Mon 2026-09-21 00:00Z, which is after the
-    deadline;
-  - the closed-session re-derivation, on 2026-11-09.
+    choice is made;
+  - `BANKR_LLM_KEY`'s scope text in `credentials.py` still describes the key
+    before the operator's fix.
+- **Dated** (`CLAUDE.md`): the weekday capture from Mon 2026-09-21 00:00Z; the
+  closed-session re-derivation on 2026-11-09.
 
 ### Open items, none resolved
-1. **The page lands at 7.6,** after the stops at 3.8, 5.4, 6.6 and 7.5.
-   PHASE-2.md recommends pulling a first slice forward into Phase 2. That is
-   the operator's call.
-2. **The five-wallet plan** waits on the operator's choice among 2.0's options.
-3. **`config.load()` merges all of `.env` into the caller's environment.** 2.4
-   builds each analyst's environment from nothing and proves it by a broken
-   copy. `.env` is still readable on disk; 4.12 owns the split.
+1. **The page lands at 7.6,** after the stops at 3.8, 5.4, 6.6 and 7.5, unless
+   the operator pulls a slice forward.
+2. **The five-wallet plan** waits on 2.0's choice. Risk, too, runs on the shared
+   key, as `unassigned`.
+3. **`config.load()` merges all of `.env` into the caller's environment.**
+   - Every agent process is built from an empty environment, analysts and risk
+     alike.
+   - The signer reads the key itself, in its own process.
+   - `.env` is still readable on disk; 4.12 owns the split.
 4. **The preview as decided** names no decision id, hashes or signature, and
-   7.2 serves by id.
+   7.2 serves by id. The record now carries every report and the risk reply
+   whole; what the preview shows of it is 7.x's.
 5. **How the handler holds the full record:** bundled per deploy, or a private
    URL.
-6. **The live leg's mechanics.** Proposed, not decided: one small order per
-   trading cycle, alternating direction.
+6. **The live leg's mechanics,** now Phase 5's.
 7. **Token design** is a judging criterion that no unit covers (PLAN §12).
-8. **The 3.4 sweep** is deferred to 3.4's full version. After minimal 3.4,
-   invariant 4's "one module" does not hold.
+8. **The 3.4 sweep.** Minimal 3.4 consumes the three older verdicts, so
+   invariant 4's "one module" does not hold; the sweep is 3.4's full version.
 9. **Carried from 2026-09-18:**
    - two `http.py` changes;
    - daylight saving;
    - holidays fail closed;
-   - exit is not assessed, because no sell quote is read;
+   - exit is not assessed;
    - one daily-close call was set against 1.7's two;
    - caching in other request shapes is untested;
-   - about 37–50% of billed output does not appear in the reply;
-   - AMZN's GeckoTerminal price alternates between two levels;
-   - $25 is sized at USDG's mark;
+   - billed output missing from the reply;
+   - AMZN's two GeckoTerminal levels;
+   - $25 sized at USDG's mark;
    - the quote-age budget;
-   - nine feeds describe themselves `RH<ticker> / USD`;
-   - no offchain body has a source time;
-   - the registry refresh fetch has no owner;
-   - there is one RPC endpoint;
+   - nine `RH<ticker> / USD` feeds;
+   - no offchain source time;
+   - the registry refresh owner;
+   - one RPC endpoint;
    - which impact field gates;
    - the README status line.
 
 ### The numbers that stand
 - **Snapshot:** schema `openfund.snapshot/4`, about 195 KB with 763 daily
-  closes. The committed one is `253315c0…` at block 66852293, Sat 06:01Z, in
+  closes. The committed one is `253315c0…` at block 66852293, in
   `fixtures/snapshots/`.
-- **Selftest:** 235 addresses in about 102 s.
 - **Analyst call:** $0.264 at Sonnet 5, uncached. A cycle is about $1.11.
-- **LLM credits:** $15.517951 read by `probes/keymap.py` before the three
-  calls, equal to the earlier reading less 2.6's $0.273156. The replies then
-  spent $0.522736 by their own figures, plus whatever the 504 cost, if
-  anything. The balance was not re-read.
-- **Real analyst calls,** in tokens in and out:
+- **Real analyst calls:**
 
-  | Seat | Cost | Time | Tokens in | Tokens out | Reasoning |
-  |---|---|---|---|---|---|
-  | price-integrity | $0.273156 | 78.6 s | 98,438 | 7,628 | 77% |
-  | price-trend | $0.273142 | 83.3 s | 98,356 | 7,643 | 76% |
-  | execution-quality | $0.249594 | 58.2 s | 98,412 | 5,277 | 84% |
-  | cross-asset-macro | none | a 504 at 113.3 s | | | |
-- **Wallet:** about $1.29, as 0.078742 USDG and 0.000460 ETH on 4663
-  (`PHASE-1-GATE.md` §2).
+  | Seat | Result | Cost | Time |
+  |---|---|---|---|
+  | price-integrity | refused | $0.273156 | 78.6 s |
+  | price-trend | refused | $0.273142 | 83.3 s |
+  | execution-quality | accepted | $0.249594 | 58.2 s |
+  | cross-asset-macro | a 504 | unknown | 113.3 s |
+
+  The credit balance was not re-read after them.
+- **Phase 3, offline, on the four approved reports:**
+  - META 12.5%, AMD, INTC and USO 6.25% each, 68.75% cash;
+  - four buys totalling $62.50 of the $200 paper book;
+  - a risk bundle of about 32,400 tokens, 12,000 of them reserved.
+- **Wallet:** about $1.29, as 0.078742 USDG and 0.000460 ETH on 4663.
 
 ### Config
-**Set in the 2.2–2.5 batch:**
-- `analysts.json` v2: four seats, their vocabularies, questions and brief files;
-  at most six calls per report; three confidence words;
-- `cadence.json`: `cycle_deadline_seconds` 1800, `retry_budget_per_worker` 1,
-  `max_parallel_workers` 4;
-- `models.json`: `risk_model` `claude-sonnet-5`, `context_budget_tokens` 70000,
-  the listed price ($2 and $10 per million), `usage_settle_seconds` 3600.
-
-**Still null:**
-- `cadence.json`: `confirmation_depth`;
-- `thresholds.json`: `max_position_weight`, `turnover_max_bps`,
-  `cash_floor_usd` and `quorum_min_analysts`;
-- `mandate.json`: `cumulative_budget_usd`, `approved_by`, `approved_at`,
-  `expires_at`, and an empty `allowed_assets`.
+- **Set in the 2.2–2.5 batch:**
+  - `analysts.json` v2;
+  - `cadence.json`'s deadline, retry and width;
+  - `models.json`'s risk model, context budget, price and settle window.
+- **Set in the Phase 3 batch, all provisional:**
+  - `thresholds.json`: `quorum_min_analysts` 3, `max_position_weight` "0.25",
+    `cash_floor_usd` "20", `min_order_usd` "1", `turnover_max_bps` 10000;
+  - `analysts.json`: `confidence_weights`;
+  - `models.json`: `context_bytes_per_token` "1.8";
+  - `mandate.json`: 20 allowed assets and placeholder approvals.
+- **Still null:** `cadence.json`'s `confirmation_depth`; `mandate.json`'s
+  `cumulative_budget_usd`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `bb7de97`, 2.6, pushed by the
-operator. Every commit from `ea39fd6` (the bps rule) to the one that last
-changed this note is committed and **not pushed**.
+Checked locally, with no fetch. `origin/main` is `837a6ce`, the last note's
+commit, pushed by the operator. Every commit from `a4c2bf6` (3.1's config) to
+the one that last changed this note is committed and **not pushed**.
 
 ### What this note does not cover
-- **Decisions.** It does not restate any in full; LESSONS holds them.
-- **The plan.** PLAN, ROADMAP, PHASE-0-1 and SIMPLIFICATION are the plan.
+- **Decisions.** LESSONS holds them in full.
+- **The plan.** PLAN, ROADMAP, PHASE-0-1, PHASE-2 and SIMPLIFICATION are the
+  plan.
 - **Credentials.** It checks none beyond `make check-env`'s names.
-- **The remote.** Its check is one local read of the remote-tracking ref.
 - **Unrecorded conversation.** Anything not written into `tracker/`,
   `planning/`, `config/` or `research/` is lost on restart.
