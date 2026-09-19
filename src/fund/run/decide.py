@@ -290,13 +290,13 @@ def summary(done: Mapping[str, Any]) -> str:
     for order in review["gates"]["orders"]:
         o, d = orders[order["index"]], decided[order["index"]]
         lines.append(f"order {o['index']:>2}   {o['side']:4} {o['asset']['symbol']:5} "
-                     f"${o['usd']:>6}  gates {'cleared' if order['cleared'] else 'BLOCKED by ' + ', '.join(order['blocked_by'])}"
+                     f"${Decimal(o['usd']):>6.2f}  gates {'cleared' if order['cleared'] else 'BLOCKED by ' + ', '.join(order['blocked_by'])}"
                      f"  risk {d['model_vote'] or '-'}  => "
                      f"{'APPROVED' if d['approved'] else 'VETOED by ' + ', '.join(d['vetoed_by'])}")
         if d.get("model_why"):
             lines.append(f"            risk: {d['model_why'][:150]}")
     budget = review["budget"]
-    lines += ["", f"risk       bundle about {budget['tokens']} tokens ({budget['gate']['reason']})"]
+    lines += ["", f"risk       bundle: {budget['gate']['reason']}"]
     if review["decision"]["overall"]:
         lines.append(f"           overall {review['decision']['overall']['vote']}: "
                      f"{review['decision']['overall']['why'][:150]}")

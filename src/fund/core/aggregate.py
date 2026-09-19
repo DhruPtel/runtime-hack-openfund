@@ -253,6 +253,11 @@ def _signed(value: Decimal | None) -> str:
     return ("+" if value > 0 else "") + decimal_text(value)
 
 
+def _shown(weight: Decimal) -> str:
+    """A weight to six places, for the table only. The proposal keeps it exact."""
+    return decimal_text(weight.quantize(QUANTUM))
+
+
 def _money(value: Decimal) -> str:
     cents = value.quantize(Decimal("0.01"))
     return "·" if not cents else ("+" if cents > 0 else "") + format(cents, "f")
@@ -279,12 +284,12 @@ def table(proposal: Proposal, seats: Sequence[str], nav_usd: Decimal | None = No
                 for c in row.contributions}
         cells = [row.symbol, *(said.get(seat, "·") for seat in seats), _signed(row.direction),
                  decimal_text(row.caution) if row.caution else "·", _signed(row.score),
-                 decimal_text(row.current), decimal_text(row.target)]
+                 _shown(row.current), _shown(row.target)]
         if nav_usd is not None:
             cells.append(_money((row.target - row.current) * nav_usd))
         rows.append(cells)
-    cash = ["cash", *("" for _ in seats), "", "", "", decimal_text(proposal.cash_current),
-            decimal_text(proposal.cash_target)]
+    cash = ["cash", *("" for _ in seats), "", "", "", _shown(proposal.cash_current),
+            _shown(proposal.cash_target)]
     if nav_usd is not None:
         cash.append(_money((proposal.cash_target - proposal.cash_current) * nav_usd))
     rows.append(cash)
