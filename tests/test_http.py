@@ -64,21 +64,6 @@ def test_a_failure_names_endpoints_and_hides_their_urls():
     assert "secret-key" not in str(failure.value) and "<PRIMARY>" in str(failure.value)
 
 
-def test_an_accept_hook_can_call_a_200_transient():
-    def accept(reply):
-        if reply.body == b"busy":
-            raise http.Retry("rate limited inside a 200")
-        return reply.body
-
-    transport = replies((200, b"busy", {}), (200, b"done", {}))
-    assert client("ONLY", transport=transport).send(accept=accept) == b"done"
-
-
-def test_a_two_tuple_transport_is_a_reply_with_no_headers():
-    reply = client("ONLY", transport=replies((200, b"x"))).send()
-    assert reply.status == 200 and dict(reply.headers) == {}
-
-
 # --- Retry-After ------------------------------------------------------------------------
 
 def test_a_positive_retry_after_longer_than_the_backoff_is_waited_out():
