@@ -180,11 +180,16 @@ class Inference:
 Event = Union[Opening, Fill, Fee, Inference]
 
 
+def book_for(mode: ExecutionMode) -> str:
+    """The book an order of this mode trades in (P9): paper, or real for live."""
+    return PAPER if mode is ExecutionMode.PAPER else REAL
+
+
 def book_of(event: Event) -> str:
     """The book an event belongs to (P9): a fill by its mode, an opening or a fee by
     the book it names, and inference to the real book, whose money paid for it."""
     if isinstance(event, Fill):
-        return PAPER if event.mode is ExecutionMode.PAPER else REAL
+        return book_for(event.mode)
     if isinstance(event, Inference):
         return REAL
     if isinstance(event, (Opening, Fee)):

@@ -20,6 +20,7 @@ from fund import config
 from fund.adapters import bankr_quote
 from fund.agents import schema
 from fund.core import aggregate, gates, plan
+from fund.run import fake_venue
 from fund.core.types import (
     BPS, USD, Amount, AssetId, FetchStatus, Fixed, Instant, Observation, Price, Quote,
 )
@@ -90,38 +91,14 @@ def propose(reports=FOUR, the_book: plan.Book | None = None, limits=LIMITS) -> a
                                limits=limits, confidence_weights=WEIGHTS, symbols=SYMBOLS)
 
 
-def _units(value: Decimal, decimals: int) -> int:
-    return int(value.scaleb(decimals).to_integral_value(rounding=ROUND_DOWN))
-
-
 def fake_quote(intent: plan.Intent, *, fetched_ms: int = FETCHED_MS,
                impact_bps: int | None = None) -> Observation:
-    """What the venue might answer for this order, scaled from the capture."""
-    entry = ENTRIES[intent.address]
-    venue = Decimal(entry["quote"]["venue_price_usd"])
-    usdg = Decimal(entry["quote"]["venue_sell_token_price_usd"])
-    impact = int(entry["quote"]["swap_impact_bps"]) if impact_bps is None else impact_bps
-    sold = Decimal(intent.sell.raw).scaleb(-intent.sell.decimals)
-    stock = AssetId(CHAIN, intent.address)
-    if intent.side == "buy":
-        got = sold * usdg / venue
-        sell_price = Price.parse(format(usdg, "f"), intent.sell.asset, USD)
-        buy_price = Price.parse(format(venue, "f"), stock, USD)
-    else:
-        got = sold * venue / usdg
-        sell_price = Price.parse(format(venue, "f"), stock, USD)
-        buy_price = Price.parse(format(usdg, "f"), intent.buy, USD)
-    buy = Amount(_units(got, intent.buy_decimals), intent.buy_decimals, intent.buy)
-    quote = Quote(sell=intent.sell, buy=buy,
-                  min_buy=Amount(buy.raw * 95 // 100, buy.decimals, buy.asset),
-                  price_impact=Fixed(impact, 0, BPS), swap_impact=Fixed(impact, 0, BPS),
-                  max_price_impact=Fixed(1500, 0, BPS), fee=Fixed(0, 0, BPS), fee_waived=False,
-                  slippage=Fixed(500, 0, BPS), sell_price=sell_price, buy_price=buy_price,
-                  quote_id=f"fake-{intent.index}")
-    return Observation(value=quote, source=bankr_quote.SOURCE, source_time=None,
-                       fetch_time=Instant(fetched_ms), block=None, status=FetchStatus.OK,
-                       detail="FAKE VENUE: scaled from the capture's own venue prices; not a "
-                              "quote", source_ref=quote.quote_id)
+    """What the venue might answer for this order, scaled from the capture
+    (`run/fake_venue.py`, the one fake venue)."""
+    return fake_venue.observe(SNAPSHOT, bankr_quote.QuoteRequest(intent.sell, intent.buy,
+                                                                 intent.buy_decimals),
+                              Instant(fetched_ms), impact_bps=impact_bps,
+                              quote_id=f"fake-{intent.index}")
 
 
 def judged(intent: plan.Intent, observation: Observation,

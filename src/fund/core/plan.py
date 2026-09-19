@@ -252,7 +252,10 @@ def _canonical(obj: Any) -> Any:
     return json.loads(to_canonical(obj))
 
 
-def _quote_record(seen: QuoteSeen | None, side: str) -> dict[str, Any] | None:
+def quote_record(seen: QuoteSeen | None, side: str) -> dict[str, Any] | None:
+    """A quote as a plan's order carries it: the observation exactly as fetched, the
+    verdict it was given, and the figures risk reads. The chokepoint writes a fresh
+    quote the same way when it regates an order (4.4)."""
     if seen is None:
         return None
     record: dict[str, Any] = {
@@ -349,7 +352,7 @@ def write(intents: Sequence[Intent], quotes: Mapping[int, QuoteSeen], *,
                      "decimals": intent.sell.decimals},
             "buy": {"address": intent.buy.address, "decimals": intent.buy_decimals},
             "weight": weight,
-            "quote": _quote_record(quotes.get(intent.index), intent.side),
+            "quote": quote_record(quotes.get(intent.index), intent.side),
             "evidence": _evidence(entries[intent.address])}
         if layout >= 2:
             order["move"] = _move(intent, seen[intent.address], parts[intent.address],
