@@ -21,8 +21,8 @@ its own worker and never the cycle:
       - each called asset: present at its address, under its own symbol, and
         tradeable;
       - at most the configured number of calls, one per asset;
-      - every citation naming a field that exists;
-      - every figure matching the field it cites.
+      - every citation naming a field, or recorded as imprecise;
+      - every figure matching a value the snapshot holds.
 
 **The figure check is the one that matters most.** A figure line that cites a
 single field (`[mark.price_usd]`, `[timeline 2026-09-03]`) must write that
@@ -34,6 +34,23 @@ Either rounding of an exact midpoint is correct. The capture holds AMZN's close
 of 266.085, which the approved report writes 266.08, and USO's of 161.405,
 written 161.41. A strict half-up rule refused the first; that was the rule's
 error, not the report's.
+
+**A real value under a loose reference is accepted and recorded** (the
+operator's rule after 3.8, where four real reports were refused and none had
+invented a figure). When a figure is not the field its line cites, it is looked
+for among the values of the assets the line is about: the call's own asset,
+and every asset the line names by symbol, in its citations or its words. Found,
+the report stands, and an `Imprecision` records what was cited and where the
+value is. A citation that names no field as written is recorded the same way,
+with the field it resolves to when exactly one field ends in it
+(`[swap_impact_bps]` is `quote.swap_impact_bps`). **A figure found nowhere
+still refuses the report:** it is fabricated. When a line's citation names
+nothing, every figure on it is checked by value, bps included, because nothing
+on the line marks a figure as computed.
+
+The search stays inside the assets the line is about, not the whole snapshot:
+about 2,500 numbers, among which a figure written to two places could match by
+chance, and the fabrication check would be weaker for it.
 
 **Computed figures are cited but not checked,** as REPORT-FORMAT.md states:
 - a percentage;
@@ -80,6 +97,8 @@ _PERCENT = re.compile(r"[+-]?\d+(?:\.\d+)?%")
 #: three after a first group of one to three, never after a decimal point.
 _GROUPED = re.compile(r"(?<![\d.,])\d{1,3}(?:,\d{3})+(?![\d,])")
 _DECIMAL = re.compile(r"(?<![\d.])(-?\d+\.\d+)(?![\d.])")
+
+_SYMBOL = re.compile(r"(?<![A-Za-z0-9])([A-Z][A-Z0-9.]{0,9})(?![A-Za-z0-9])")
 
 _MISSING = object()
 
@@ -137,9 +156,36 @@ class Report:
 
 
 @dataclass(frozen=True)
+class Imprecision:
+    """A citation that was loose, kept so a reader sees it. Never a refusal.
+
+    Either a citation named no field as written (`found` is where it resolves,
+    or None), or a figure was not the field its line cites but is a value the
+    snapshot holds for an asset the line is about (`found` names that value)."""
+
+    cited: str  # the citation item as written, or the fields the figure's line cites
+    found: str | None  # where the value really is, as a citation would name it
+    written: str | None = None  # the figure, when a figure was found elsewhere
+    line: int | None = None
+    why: str | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"cited": self.cited, "found": self.found, "written": self.written,
+                "line": self.line, "why": self.why}
+
+    def __str__(self) -> str:
+        where = f" (line {self.line})" if self.line else ""
+        if self.written is not None:
+            return f"{self.written} cites {self.cited}; it is {self.found}{where}"
+        return (f"[{self.cited}] names no field; it resolves to {self.found}{where}" if self.found
+                else f"[{self.cited}] names no field: {self.why}{where}")
+
+
+@dataclass(frozen=True)
 class Verdict:
     report: Report | None
     refusals: tuple[Refusal, ...]
+    imprecisions: tuple[Imprecision, ...] = ()
 
     @property
     def ok(self) -> bool:
@@ -148,6 +194,11 @@ class Verdict:
     @property
     def rule(self) -> str | None:
         return self.refusals[0].rule if self.refusals else None
+
+    def as_dict(self) -> dict[str, Any]:
+        """The parsed report, and every citation that was loose in it."""
+        parsed = self.report.as_dict() if self.report is not None else {}
+        return {**parsed, "imprecise_citations": [i.as_dict() for i in self.imprecisions]}
 
 
 @dataclass(frozen=True)
@@ -271,9 +322,27 @@ def _number(value: Any) -> Decimal | None:
     if isinstance(value, bool) or isinstance(value, (list, dict)) or value is None:
         return None
     try:
-        return Decimal(str(value))
+        number = Decimal(str(value))
     except (InvalidOperation, ValueError):
         return None
+    return number if number.is_finite() else None
+
+
+def _leaves(node: Any, prefix: str = "") -> list[tuple[str, Any]]:
+    """Every numeric value under an asset's entry, by its field path. The closes
+    are named by date instead (`timeline 2026-09-03`)."""
+    found: list[tuple[str, Any]] = []
+    if isinstance(node, Mapping):
+        for key, value in node.items():
+            if key != "timeline":
+                found += _leaves(value, f"{prefix}.{key}" if prefix else key)
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            if isinstance(value, (Mapping, list)):
+                found += _leaves(value, f"{prefix}.{index}")
+    elif _number(node) is not None:
+        found.append((prefix, node))
+    return found
 
 
 @dataclass(frozen=True)
@@ -334,6 +403,42 @@ class _Snapshot:
                                    single=_number(value) is not None))
         return found, None
 
+    def loosely(self, item: str, scope: Mapping[str, Any] | None) -> _Resolved | None:
+        """A field cited without the block that holds it: `[swap_impact_bps]` for
+        `quote.swap_impact_bps`. Found only when exactly one field ends so."""
+        named = _ITEM_FIELD.match(item)
+        if named is None:
+            return None
+        entry = self.by_symbol.get(named.group(1)) if named.group(1) else scope
+        if entry is None:
+            return None
+        path = named.group(2)
+        ends = [(p, v) for p, v in _leaves(entry) if p == path or p.endswith("." + path)]
+        if len(ends) != 1:
+            return None
+        return _Resolved(f"{entry['asset']['symbol']} {ends[0][0]}", ends[0][1], single=True)
+
+    def about(self, scope: Mapping[str, Any] | None, text: str) -> list[Mapping[str, Any]]:
+        """The assets a figure line is about: the call's own, and every asset the
+        line names by symbol, in its citations or its words."""
+        entries = [scope] if scope is not None else []
+        for word in _SYMBOL.findall(text):
+            entry = self.by_symbol.get(word)
+            if entry is not None and entry not in entries:
+                entries.append(entry)
+        return entries
+
+    def values(self, entries: Sequence[Mapping[str, Any]]) -> list[_Resolved]:
+        """Every single value these assets hold: each numeric field and each close."""
+        out = []
+        for entry in entries:
+            label = entry["asset"]["symbol"]
+            out += [_Resolved(f"{label} {path}", value, single=True)
+                    for path, value in _leaves(entry)]
+            out += [_Resolved(f"{label} timeline {point[0]}", point[2], single=True)
+                    for point in (entry.get("timeline") or {}).get("points") or ()]
+        return out
+
 
 def _citations(text: str) -> list[list[str]]:
     return [[" ".join(item.split()) for item in bracket.split(",")]
@@ -361,30 +466,51 @@ def _claims(text: str) -> list[tuple[str, str, Decimal]]:
     return claims
 
 
-def _check_figure(figure: Figure, fields: list[_Resolved]) -> Refusal | None:
+def _fits(kind: str, pairs: Sequence[tuple[_Resolved, Decimal]]) -> list[tuple[_Resolved, Decimal]]:
+    """The values a figure of this kind can be: any for a plain decimal, a bps
+    field for `N bps`, a USD field for `$N.NNM`."""
+    return [(f, v) for f, v in pairs
+            if kind == "plain" or (kind == "bps" and f.name.endswith("_bps"))
+            or (kind == "millions" and f.name.endswith("_usd"))]
+
+
+def _check_figure(figure: Figure, fields: list[_Resolved], *, loose: bool,
+                  about: Sequence[str], pool: Any) -> tuple[Refusal | None, list[Imprecision]]:
+    """Each figure on the line is a field it cites, or a value an asset the line is
+    about holds, or it refuses the report as fabricated.
+
+    `loose` says a citation on the line named no field. Then no figure on it can be
+    told from a computed one by what it cites, so every figure is checked by value,
+    bps included. `pool()` lists the values of the assets the line is about."""
     singles = [(f, _number(f.value)) for f in fields if f.single]
-    if not singles:
-        return None  # a computed figure: cited, not checked
-    cites_bps = any(f.name.endswith("_bps") for f, _ in singles)
+    if not singles and not loose:
+        return None, []  # a computed figure: cited, not checked
+    check_bps = loose or any(f.name.endswith("_bps") for f, _ in singles)
+    cited = "; ".join(f"{f.name} = {f.value}" for f, _ in singles) or "no field that exists"
+    found: list[Imprecision] = []
+    held: list[tuple[_Resolved, Decimal]] | None = None
     for kind, written, claim in _claims(figure.text):
-        if kind == "bps" and not cites_bps:
+        if kind == "bps" and not check_bps:
             continue  # computed from the prices it cites, like a percentage: not checked
-        candidates = [(f, v) for f, v in singles
-                      if kind == "plain"
-                      or (kind == "bps" and f.name.endswith("_bps"))
-                      or (kind == "millions" and f.name.endswith("_usd"))]
         scale = Decimal(1_000_000) if kind == "millions" else Decimal(1)
-        if not any(_matches(claim, v / scale) for _, v in candidates):
-            cited = "; ".join(f"{f.name} = {f.value}" for f, _ in singles)
-            return Refusal("figure", f"{written} matches none of the fields it cites: {cited}",
-                           figure.line)
-    return None
+        if any(_matches(claim, v / scale) for _, v in _fits(kind, singles)):
+            continue
+        held = held if held is not None else [(f, _number(f.value)) for f in pool()]
+        match = next((f for f, v in _fits(kind, held) if _matches(claim, v / scale)), None)
+        if match is not None:  # a real value, cited under the wrong reference
+            found.append(Imprecision(cited=", ".join(f.name for f, _ in singles) or "no field",
+                                     found=match.name, written=written, line=figure.line))
+            continue
+        return (Refusal("figure", f"{written} matches none of the fields it cites: {cited}; "
+                                  f"nor any value of {', '.join(about) or 'the snapshot'}",
+                        figure.line), found)
+    return None, found
 
 
-def check(report: Report, snapshot: Mapping[str, Any], *, contract: Contract, agent: str,
-          snapshot_sha256: str) -> tuple[Refusal, ...]:
-    """Hold a parsed report to its seat's contract and to the snapshot it names."""
+def _examine(report: Report, snapshot: Mapping[str, Any], *, contract: Contract, agent: str,
+             snapshot_sha256: str) -> tuple[tuple[Refusal, ...], tuple[Imprecision, ...]]:
     refusals: list[Refusal] = []
+    imprecisions: list[Imprecision] = []
     if report.seat != contract.seat:
         refusals.append(Refusal("header", f"seat {report.seat!r}, expected {contract.seat!r}", 1))
     if report.agent != agent:
@@ -420,6 +546,15 @@ def check(report: Report, snapshot: Mapping[str, Any], *, contract: Contract, ag
             refusals.append(Refusal("asset", f"{call.symbol} is {entry['status']['value']}, "
                                     "not tradeable", call.line))
 
+    lines = report.text.split("\n")
+
+    def line_of(item: str) -> int | None:
+        """The line whose citation holds the item; else the first line naming it."""
+        for n, text in enumerate(lines, start=1):
+            if any(item in items for items in _citations(text)):
+                return n
+        return next((n for n, text in enumerate(lines, start=1) if item in text), None)
+
     regions = [(report.opening, None, ())]
     regions += [(c.text, snap.by_address.get(c.address), c.figures) for c in report.calls]
     for text, scope, figures in regions:
@@ -428,18 +563,40 @@ def check(report: Report, snapshot: Mapping[str, Any], *, contract: Contract, ag
                 if _ITEM_ALL.match(item):
                     continue
                 _, why = snap.resolve(item, scope)
-                if why:
-                    refusals.append(Refusal("citation", why))
+                if why:  # a reference that names nothing as written: recorded, not refused
+                    loosely = snap.loosely(item, scope)
+                    imprecisions.append(Imprecision(cited=item, found=loosely and loosely.name,
+                                                    line=line_of(item), why=why))
         for figure in figures:
             fields: list[_Resolved] = []
+            loose = False
             for items in _citations(figure.text):
                 for item in items:
-                    if not _ITEM_ALL.match(item):
-                        fields += snap.resolve(item, scope)[0]
-            refusal = _check_figure(figure, fields)
+                    if _ITEM_ALL.match(item):
+                        continue
+                    resolved, why = snap.resolve(item, scope)
+                    if why:
+                        loosely = snap.loosely(item, scope)
+                        if loosely is None:
+                            loose = True
+                        else:
+                            resolved = [loosely]
+                    fields += resolved
+            entries = snap.about(scope, figure.text)
+            refusal, found = _check_figure(
+                figure, fields, loose=loose, about=[e["asset"]["symbol"] for e in entries],
+                pool=lambda entries=entries: snap.values(entries))
+            imprecisions += found
             if refusal:
                 refusals.append(refusal)
-    return tuple(refusals)
+    return tuple(refusals), tuple(imprecisions)
+
+
+def check(report: Report, snapshot: Mapping[str, Any], *, contract: Contract, agent: str,
+          snapshot_sha256: str) -> tuple[Refusal, ...]:
+    """Hold a parsed report to its seat's contract and to the snapshot it names."""
+    return _examine(report, snapshot, contract=contract, agent=agent,
+                    snapshot_sha256=snapshot_sha256)[0]
 
 
 def validate(text: str, snapshot: Mapping[str, Any], *, contract: Contract, agent: str,
@@ -448,5 +605,6 @@ def validate(text: str, snapshot: Mapping[str, Any], *, contract: Contract, agen
     report, refusals = parse(text)
     if report is None:
         return Verdict(None, refusals)
-    return Verdict(report, refusals + check(report, snapshot, contract=contract, agent=agent,
-                                            snapshot_sha256=snapshot_sha256))
+    checked, imprecise = _examine(report, snapshot, contract=contract, agent=agent,
+                                  snapshot_sha256=snapshot_sha256)
+    return Verdict(report, refusals + checked, imprecise)

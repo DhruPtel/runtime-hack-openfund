@@ -141,9 +141,6 @@ MUTATIONS = {
     "asset: wrong symbol": (f"CALL AMD {AMD}", f"CALL AMZN {AMD}", "asset"),
     "asset: not tradeable": (f"CALL AMD {AMD}", f"CALL ASML {ASML}", "asset"),
     "no-calls: both": ("\nCALL AMD", "\nNO CALLS\nCALL AMD", "no-calls"),
-    "citation: no such field": ("[mark.price_usd]", "[mark.price_usdx]", "citation"),
-    "citation: no such close": ("[timeline 2026-09-03]", "[timeline 2026-08-22]", "citation"),
-    "citation: no such asset": ("SPY mark.price_usd]", "XYZ mark.price_usd]", "citation"),
 }
 
 
@@ -154,6 +151,40 @@ def test_each_rule_refuses_by_its_own_name(name):
     assert old in text
     v = verdict(text.replace(old, new, 1))
     assert not v.ok and rule in rules(v)
+
+
+# --- an imprecise citation is recorded, not refused; its figure is still checked (3.8) -------------
+
+IMPRECISE = {
+    "no such field": ("[mark.price_usd]", "[mark.price_usdx]", "mark.price_usdx", "AMD mark.price_usd"),
+    "no such close": ("[timeline 2026-09-03]", "[timeline 2026-08-22]", "timeline 2026-08-22",
+                      "AMD timeline 2026-09-03"),
+    "no such asset": ("SPY mark.price_usd]", "XYZ mark.price_usd]", "XYZ mark.price_usd", None),
+}
+
+
+@pytest.mark.parametrize("name", IMPRECISE)
+def test_an_imprecise_citation_is_recorded_and_the_report_accepted(name):
+    """The operator's rule after 3.8: a reference that names nothing as written does
+    not refuse the report. It is recorded, and the figure under it is found by value."""
+    old, new, cited, found = IMPRECISE[name]
+    text = example("price-trend")
+    v = verdict(text.replace(old, new, 1))
+    assert v.ok, v.refusals
+    assert cited in [i.cited for i in v.imprecisions]
+    if found:
+        assert found in [i.found for i in v.imprecisions if i.written is not None]
+    assert v.as_dict()["imprecise_citations"]
+
+
+@pytest.mark.parametrize("name", ["no such field", "no such close"])
+def test_a_fabricated_figure_under_an_imprecise_citation_still_refuses(name):
+    old, new, _, _ = IMPRECISE[name]
+    figure = {"no such field": ("559.42, Friday's close", "569.42, Friday's close"),
+              "no such close": ("454.99, the low", "444.99, the low")}[name]
+    text = example("price-trend").replace(old, new, 1).replace(*figure, 1)
+    refusal = next(r for r in verdict(text).refusals if r.rule == "figure")
+    assert figure[1].split(",")[0] in refusal.detail and "nor any value of AMD" in refusal.detail
 
 
 def test_a_report_with_no_calls_must_say_so():
@@ -240,3 +271,64 @@ def test_a_figure_with_thousands_separators_is_the_same_number():
     wrong = text.replace("$2,101,924.28", "$2,201,924.28", 1)
     refusal = next(r for r in verdict(wrong, "price-integrity").refusals if r.rule == "figure")
     assert "2201924.28" in refusal.detail
+
+
+CYCLE_3_8 = REPO / "fixtures" / "cycles" / "20260919T171351Z" / "cycle" / "results"
+
+
+def recorded_3_8(seat: str) -> str:
+    from fund.agents import show
+    return show.reply_text(json.loads((CYCLE_3_8 / f"{seat}.json").read_text()))
+
+
+def live(text: str, seat: str) -> schema.Verdict:
+    return schema.validate(text, SNAPSHOT, contract=schema.Contract.load(seat),
+                           agent="unassigned", snapshot_sha256=SHA)
+
+
+def test_the_3_8_replies_revalidated_from_their_stored_text():
+    """No new call. price-trend, execution-quality and price-integrity now pass, each
+    loose citation recorded. cross-asset-macro still refuses on one figure, `+(-0.09)%`,
+    a percentage the parser does not read as one."""
+    verdicts = {s: live(recorded_3_8(s), s) for s in SEATS}
+    assert {s: v.ok for s, v in verdicts.items()} == {
+        "price-trend": True, "cross-asset-macro": False, "execution-quality": True,
+        "price-integrity": True}
+    assert [r.rule for r in verdicts["cross-asset-macro"].refusals] == ["figure"]
+    assert verdicts["cross-asset-macro"].refusals[0].detail.startswith("-0.09 matches none")
+    loose = {str(i) for i in verdicts["price-trend"].imprecisions}
+    assert loose == {"109.05 cites INTC timeline 2026-09-09, INTC timeline 2026-09-17; "
+                     "it is INTC mark.price_usd (line 34)"}
+    found = {(i.written, i.found) for i in verdicts["cross-asset-macro"].imprecisions}
+    assert ("544.70535", "META timeline 2026-08-20") in found
+    assert ("751.28", "SPY timeline 2026-09-16") in found
+    paths = {(i.cited, i.found) for i in verdicts["execution-quality"].imprecisions}
+    assert ("swap_impact_bps", "MSTR quote.swap_impact_bps") in paths
+    assert all(i.line and i.line > 3 for i in verdicts["execution-quality"].imprecisions)
+
+
+@pytest.mark.parametrize("seat, real, fabricated", [
+    ("price-trend", "cleared to 109.20-109.05", "cleared to 109.20-110.05"),
+    ("cross-asset-macro", "544.70535 to 666.7615", "545.70535 to 666.7615"),
+    ("cross-asset-macro", "SPY fell to 751.28 on 9/16 while SGOV", "SPY fell to 741.28 on 9/16 while SGOV"),
+    ("execution-quality", "quote age 0.725s", "quote age 0.925s"),
+    ("price-integrity", "mark 559.42445 vs corroboration", "mark 569.42445 vs corroboration"),
+    ("price-integrity", "on $2,101,924.28 of 24h volume", "on $2,191,924.28 of 24h volume"),
+])
+def test_every_3_8_figure_changed_to_a_value_the_snapshot_does_not_hold_refuses(
+        seat, real, fabricated):
+    """The fabrication check, unweakened: each of these lines was loose or newly read,
+    and a figure on it that matches nothing still refuses the report."""
+    text = recorded_3_8(seat)
+    assert real in text
+    v = live(text.replace(real, fabricated, 1), seat)
+    assert not v.ok and "figure" in rules(v), fabricated
+
+
+def test_a_real_value_of_an_asset_the_line_does_not_name_still_refuses():
+    """The search is the assets the line is about, not the whole snapshot: META's
+    close written on AMD's line, with META named nowhere, is refused."""
+    text = example("price-trend").replace("- 454.99, the low on 3 September [timeline 2026-09-03]",
+                                          "- 544.71, the low on 3 September [timeline 2026-09-03]",
+                                          1)
+    assert "figure" in rules(verdict(text))

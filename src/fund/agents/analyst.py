@@ -180,7 +180,7 @@ def run(job: Mapping[str, Any], key: str, *, send: Any = None,
         result["attempts"].append(_attempt_record(number, at, reply, job["pricing"], refusals))
         if verdict is not None and verdict.ok:
             result.update(status="no_call" if verdict.report.no_calls else "ok", reason=None,
-                          detail=None, report=verdict.report.as_dict(),
+                          detail=None, report=verdict.as_dict(),
                           report_text=verdict.report.text)
             break
         result.update(reason="invalid", detail="; ".join(str(r) for r in refusals),
