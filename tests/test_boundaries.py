@@ -1,10 +1,6 @@
-"""The structural rules CODEBASE §3 names, read from the source, and the recorded
-rules the 2026-09-18 audit found no test for. Each test was shown to fail with
-its rule broken on purpose (tracker/LOGS.md, the test audit).
-
-The credential-in-logs rule lives in tests/test_redaction.py. The deployed
-isolation test is unit 4.12's, and needs a deployed process to run against.
-"""
+"""The structural rules of CODEBASE §3 and §8, read from the source, and the recorded
+rules the 2026-09-18 test audit found untested. Each was shown to fail with its rule
+broken on purpose; credential masking is test_redaction.py's, isolation is 4.12's."""
 
 from __future__ import annotations
 

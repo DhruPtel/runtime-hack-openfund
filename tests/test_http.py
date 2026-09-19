@@ -1,9 +1,6 @@
-"""The shared HTTP client, offline (unit 1.3's transport, moved at 1.4).
-
-The chain adapter's own tests still drive it through `RpcClient`. These cover
-what the move added: GETs for GeckoTerminal, and Retry-After, which the RPC
-never sends and GeckoTerminal sends as 0.
-"""
+"""The shared HTTP client, unit 1.3's transport moved at 1.4: a whole-request deadline,
+a doubling backoff, Retry-After with 0 read as no hint, a User-Agent, and no
+endpoint URL in an error."""
 
 from __future__ import annotations
 

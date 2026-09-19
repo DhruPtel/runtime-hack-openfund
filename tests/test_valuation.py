@@ -1,10 +1,6 @@
-"""Unit 1.4: the one valuation function and the tiered cross-check, offline.
-
-Assets come from the real pinned universe in `config/registry/`. The AMZN case is
-probe 0.4's own reading (`probes/out/feed.json`, block 66354932): the feed at
-252.60, GeckoTerminal at 265.87982073 on $2,193,251.17 of 24h volume, which
-F0.4.5 recorded as a 499.5 bps divergence on a liquid name.
-"""
+"""Unit 1.4, valuation: one mark and one value function, the tiered divergence veto,
+closed-session findings, and holdings never valued at zero. The AMZN case is probe
+0.4's reading: feed 252.60, GeckoTerminal 265.88 on $2.19M of volume (F0.4.5)."""
 
 from __future__ import annotations
 

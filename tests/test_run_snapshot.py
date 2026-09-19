@@ -1,16 +1,6 @@
-"""Unit 1.6's live read, `run/snapshot.py`, run offline end to end.
-
-The whole path `main()` takes — pin, read the chain, GeckoTerminal, quotes,
-judge, build — runs here with no network: `urlopen` is replaced by a failure.
-The three transports answer in the shapes the real sources were recorded in:
-- the chain speaks the real `aggregate3` ABI, as 1.3's fake does;
-- GeckoTerminal's entries follow the batch response captured 2026-09-19 UTC;
-- each quote is probe 0.3's recorded TSLA body, re-addressed to the token asked.
-
-This is not 1.9's replay of a recorded run; it proves the composition, not the
-data. The universe is the real pinned one, narrowed to three stocks with feeds
-and one held stock without.
-"""
+"""Unit 1.6's live read, run end to end with the network refused, over transports
+answering in the recorded shapes: every read at the pinned hash, the snapshot it
+builds, a beacon disagreement stopping it, and a dropped holding still read."""
 
 from __future__ import annotations
 
@@ -26,6 +16,9 @@ from fund.core import universe, valuation
 from fund.core.types import ChainAddress, FetchStatus, Instant
 from fund.run import snapshot as run
 
+# Not 1.9's replay of a recorded run: this proves the composition, not the data.
+# The universe is the real pinned one, narrowed to three stocks with feeds and one
+# held stock without.
 U = universe.load()
 CHAIN = 4663
 SAT = 1_789_776_000                                    # Sat 2026-09-19 00:00:00Z

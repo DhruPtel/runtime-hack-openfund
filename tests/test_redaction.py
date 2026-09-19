@@ -1,10 +1,6 @@
-"""Unit 0.1 done-condition: every declared credential value is masked in logs.
-
-The load-bearing test is ``test_a_new_credential_is_masked_without_touching_the
-_filter``. The others prove the filter works; that one proves the property
-planning/PHASE-0-1.md actually asks for -- that the denylist is *derived* from the
-credential table, so adding a credential cannot create an unredacted path.
-"""
+"""Unit 0.1 and PLAN §2 invariant 1: every declared credential is masked in logs, by a
+denylist derived from the credential table, and the analyst role can load neither
+the execution key nor the signing key, under any name."""
 
 from __future__ import annotations
 

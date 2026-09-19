@@ -1,9 +1,6 @@
-"""Unit 1.3: the chain adapter, offline.
-
-Transports are injected to hang, refuse and rate-limit on purpose. The one
-live read is the adapter's own `--prove` entry point, which is not part of
-`make test`.
-"""
+"""Unit 1.3, the chain adapter: every read at the pinned block by hash, missing state
+retried and answers not, freshness in open-session time, series coverage and scale
+breaks, the closed session inferred from rounds, and daily closes."""
 
 from __future__ import annotations
 

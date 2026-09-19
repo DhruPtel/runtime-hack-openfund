@@ -1,10 +1,6 @@
-"""Unit 1.4: the GeckoTerminal corroborator, offline.
-
-Replies are shaped like the batch tokens endpoint's real ones (captured
-2026-09-19 UTC): decimal strings for price and volume, one `top_pools` entry,
-Cloudflare cache headers. The live read is `python -m fund.adapters.gecko
---prove`, which is not part of `make test`.
-"""
+"""Unit 1.4, the GeckoTerminal corroborator: price and 24h volume read exactly and
+matched by address, and a missing, zero, duplicated or unreadable entry never read
+as a price. Replies follow the batch endpoint's, captured 2026-09-19 UTC."""
 
 from __future__ import annotations
 

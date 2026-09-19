@@ -1,7 +1,6 @@
-"""Unit 1.6: the snapshot builder, offline, on the real pinned universe.
-
-The live build is `python -m fund.run.snapshot`, not part of `make test`.
-"""
+"""Unit 1.6, the snapshot builder: canonical bytes whose hash holds still and moves
+with any change, each status at its own rule, findings only past the limit, and
+readings from another block or after the pin refused."""
 
 from __future__ import annotations
 

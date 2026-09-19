@@ -1,10 +1,6 @@
-"""Unit 1.1: the types module.
-
-Two things are proven here. The first is the canonical encoding: sorted keys,
-no floats, big integers as strings, and a byte-stable round trip. The second is
-that each type can express the cases the probes actually measured, built from
-recorded values wherever the record has them.
-"""
+"""Unit 1.1, the types: a canonical encoding with no floats and big integers as text,
+and types that hold what the probes measured (CRM's shape, a series judged on its
+newest point, a swap run through a bundler) and refuse what they did not."""
 
 from __future__ import annotations
 

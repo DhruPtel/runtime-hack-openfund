@@ -1,9 +1,6 @@
-"""Unit 1.2: the universe.
-
-Every rule is tested against something it should admit and something it should
-reject. Every refusal is checked for *which rule* refused: a rejection firing
-for the wrong reason looks exactly like a passing test.
-"""
+"""Unit 1.2, the universe: the registry pinned by hash and refreshed deliberately,
+identity by registry and markability by feed as separate rules, the beacon check
+failing loudly, and a held asset carried when the registry drops it."""
 
 from __future__ import annotations
 
@@ -14,6 +11,8 @@ import pytest
 from fund.core import universe as u
 from fund.core.types import AssetId, Instant
 
+# Each refusal is checked for the rule that refused it: one firing for the wrong
+# reason looks exactly like a passing test.
 CHAIN = 4663
 
 

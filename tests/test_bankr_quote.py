@@ -1,9 +1,6 @@
-"""Unit 1.5: the quote adapter, offline.
-
-The response bytes are probe 0.3's own TSLA quote at $25 (`probes/out/quote.json`,
-2026-09-17): the four number formats, a negative impact, all 12 fields. The live
-read is `python -m fund.adapters.bankr_quote --prove`, not part of `make test`.
-"""
+"""Unit 1.5, the quote adapter: $25 sized at USDG's own mark, four number formats
+converted exactly, signed impact on swapImpactBps, quote age, refusals that keep the
+venue's words, and no route to spend authority. Bytes are probe 0.3's TSLA quote."""
 
 from __future__ import annotations
 

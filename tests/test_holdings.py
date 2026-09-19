@@ -1,20 +1,6 @@
-"""Unit 1.8: held-but-untradeable. A holding never leaves the book, whatever
-takes its asset out of the buy universe.
-
-Every case holds 2 NVDA and moves NVDA out of the buy universe one way. Then it
-reads the snapshot's holdings:
-- **the five ways PHASE-0-1 1.8 names:** not tradeable this snapshot, below
-  the corroborator line, no longer markable, listed but not ACTIVE, and
-  identity in doubt (dropped by the registry and carried, or an unread beacon);
-- **the per-snapshot statuses 1.6 and 1.8 added:** no mark, short history,
-  uncorroborated, and divergence veto.
-
-Each time the holding is still there, with its universe status, and is either
-valued at its own mark or explicitly unvalued with the reason. It is never
-valued at zero, and never at the venue's quote. A final test asserts that
-every way-out status is exercised here, so a status added later cannot slip
-past this file.
-"""
+"""Unit 1.8: a holding never leaves the book. A held NVDA is taken out of the buy
+universe ten ways, and each time keeps its row, balance and status, valued at its
+own mark or carried at null with the reason, never at zero."""
 
 from __future__ import annotations
 
