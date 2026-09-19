@@ -34,6 +34,7 @@ import json
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import Callable
 
 from fund import config
 from fund.adapters import bankr_quote, chain_4663, gecko
@@ -60,6 +61,21 @@ class ChainRead:
     series: dict[AssetId, Series]          # each stock's rounds over the window
     beacons: dict[AssetId, Check]          # each stock's beacon cross-check
     balances: dict[AssetId, Observation]   # the wallet: cash, gas, every registry asset
+
+
+@dataclass(frozen=True)
+class Sources:
+    """The three adapters' clients. `live_sources` makes the real ones; a test
+    passes clients over recorded-shape transports, and nothing else changes."""
+
+    rpc: chain_4663.RpcClient
+    corroborator: gecko.Gecko
+    venue: bankr_quote.QuoteAdapter
+
+
+def live_sources(cfg: config.Config, settings: chain_4663.Settings) -> Sources:
+    return Sources(rpc=settings.client(cfg.secret), corroborator=gecko.Settings.load().gecko(),
+                   venue=bankr_quote.Settings.load().adapter(cfg.secret))
 
 
 @dataclass(frozen=True)
@@ -103,25 +119,25 @@ def cash_mark(chain: ChainRead, u: universe.Universe, settings: chain_4663.Setti
     return valuation.mark(u.cash(), reading, fresh)
 
 
-def read_offchain(cfg: config.Config, chain: ChainRead, u: universe.Universe,
-                  settings: chain_4663.Settings, limits: bankr_quote.Limits) -> OffchainRead:
+def read_offchain(chain: ChainRead, u: universe.Universe, settings: chain_4663.Settings,
+                  limits: bankr_quote.Limits, sources: Sources,
+                  clock: Callable[[], Instant] = now) -> OffchainRead:
     stocks = stocks_of(u)
-    corroborations = gecko.Settings.load().gecko().corroborate(stocks)
+    corroborations = sources.corroborator.corroborate(stocks)
     cash = cash_mark(chain, u, settings)
     size = (bankr_quote.nominal_sell(limits.nominal, cash.price, u.cash_decimals)
             if cash.check.passes else None)
     quotes: dict[AssetId, Observation] = {}
-    venue = bankr_quote.Settings.load().adapter(cfg.secret)
     for a in stocks:
         if size is None:
             quotes[a] = Observation(value=None, source=bankr_quote.SOURCE, source_time=None,
-                                    fetch_time=now(), block=None, status=FetchStatus.REFUSED,
+                                    fetch_time=clock(), block=None, status=FetchStatus.REFUSED,
                                     detail=f"not asked: no size, because the cash leg has no "
                                            f"mark ({cash.check.reason})")
         else:
-            quotes[a] = venue.quote(bankr_quote.QuoteRequest(
+            quotes[a] = sources.venue.quote(bankr_quote.QuoteRequest(
                 sell=size, buy=a, buy_decimals=u.records[a].decimals))
-    return OffchainRead(corroborations, size, quotes, now())
+    return OffchainRead(corroborations, size, quotes, clock())
 
 
 def _config_sha256() -> dict[str, str]:
@@ -206,6 +222,24 @@ def assemble(chain: ChainRead, offchain: OffchainRead, u: universe.Universe,
         rules=_rules(settings, rule, limits, offchain.quote_size), config=_config_sha256())
 
 
+@dataclass(frozen=True)
+class Built:
+    snapshot: snapshot.Snapshot
+    chain: ChainRead
+    offchain: OffchainRead
+
+
+def read_and_build(sources: Sources, *, settings: chain_4663.Settings, u: universe.Universe,
+                   rule: valuation.DivergenceRule, limits: bankr_quote.Limits,
+                   wallet: ChainAddress, clock: Callable[[], Instant] = now) -> Built:
+    """Pin a block, read everything, judge, and build: the whole live path."""
+    block = chain_4663.pin_block(sources.rpc, settings.chain_id, settings.block_tag)
+    chain = read_chain(settings, sources.rpc, u, wallet, block)
+    offchain = read_offchain(chain, u, settings, limits, sources, clock)
+    return Built(snapshot.build(assemble(chain, offchain, u, settings, rule, limits, wallet), u),
+                 chain, offchain)
+
+
 def write(snap: snapshot.Snapshot) -> Path:
     OUT.mkdir(parents=True, exist_ok=True)
     path = OUT / f"snapshot-{snap.sha256}.json"
@@ -222,13 +256,11 @@ def main(prove: bool = False) -> int:
     u = universe.load()
     wallet = ChainAddress(settings.chain_id,
                           json.loads((CONFIG / "mandate.json").read_text())["execution_wallet"])
-    rpc = settings.client(cfg.secret)
-    block = chain_4663.pin_block(rpc, settings.chain_id, settings.block_tag)
+    sources = live_sources(cfg, settings)
     started = time.monotonic()
-    chain = read_chain(settings, rpc, u, wallet, block)
-    chain_s = time.monotonic() - started
-    offchain = read_offchain(cfg, chain, u, settings, limits)
-    snap = snapshot.build(assemble(chain, offchain, u, settings, rule, limits, wallet), u)
+    built = read_and_build(sources, settings=settings, u=u, rule=rule, limits=limits,
+                           wallet=wallet)
+    snap, chain, offchain, block = built.snapshot, built.chain, built.offchain, built.chain.block
     path = write(snap)
 
     doc = snap.document
@@ -240,7 +272,8 @@ def main(prove: bool = False) -> int:
     print(f"   sha256 {snap.sha256}; {len(snap.body):,} bytes; {len(doc['assets'])} assets, "
           f"{points:,} rounds of history; closed sessions at the block: "
           f"{doc['block']['closed_sessions'] or 'none'}")
-    print(f"   chain read in {chain_s:.1f}s; oldest quote {oldest:.1f}s old at built_at")
+    print(f"   read and built in {time.monotonic() - started:.1f}s; oldest quote {oldest:.1f}s "
+          f"old at built_at")
     print(f"   counts: {doc['summary']['counts']}")
     print(f"   findings: {len(doc['summary']['findings'])}; holdings: "
           + ", ".join(f"{h['asset']['symbol']} {h['balance']} = ${h['value_usd']}"
@@ -253,7 +286,7 @@ def main(prove: bool = False) -> int:
 
     print("\n== the same build at the same block: the chain re-read, fresh, at "
           f"{block.hash[:18]}…, with the same offchain answers")
-    again = read_chain(settings, rpc, u, wallet, block)
+    again = read_chain(settings, sources.rpc, u, wallet, block)
     def content(o: Observation) -> tuple:  # everything but when it was fetched
         return o.status, o.value, o.source_time, o.source_ref, o.block
     same_chain = (all(content(again.readings[a]) == content(chain.readings[a]) for a in chain.readings)
