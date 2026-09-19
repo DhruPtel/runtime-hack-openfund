@@ -789,9 +789,66 @@ vocabularies, a machine-read first line and `CALL` lines, at most six calls on
 tradeable assets, silence or `NO CALLS` to abstain, three-word confidence, and
 a "wrong if" per call. **Shown at the stop and waiting for the operator.**
 
+## 2.2 — Report schema and validation
+**Date:** 2026-09-19 · **Commit:** 5f108aa
+
+Built `agents/schema.py`, stdlib only. It parses a report into what the
+aggregator reads (seat, agent, snapshot; per call the address, word and
+confidence) and refuses a bad report by a named rule, never an exception. The
+rules are header, call shape, vocabulary, confidence, asset, coverage,
+no-calls, citation and figure. The artifact is `tests/test_schema.py`, 31 tests
+that parse the four approved examples straight from `REPORT-FORMAT.md` and catch
+five fabricated figures, each named with its field and true value. The examples
+also caught a wrong rounding rule in the validator: AMZN's 266.085 is correctly
+written 266.08, so a figure now matches within half a unit of its last digit.
+
+## 2.3 — The briefs
+**Date:** 2026-09-19 · **Commit:** de1a6af
+
+Built one versioned brief per seat under `agents/briefs/`, plus the shared
+contract `analyst.v1.md`, and `analyst.render()`. The seat's question and the
+questions it leaves to others come from `config/analysts.json` v2, and the
+snapshot goes in as byte-identical text named by its sha256. `tests/test_briefs.py`
+(17) shows four distinct questions, each seat speaking only its own vocabulary,
+the same snapshot bytes for every seat, and the approved NVDA call as the shared
+example.
+
+## 2.4 — The runner
+**Date:** 2026-09-19 · **Commit:** f38596f
+
+Built `agents/runner.py`, `agents/analyst.py`'s worker and
+`adapters/bankr_llm.py`:
+- four analyst processes at bounded width, each environment built from nothing
+  with only its own key;
+- the key source a parameter, per agent or shared;
+- per-worker and cycle deadlines, and pre-allocated result slots;
+- one retry for a malformed reply, never for a timeout;
+- a gateway client that makes one request per call;
+- a check that refuses any treasurer key before anything starts.
+
+`tests/test_runner.py` runs real subprocesses against a fake gateway on
+127.0.0.1: one seat ok, one abstaining, one malformed and retried once, one
+hung and not retried. The cycle completes, marked partial. Verified H:
+- with isolation removed, every analyst could see `BANKR_KEY_EXEC`,
+  `SIGNING_KEY` and the other agents' keys, and the test failed;
+- six other guards, each broken in a copy, were caught by their own tests;
+- nothing ran live.
+
+## 2.5 — Cost accounting
+**Date:** 2026-09-19 · **Commit:** 4b02ed7
+
+Each call's cost now comes from its own usage block at the listed price
+(`bankr_llm.cost`), and per call, per analyst and per cycle it is labelled an
+estimate, with calls of unknown cost counted, not zeroed.
+`adapters/bankr_usage.py` reads `/v1/usage` once, takes the window from the
+provider's answer, and compares aggregate to aggregate only once the window has
+settled, never as a before-and-after delta. `tests/test_cost.py` (10)
+reproduces 1.8a's $0.264272 to the digit, and reconciles the recorded settled
+window against its six recorded calls exactly: $1.105746.
+
 ---
 
-## State at close — 2026-09-19, 2.1 at its stop; the keys measured
+## State at close — 2026-09-19, 2.2–2.5 built offline; live runs wait on the keys
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -805,7 +862,7 @@ minimal version.
   carries the rule.
 - Keys, signing and spend authority keep their full guard.
 - The operator is stopped at 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1 was
-  restored everywhere on 2026-09-19.
+  approved on 2026-09-19.
 - Work follows the phase and unit order.
 
 **The deadline** was given on 2026-09-19 at about 11:00Z as "about 16 hours".
@@ -815,7 +872,8 @@ closed session, Sat 00:05Z to Sun 23:55Z.
 
 **Check it in a minute.** Nothing here spends.
 - `git log --oneline -15` and `git status -sb`.
-- `make test`: 362 passed when this was written.
+- `make test`: 436 passed when this was written, about 12 s. The runner tests
+  start real subprocesses against a fake gateway on 127.0.0.1.
 - `make replay`: rebuilds the committed capture offline, byte for byte, in
   under a second. Needs no credential.
 - `make check-env`: which credentials are present, by name only.
@@ -843,36 +901,50 @@ closed session, Sat 00:05Z to Sun 23:55Z.
 - **Answered, from 1.9's checkpoint:** the demo runs the committed capture for
   the reproducible part, and a live cycle, the purchase and the explorer for the
   rest (8.4's approved minimal version).
-- **What is built** is unchanged since Phase 1. Under `src/fund/`:
+- **2.1, approved:** `planning/REPORT-FORMAT.md` is the format.
+- **2.2 to 2.5, built and proven offline** (entries above). Nothing has run
+  live.
+- **What is built.** Under `src/fund/`:
   - `config.py`, `credentials.py`, `redaction.py`;
   - `core/types.py`, `core/universe.py`, `core/valuation.py`,
     `core/snapshot.py`;
   - `adapters/http.py`, `adapters/chain_4663.py`, `adapters/gecko.py`,
-    `adapters/bankr_quote.py`, `adapters/cache.py`;
+    `adapters/bankr_quote.py`, `adapters/cache.py`, `adapters/bankr_llm.py`,
+    `adapters/bankr_usage.py`;
+  - `agents/schema.py`, `agents/analyst.py`, `agents/runner.py`, and
+    `agents/briefs/`;
   - `run/snapshot.py`, `run/selftest.py`.
 
-  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 28.
+  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 23.
 
 ### Next
-- **2.0 ran, and the operator chooses.** A SIWE account has its own address, a
-  read-only key and the Agent API off, each measured by refusal. It has **no
-  LLM gateway access** (`research/findings.md` §2.0). The options, not chosen:
+- **2.6, the first real report, waits on a key that is safe to use.**
+  `BANKR_LLM_KEY` was still not read-only, with the Agent API on, when the
+  2.2–2.5 batch began (`probes/keymap.py`). Until the operator fixes it in the
+  dashboard, or 2.0's choice gives each agent its own gateway key, nothing
+  runs live.
+  - The runner has no live entry point yet. 2.6 adds one.
+  - Its key source is a parameter, `PerAgentKeys` or `SharedGatewayKey`.
+- **2.0's choice is still open:**
   - (a) email sign-ups with `--llm`, untested;
   - (b) the dashboard, unknown for a SIWE account;
-  - (c) own wallets with inference on the fund's key, available now.
+  - (c) own wallets with inference on the fund's key. Unsafe while
+    `BANKR_LLM_KEY` can sign.
 
-  One shared wallet is ruled out. 2.4's credential rows and every live run
-  wait on this choice.
-- **2.1 is at its stop.** `planning/REPORT-FORMAT.md` waits for the operator.
-  2.2 and 2.3 are built only from what is approved.
+  One shared wallet is ruled out.
+- **Then, in order:**
+  - the page slice, if the operator approves it;
+  - 2.6;
+  - 2.7, the report store;
+  - 2.8, the failure drill. Its three offline cases already exist as 2.4's
+    tests;
+  - the exit run.
 - **The keys, measured** (LESSONS 2026-09-19, the fund's keys):
   - `BANKR_LLM_KEY` is **not read-only**;
   - the **Agent API is on** for all three fund keys;
   - `BANKR_KEY_EXEC` has the gateway on.
 
   Invariant 1 is false as measured until the operator changes those settings.
-  2.0's option (c) is unsafe until they change. Nothing was changed by this
-  pass.
 - **Where the agent account's secrets live:** `~/.openfund/agents/price-integrity/`,
   mode 0600, outside the repository:
   - `siwe.key`, the sign-in key;
@@ -888,8 +960,9 @@ closed session, Sat 00:05Z to Sun 23:55Z.
   - the live round trip (5.2);
   - one refused-swap attempt per agent key (4.12).
 - **Owed outside the plan docs:**
-  - `config/analysts.json`, with 2.1;
-  - `credentials.py` and `.env.example`, after SIWE is proven;
+  - `credentials.py` and `.env.example`: per-agent key names, once 2.0's
+    choice is made. The runner passes each key under one generic variable, so
+    nothing waits on this but live use;
   - the config values SIMPLIFICATION proposes, each set by its unit.
 - **Dated** (`CLAUDE.md`):
   - the weekday capture, from Mon 2026-09-21 00:00Z, which is after the
@@ -902,7 +975,8 @@ closed session, Sat 00:05Z to Sun 23:55Z.
    the operator's call.
 2. **The five-wallet plan** waits on the operator's choice among 2.0's options.
 3. **`config.load()` merges all of `.env` into the caller's environment.** 2.4
-   works around it for analysts, and 4.12 owns the split.
+   builds each analyst's environment from nothing and proves it by a broken
+   copy. `.env` is still readable on disk; 4.12 owns the split.
 4. **The preview as decided** names no decision id, hashes or signature, and
    7.2 serves by id.
 5. **How the handler holds the full record:** bundled per deploy, or a private
@@ -942,24 +1016,25 @@ closed session, Sat 00:05Z to Sun 23:55Z.
   (`PHASE-1-GATE.md` §2).
 
 ### Config
-Unchanged since 2026-09-18. `analysts.json` still names
-`fundamentals-calendar`. **Still null:**
-- `cadence.json`: `confirmation_depth`, `cycle_deadline_seconds` and
-  `retry_budget_per_worker`;
-- `models.json`: `risk_model` and `context_budget_tokens`;
+**Set in the 2.2–2.5 batch:**
+- `analysts.json` v2: four seats, their vocabularies, questions and brief files;
+  at most six calls per report; three confidence words;
+- `cadence.json`: `cycle_deadline_seconds` 1800, `retry_budget_per_worker` 1,
+  `max_parallel_workers` 4;
+- `models.json`: `risk_model` `claude-sonnet-5`, `context_budget_tokens` 70000,
+  the listed price ($2 and $10 per million), `usage_settle_seconds` 3600.
+
+**Still null:**
+- `cadence.json`: `confirmation_depth`;
 - `thresholds.json`: `max_position_weight`, `turnover_max_bps`,
   `cash_floor_usd` and `quorum_min_analysts`;
 - `mandate.json`: `cumulative_budget_usd`, `approved_by`, `approved_at`,
   `expires_at`, and an empty `allowed_assets`.
 
-Proposals for each are in SIMPLIFICATION.md, "Config the minimal build needs".
-None is set.
-
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `4c13b7e`, the Phase 2 plan
-pushed by the operator. Every commit from `db62557` (the 2.1 fix) to the one
-that last changed this note is committed and **not pushed**. That includes 2.0,
-the key identification and 2.1.
+Checked locally, with no fetch. `origin/main` is `dea96ac`, pushed by the
+operator after 2.1. Every commit from `3290a6c` (the 2.2–2.5 batch) to the one
+that last changed this note is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** It does not restate any in full; LESSONS holds them.
