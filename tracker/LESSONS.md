@@ -2300,3 +2300,49 @@ through. None has been seen, and it is the operator's call if one is.
 - every attempt now keeps its reply whole;
 - the runner's live entry point has its tests.
 **Affects:** 2.2, 2.3 (the value its first line carries), 2.4, 2.6.
+
+## 2026-09-19 — 2.6 finished: three more seats, one call each, and 2.7's store
+*The operator's instruction: one call per seat, the same snapshot, no brief
+iterated. A poor report is a finding.* Sent at 15:58:33Z with `BANKR_LLM_KEY`
+measured first, as before (`research/findings.md` §2.6, continued).
+- **Price-trend was refused for errors that are the model's.** It gave META a
+  39-digit address invented after the first 8. It gave GME the address of its
+  Chainlink feed (`mark.feed_proxy`), not the token. It dated GME's 18th close
+  the 17th. The validator caught all three. Its other figures, including
+  computed ones, check out.
+  - **The lesson.** An entry holding two addresses invites the wrong one.
+    Identity by address (PLAN §2 invariant 8) held because the validator
+    checks it, not because the model gets it right.
+- **Its NVDA call is the brief's own example.** `analyst.v1.md` carries the
+  approved NVDA call from *this* capture, labelled "From an earlier snapshot".
+  The model repeated its range, its reasoning and its "Wrong if". On this
+  capture that call cannot be judged, and the label is false. The brief is
+  2.3's, and it is not changed here.
+- **Cross-asset-macro got no reply.** The gateway answered HTTP 504 after
+  113.3 s, which suggests an upstream limit well under our 600 s. Not retried:
+  a gateway refusal never is, and the rule was one call. Whether it was billed
+  waits on the settled window.
+- **Execution-quality was accepted,** the first reply to pass unchanged: no
+  fee, small impact, and caution on MSTR.
+- **Both condition seats caution MSTR on the same 132 bps gap,** one as a stale
+  mark and one as a buyer's cost. The aggregator's largest-caution rule keeps
+  it from counting twice. Otherwise the three reports answer different
+  questions. The seat likeliest to repeat price-trend is the one that timed
+  out.
+- **2.7 built at its minimal version.** A write-once store: one file per
+  report, named by the sha256 of its bytes. It is verified on every read and
+  never rewritten. Refused replies are kept with their refusals, so the record
+  holds every reply that arrived. The runner stores each one and puts its id
+  on the seat's result.
+  - **Not built:** a query layer, SQLite and any index.
+  - **A mistake caught on the way:** an entry-point test wrote a fake record
+    into the real live store. It was removed, and the test now writes to a
+    temporary directory.
+
+**Spent:** $0.522736 by the replies' own figures, plus the 504's unknown.
+**Owed:**
+- the settled `/v1/usage` cross-check, for the 15:39Z and 15:58Z calls both;
+- one cross-asset-macro call, if the operator authorises it;
+- a true label on, or a different, brief example.
+**Affects:** 2.3 (the example), 2.4 (the gateway limit against the 600 s
+timeout), 2.7, 3.x (the aggregator meets MSTR twice).
