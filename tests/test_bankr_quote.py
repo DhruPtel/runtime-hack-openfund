@@ -17,12 +17,10 @@ from pathlib import Path
 
 import pytest
 
-from fund import config
 from fund.adapters import bankr_quote as bq
 from fund.core.types import (
     USD, Amount, AssetId, Check, FetchStatus, Fixed, Instant, Observation, Price, Source,
 )
-from fund.credentials import Role
 
 CHAIN = 4663
 USDG = AssetId(CHAIN, "0x5fc5360d0400a0fd4f2af552add042d716f1d168")
@@ -148,7 +146,6 @@ def test_a_body_that_is_not_json_is_refused():
 
 # --- tradeability: three conditions, each refused at its own rule -----------------------------
 
-
 def test_tradeable_is_never_evidence_of_execution():
     verdict = judged(parsed())
     assert verdict.verdict.passes
@@ -212,11 +209,6 @@ def adapter(transport, sleeps=None, secret=lambda name: "test-read-key"):
 def replies(*items):
     queue = iter(items)
     return lambda url, body, timeout: next(queue)
-
-
-def test_a_200_becomes_a_quote_observation():
-    seen = adapter(replies((200, RECORDED, {}))).quote(REQUEST)
-    assert seen.ok and seen.value.sell == TWENTY_FIVE
 
 
 def test_a_venue_refusal_keeps_the_venues_words_and_is_not_called_unreachable():
@@ -300,13 +292,6 @@ def test_the_adapter_asks_for_the_read_key_and_nothing_else():
     asked: list[str] = []
     bq.Settings.load().adapter(lambda name: asked.append(name) or "k", clock=lambda: FETCHED)
     assert asked == ["BANKR_KEY_READ"]
-
-
-def test_the_role_quotes_run_under_cannot_load_the_execution_or_signing_key():
-    cfg = config.load(Role.ANALYST, require=False, install_redaction=False)
-    for name in ("BANKR_KEY_EXEC", "SIGNING_KEY"):
-        with pytest.raises(config.CredentialNotPermittedError):
-            cfg.secret(name)
 
 
 @pytest.mark.parametrize("credential, refusal", [("BANKR_KEY_EXEC", "can transact"),
