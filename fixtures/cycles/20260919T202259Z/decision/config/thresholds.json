@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "_null_means": "unresolved, and blocks the check that depends on it. Never a default.",
+
+  "capital_usd": 200,
+  "intended_trade_size_usd": 25,
+  "_sizing_resolved_by": "LESSONS 2026-09-17, capital and trade size",
+
+  "_tradeability_note": "Tradeable means all three of: a quote at intended size succeeded, quote age within bound, and impact known and within limit or null. Null blocks. There is no depth term: tokenized stocks do have AMM pools (findings F0.4.3), but execution is RFQ against USDG, so pool depth grades the price corroborator and never tradeability. See planning/PLAN.md section 13.",
+  "quote_max_age_seconds": 60,
+  "_quote_max_age_resolved_by": "0.11 checkpoint decision (tracker/LESSONS.md 2026-09-18); provisional",
+  "impact_max_bps": 50,
+  "_impact_note": "Compared signed: the gate is impact > limit, never abs(impact) > limit, because negative impact is price improvement (findings F0.3.4). The field that gates is swapImpactBps (documented; the two impact fields have never differed in a measurement). Loose on purpose: measured impact ran -15 to +2 bps on stock quotes and 13 bps at most (F0.3.4, F0.5.1).",
+  "_impact_max_resolved_by": "0.11 checkpoint decision (tracker/LESSONS.md 2026-09-18); provisional",
+
+  "feed_staleness_rule": "per_feed_heartbeat_plus_margin_in_open_session",
+  "feed_staleness_margin_seconds": 3600,
+  "_feed_staleness_note": "Replaces the single feed_staleness_max_seconds. Staleness is not a constant: a feed's newest observation is stale when its age exceeds that feed's own documented heartbeat plus feed_staleness_margin_seconds. Equity feeds document 86,400 s (findings F0.4.1); read each feed's heartbeat from the pinned feed data, never assume it. An updatedAt 3.6 h old is normal in market hours (F0.4.7). Measured in 1.3: the largest weekday gap was 24.0 h (SPY, QQQ, SGOV, on heartbeat alone), inside the limit by the margin; over one weekend every equity feed was silent 48-59 h, so this rule judges them all stale for about 23-35 h each weekend (LESSONS 2026-09-18). Applies to the newest point of a series only; historical points are old by definition (decision 2026-09-18). Since 1.4 the age counts only open-session time: time inside the closed session inferred from the feeds' own rounds (config/sessions.json, Sat 00:05Z to Sun 23:55Z for us_equities_24/5) does not count, so a weekend is expected and a holiday, which is not modelled, is stale (DECISION 2026-09-18; PLAN section 13).",
+  "_feed_staleness_resolved_by": "rule: 0.11 checkpoint decision; margin: decision before unit 1.1 (tracker/LESSONS.md 2026-09-18). Provisional. An equity feed's newest point is stale past 86,400 + 3,600 s. Weekend behaviour was measured in 1.3 on one weekend (48-59 h silent), then over 12 weeks at 1.4, and settled by the closed-session decision (tracker/LESSONS.md 2026-09-18).",
+
+  "divergence_max_bps": 100,
+  "corroborator_min_volume_usd_24h": 1000000,
+  "_divergence_note": "Two tiers, both numbers provisional. Chainlink-vs-GeckoTerminal divergence tracks the corroborating pool's liquidity, not the feed's quality (findings F0.4.5): ~20 bps median above $1M of 24h pool volume, up to 610 bps below it. Above corroborator_min_volume_usd_24h the veto fires past divergence_max_bps. Below it the asset is excluded from the universe, not held, rather than vetoed every cycle. The tier does not make a liquid name safe: AMZN diverged 499 bps on $2.19M of volume, which this veto must catch. The check is cross-source and independent of the execution venue, because GeckoTerminal covers 32 of 32 addressable tokens (F0.4.2).",
+  "_divergence_resolved_by": "0.4 checkpoint decision (tracker/LESSONS.md 2026-09-18). Tightening either number is a config change, not a release.",
+
+  "max_position_weight": "0.25",
+  "_max_position_weight_note": "A fraction of the paper NAV: two $25 orders in one name at $200. The aggregator never raises a position past it, and a buy's step is a fraction of it (core/aggregate.py). Decimal text, never a float.",
+  "turnover_max_bps": 10000,
+  "_turnover_note": "A cycle may trade at most its paper NAV. Loose, and stated as loose (planning/SIMPLIFICATION.md).",
+  "cash_floor_usd": "20",
+  "_cash_floor_note": "10% of the $200 paper capital. The aggregator funds new buys only from cash above it; the gate checks the plan against it. Decimal text.",
+  "min_order_usd": "1",
+  "_min_order_note": "An order under $1 is dust and is dropped when the plan is sized, so an unchanged view means no trade. Decimal text: as an integer, the boundary test would read every `x < 1` in the code as this threshold.",
+  "_position_limits_resolved_by": "max_position_weight and cash_floor_usd set at 3.1, min_order_usd at 3.3, turnover_max_bps at 3.4 (operator, 2026-09-19, the Phase 3 batch brief, as planning/SIMPLIFICATION.md proposed). Provisional.",
+
+  "quorum_min_analysts": 3,
+  "_quorum_note": "Defined against a roster of 4: one failed seat still decides, two do not. Below it the cycle keeps every holding (core/aggregate.py).",
+  "_quorum_resolved_by": "Set at 3.1 (operator, 2026-09-19, the Phase 3 batch brief, as planning/SIMPLIFICATION.md proposed). Provisional."
+}

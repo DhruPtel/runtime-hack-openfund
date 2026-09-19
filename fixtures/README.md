@@ -20,7 +20,11 @@ commit `ee9077c`, the last before the build read the flag (`8c7a702`).
 - `cycle/`: the runner's cycle as it wrote it;
 - `reports/`: every stored reply, by its id;
 - `decision/`: the decision's files. These are the quotes as recorded, the
-  plan, the risk review, and the record's exact bytes with its envelope.
+  plan, the risk review, and the record's exact bytes with its envelope;
+- `decision/config/`: the four config files the decision read, byte for byte.
+  The record names each file's sha256, and a replay reads this copy, never the
+  working tree's `config/` (`run/decide.replay`), so config tuned later does not
+  change an earlier record's rebuild.
 
 Each is scanned for every declared credential before commit.
 `20260919T202259Z` is the exit run that ended Phase 3, on
@@ -35,6 +39,9 @@ Each is scanned for every declared credential before commit.
 - four live replies, all refused;
 - so no quorum and no rebalance;
 - the record signed with the fund's key.
+
+It is **history, and nothing rebuilds it.** It predates the 3.8 sweep, which
+changed what a record holds, though its schema also says `openfund.decision/1`.
 `accounting/` the known-answer accounting fixture (unit 4.11).
 `live/` never committed: every live build's snapshot, and its capture under
 `live/captures/`. See .gitignore.

@@ -1,0 +1,54 @@
+{
+  "version": 2,
+  "_status": "Approved at 2.1 (2026-09-19): four seats, two vocabularies, and the report format in planning/REPORT-FORMAT.md. The fourth seat was repointed from fundamentals-calendar, which the snapshot gave only names and ISINs (LESSONS 2026-09-19).",
+  "_design_note": "Scopes are disjoint in QUESTION, not necessarily in asset set: every seat may look at every asset, provided it asks its own question. The failure mode is two seats asking the same question of the same assets, so each seat states its question and names the questions that belong to the others.",
+
+  "max_calls_per_report": 6,
+  "_max_calls_note": "At most six CALL lines, only on assets the snapshot marks tradeable. Silence is no view (planning/REPORT-FORMAT.md, Coverage).",
+  "confidence": ["low", "medium", "high"],
+  "confidence_weights": {"low": "0.25", "medium": "0.5", "high": "0.75"},
+  "_confidence_weights_note": "Set at 3.1 (2026-09-19), provisional: the batch brief left the mapping to the build, to be shown at 3.2 and tuned once a real cycle is seen. Evenly spaced, and high is not certainty: a high caution cuts a direction call by three quarters and does not zero it, because refusing a trade is risk's job, not the aggregator's. Exact decimals, so every score is exact.",
+  "vocabularies": {
+    "direction": ["buy", "hold", "sell"],
+    "condition": ["proceed", "caution"]
+  },
+
+  "analysts": [
+    {
+      "id": "price-trend",
+      "vocabulary": "direction",
+      "question": "Where is each price going, on the evidence of its own 30 daily closes and latest round?",
+      "not_asked": ["what trading costs (execution-quality)", "whether the mark is right (price-integrity)", "how assets move together (cross-asset-macro)"],
+      "brief": "price-trend.v1.md"
+    },
+    {
+      "id": "cross-asset-macro",
+      "vocabulary": "direction",
+      "question": "How are these assets moving together, and what does that co-movement favour adding, keeping or cutting?",
+      "not_asked": ["where a single price is going on its own (price-trend)", "what trading costs (execution-quality)", "whether the mark is right (price-integrity)"],
+      "brief": "cross-asset-macro.v1.md"
+    },
+    {
+      "id": "execution-quality",
+      "vocabulary": "condition",
+      "question": "What would a trade at the quoted size cost right now: fee, price impact, the slippage the quote allows, the quote's age, and the gap between the price paid and the mark it would be booked at?",
+      "not_asked": ["which way a price is going (price-trend)", "whether the mark itself is wrong (price-integrity)"],
+      "brief": "execution-quality.v1.md"
+    },
+    {
+      "id": "price-integrity",
+      "vocabulary": "condition",
+      "question": "Does each asset's mark hold up today, judged by the three prices the snapshot carries: the Chainlink mark, GeckoTerminal, and the venue's price inside the quote?",
+      "not_asked": ["which way a price is going (price-trend)", "what a trade costs (execution-quality)"],
+      "brief": "price-integrity.v1.md"
+    }
+  ],
+  "_assets_resolved_by": "the snapshot: a call names an asset by (chain_id, address), and only assets whose status is tradeable may be called.",
+
+  "risk_agent": {
+    "id": "risk",
+    "objective": "Read all four full reports and the sized plan. Apply core/gates.py. Fixed gates cannot be overridden by model text.",
+    "_note": "Not an analyst. A separate role."
+  },
+  "_treasurer_note": "The treasurer is not an agent role. It is the sole writer and holds the only spend authority (planning/PLAN.md section 2 invariant 1)."
+}
