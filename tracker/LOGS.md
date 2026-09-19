@@ -436,6 +436,22 @@ caught. `--prove` was run live at block 66652203:
 Measuring as it went, the unit found every equity feed silent for 48–59 h over
 a weekend, against a 25 h rule. That finding and four others are in LESSONS.
 
+## 1.3 close-out — one decision recorded, one stopped
+**Date:** 2026-09-18 · **Commit:** 09409fe
+
+**Recorded.** The operator's decision that the feed staleness comparison stays
+in the chain adapter, as a named exception to "gates exist once" in CODEBASE §3
+and PLAN §2 invariant 4. The decision's "1.8" is marked open, because
+`gates.py` is 3.4's.
+
+**Stopped.** The weekend-staleness decision is not recorded, as instructed. It
+depended on the verdict naming the market session, and the verdict names only
+the feed's schedule label. Nothing on record says when that schedule is open.
+
+**Already there.** The four owed 1.3 entries were already in LESSONS from
+`c551edc`, so none was rewritten. The state note below replaces the one written
+at 1.3's close.
+
 ---
 
 ## State at close — 2026-09-18 (1.3 done)
