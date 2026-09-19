@@ -478,6 +478,33 @@ comparisons sitting outside `gates.py` are recorded open.
 
 ---
 
+## 1.5 — Quote adapter
+**Date:** 2026-09-18 · **Commit:** 629ed14
+
+Recorded two operator decisions first, then built `adapters/bankr_quote.py`.
+The decisions: in a closed session, divergence is a finding carried to the
+decision record, not a veto (recorded and folded, and owed in
+`core/valuation.py`, which was outside this pass); and the threshold
+comparisons in 1.3, 1.4 and 1.5 are named exceptions that 3.4 sweeps into
+`gates.py`. The adapter runs on the shared transport, read-only under the
+analyst role. Its decimals come from the pins and are checked against the
+response, its four number formats are converted exactly, absent stays null,
+and its `tradeability()` names its rule (`quote`, `size`, `quote-age` or
+`impact`), compares `swapImpactBps` signed, and carries `executable` as
+undetermined on every verdict. The artifact is
+`python -m fund.adapters.bankr_quote --prove` at Sat 01:52Z: all 35 markable
+stocks were quoted at 25.001227 USDG ($25 at USDG's own mark); 31 were
+tradeable, four of them admitted at negative impact; four were refused at
+`impact` at the nominal size; a tradeable quote was refused at `quote-age`
+after 64.6 s; the venue's HTTP 500 "No quote available" was refused at `quote`;
+and a dead port was undetermined there. Verified by 39 offline tests, six rule
+mutations each caught, and a subprocess check that importing the module loads
+no `bankr_exec`, treasurer or signing module; at 25,000 USDG the two impact
+fields still never differed, up to 7,084 bps against the venue's own 1,500 bps
+cap.
+
+---
+
 ## State at close — 2026-09-18, after 1.4
 
 **Read this first.** This note describes the repository at the commit that last
