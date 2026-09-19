@@ -165,7 +165,7 @@ def cost(usage: dict, price: dict) -> float:
 
 # --- how a report uses history: a proxy, stated as one --------------------------------------
 
-_DATED = re.compile(r"\b\d{1,2}/\d{1,2}\b|\b2026-\d{2}-\d{2}\b|\b(?:Aug|Sep)\w*\.? \d{1,2}\b")
+_DATED = re.compile(r"\b\d{1,2}/\d{1,2}\b|\b(?:2026-)?\d{2}-\d{2}\b|\b(?:Aug|Sep)\w*\.? \d{1,2}\b")
 _PRICE = re.compile(r"\b\d{1,5}\.\d{1,4}\b")
 
 
