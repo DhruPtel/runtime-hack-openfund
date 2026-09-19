@@ -44,6 +44,7 @@ RULE_QUOTE = "quote"                # a fresh quote for this order, judged by ba
 RULE_POSITION = "position-weight"   # a buy leaves the position at most the position limit
 RULE_CASH_FLOOR = "cash-floor"      # the plan leaves at least the cash floor
 RULE_TURNOVER = "turnover"          # the plan trades at most turnover_max_bps of the NAV
+RULE_CONTEXT_BUDGET = "context-budget"  # risk's whole bundle fits the budget (invariant 3)
 
 
 def _number(config: Mapping[str, Any], name: str) -> Decimal | None:
@@ -59,6 +60,13 @@ def _number(config: Mapping[str, Any], name: str) -> Decimal | None:
     raise TypeError(f"{name} is {type(raw).__name__}, not a number")
 
 
+def _whole(config: Mapping[str, Any], name: str) -> int | None:
+    value = _number(config, name)
+    if value is not None and value != value.to_integral_value():
+        raise ValueError(f"{name} is a whole number")
+    return None if value is None else int(value)
+
+
 @dataclass(frozen=True)
 class Limits:
     """Every Phase 3 limit, read once from `config/thresholds.json` and, for the
@@ -71,20 +79,20 @@ class Limits:
     min_order_usd: Decimal | None
     max_trade_usd: Decimal | None
     turnover_max_bps: Decimal | None
+    context_budget_tokens: int | None
 
     @classmethod
     def from_config(cls, thresholds: Mapping[str, Any],
-                    mandate: Mapping[str, Any] | None = None) -> "Limits":
-        """Without a mandate, its limits are unresolved and block."""
-        quorum = _number(thresholds, "quorum_min_analysts")
-        if quorum is not None and quorum != quorum.to_integral_value():
-            raise ValueError("quorum_min_analysts is a whole number of seats")
-        return cls(quorum_min_analysts=None if quorum is None else int(quorum),
+                    mandate: Mapping[str, Any] | None = None,
+                    models: Mapping[str, Any] | None = None) -> "Limits":
+        """Without a mandate or the models file, their limits are unresolved and block."""
+        return cls(quorum_min_analysts=_whole(thresholds, "quorum_min_analysts"),
                    max_position_weight=_number(thresholds, "max_position_weight"),
                    cash_floor_usd=_number(thresholds, "cash_floor_usd"),
                    min_order_usd=_number(thresholds, "min_order_usd"),
                    max_trade_usd=_number(mandate or {}, "max_trade_usd"),
-                   turnover_max_bps=_number(thresholds, "turnover_max_bps"))
+                   turnover_max_bps=_number(thresholds, "turnover_max_bps"),
+                   context_budget_tokens=_whole(models or {}, "context_budget_tokens"))
 
 
 @dataclass(frozen=True)
@@ -287,6 +295,19 @@ def turnover(traded_usd: Decimal, nav_usd: Decimal, limits: Limits) -> Gate:
                                           f"(${allowed:.2f})")
     return Gate(RULE_TURNOVER, True, f"${traded_usd} traded, within {most} bps of the NAV "
                                      f"(${allowed:.2f})")
+
+
+def context_budget(tokens: int, limits: Limits) -> Gate:
+    """Risk's whole bundle, as `core/context.measure` counts it, fits the budget.
+    Over it the cycle vetoes; nothing is summarized to make it fit (PLAN §2
+    invariant 3)."""
+    budget = limits.context_budget_tokens
+    if budget is None:
+        return _unresolved(RULE_CONTEXT_BUDGET, "context_budget_tokens")
+    if tokens > budget:
+        return Gate(RULE_CONTEXT_BUDGET, False, f"about {tokens} tokens, over the budget of "
+                                                f"{budget}: veto, never a summary")
+    return Gate(RULE_CONTEXT_BUDGET, True, f"about {tokens} tokens, within the budget of {budget}")
 
 
 def evaluate(plan: Mapping[str, Any], *, snapshot: Mapping[str, Any],

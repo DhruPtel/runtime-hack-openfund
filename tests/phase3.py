@@ -41,7 +41,7 @@ SYMBOLS = {a: e["asset"]["symbol"] for a, e in ENTRIES.items()}
 ADDRESS = {symbol: address for address, symbol in SYMBOLS.items()}
 CHAIN = SNAPSHOT["block"]["chain_id"]
 LIMITS = gates.Limits.from_config(config.load_json("thresholds.json"),
-                                  config.load_json("mandate.json"))
+                                  config.load_json("mandate.json"), config.load_json("models.json"))
 QUOTE_LIMITS = bankr_quote.Limits.from_thresholds(config.load_json("thresholds.json"))
 NAV = Decimal(200)
 

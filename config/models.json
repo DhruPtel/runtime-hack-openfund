@@ -13,6 +13,8 @@
   "transport_timeout_seconds": 600,
   "_transport_timeout_note": "Set to 600 s (DECISION after 1.7). A call cut off on our side is still billed and returns nothing (F0.9.3), so this must exceed the real call, not the hoped-for one: 600 s covers a 9,000-token reply at the slowest rate measured, 535 s. At the full 12,000-token cap and that rate the bound would be ~710 s; the cap is the backstop, not the expectation (F1.7.4).",
   "context_budget_tokens": 70000,
+  "context_bytes_per_token": "1.8",
+  "_context_bytes_per_token_note": "Set at 3.6 (2026-09-19). The lower of the two measured ratios of prompt bytes to input tokens: 1.81 at 1.7 and 2.0 at 1.8a. Dividing by the lower one overcounts the tokens, so the budget errs toward vetoing. The gateway has no token-count endpoint (F1.7.2).",
   "_context_budget_note": "Set at 2.4 (planning/PHASE-2.md). Invariant 3's bundle is every accepted report, the sized plan and the risk output: four replies at the 12,000-token cap (48,000), a plan of at most 8 orders with their evidence and the risk brief (about 8,000), and risk's own reply at its 12,000 cap. About 68,000 in all. Over budget, the cycle vetoes rather than summarizing. Measured from bytes / 1.8, the lower of the two measured ratios (1.7, 1.8a), because the gateway has no token-count endpoint (F1.7.2).",
   "_budgets_resolved_by": "units 2.4 and 3.6, informed by unit 1.7",
   "pricing_per_million": {
