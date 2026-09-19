@@ -13,9 +13,7 @@ import uuid
 import pytest
 
 from fund.core import orders
-from fund.core.types import (
-    Amount, AssetId, ChainAddress, ExecutionMode, Order, OrderState, Quote,
-)
+from fund.core.types import Amount, AssetId, ChainAddress, ExecutionMode, Order, OrderState
 from test_types import swap_execution, swap_order
 
 CHAIN = 4663
@@ -132,15 +130,3 @@ def test_an_id_from_anything_but_a_decision_id_and_a_plan_index_is_refused(decis
     with pytest.raises(ValueError):
         orders.idempotency_key(decision, index)
 
-
-def test_a_quote_is_an_orders_only_when_it_sells_what_the_order_sells_for_what_it_buys():
-    order = prepared()
-    quote = Quote(sell=order.sell, buy=Amount(832_497_744_366_588_876, 18, GME),
-                  min_buy=order.min_buy, price_impact=None, swap_impact=None,
-                  max_price_impact=None, fee=None, fee_waived=None, slippage=None,
-                  sell_price=None, buy_price=None, quote_id="q")
-    assert orders.quote_is_for(order, quote)
-    other = AssetId(CHAIN, "0x" + "ab" * 20)
-    for changed in (dict(sell=Amount(18_751_446, 6, USDG)),
-                    dict(buy=Amount(1, 18, other), min_buy=Amount(1, 18, other))):
-        assert not orders.quote_is_for(order, dataclasses.replace(quote, **changed))

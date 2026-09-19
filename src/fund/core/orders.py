@@ -36,7 +36,7 @@ import uuid
 from types import MappingProxyType
 from typing import Mapping
 
-from .types import Execution, Order, OrderState, Quote
+from .types import Execution, Order, OrderState
 
 P, S, U, C, F, R = (OrderState.PREPARED, OrderState.SUBMITTED, OrderState.UNKNOWN,
                     OrderState.CONFIRMED, OrderState.FAILED, OrderState.REFUSED)
@@ -89,9 +89,3 @@ def idempotency_key(decision_id: str, index: int) -> str:
     The same order always has the same key."""
     return str(uuid.uuid5(KEYS, order_id(decision_id, index)))
 
-
-def quote_is_for(order: Order, quote: Quote) -> bool:
-    """A quote is this order's when it sells exactly what the order sells, for the
-    asset the order buys. The chokepoint (4.4) and the paper fill (P3) both ask it.
-    `gates.fresh_quote` asks the same of the record's plan, in that shape."""
-    return quote.sell == order.sell and quote.buy.asset == order.buy_asset

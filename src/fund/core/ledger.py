@@ -265,7 +265,7 @@ def paper_fill(order: Order, quote: Quote, snapshot: Mapping[str, Any]) -> Fill:
     if order.state is not OrderState.SUBMITTED:
         raise LedgerError(f"order {order.order_id} is {order.state.value}: only a submitted "
                           "order fills, so its state is written before the fill")
-    if not orders.quote_is_for(order, quote):
+    if quote.sell != order.sell or quote.buy.asset != order.buy_asset:
         raise LedgerError(f"the quote is for another order than {order.order_id}")
     if quote.buy < order.min_buy:
         raise LedgerError(f"the quote buys less than order {order.order_id}'s minimum")
