@@ -725,9 +725,39 @@ process despite `config.load()` merging all of `.env`, recommends pulling a
 page slice forward to watch the swarm, and treats 2.1 as a stop against what the
 pivot recorded.
 
+## The 2.1 stop restored, and unit 2.0 added
+**Date:** 2026-09-19 · **Commit:** f87d427
+
+At the operator's word, 2.1 is a stop and always was, because the report format
+is the product and is read before any code consumes it. It is restored to the
+stop list in `CLAUDE.md`, PLAN §8, ROADMAP, SIMPLIFICATION and the gate report's
+marker. The same pass added unit 2.0 to all four and corrected the context
+budget to 70,000, which the earlier 60,000 figure had set without the risk
+reply.
+
+## 2.0 — SIWE agent wallet, proven once
+**Date:** 2026-09-19 · **Commit:** a1db746
+
+One account was made with `bankr login siwe` under a separate CLI config.
+`probes/siwe/hook.mjs` fed the key in from a file and kept the login's own
+answer, and `probes/siwe_agent.py` tested the new key by what it does. The
+artifact is `research/findings.md` §2.0:
+- its own address, `0x42a9…3d27`, a new Bankr wallet;
+- a signature and a quoted swap each refused 403 "Read-only API key";
+- `/agent/prompt` refused 403 "Agent API access not enabled";
+- but **every gateway call refused 403 "does not have LLM Gateway access
+  enabled"**, the body of the known gateway-off control, and the credit top-up
+  refused at the same toggle.
+
+Verified against a never-issued key (401 everywhere), with the agent wallet read
+empty on every chain before and after, the fund's CLI config hashing the same
+before and after, and neither secret in the working tree. $0 spent; the verdict
+is that SIWE alone cannot carry the five-wallet plan, and the options are the
+operator's.
+
 ---
 
-## State at close — 2026-09-19, Phase 2 planned, not started
+## State at close — 2026-09-19, 2.0 run; Phase 2 waits on the wallet choice
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -740,9 +770,8 @@ minimal version.
   `planning/SIMPLIFICATION.md`. PLAN §8 states the pivot, and `CLAUDE.md`
   carries the rule.
 - Keys, signing and spend authority keep their full guard.
-- The operator is stopped at **2.1**, 3.8, 5.4, 6.6, 7.5 and 8.5. **`CLAUDE.md`
-  still omits 2.1,** which the operator made a stop in the Phase 2 brief (LESSONS
-  2026-09-19). Stop at 2.1 anyway. The fix is owed.
+- The operator is stopped at 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1 was
+  restored everywhere on 2026-09-19.
 - Work follows the phase and unit order.
 
 **The deadline** was given on 2026-09-19 at about 11:00Z as "about 16 hours".
@@ -791,19 +820,27 @@ closed session, Sat 00:05Z to Sun 23:55Z.
   Every other module is a stub: `grep -l "Not yet built" -r src/` lists 28.
 
 ### Next
-- **`planning/PHASE-2.md` awaits the operator.** No Phase 2 work has started.
-  Its order: 2.0 → 2.1 (a stop) → 2.2 → 2.3 → 2.4 → the page slice, if
-  approved → 2.5 → 2.6 → 2.7 → 2.8 → the exit run.
-- **2.0 comes first:** prove `bankr login siwe` with one key before anything
-  assumes five wallets. The installed CLI's source (0.3.37) shows:
-  - the SIWE request never asks for gateway access;
-  - the Agent API and Token Launch are on unless flagged off;
-  - the server creates a new wallet;
-  - the key is written over the fund's session in `~/.bankr/config.json`
-    unless `--config` is given.
+- **2.0 ran, and the operator chooses.** A SIWE account has its own address, a
+  read-only key and the Agent API off, each measured by refusal. It has **no
+  LLM gateway access** (`research/findings.md` §2.0). The options, not chosen:
+  - (a) email sign-ups with `--llm`, untested;
+  - (b) the dashboard, unknown for a SIWE account;
+  - (c) own wallets with inference on the fund's key, available now.
 
-  A failure is a finding. The options are in PHASE-2.md. There is no
-  shared-wallet fallback.
+  One shared wallet is ruled out. 2.4's credential rows and every live run
+  wait on this choice.
+- **What can proceed without it:**
+  - 2.1, a stop: four hand-written reports;
+  - then 2.2 to 2.4 offline, on a fake gateway.
+- **Where the agent account's secrets live:** `~/.openfund/agents/price-integrity/`,
+  mode 0600, outside the repository:
+  - `siwe.key`, the sign-in key;
+  - `bankr-config.json`, the API key;
+  - `siwe-login.json`, the login's masked answer.
+
+  A backup of the fund's own CLI config, taken before the login, sits in
+  `~/.openfund/backup/`. It holds the fund's CLI key, and can be deleted once
+  it is no longer wanted.
 - **Owed, and each a spend:**
   - agent credits, about $22 plus about 5.8%;
   - a fresh buyer key with about $1 of USDC on Base (7.5);
@@ -822,10 +859,7 @@ closed session, Sat 00:05Z to Sun 23:55Z.
 1. **The page lands at 7.6,** after the stops at 3.8, 5.4, 6.6 and 7.5.
    PHASE-2.md recommends pulling a first slice forward into Phase 2. That is
    the operator's call.
-2. **Folds owed to CLAUDE.md, PLAN, ROADMAP and SIMPLIFICATION:**
-   - 2.1 as a stop;
-   - unit 2.0;
-   - a context budget of 70,000.
+2. **The five-wallet plan** waits on the operator's choice among 2.0's options.
 3. **`config.load()` merges all of `.env` into the caller's environment.** 2.4
    works around it for analysts, and 4.12 owns the split.
 4. **The preview as decided** names no decision id, hashes or signature, and
@@ -881,10 +915,9 @@ Proposals for each are in SIMPLIFICATION.md, "Config the minimal build needs".
 None is set.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `5c8eb98`. The reflog shows it
-pushed on 2026-09-19 at 04:58 PDT, which covers the pivot. Every commit from
-`e2bae90` (the Phase 2 plan) to the one that last changed this note is
-committed and **not pushed**.
+Checked locally, with no fetch. `origin/main` is `4c13b7e`, the Phase 2 plan
+pushed by the operator. Every commit from `db62557` (the 2.1 fix) to the one
+that last changed this note is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** It does not restate any in full; LESSONS holds them.
