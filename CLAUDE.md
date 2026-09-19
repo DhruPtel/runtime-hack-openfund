@@ -6,8 +6,8 @@ Before building any unit from 2.1 on, read its row in
 `planning/SIMPLIFICATION.md` and build the minimal version. PLAN §8 states the
 pivot, and `planning/PHASE-2.md` details Phase 2, which opens with 2.0 (the
 SIWE agent-wallet proof). Keys, signing and spend authority keep their full
-guard. Stop at 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1 is the report format:
-the operator reads it before any code consumes it.
+guard. Stop at 2.1, 3.8, 4.11, 5.4, 6.6, 7.5 and 8.5 (4.11 added 2026-09-19).
+2.1 is the report format: the operator reads it before any code consumes it.
 
 ## Verification scales with risk (operator, 2026-09-18, at the Phase 1 gate)
 
@@ -24,6 +24,30 @@ works.
 
 This changes the pace, not the standard. If something looks wrong while moving
 quickly, stop and say so.
+
+## What the audit cut (operator, 2026-09-19, after the Batch B audit)
+
+The audit found 33 rules expressed 61 times, six ledger readers and one table
+nothing calls, and four rules defined twice. These rules keep the money path and
+cut the same discipline applied to storage, display and plumbing.
+
+- **One test per rule.** A rule gets one test, at the layer that owns it. If it
+  is already guarded on the same path, cite that test instead of writing a
+  second.
+- **Break-to-prove is for money and identity only:** spend authority, signing,
+  identity, the signed record, and the arithmetic deciding what is bought or
+  sold. Everywhere else a passing test is enough.
+- **One definition, many call sites.** A rule called from three places is
+  correct. A rule defined in two places is a bug waiting.
+- **No function without a caller.** Do not build a reader, a table or a helper
+  because a plan document named a primitive. Build it when something calls it.
+- **A plan naming a unit is not a reason for a module.** If two units are
+  naturally one function, write one and say so.
+- **No precision without a requirement.** Exact arithmetic, deep contexts and
+  tolerance ceremony only where a stated requirement needs them.
+
+None of this relaxes the money path: the three cash bugs and the replay's config
+leak were found by the discipline being kept.
 
 ## Dated obligations
 
