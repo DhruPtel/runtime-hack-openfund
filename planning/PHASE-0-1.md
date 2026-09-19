@@ -958,9 +958,11 @@ at block 66716733, Sat 02:13Z:
   one nudged price changed it.
 
 Offline, 25 tests in `tests/test_snapshot.py` assert each refusal at its rule,
-and seven mutations were each caught. `run/snapshot.py` has no offline test;
-its proof is the live build. `make snapshot` is not wired: the Makefile was
-outside this pass's paths.
+and seven mutations were each caught. `tests/test_run_snapshot.py` runs the
+whole live path offline, with the network refused, over transports answering
+in the recorded shapes. It found one defect: a held stock outside the universe
+went unread at the beacon, so it read as `identity_in_doubt`. That is fixed.
+`make snapshot` is not wired: the Makefile was outside this pass's paths.
 
 **Checkpoint:** you read a real snapshot and judge whether an analyst could say
 anything intelligent from it. The prior evidence is F0.9.6: given a single
