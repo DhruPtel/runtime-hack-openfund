@@ -357,3 +357,12 @@ def test_a_figure_behind_a_bracket_of_prose_is_still_checked(line, ok):
     assert real in text
     v = verdict(text.replace(real, line, 1))
     assert v.ok is ok, v.refusals
+
+
+def test_an_asset_named_at_the_end_of_a_sentence_is_one_the_line_is_about():
+    text = recorded_3_8("cross-asset-macro").replace(
+        "- META over the same window: 544.70535 to 666.7615, +22.4%",
+        "- 544.70535 to 666.7615 over the same window, +22.4%, for META.", 1)
+    assert "for META." in text
+    found = {(i.written, i.found) for i in live(text, "cross-asset-macro").imprecisions}
+    assert ("544.70535", "META timeline 2026-08-20") in found

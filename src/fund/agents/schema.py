@@ -428,7 +428,7 @@ class _Snapshot:
         line names by symbol, in its citations or its words."""
         entries = [scope] if scope is not None else []
         for word in _SYMBOL.findall(text):
-            entry = self.by_symbol.get(word)
+            entry = self.by_symbol.get(word) or self.by_symbol.get(word.rstrip("."))
             if entry is not None and entry not in entries:
                 entries.append(entry)
         return entries
