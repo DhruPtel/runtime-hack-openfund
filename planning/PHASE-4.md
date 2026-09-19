@@ -1,7 +1,7 @@
 # Phase 4: the treasurer and the ledger
 
-**Status, 2026-09-19:** the six decisions are made (below), and 4.0 is being
-built: twelve values, one definition each. Phase 3 closed with 3.9: the exit run's
+**Status, 2026-09-19:** the six decisions are made (below), and **4.0 is built**:
+twelve values, one definition each (LOGS, 4.0). Next is Batch B, from 4.1. Phase 3 closed with 3.9: the exit run's
 signed decision rebuilds byte for byte (`tests/test_replay_cycle.py`). Before 4.0,
 the replay was made to read the config its cycle carries and to judge by the gate
 set its record names (LOGS, "3.9 hardened"), because 4.1 and 4.4 change both.
@@ -157,8 +157,9 @@ and its rule. All are **H**. Each rule is broken in a copy and a test must fail.
   - 4.11.
 - **One definition:** cash is the cash leg the ledger holds, from P4: USDG.
   Its dollar value is `cash.worth` at USDG's own mark. `core/ledger.py`,
-  `cash(events, *, book, snapshot)`. It sits in the ledger, not `core/cash.py`
-  as first planned, because `cash.py` cannot import the ledger that imports it.
+  `cash_held(events, *, book, snapshot)`. It sits in the ledger, not `core/cash.py`
+  as first planned, because `cash.py` cannot import the ledger that imports it,
+  and it is not named `cash`, which would hide that module inside the ledger.
   `cash.cash_after` stays the projection for plans (P11).
 - **Decided (the operator):** paper cash is USDG units, valued at USDG's own
   mark, never assumed to be a dollar. The exit run's snapshot marks USDG at
@@ -254,7 +255,7 @@ and its rule. All are **H**. Each rule is broken in a copy and a test must fail.
   what the fill really got, and booked cash ignores what is still to come.
 - **One definition:** `gates.settle(plan, approved, …, booked_usd, filled)`.
   The orders already filled count at what they booked, which is in
-  `booked_usd` (P5). The approved orders not yet filled count at `cash_after`'s
+  `booked_usd` (P5, `ledger.cash_held`). The approved orders not yet filled count at `cash_after`'s
   projection. A filled order is never projected again and never dropped.
   Orders run in the plan's order, sells first, so every buy is judged against
   the sells' booked proceeds, not their marks.
