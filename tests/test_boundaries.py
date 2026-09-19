@@ -13,10 +13,11 @@ import dataclasses
 import json
 import os
 import pathlib
+from types import MappingProxyType
 
 from fund.adapters import bankr_quote, chain_4663
-from fund.core import valuation
-from fund.core.types import BPS, USD, Fixed, Instant
+from fund.core import snapshot, valuation
+from fund.core.types import BPS, USD, Check, FetchStatus, Fixed, Instant
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SRC = REPO / "src"
@@ -321,3 +322,55 @@ def test_nothing_calls_the_agent_api():
 
 
 #: PHASE-0-1 1.6: an asset's status is the first of these rules that does not pass.
+RECORDED_ORDER = ("identity", "standing", "beacon", "markability", "mark", "history",
+                  "corroboration", "corroborator-line", "divergence", "tradeability")
+STATUS_OF = {"identity": "identity_in_doubt", "standing": "listed_not_active",
+             "beacon": "identity_in_doubt", "markability": "unmarkable", "mark": "no_mark",
+             "history": "short_history", "corroboration": "uncorroborated",
+             "corroborator-line": "below_corroborator_line", "divergence": "divergence_veto",
+             "tradeability": "not_tradeable"}
+
+
+def test_the_status_is_the_first_rule_in_the_recorded_order_that_fails():
+    """For each pair of neighbouring rules, one asset fails both, and the earlier
+    rule names its status. Any change to the order inverts some neighbouring pair."""
+    from test_snapshot import BEACON, U, entry, inputs, listed, offchain, stock
+
+    nvda = listed("NVDA")
+    record = dataclasses.replace(U.records[nvda], status="ASSET_STATUS_INACTIVE")
+    inactive = dataclasses.replace(U, records=MappingProxyType({**U.records, nvda: record}))
+    unread = Check(None, "beacon slot not read: unreachable")
+    unmarkable = Check(False, "constructed: judged unmarkable")
+    stale = Check(False, "a gap this long in an open session is stale")
+    absent = offchain(None, status=FetchStatus.ABSENT, detail="GeckoTerminal did not list it")
+
+    def holding(u, asset, **changes):
+        return dataclasses.replace(stock("NVDA", **changes), asset=asset), u
+
+    both_fail = {
+        ("identity", "standing"): lambda: holding(inactive, dataclasses.replace(
+            inactive.stock(nvda, BEACON), identity=Check(False, "constructed: identity in doubt"))),
+        ("standing", "beacon"): lambda: holding(inactive, inactive.stock(nvda, unread)),
+        ("beacon", "markability"): lambda: holding(
+            U, dataclasses.replace(U.stock(nvda, unread), markability=unmarkable)),
+        ("markability", "mark"): lambda: holding(
+            U, dataclasses.replace(U.stock(nvda, BEACON), markability=unmarkable), fresh=stale),
+        ("mark", "history"): lambda: (stock("NVDA", fresh=stale, reach=False), U),
+        ("history", "corroboration"): lambda: (stock("NVDA", reach=False, corroboration=absent), U),
+        ("corroboration", "corroborator-line"): lambda: (
+            stock("NVDA", corroboration=absent, volume="242.1"), U),
+        ("corroborator-line", "divergence"): lambda: (
+            stock("NVDA", volume="242.1", corroborator="265.87982073", closed=False), U),
+        ("divergence", "tradeability"): lambda: (
+            stock("NVDA", corroborator="265.87982073", closed=False, impact=60), U),
+    }
+    assert snapshot.ORDER == RECORDED_ORDER
+    assert set(both_fail) == set(zip(RECORDED_ORDER, RECORDED_ORDER[1:]))
+    wrong = {}
+    for (first, second), build in both_fail.items():
+        stock_inputs, u = build()
+        status = entry(snapshot.build(inputs(stock_inputs), u), "NVDA")["status"]
+        if status["value"] != STATUS_OF[first] or (first in ("identity", "beacon")
+                                                   and status["rule"] != first):
+            wrong[(first, second)] = (status["value"], status["rule"])
+    assert wrong == {}
