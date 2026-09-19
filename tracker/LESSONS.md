@@ -2545,3 +2545,60 @@ function they all call, and it is defined before any of them is built.
 
 **Affects:** 3.1, 3.3, 3.4, 3.5; every Phase 4 unit; CODEBASE §1's principle 3,
 "one rule, one location", which this extends from limits to shared values.
+
+## 2026-09-19 — The sweep's R1 to R7 and S1 closed; S2 to S13, each with the unit that owns it
+**Closed** (LOGS, "After the sweep"):
+- R1 to R3, as one definition of cash (`core/cash.py`, the design lesson
+  above);
+- R4, the risk agent's identity on replay;
+- R5 and R6, the fabrication holes;
+- R7, a rule named twice;
+- S1, computed figures on cited lines.
+
+On the stored 3.8 replies, **all four now pass**, with no new call.
+
+**S8 and S9 are money-path bugs, not strictness.**
+- **S9, fixed as a consequence of R1.** The floor blocked sells that raise
+  cash, so a book below the floor could never sell its way back. The floor is
+  now judged on the approved orders and drops only buys. A sell is never
+  dropped.
+- **S8, not fixed.** Sells are held to the buy rules:
+  - a held stock the snapshot no longer calls tradeable can never be sold;
+  - an analyst's sell call on it refuses the whole report.
+
+  That traps a position whose mark the fund may no longer trust. 1.2's DECISION
+  says such a name is "refused for buying, never dropped as a holding".
+  - **Owner:** 3.4 (the gates) and 2.2 (the validator).
+  - **The operator decides** what a sell needs instead: a mark to value it and
+    a fresh quote to execute it, but not the corroborator line or a buy-side
+    impact limit.
+  - **Before any cycle that holds positions:** 8.3's unattended cycles.
+
+**The rest, each with its owner:**
+
+| # | What | Owner | When, or why not |
+|---|---|---|---|
+| S2 | A bps figure on a line citing a `_bps` field is always checked against it, and no brief gives `divergence_bps`'s sign | 2.2, 2.3 | Before the next exit run: price-integrity writes such lines |
+| S3 | On a line whose citation names nothing, a computed plain decimal is refused. Ratios are no longer, since S1. | 2.2 | Low, now the brief asks for full paths. The latest round still has no citation form. |
+| S4 | `+(-0.09)%` is not read as a percentage. The 3.8 instance passes by S1's arithmetic, not by its notation. | 2.2 | Low. A one-line parser fix when 2.2 is next touched. |
+| S5 | `NO CALLS` must be exact and cannot stand beside calls. The brief says neither. | 2.2, 2.3 | Before the next exit run: execution-quality nearly tripped it at 3.8 |
+| S6 | The risk reply parser refuses any variation, and a refused reply vetoes everything | 3.5 | **Before the first live risk call,** which the next exit run makes. It fails closed, so the cost is a lost vote, not a wrong one. |
+| S7 | The brief says code checks every figure. Prose figures are not checked, by design. | 2.3 | Not worth fixing on its own. Every figure line is now checked (R5); fold it into the next brief change. |
+| S10 | The mandate gate checks the order's labelled asset, not the legs traded | 4.4 (chokepoint), 4.1 | The treasurer must check the legs it signs. The planner never builds a mismatched plan. |
+| S11 | The snapshot's verdicts have no age limit. A Saturday snapshot decided after Monday's open would pass an open-session divergence as a finding. | 4.4 (regate on fresh evidence) | Phase 4. Money-adjacent: record it where 4.4 is planned. |
+| S12 | One unmarkable holding stops the cycle with no signed record | 3.7 with 4.8 (the cycle) | A no-rebalance record should still be signed. Phase 4's cycle. |
+| S13 | The command's "authorizes True" checks the envelope against the key it names | 7.1 (publish the key), 4.4 (verify against it) | Phase 4 and 7. The wording overstates until then. |
+
+**Found in this batch, and owed:**
+- **3.9 cannot rebuild the 3.8 fixture with today's code.** This batch changed
+  what a record holds: the plan's funding, and the floor on the approved set.
+  Every remaining difference is one of those. So 3.9 replays a cycle recorded
+  under the current code, or the one it has at the commit that recorded it. The
+  record's `schema` still says `openfund.decision/1` and should move to `/2` when
+  3.9 is built.
+- **S1's remainder:** a statistic of a whole series (a correlation) on a line
+  that also cites a single field still refuses. Exempting it would let an
+  invented figure through on any line that cites a series. 2.3 could ask for
+  such figures on a line of their own.
+
+**Affects:** 2.2, 2.3, 3.4, 3.5, 3.7, 3.9, 4.1, 4.4, 4.8, 7.1, 8.3.
