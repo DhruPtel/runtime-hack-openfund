@@ -2211,3 +2211,63 @@ minimal versions:
   against a fake gateway. Nothing ran live, and the runner has no live entry
   point yet.
 **Affects:** 2.2's figure rule; 2.5; 2.6 and every live run.
+
+## 2026-09-19 — The keys after the operator's fix, measured: the analysts' key cannot reach a signing surface
+**What we believed.** At 2.1, `BANKR_LLM_KEY` measured not read-only with the
+Agent API on, and the analysts would hold it. The operator then set it to
+gateway on, read-only on, Agent API off and Wallet API off. `BANKR_KEY_READ`
+became read-only with everything else off. `BANKR_KEY_EXEC` became Wallet API
+on, read-only off, everything else off.
+
+**What `probes/keymap.py` measured before 2.6 ran:**
+- `BANKR_LLM_KEY`:
+  - `/wallet/sign` refused 403 "Wallet API access not enabled";
+  - `/agent/profile` refused 403 "Agent API access not enabled";
+  - the gateway answers 200.
+- `BANKR_KEY_READ`: read-only, gateway off, Agent API off.
+- `BANKR_KEY_EXEC`: not read-only as labelled, gateway off, Agent API off.
+
+Every setting matches the dashboard's word this time.
+
+**What it means.** Invariant 1 holds for the analysts' key as far as it can be
+measured: it is refused by name on both surfaces that can sign or transact.
+**Still not measurable:**
+- the read-only toggle on `BANKR_LLM_KEY`, because the Wallet API refuses
+  first;
+- token launch on every key, because no read is gated by it.
+**Affects:** invariant 1; PLAN §6; 2.4 and 2.6; 2.0's option (c), now safe as the
+keys stand.
+
+## 2026-09-19 — 2.6: the first real report, refused on its first line and on a validator rule that was wrong
+**What we believed.** A real model given the approved brief would either pass
+2.2 or be caught fabricating.
+
+**What one call measured** (`research/findings.md` §2.6; $0.273156; 78.6 s):
+- **It did not copy the first line.** Where the brief gave the unassigned agent
+  `0x…`, it wrote the fund's wallet, the only address in the snapshot. A
+  placeholder shaped like an elided address was read as one to fill in.
+- **2.2's bps rule refused five correct figures.** They were divergences the
+  model computed and cited, such as `136bps`. The approved rule says computed
+  figures are not checked, but the code checked any "bps" number against a
+  `_bps` field. With the rule corrected in a scratch copy, the only refusal
+  left is the header.
+- **No figure was fabricated.** One computed clause was imprecise, and two
+  prose claims were unsupported ("venue AMM", SGOV "likely thin"). The
+  validator does not read prose, by design.
+- **The reply states its own cost per request.** `usage.cost` is 0.273156,
+  equal to our estimate. It also counts reasoning tokens: 5,858 of 7,628, or
+  77%.
+
+**The judgement.** A real view, reached mechanically. It follows the brief's own
+method to the same five calls the hand-written example made, and it is thinner
+than that example.
+
+**Not changed, by instruction.** The brief and the validator stay as they were
+at the call.
+
+**Owed:**
+- the bps rule, with its test;
+- a placeholder that cannot be read as an address, or real agent addresses;
+- tests for the runner's `main()`;
+- the settled usage cross-check.
+**Affects:** 2.2, 2.3, 2.5, 2.0's choice, the runner's `UNASSIGNED_AGENT`.
