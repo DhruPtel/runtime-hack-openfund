@@ -293,22 +293,56 @@ def accept(plan: RefreshPlan, registry_dir: Path = DEFAULT_DIR, *,
     """Bump the pin to `plan`: the explicit config change a new version requires.
 
     It refuses to drop a held asset from the registry unless that is
-    acknowledged. Even acknowledged, the holding stays in the book, where
-    `Universe.held_asset` still describes it. After a new registry or directory
-    is accepted, the reviewed feed map no longer matches, and loading refuses
-    until the map is re-reviewed.
+    acknowledged. Even acknowledged, the holding stays in the book: the asset
+    is written to `pins.json`'s `carried` list with its last registry record's
+    symbol, name and decimals (1.8). So its balance is still read, and
+    `Universe.held_asset` still describes it. A carried asset that a later
+    registry lists again leaves the list. After a new registry or directory is
+    accepted, the reviewed feed map no longer matches, and loading refuses until
+    the map is re-reviewed.
     """
     stored = registry_dir / plan.filename
     if not stored.exists() or stored.read_bytes() != plan.raw:
         raise PinMismatch(f"{plan.filename} is not stored; call store() first")
+    pins = read_pins(registry_dir)
+    carried = pins.setdefault("carried", {})
     if plan.pin.name == REGISTRY:
         removed = set(plan.removed)
         dropped = [asset for asset in held if asset in removed]
         if dropped and not acknowledge_removed_held:
             raise HeldAssetRemoved(dropped)
-    pins = read_pins(registry_dir)
+        old = parse_registry(read_pinned(REGISTRY, registry_dir)[1]) if dropped else {}
+        for asset in dropped:
+            record = old[asset]
+            carried[_carried_key(asset)] = {
+                "chain_id": asset.chain_id, "address": asset.address, "symbol": record.symbol,
+                "name": record.name, "decimals": record.decimals,
+                "removed_in": plan.pin.sha256,
+                "reason": "held when the issuer registry stopped listing it; carried so the "
+                          "holding stays in the book (1.8)"}
+        now_listed = parse_registry(plan.raw)
+        for key in [k for k, v in carried.items()
+                    if AssetId(v["chain_id"], v["address"]) in now_listed]:
+            del carried[key]
     pins["inputs"][plan.pin.name] = _pin_to_json(plan.pin)
     (registry_dir / PINS_FILE).write_text(json.dumps(pins, indent=2, sort_keys=True) + "\n")
+
+
+def _carried_key(asset: AssetId) -> str:
+    return f"{asset.chain_id}:{asset.address}"
+
+
+@dataclass(frozen=True)
+class CarriedAsset:
+    """An asset the issuer registry no longer lists, kept because it was held
+    when the registry dropped it. Its balance is still read, and it stays in the
+    book with identity in doubt and no mark."""
+
+    asset: AssetId
+    symbol: str      # display only, from its last registry record
+    name: str
+    decimals: int
+    removed_in: str  # sha256 of the registry version that dropped it
 
 
 # --- the feed map: the one place a name ever meets an address ------------------
@@ -426,6 +460,7 @@ class Universe:
     cash_decimals: int
     gas_asset: AssetId
     gas_decimals: int
+    carried: Mapping[AssetId, CarriedAsset] = MappingProxyType({})
 
     @property
     def _tag(self) -> str:
@@ -521,6 +556,9 @@ class Universe:
           described with identity False and no feed, so it stays in the book,
           flagged. `decimals` is the chain's, since the registry no longer
           supplies it.
+        - A carried asset, dropped by the registry while held, is described
+          the same way, under its last record's symbol and decimals, with the
+          registry version that dropped it (1.8).
         """
         if asset == self.cash_leg:
             return self.cash()
@@ -528,6 +566,14 @@ class Universe:
             return self.gas()
         if asset in self.records:
             return self.stock(asset, beacon)
+        carried = self.carried.get(asset)
+        if carried is not None:
+            return Asset(id=asset, kind=AssetKind.STOCK, symbol=carried.symbol,
+                         decimals=carried.decimals,
+                         identity=Check(False, f"not in {self._tag}: dropped by registry "
+                                               f"{carried.removed_in[:12]}… while held, and carried"),
+                         markability=Check(False, "no longer listed: no feed may mark it"),
+                         beacon=Check(None, "not cross-checked: identity is false"))
         return Asset(id=asset, kind=AssetKind.STOCK, symbol="unlisted", decimals=decimals,
                      identity=self.identity(asset),
                      markability=Check(False, "unlisted: no feed may mark it"),
@@ -600,8 +646,14 @@ def load(registry_dir: Path = DEFAULT_DIR) -> Universe:
     gas_asset = AssetId.native(pins["gas"]["chain_id"])
     feeds = _load_feed_map(registry_dir, registry, directory, records,
                            parse_directory(directory_raw, chain_id), {cash_leg, gas_asset})
+    carried = {}
+    for entry in (pins.get("carried") or {}).values():
+        asset = AssetId(entry["chain_id"], entry["address"])
+        carried[asset] = CarriedAsset(asset=asset, symbol=entry["symbol"], name=entry["name"],
+                                      decimals=entry["decimals"], removed_in=entry["removed_in"])
     return Universe(registry=registry, directory=directory,
                     records=MappingProxyType(records), feeds=MappingProxyType(feeds),
                     issuer_beacon=ChainAddress(chain_id, beacon["address"]),
                     cash_leg=cash_leg, cash_decimals=cash["decimals"],
-                    gas_asset=gas_asset, gas_decimals=pins["gas"]["decimals"])
+                    gas_asset=gas_asset, gas_decimals=pins["gas"]["decimals"],
+                    carried=MappingProxyType(carried))

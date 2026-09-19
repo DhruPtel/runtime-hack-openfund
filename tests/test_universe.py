@@ -432,6 +432,30 @@ def test_an_asset_dropped_from_the_registry_stays_describable_while_held(registr
         universe.stock(CRM, beacon=Check(True))  # no longer admissible to buy
     held = universe.held_asset(CRM, decimals=18)  # and still in the book
     assert held.identity.value is False and "not in rhj_assets" in held.identity.reason
+    # 1.8: it is carried, so its balance is still read, under its last record's name
+    carried = universe.carried[CRM]
+    assert (carried.symbol, carried.decimals, carried.removed_in) == ("CRM", 18, plan.pin.sha256)
+    assert held.symbol == "CRM" and "while held, and carried" in held.identity.reason
+
+
+def test_a_carried_asset_that_the_registry_lists_again_is_no_longer_carried(registry_copy):
+    _, original = u.read_pinned(u.REGISTRY, registry_copy)
+    payload = json.loads(original)
+    payload["assets"] = [a for a in payload["assets"] if a["tokenSymbol"] != "CRM"]
+    first = u.plan_refresh(u.REGISTRY, "api.robinhood.com/rhj/assets", json.dumps(payload).encode(),
+                           Instant(2), original)
+    u.store(first, registry_copy)
+    u.accept(first, registry_copy, held=[CRM], acknowledge_removed_held=True)
+    assert "4663:" + CRM.address in u.read_pins(registry_copy)["carried"]
+    _, current = u.read_pinned(u.REGISTRY, registry_copy)
+    back = u.plan_refresh(u.REGISTRY, "api.robinhood.com/rhj/assets", original + b" ", Instant(3), current)
+    u.store(back, registry_copy)
+    u.accept(back, registry_copy, held=[CRM])
+    assert u.read_pins(registry_copy)["carried"] == {}
+
+
+def test_the_pinned_universe_carries_nothing_today():
+    assert dict(u.load().carried) == {}
 
 
 # the boundary ------------------------------------------------------------------------
