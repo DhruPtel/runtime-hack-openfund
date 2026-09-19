@@ -530,6 +530,28 @@ judged yet.**
 
 ---
 
+## 1.7 — Analyst cost against a real snapshot
+**Date:** 2026-09-18 · **Commit:** bcf1d81
+
+After two changes to 1.6 — closed-session findings only past the open-session
+limit, and an offline test of `run/snapshot.py` that found and fixed an unread
+beacon on held stocks outside the universe — built `probes/analyst_cost.py`. It
+embeds snapshot `7eba6212…` byte for byte, hash checked, and made four calls at
+`claude-sonnet-5`: two identical analyst calls, one with the timeline removed,
+and one risk call. The artifact is `research/findings.md` §1.7:
+- $0.454 an analyst call (185,168 tokens in; 7,725 and 9,087 out; 62 and 75 s);
+- $1.87 a cycle, $56 over 30 days, 28 times 0.9's floor, and 37 records at
+  $0.05 to cover one cycle;
+- the timeline, 66.8% of the input and 53% of a cycle;
+- the timeouts: they cover these calls but are not sized for an uncapped reply
+  at the slowest rate measured, with values recommended and not set.
+
+It was verified by the credit balance and a settled `/v1/usage` window, which
+agree with the listed price to the last digit ($1.080114 spent). The price
+awaits the operator.
+
+---
+
 ## State at close — 2026-09-18, after 1.6 ▶ (waiting at the checkpoint)
 
 **Read this first.** This note describes the repository at the commit that last
