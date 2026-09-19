@@ -174,7 +174,8 @@ def _rules(settings: chain_4663.Settings, rule: valuation.DivergenceRule,
                          f"not a fill."),
         "timeline": (f"The feed's own rounds over {settings.window_s // 86400} days to the pinned "
                      f"block, oldest first, at most {settings.max_rounds}. A series that falls "
-                     f"short says so in its coverage."),
+                     f"short says so in its coverage, and its asset is not tradeable that "
+                     f"snapshot."),
         "value": "Raw units times the mark, exact. No mark, no value, and never zero.",
     }
 

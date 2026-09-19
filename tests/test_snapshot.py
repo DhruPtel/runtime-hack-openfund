@@ -244,10 +244,21 @@ def test_a_stale_mark_is_no_mark_at_freshness():
     assert e["mark"]["price_usd"] is None
 
 
-def test_a_short_series_says_it_is_short():
+def test_a_short_series_says_it_is_short_and_the_asset_is_not_tradeable():
     e = entry(snapshot.build(inputs(stock("NVDA", reach=False)), U), "NVDA")
     assert e["timeline"]["coverage"]["verdict"] is False and "3 days after" in e["timeline"]["coverage"]["reason"]
     assert e["timeline"]["rounds"] == 3
+    assert e["status"]["value"] == "short_history" and e["status"]["rule"] == "history"
+    assert e["status"]["verdict"] is False
+
+
+def test_a_series_whose_read_failed_partway_is_undetermined_history():
+    first = stock("NVDA")
+    partial = dataclasses.replace(first.series, coverage=Check(
+        None, "read failed at round 1001: [rpc] -32000: missing trie node ... layer stale"))
+    e = entry(snapshot.build(inputs(dataclasses.replace(first, series=partial)), U), "NVDA")
+    assert e["status"]["value"] == "short_history" and e["status"]["verdict"] is None
+    assert "missing trie node" in e["status"]["reason"]
 
 
 # --- holdings: never silently zero ------------------------------------------------------------

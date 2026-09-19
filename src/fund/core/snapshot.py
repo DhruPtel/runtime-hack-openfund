@@ -77,8 +77,10 @@ RULE_SERIES_HEAD = "series-head"
 RULE_DUPLICATE = "duplicate"
 
 #: The order an asset's rules run in. Its status is the first that does not pass.
-ORDER = ("identity", "standing", "beacon", "markability", "mark", "corroboration",
+ORDER = ("identity", "standing", "beacon", "markability", "mark", "history", "corroboration",
          "corroborator-line", "divergence", "tradeability")
+
+RULE_HISTORY = "history"  # the price series reaches back to its window
 
 
 class SnapshotRefused(Exception):
@@ -310,6 +312,13 @@ def _judge(s: StockInputs, universe: Universe, rule: valuation.DivergenceRule
         return admitted.universe_status, admitted.rule, admitted.decision, the_mark, cross
     if not the_mark.check.passes:
         return UniverseStatus.NO_MARK, the_mark.rule, the_mark.check, the_mark, cross
+    coverage = s.series.coverage or Check(None, "the series was asked for no window")
+    if not coverage.passes:
+        # An analyst reasons from the series; one that falls short, or whose
+        # read failed partway, is not enough to buy on (1.7's SPCX).
+        return (UniverseStatus.SHORT_HISTORY, RULE_HISTORY,
+                Check(coverage.value, f"[{RULE_HISTORY}] the price series does not reach its "
+                                      f"window: {coverage.reason}"), the_mark, cross)
     if cross.rule in (valuation.RULE_CORROBORATION, valuation.RULE_VOLUME):
         return UniverseStatus.UNCORROBORATED, cross.rule, cross.verdict, the_mark, cross
     if cross.rule == valuation.RULE_CORROBORATOR_LINE:
