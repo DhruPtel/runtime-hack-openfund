@@ -54,21 +54,28 @@ def _number(config: Mapping[str, Any], name: str) -> Decimal | None:
 
 @dataclass(frozen=True)
 class Limits:
-    """Every Phase 3 limit, read once from `config/thresholds.json`. None is
-    unresolved. Weights are fractions of the paper NAV; money is USD."""
+    """Every Phase 3 limit, read once from `config/thresholds.json` and, for the
+    per-trade limit, `config/mandate.json`. None is unresolved. Weights are
+    fractions of the paper NAV; money is USD."""
 
     quorum_min_analysts: int | None
     max_position_weight: Decimal | None
     cash_floor_usd: Decimal | None
+    min_order_usd: Decimal | None
+    max_trade_usd: Decimal | None
 
     @classmethod
-    def from_config(cls, thresholds: Mapping[str, Any]) -> "Limits":
+    def from_config(cls, thresholds: Mapping[str, Any],
+                    mandate: Mapping[str, Any] | None = None) -> "Limits":
+        """Without a mandate, its limits are unresolved and block."""
         quorum = _number(thresholds, "quorum_min_analysts")
         if quorum is not None and quorum != quorum.to_integral_value():
             raise ValueError("quorum_min_analysts is a whole number of seats")
         return cls(quorum_min_analysts=None if quorum is None else int(quorum),
                    max_position_weight=_number(thresholds, "max_position_weight"),
-                   cash_floor_usd=_number(thresholds, "cash_floor_usd"))
+                   cash_floor_usd=_number(thresholds, "cash_floor_usd"),
+                   min_order_usd=_number(thresholds, "min_order_usd"),
+                   max_trade_usd=_number(mandate or {}, "max_trade_usd"))
 
 
 @dataclass(frozen=True)
@@ -139,3 +146,16 @@ def funded_share(cash_weight: Decimal, released: Decimal, wanted: Decimal, nav_u
     if wanted <= spare:
         return Decimal(1)
     return spare / wanted
+
+
+# --- the limits the planner applies (3.3) ----------------------------------------------------
+
+def pieces(total_usd: Decimal, limits: Limits) -> list[Decimal] | None:
+    """A move in dollars as orders: whole orders of the per-trade limit, then the
+    remainder, and any piece under the minimum order dropped as dust. None when
+    either limit is unresolved."""
+    size, least = limits.max_trade_usd, limits.min_order_usd
+    if size is None or least is None:
+        return None
+    whole, rest = divmod(total_usd, size)
+    return [piece for piece in [size] * int(whole) + [rest] if piece >= least]
