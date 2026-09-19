@@ -9,11 +9,12 @@ checked entry by entry on 2026-09-18, after this claim had been false since
 before 09:10 that day. Where a fold exposes a contradiction, the plan doc marks
 it open rather than reconciling it.
 
-**Pending folds into the plan docs: none, as of 2026-09-18, after 1.10.** The
-capture-hash decision and the feed-description entry were folded in 1.10's pass,
-into PHASE-0-1 1.9 and 1.10 and PLAN §8. F0.4.1 in `research/findings.md` still
-says every equity feed is named `Robinhood <TICKER> / USD`. That file is research,
-not plan, and was outside the pass.
+**Pending folds into the plan docs: none, as of 2026-09-18, after 1.11.** The
+three 1.11 entries were folded in 1.11's pass, into PHASE-0-1 1.11 and its list
+of what Phase 1 cannot do, and into PLAN §8 and §9. F0.4.1 in
+`research/findings.md` still says every equity feed is named
+`Robinhood <TICKER> / USD`. That file is research, not plan, and was outside
+1.10's pass.
 
 **Owed in code, outside the paths of the passes that found them:**
 1. **`adapters/http.py`, two changes** (found by 1.5): return a caller-named
@@ -1693,3 +1694,72 @@ correct values.
   checks names against the directory only.
 - **Not folded:** `research/findings.md` F0.4.1 is outside this pass's paths.
 **Affects:** 1.10, F0.4.1, anything that would match a feed by its name.
+
+## 2026-09-18 — 1.11: mixed blocks are refused by the builder, not by 1.3, and three of its four checks were untested
+The brief credited 1.3 with refusing mixed blocks. `require_one_block` in
+`adapters/chain_4663.py` does, but its only caller is `--prove`. What refuses a
+mixed block in a build is `core/snapshot.py`'s block-pin, which checks four
+places: the mark, each series point, the cash and gas readings, and each
+balance. Only the mark was tested. With the check deleted at any of the other
+three, all 347 tests passed.
+- **What 1.11 did.** The block-pin test is parametrized over the four places,
+  and each case asserts the message naming its own place. Each deletion now
+  fails exactly its own case.
+- **Not changed:** `require_one_block` stays as the proof's own check.
+**Affects:** 1.3, 1.6, 1.11.
+
+## 2026-09-18 — 1.11: no offchain body carries a source time, so a replayed body cannot be built from a real source
+PHASE-0-1 1.11 asked that an offchain response whose newest point's source time
+is old relative to its fetch time be refused. That assumed an offchain series
+with dated points. Since the price-history decision, history comes from chain
+rounds.
+- **The bodies.** In the committed capture, GeckoTerminal's token entries and
+  the venue's 35 quotes carry no time field. The venue documents that a quote
+  has no timestamp.
+- **The only source-stated time is the HTTP `Date` header,** at 1 s
+  resolution. Four GeckoTerminal answers measured were all edge-cache `MISS`,
+  within 2.5 s of our clock. No rule reads the header. GeckoTerminal allows a
+  cache up to 60 s old (`s-maxage=60`).
+- **What is refused:**
+  - a quote older than 60 s by our own clock;
+  - a quote judged before it was fetched;
+  - in a replay, any clock read past the capture's tape.
+
+  A body replayed by the network, or a stale GeckoTerminal answer, is taken as
+  current. GeckoTerminal only corroborates, so a stale answer can hide a
+  divergence or invent one; it never sets the mark.
+- **Open:** whether to refuse a GeckoTerminal answer whose `Date`, less any
+  `Age`, is too old against its fetch time. Its limit belongs in
+  `config/thresholds.json`, which was outside 1.11's paths. The operator's call.
+**Affects:** 1.4, 1.5, 1.11; PLAN §9; `adapters/gecko.py`.
+
+## 2026-09-18 — 1.11: a paused feed and a closed market look alike to the fund, but not to the chain
+**What we believed.** 1.3 recorded that a paused feed shows up only as a stale
+newest point, and that whether these proxies expose a pause flag was not
+probed.
+
+**What the record and the chain say.**
+- Chainlink's Robinhood feed page says the token contract exposes
+  `oraclePaused()`, and that the feed freezes at its last value while the flag
+  is true. The workflow is to pause the oracle, stage the multiplier, then
+  unpause.
+- The mainnet implementation `0xb354…5ae2` dispatches `oraclePaused()`,
+  `pauseOracle()` and `unpauseOracle()`. The feed proxies revert on both
+  `paused()` and `oraclePaused()`.
+- At block 66841212, Sat 05:43Z inside the closed session, all 35 feed-bearing
+  tokens answered `oraclePaused()` false. A selector no contract has reverted,
+  so that answer is real: the weekend silence is the closed market.
+
+**What the fund does.** It reads only `latestRoundData`.
+- A feed paused in an open session is judged fresh for 25 h of open-session
+  time.
+- One paused from Friday afternoon stays fresh until Monday about 20:00Z.
+- A pause shorter than that is never seen. A pause is when the multiplier is
+  being changed, so that is the window in which the mark is most in doubt.
+
+**Open:** reading `oraclePaused()` at the pinned block and refusing the mark
+while it is true. That touches the reader, the snapshot's inputs, its rule
+order and schema, and `run/snapshot.py`, which was outside 1.11's paths. No
+paused answer has been observed, so none could be recorded as a case. The
+operator's call.
+**Affects:** 1.3, 1.6, 1.8 (a held asset's value), 1.11; PLAN §9; F0.4.4.
