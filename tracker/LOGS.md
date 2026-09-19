@@ -1506,10 +1506,10 @@ commands need `PYTHONPATH=src`.
   `cumulative_budget_usd`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `f145540`, pushed by the
-operator at about 20:49Z: everything through Phase 3's close and the Phase 4 plan.
-Every commit from `0f64916` (3.9 hardened) to the one that last changed this
-note — 3.9's hardening, 4.0, and Batch B — is committed and **not pushed**.
+Checked locally, with no fetch. `origin/main` is `cc14228`, pushed by the operator
+at about 21:48Z: everything through 3.9's hardening and 4.0. Every commit from
+`26d049f` (4.1's mandate) to the one that last changed this note — Batch B, 4.1 to
+4.8 — is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** LESSONS holds them in full.
