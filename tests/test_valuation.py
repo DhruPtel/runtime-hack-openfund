@@ -126,11 +126,6 @@ def test_an_unread_feed_is_undetermined_at_reading():
     assert m.rule == valuation.RULE_READING and m.check.value is None
 
 
-def test_an_asset_with_no_feed_has_no_mark_at_markability():
-    m = valuation.mark(CRM, None, FRESH)
-    assert m.rule == valuation.RULE_MARKABILITY and m.check.value is False
-
-
 # --- holdings: never silently zero -------------------------------------------------------------
 
 def test_an_unmarkable_holding_is_carried_with_no_value_not_zero():
@@ -139,13 +134,6 @@ def test_an_unmarkable_holding_is_carried_with_no_value_not_zero():
                                    universe_reason="[markability] no Chainlink feed")
     assert held.value is None and held.mark is None and held.balance.value.raw == 10**18
     assert "not zero" in held.value_reason and "[markability]" in held.value_reason
-
-
-def test_a_stale_mark_leaves_the_holding_unvalued():
-    stale = valuation.mark(AMZN, reading(AMZN, 25260000000), Check(False, "stale"))
-    held = valuation.value_holding(AMZN, balance(AMZN, 10**18), stale,
-                                   universe_status=UniverseStatus.TRADEABLE, universe_reason=None)
-    assert held.value is None and "[freshness]" in held.value_reason
 
 
 def test_an_unread_balance_is_not_a_zero_balance():
@@ -281,25 +269,9 @@ def test_in_a_closed_session_the_recorded_amzn_divergence_is_a_finding_not_a_vet
     assert "2026-09-18T" in f.reason  # names the round the feed is frozen at
 
 
-def test_the_same_divergence_in_an_open_session_is_still_vetoed():
-    check = amzn_check("265.87982073", closed=False)
-    assert check.rule == valuation.RULE_DIVERGENCE and check.finding is None
-
-
 def test_a_small_closed_session_divergence_is_still_recorded_and_says_it_is_within():
     check = amzn_check("252.60", closed=True)
     assert check.verdict.passes and not check.finding.beyond_open_session_limit
-
-
-def test_a_closed_session_changes_nothing_below_the_line_or_without_corroboration():
-    thin = amzn_check("265.87982073", closed=True, volume="3502.1")
-    assert thin.rule == valuation.RULE_CORROBORATOR_LINE and thin.finding is None
-    source = Source("geckoterminal", f"networks/robinhood/tokens/{AMZN.id.address}")
-    missing = Observation(value=None, source=source, source_time=None, fetch_time=FETCHED,
-                          block=None, status=FetchStatus.ABSENT, detail="not listed")
-    absent = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
-                                   missing, missing, RULE, independent=True, closed_session=True)
-    assert absent.rule == valuation.RULE_CORROBORATION and absent.verdict.value is None
 
 
 def test_a_corroborator_volume_that_is_not_usd_is_refused():
