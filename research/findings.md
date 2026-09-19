@@ -3356,3 +3356,131 @@ used, not that the calls are any good.
 - **The measured snapshot's timeline is about 2% light,** because of SPCX
   (F1.7.8).
 - **Spent: $1.080114.** The balance went from $2.799976 to $1.719862.
+
+---
+
+## 1.8a — Daily closes and prompt caching, measured (DECISIONs after 1.7)
+
+**Date:** 2026-09-19 UTC · **Method:** `PYTHONPATH=src python3 -m probes.analyst_cost
+fixtures/live/snapshot-2e95fab1437593aa4722e8e96153e21fffcaf1e32c919be72a64b52f662ce524.json
+--one --confirm`, then `--cache --confirm` · **Captures:** `probes/out/analyst_cost_one.json`,
+`probes/out/analyst_cost_cache.json`
+
+> **Three calls, both measurements on one snapshot.** Snapshot `2e95fab1…`:
+> - block 66742900, Sat 02:57Z;
+> - 189,357 bytes, 35 assets;
+> - a timeline of **daily closes over 30 days**: 763 points, where 1.7's
+>   snapshot had 4,628.
+>
+> The brief is 0.9's, as at 1.7, at `claude-sonnet-5` with the 12,000 output
+> cap now set.
+
+### F1.8a.1 — Daily closes halve the input and cut an analyst call by 42%
+
+**Confidence: measured, one call, against 1.7's two.**
+
+| | 1.7 call 1 | 1.7 call 2 | **Daily closes** |
+|---|---|---|---|
+| Snapshot | 335,294 B, 4,628 pts | same | **189,357 B, 763 pts** |
+| Input tokens | 185,168 | 185,168 | **94,716** (−48.8%) |
+| Output tokens | 9,087 | 7,725 | 7,484 |
+| Latency | 75.0 s | 62.4 s | 60.0 s |
+| Cost | $0.4612 | $0.4476 | **$0.2643** (−41.8% on the mean) |
+
+The timeline went from 62% of the snapshot's bytes to 32%.
+
+### F1.8a.2 — The reports used history as much as 1.7's did
+
+**Confidence: measured counts. As a judge of quality it is a proxy.**
+
+| Reports that… | 1.7 call 1 | 1.7 call 2 | **Daily closes** |
+|---|---|---|---|
+| cite the timeline | 35 of 35 | 20 of 35 | **35 of 35** |
+| quote dated points | 31 | 10 | **18** |
+| name two or more price levels | 34 | 33 | **35** |
+| say `NO_CALL` or abstain | 1 + 1 | 16 + 0 | **0 + 0** |
+
+- **The daily call sits inside the range** that 1.7's two *identical* calls
+  spanned on every count. The two identical calls already disagreed from 1
+  `NO_CALL` to 16. One call against two cannot show variance, and it does not
+  show that daily closes are better.
+- **Read, the reasoning uses the longer view.** "30-day closes rose from 310.85
+  (08-20) to 335.38 latest, +7.9%… accelerating over the last two weeks", and
+  "net still down ~3.9% but momentum has turned up".
+- **Some calls change with the window.** BABA reads as a 30-day downtrend
+  (−12.3%, SELL) where the 7-day view saw "a steady climb" (+4%, BUY). Both are
+  right for their window, and a fund that rebalances daily is better served by
+  the longer one.
+- **On these measures the analysts are not worse,** so the decision's
+  condition is met and daily closes are adopted.
+
+### F1.8a.3 — The series is honest across a weekend and a holiday
+
+**Confidence: measured.** Take NVDA's timeline. From 2026-08-20 to 09-18 it has
+21 closes at 20:00Z:
+- **8 weekend days** fell in the inferred closed session and have **no close**;
+- **1 day, Mon 09-07 (Labor Day),** had no new round since Friday's close, so
+  it has **no close** either;
+- **nothing is carried forward or interpolated;**
+- **the coverage reason names both counts.**
+
+The latest round is always the last point. At this block that was Friday's
+close itself, so no separate `latest` row appeared. Freshness and the mark
+still judge the newest round, not a close.
+
+The 20:00Z cut is 16:00 in New York in daylight time. From 1 November it will
+be 15:00. That is recorded, and it is not a close under any exchange's
+definition.
+
+### F1.8a.4 — The gateway does not honour prompt caching
+
+**Confidence: measured. Verdict: fail.** Two calls on `/v1/messages`, with the
+system prompt and the snapshot marked `cache_control: {"type": "ephemeral"}`:
+- the first under the price-trend scope;
+- the second, 62 s later, under the execution-quality scope, over the same
+  prefix, as four analysts sharing one snapshot would.
+
+| Call | Input tokens | Output | Cost at listed rates | Balance fell by |
+|---|---|---|---|---|
+| 1, write expected | 94,719 | 7,470 | $0.264138 | $0.264138 |
+| 2, read expected | 94,722 | 6,486 | $0.254304 | $0.254304 |
+
+- **Neither response's `usage` carries `cache_creation_input_tokens` or
+  `cache_read_input_tokens`.** Both were billed full input at $2/M.
+- **The gateway's own settled window agrees.** `/v1/usage` records
+  `totalCacheReadInputTokens: 0` and `totalCacheWriteInputTokens: 0`, although
+  the price list offers `cache_read` $0.20/M and `cache_write` $2.50/M.
+- **The provider named is `surplus`.**
+- **The saving F1.7.6 priced, from $1.87 to $0.96 a cycle, is not available**
+  on this path. Whether another request shape would be honoured is untested:
+  the decision allowed two calls.
+
+### F1.8a.5 — The cycle, repriced
+
+**Confidence: analyst call measured; risk call is 1.7's measurement; the rest is
+arithmetic.**
+
+| | 1.7 (every round, 7 days) | **1.8 (daily closes, 30 days)** |
+|---|---|---|
+| Analyst call | $0.4544 | **$0.2643** |
+| Risk call | $0.0484 | $0.0484 (1.7's; its input is the reports, not the snapshot) |
+| **Cycle** | $1.866 | **$1.106** |
+| 30 days | $55.98 | **$33.16** |
+| Records to cover a cycle at $0.25 | 7.5 | **4.4** |
+
+### Reconciliation
+
+**Confidence: measured.**
+- **The balance** went from $1.719862 to $0.937148, a fall of $0.782714. That
+  is exactly the three calls at listed prices: $0.264272 + $0.264138 +
+  $0.254304.
+- **`/v1/usage`'s settled window** holds 9 requests and $1.88846. That is
+  0.9's two calls, 1.7's four and these three, exactly.
+
+### Method limitations
+
+- **One daily-close analyst call,** against 1.7's two. The report counts are a
+  proxy, not a grade. The 2.1 brief will change what "using history" looks
+  like.
+- **Caching was tested on one endpoint, in one request shape, twice.**
+- **Spent: $0.782714.** The balance went from $1.719862 to $0.937148.
