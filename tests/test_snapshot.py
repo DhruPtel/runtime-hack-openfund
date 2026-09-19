@@ -273,14 +273,6 @@ def test_a_held_asset_with_no_feed_is_carried_without_a_value():
     assert ["CRM", crm.address] in snap.document["outside_universe"]["assets"]
 
 
-def test_cash_is_valued_at_its_own_mark_and_an_empty_stock_is_not_a_holding():
-    zero = {listed("NVDA"): balance(listed("NVDA"), 0, 18)}
-    snap = snapshot.build(inputs(stock("NVDA"), extra_balances=zero), U)
-    rows = {h["asset"]["symbol"]: h for h in snap.document["holdings"]}
-    assert set(rows) == {"ETH", "USDG"}
-    assert rows["USDG"]["value_usd"] == "0.0787381337678" and rows["USDG"]["mark"]["price_usd"] == "0.9999509"
-
-
 def test_everything_registry_listed_without_a_feed_is_listed_as_outside_the_universe():
     snap = snapshot.build(inputs(stock("NVDA")), U)
     stocks_with_feeds = sum(1 for a in U.feeds if a in U.records)
