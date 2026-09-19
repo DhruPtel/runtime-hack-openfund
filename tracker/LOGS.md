@@ -552,6 +552,39 @@ awaits the operator.
 
 ---
 
+## 1.8 — Held-but-untradeable
+**Date:** 2026-09-18 · **Commit:** ea8398f
+
+Built on four decisions taken first:
+- the price is raised to $0.25;
+- the timeouts are set to 600 s and 630 s, with a 12,000-token output cap;
+- daily closes over 30 days, adopted after measuring them at 94,716 input
+  tokens and $0.264 a call against 1.7's 185,168 and $0.454, with reports as
+  history-minded;
+- a caching test, which found the gateway ignores cache control.
+
+Two fixes came with them: the missing-state retry for `missing trie node`, and
+a `history` rule so a short series is not tradeable, which was a separate
+defect.
+
+1.8 itself gives every holding row a `universe_status` and a `holding_status`
+(owned, valued, exit). It closes the one quiet way out of the book: an asset
+the registry drops while held is now written to `pins.json`'s `carried` list,
+and its balance is still read.
+
+The artifact is `tests/test_holdings.py`. It takes a held NVDA out of the buy
+universe ten ways — the five the unit names, with identity in doubt both ways,
+and four per-snapshot statuses — and each time the holding keeps its row,
+balance and status, valued at its own mark or carried at null with a reason. It
+was verified in four ways:
+- the set of holdings is identical before and after every change;
+- a test fails if a way-out status lacks a case;
+- three mutations that drop or zero a holding were each caught;
+- a live build at block 66750551 carried USDG and ETH with both statuses and
+  rebuilt to the identical hash.
+
+---
+
 ## State at close — 2026-09-18, after 1.7
 
 **Read this first.** This note describes the repository at the commit that last
