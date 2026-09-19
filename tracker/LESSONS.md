@@ -1407,3 +1407,20 @@ the venue.
 - **Unresolved.** Finding out needs the pool list for AMZN, which the batch
   endpoint does not give.
 **Affects:** 1.4's corroborator, the finding's wording, 3.7, 3.8; F0.4.5's AMZN case.
+
+## 2026-09-18 — DECISION: a closed-session finding only when the divergence is past the open-session limit
+*Decided by the operator after 1.6.* 1.6 recorded one closed-session finding
+for every asset above the $1M line: 20 in one weekend snapshot, 17 of them
+within the 100 bps an open session would veto at. Only the ones past the limit
+are interesting. The rest are noise in a document that analysts read and buyers
+pay for.
+- **Now:** the snapshot emits a finding only when
+  `beyond_open_session_limit` is true.
+- **Unchanged:** the `corroboration` block, which carries every divergence and
+  its session.
+- **The finding stays in the snapshot.** `core/valuation.py` still returns a
+  `Finding` for every closed-session cross-check above the line, and the
+  snapshot filters them. Its docstring says the snapshot entry carries the
+  finding, which is now true only past the limit. That wording is owed; it
+  was outside 1.7's paths.
+**Affects:** 1.6's `core/snapshot.py`, 3.7; PLAN §11; PHASE-0-1 1.6.
