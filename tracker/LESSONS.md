@@ -1255,3 +1255,66 @@ rule. This settles two questions left open:
 The "one gate definition" test must name all three until the sweep.
 **Affects:** 3.4; CODEBASE §3 and rules table; PLAN §2 invariant 4; PHASE-0-1
 1.3-1.5; ROADMAP 3.4.
+
+## 2026-09-18 — 1.5 live: 31 of 35 tradeable at $25, and the four refused at impact all sit below the corroborator line
+`python -m fund.adapters.bankr_quote --prove`, Sat 2026-09-19 01:52Z: all 35
+markable stocks quoted at 25.001227 USDG. That is $25 at USDG's own Chainlink
+mark, $0.99995.
+- **31 are tradeable.** Their impact ran from −19 to +48 bps.
+- **Four were refused at `impact` at the nominal size itself:** CLSK 991 bps,
+  RGTI 684, IONQ 480, NBIS 77. All four were below the $1M corroborator line
+  at 1.4: IONQ $0, CLSK $242, RGTI $507, NBIS $28k. The first three were the
+  three thinnest pools.
+- **The link is not one for one.** The other eleven names below the line
+  passed on impact, EWY at $2.6k and CRWV at $4.9k among them. Thin pools and
+  wide venue impact go together here, but not reliably. That is one
+  observation each, not a rule.
+- **Impact moves quote to quote.** Two runs two minutes apart gave TSLA −11
+  then +1, and different sets of names with negative impact: 10, then 4. A
+  quote is a moment, which is why its age is bounded.
+- **Quotes price on a Saturday,** while the feeds are frozen in their closed
+  session.
+
+So PLAN §12's "how many are tradeable at $25" has a first measured answer: 31
+of 35, at one moment. Whether any would fill is still unmeasurable (F0.5.1).
+**Affects:** 1.6, 3.3; PLAN §12.
+
+## 2026-09-18 — F0.3.4 re-run: the two impact fields never differ even at 7,084 bps, and a quote prices far past the venue's own cap
+F0.3.4 left open whether `swapImpactBps` and `priceImpactBps` ever differ, and
+said a size large enough to separate them was needed. 1.5 quoted 25,000 USDG,
+read-only, on the three names with the widest impact at $25:
+- CLSK 6,417 bps, RGTI 5,500 and IONQ 7,084;
+- the two fields were identical every time;
+- `maxPriceImpactBps` said 1,500 every time.
+
+So the venue returns a 200 quote at more than four times its own documented
+cap. The cap binds at execution, if anywhere, not at quoting. It is still only
+documented that `swapImpactBps` is the field execution gates on, since the two
+have now been measured equal up to 7,084 bps. The adapter gates on
+`swapImpactBps` as documented, at 50 bps, far inside either number.
+**Affects:** 1.5, 3.4, 5.6; closes F0.3.4's "needs a funded wallet" (it did not).
+
+## 2026-09-18 — The venue declines with HTTP 500, and `http.py` retries it and keeps no body
+A 0.000001 USDG quote drew HTTP 500 `{"message":"No quote available"}`, three
+times. It is the venue's answer, not a transport failure. But `adapters/http.py`
+treats every non-200 as transient: it retries, and keeps only the status. The
+first cut of 1.5 then called the result unreachable. Two changes to
+`http.py` are owed, both outside 1.5's paths:
+1. **A status the caller names as an answer should come back without retries.**
+   Until then, 1.5 records every reply at its transport and reads the venue's
+   body from there. A declined quote costs three requests and 6 s of backoff.
+2. **`urllib_transport` should take caller headers.** Until then, 1.5 supplies
+   its own four-line transport to put the key in `X-API-Key`. The deadline,
+   retries, pacing and redaction are still `http.py`'s.
+**Affects:** `adapters/http.py`, 1.5, 4.x (`bankr_exec` will meet the same).
+
+## 2026-09-18 — 1.5 sizes $25 at USDG's Chainlink mark, not at the venue's USDG price
+PHASE-0-1 1.5 said "$25 nominal is about 24.94 USDG", which is $25 at the
+venue's own USDG price of 1.0022 (F0.3.5). 1.5 converts at USDG's Chainlink
+mark instead: $0.99995 gives 25.001227 USDG, rounded down.
+- **Why.** Chainlink marks the book (PLAN §11). Sizing at the venue's price
+  would let the venue decide what $25 is.
+- **The difference.** It is about 0.2% on one trade.
+- **Status.** A choice made inside the unit, recorded here for the operator to
+  overrule.
+**Affects:** 1.5, 3.3.
