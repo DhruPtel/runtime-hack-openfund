@@ -1001,9 +1001,21 @@ scratch key:
 - with no key the record was `signed: false` and did not authorize;
 - the same inputs gave the same decision id.
 
+## 3.8 ▶ — The exit run, and no veto: shown at the stop
+**Date:** 2026-09-19 · **Commits:** f619d61, f2c457e, acde7f3
+
+With the brief's example relabelled, four live calls ran on the committed
+capture, one per seat, for $1.087706, and all four replied. Cross-asset-macro
+answered in 89 s, with no 504 this time. All four were refused: no figure was
+invented, but each report cited real values under the wrong path. Two of the
+defects are the validator's own, and fixing them would rescue one report, not a
+quorum. So the fund's real decision, signed with its key as `2c9c1a79…`, is no
+rebalance: no order, no risk call and no veto (`research/findings.md` §3.8;
+`fixtures/cycles/20260919T171351Z/`). **Shown, and waiting for the operator.**
+
 ---
 
-## State at close — 2026-09-19, after 3.1 to 3.7: the fund decides, offline
+## State at close — 2026-09-19, after 3.8's run: no quorum, no veto, waiting at the stop
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -1016,11 +1028,11 @@ it. Where this note and git disagree, git is right.
   carries the rule.
 - Keys, signing and spend authority keep their full guard.
 - The operator is stopped at 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1 was approved.
-  **3.8 is the next stop.**
+  **3.8 has run and is shown, waiting for the operator.**
 
 **The deadline** was given at about 11:00Z on 2026-09-19 as "about 16 hours":
 about Sun 2026-09-20 03:00Z. That is this note's arithmetic, not a time the
-operator wrote down. This note was written at about 17:00Z.
+operator wrote down. This note was written at about 17:40Z.
 
 **Check it in a minute.** Nothing here spends unless marked. The `python3 -m`
 commands need `PYTHONPATH=src`.
@@ -1053,7 +1065,15 @@ commands need `PYTHONPATH=src`.
   seat of four has had an accepted real report, and no seat has its own account.
 - **Phase 3, 3.1 to 3.7,** offline, in one pass (entries above). It was built on
   the four approved reports, the committed capture, a labelled fake venue,
-  scripted risk replies and 2.4's fake gateway. No live call was made.
+  scripted risk replies and 2.4's fake gateway.
+- **3.8's run** (entry above; `research/findings.md` §3.8):
+  - the exit run, four live calls on the committed capture, all replied and
+    all refused;
+  - so no quorum;
+  - the fund's real decision, `2c9c1a79…`, signed with its key: no rebalance,
+    no order, no risk call and no veto.
+
+  Recorded in `fixtures/cycles/20260919T171351Z/`.
 - **Decisions of 2026-09-19** (LESSONS): the pivot, and the Phase 2 decisions.
   Then the Phase 3 batch's:
   - a target starts at the weight held;
@@ -1072,26 +1092,22 @@ commands need `PYTHONPATH=src`.
   Every other module is a stub: `grep -l "Not yet built" -r src/` lists 17.
 
 ### Next
-- **3.8, a stop: a veto from a real recorded cycle.** It needs, each authorized
-  first:
-  - accepted real reports on one snapshot, at least three for the quorum.
-    That is the exit run, about $1.10;
-  - live quotes, read-only;
-  - one live risk call, about $0.05.
-
-  Then `python3 -m fund.run.decide --cycle <runner cycle dir> --live-quotes
-  --confirm`. The veto story rests on price-integrity naming AMD and MSTR's
-  stale marks. Its only live report was refused on its first line, a placeholder
-  since fixed. A live veto is not guaranteed, and the recorded one is then the
-  one shown.
-- **3.9 after the stop.** One test rebuilds the recorded cycle's record byte for
-  byte. Two offline runs already gave the same decision id.
+- **3.8 waits on the operator.** No veto happened, because no report was
+  accepted. The choices, in `research/findings.md` §3.8 and LESSONS:
+  - fix the two validator defects: thousands separators, and brackets read as
+    citations. That rescues price-integrity alone;
+  - whether a real value cited under the wrong path should refuse a report;
+  - a brief line on citing other assets by symbol and fields by full path;
+  - the refused replies carried in the signed record;
+  - another exit run, about $1.10, then the decision with a live risk call,
+    about $0.05.
+- **3.9 after that.** It replays the recorded cycle's record byte for byte.
+  `fixtures/cycles/20260919T171351Z/` is a recorded cycle, though of a no-op.
 - **Owed from Phase 2, unchanged:**
   - the settled `/v1/usage` cross-check for the 15:39Z and 15:58Z calls, and
     whether the 504 was billed;
-  - one cross-asset-macro call, if authorised;
-  - the brief's NVDA example, labelled "From an earlier snapshot" but taken
-    from the capture every run uses;
+  - the 504: cross-asset-macro answered in 89 s at 3.8, so the limit is
+    neither shown nor ruled out;
   - 2.0's choice, (a), (b) or (c);
   - 2.8;
   - the page slice.
@@ -1100,7 +1116,8 @@ commands need `PYTHONPATH=src`.
     placeholder approvals;
   - the confidence mapping is provisional, to be tuned after a real cycle;
   - no real model has seen `risk.v1.md`;
-  - `run/decide.py`'s live paths have not run live;
+  - `run/decide.py`'s `--live-quotes` and `--confirm` ran at 3.8, but with no
+    order, so no quote and no risk call was made;
   - the aggregator is blind to co-movement (LESSONS 2026-09-19).
 - **The keys, measured on 2026-09-19 after the operator's fix:**
   - `BANKR_LLM_KEY`: the gateway on, refused by the Wallet API and the Agent
@@ -1175,7 +1192,11 @@ commands need `PYTHONPATH=src`.
   | execution-quality | accepted | $0.249594 | 58.2 s |
   | cross-asset-macro | a 504 | unknown | 113.3 s |
 
-  The credit balance was not re-read after them.
+  At 3.8, one each: price-integrity $0.265618, 71.9 s; price-trend $0.260564,
+  76.5 s; execution-quality $0.288326, 103.6 s; cross-asset-macro $0.273198,
+  89.4 s. All four were refused.
+- **LLM credits:** $14.678389 before 3.8's four calls, which cost $1.087706.
+  It was not re-read after them.
 - **Phase 3, offline, on the four approved reports:**
   - META 12.5%, AMD, INTC and USO 6.25% each, 68.75% cash;
   - four buys totalling $62.50 of the $200 paper book;
@@ -1197,9 +1218,9 @@ commands need `PYTHONPATH=src`.
   `cumulative_budget_usd`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `837a6ce`, the last note's
-commit, pushed by the operator. Every commit from `a4c2bf6` (3.1's config) to
-the one that last changed this note is committed and **not pushed**.
+Checked locally, with no fetch. `origin/main` is `837a6ce`, pushed by the
+operator. Every commit from `a4c2bf6` (3.1's config) to the one that last
+changed this note is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** LESSONS holds them in full.
