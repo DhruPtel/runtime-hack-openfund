@@ -1424,3 +1424,61 @@ pay for.
   finding, which is now true only past the limit. That wording is owed; it
   was outside 1.7's paths.
 **Affects:** 1.6's `core/snapshot.py`, 3.7; PLAN §11; PHASE-0-1 1.6.
+
+## 2026-09-18 — 1.7: an analyst call is $0.454 and a cycle $1.87 against the real snapshot, and the timeline is two thirds of the input
+0.9 measured a floor on six hand-assembled assets and said the real number would
+be higher. 1.7 measured it against snapshot `7eba6212…` (335,294 bytes, 4,628
+rounds) at `claude-sonnet-5`, with four calls.
+- **Two identical analyst calls:** 185,168 tokens in, 9,087 and 7,725 out,
+  $0.461 and $0.448, 75.0 and 62.4 s.
+- **A risk call over four stand-in reports:** $0.048.
+- **A cycle:** $1.87, which is $56 a month. That is 28 times the floor.
+  Covering one cycle at $0.05 a record takes 37 sales.
+- **The timeline:** 123,765 of the input tokens, 66.8%, and 53% of a cycle.
+- **The snapshot fits,** at 18.5% of a 1M-token window. Three smaller models
+  would not hold it.
+- **Reconciliation:** the balance and a settled `/v1/usage` window both agree
+  with the listed price to the last digit.
+
+What it leaves for others to decide:
+- whether to thin the history, where halving it saves about $0.50 a cycle;
+- whether to cache the shared snapshot, which is priced to take a cycle to
+  about $0.96, is untested, and does not happen automatically;
+- the model, a 180× price span, which is 2.4's;
+- the $0.05 price, which is the operator's.
+
+About 37–50% of billed analyst output does not appear in the reply. That is
+inferred, most likely hidden reasoning (`research/findings.md` §1.7).
+**Affects:** 1.6's history window, 2.4, 6.3, 7.2, the 0.7 price; PLAN §10, §11.
+
+## 2026-09-18 — 1.7: the configured timeouts cover today's calls, but not the evidence
+The analyst calls took 62 and 75 s, inside the 120 s worker deadline. But:
+- **Output is uncapped:** `max_output_tokens` is null, and the replies ran to
+  9,087 tokens.
+- **Throughput varied sevenfold:** about 17 output tokens/s at 0.9, and about
+  121 at 1.7. A 9,087-token reply at 0.9's rate takes about 535 s.
+- **A cut-off call still bills,** with no report (F0.9.3).
+- **The two values are inverted:** 120 s against 180 s, so the transport
+  timeout never acts inside the runner.
+
+**Recommended, not set,** because the values are 2.4's and the operator's:
+- `max_output_tokens` about 12,000;
+- `transport_timeout_seconds` at least 600;
+- `worker_deadline_seconds` at least the transport timeout plus a margin, such
+  as 630.
+
+`config/models.json` notes the measurement and leaves the values alone.
+**Affects:** 2.4; `config/models.json`.
+
+## 2026-09-18 — The chain client misses a second wording of missing state
+1.7's snapshot lost SPCX's history after its newest round:
+`-32000: … layer stale missing trie node … layer stale`. 1.3's `RpcClient`
+retries missing state only when the message reads "historical state … not
+available". A read by block hash is safe to retry in either wording.
+- **The snapshot told the truth.** SPCX's coverage is `null` with the error,
+  and it has one point.
+- **The analyst saw it,** and abstained on SPCX for that reason.
+- **The status did not change:** SPCX stayed `tradeable`, because status does
+  not look at coverage, and whether it should is open.
+- **The fix is owed** in `adapters/chain_4663.py`, outside 1.7's paths.
+**Affects:** 1.3's `RpcClient`, 1.6, 1.11.
