@@ -1,35 +1,47 @@
 {
-  "version": 1,
-  "_status": "provisional. Confirmed or revised at checkpoint 2.1.",
-  "_design_note": "Scopes are partitioned deterministically here rather than decomposed by a lead model at runtime: the universe is known in advance, so the partition is disjoint by construction, not by instruction. Disjoint means disjoint in QUESTION, not necessarily in asset set: two analysts may both look at every asset provided they ask different things of it. The failure mode to design against is two analysts asking the same question of overlapping assets. Checkpoint 2.1 settles the split.",
+  "version": 2,
+  "_status": "Approved at 2.1 (2026-09-19): four seats, two vocabularies, and the report format in planning/REPORT-FORMAT.md. The fourth seat was repointed from fundamentals-calendar, which the snapshot gave only names and ISINs (LESSONS 2026-09-19).",
+  "_design_note": "Scopes are disjoint in QUESTION, not necessarily in asset set: every seat may look at every asset, provided it asks its own question. The failure mode is two seats asking the same question of the same assets, so each seat states its question and names the questions that belong to the others.",
+
+  "max_calls_per_report": 6,
+  "_max_calls_note": "At most six CALL lines, only on assets the snapshot marks tradeable. Silence is no view (planning/REPORT-FORMAT.md, Coverage).",
+  "confidence": ["low", "medium", "high"],
+  "vocabularies": {
+    "direction": ["buy", "hold", "sell"],
+    "condition": ["proceed", "caution"]
+  },
 
   "analysts": [
     {
       "id": "price-trend",
-      "objective": "Recent price action and trend for the assets assigned to this analyst.",
-      "scope": "asset-partitioned",
-      "assets": null
-    },
-    {
-      "id": "fundamentals-calendar",
-      "objective": "The underlying equity's situation and known events for the assets assigned to this analyst.",
-      "scope": "asset-partitioned",
-      "assets": null
+      "vocabulary": "direction",
+      "question": "Where is each price going, on the evidence of its own 30 daily closes and latest round?",
+      "not_asked": ["what trading costs (execution-quality)", "whether the mark is right (price-integrity)", "how assets move together (cross-asset-macro)"],
+      "brief": "price-trend.v1.md"
     },
     {
       "id": "cross-asset-macro",
-      "objective": "Correlations and regime across the whole universe.",
-      "scope": "universe-wide",
-      "assets": null
+      "vocabulary": "direction",
+      "question": "How are these assets moving together, and what does that co-movement favour adding, keeping or cutting?",
+      "not_asked": ["where a single price is going on its own (price-trend)", "what trading costs (execution-quality)", "whether the mark is right (price-integrity)"],
+      "brief": "cross-asset-macro.v1.md"
     },
     {
       "id": "execution-quality",
-      "objective": "Quote age, impact, spread and tradeability, per asset.",
-      "scope": "universe-wide",
-      "assets": null
+      "vocabulary": "condition",
+      "question": "What would a trade at the quoted size cost right now: fee, price impact, the slippage the quote allows, the quote's age, and the gap between the price paid and the mark it would be booked at?",
+      "not_asked": ["which way a price is going (price-trend)", "whether the mark itself is wrong (price-integrity)"],
+      "brief": "execution-quality.v1.md"
+    },
+    {
+      "id": "price-integrity",
+      "vocabulary": "condition",
+      "question": "Does each asset's mark hold up today, judged by the three prices the snapshot carries: the Chainlink mark, GeckoTerminal, and the venue's price inside the quote?",
+      "not_asked": ["which way a price is going (price-trend)", "what a trade costs (execution-quality)"],
+      "brief": "price-integrity.v1.md"
     }
   ],
-  "_assets_resolved_by": "the allowlist in config/registry/ (unit 1.2); the partition is assigned in unit 2.3",
+  "_assets_resolved_by": "the snapshot: a call names an asset by (chain_id, address), and only assets whose status is tradeable may be called.",
 
   "risk_agent": {
     "id": "risk",
