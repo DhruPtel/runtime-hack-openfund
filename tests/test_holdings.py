@@ -37,10 +37,6 @@ def without_nvda(mapping):
     return MappingProxyType({a: v for a, v in mapping.items() if a != NVDA})
 
 
-def tradeable():
-    return [stock("NVDA")], U, {}
-
-
 def not_tradeable_this_snapshot():
     return [stock("NVDA", impact=60)], U, {}
 
@@ -129,14 +125,6 @@ def test_a_holding_survives_each_way_out_of_the_buy_universe(route, status, valu
     if value is None:
         assert "not zero" in row["value_reason"]  # carried without a value, and it says so
     assert row["holding_status"]["exit"]["verdict"] is None  # a stock exit is not assessed in Phase 1
-
-
-@pytest.mark.parametrize("route", [r[0] for r in ROUTES], ids=[r[0].__name__ for r in ROUTES])
-def test_a_status_change_never_drops_a_holding(route):
-    before, after = build(tradeable), build(route)
-    assert holding(before)["universe_status"]["value"] == "tradeable"
-    held = lambda snap: {(h["asset"]["address"], h["balance"]) for h in snap.document["holdings"]}  # noqa: E731
-    assert held(before) == held(after)
 
 
 def test_cash_and_gas_stay_holdings_valued_at_their_own_feeds_whatever_the_stocks_do():
