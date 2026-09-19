@@ -270,7 +270,8 @@ def test_a_held_asset_with_no_feed_is_carried_without_a_value():
                                  held_outside={crm: held}), U)
     [row] = [h for h in snap.document["holdings"] if h["asset"]["symbol"] == "CRM"]
     assert row["balance"] == "1" and row["value_usd"] is None
-    assert "not zero" in row["value_reason"] and row["status"]["value"] == "unmarkable"
+    assert "not zero" in row["value_reason"] and row["universe_status"]["value"] == "unmarkable"
+    assert row["holding_status"]["valued"]["verdict"] is False and row["holding_status"]["owned"]["verdict"] is True
     assert ["CRM", crm.address] in snap.document["outside_universe"]["assets"]
 
 

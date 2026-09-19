@@ -238,7 +238,7 @@ def test_the_live_path_builds_a_whole_snapshot_with_no_network():
 def test_a_held_stock_without_a_feed_is_carried_without_a_value():
     holdings = {h["asset"]["symbol"]: h for h in build().snapshot.document["holdings"]}
     assert set(holdings) == {"CRM", "ETH", "USDG"}
-    assert holdings["CRM"]["value_usd"] is None and holdings["CRM"]["status"]["value"] == "unmarkable"
+    assert holdings["CRM"]["value_usd"] is None and holdings["CRM"]["universe_status"]["value"] == "unmarkable"
     assert holdings["USDG"]["value_usd"] == "0.0787381337678"
 
 

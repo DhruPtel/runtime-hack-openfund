@@ -307,6 +307,32 @@ def _status(status: UniverseStatus, rule: str | None, check: Check) -> dict:
     return {"value": status.value, "rule": rule, "verdict": check.value, "reason": check.reason}
 
 
+#: Can a holding be sold? Phase 1 reads no sell quote, so for anything but cash
+#: the honest answer is that it is not assessed, and why (1.8).
+EXIT = {
+    AssetKind.CASH: Check(True, "the cash leg: a sale settles into it"),
+    AssetKind.GAS: Check(None, "not assessed: ETH to USDG is the live leg and sold once "
+                               "(F0.10.2), but no sell quote is read in Phase 1"),
+    AssetKind.STOCK: Check(None, "not assessed: no sell quote is read in Phase 1, and a stock "
+                                 "sale is paper for this operator, since stock execution is "
+                                 "location-gated (F0.5.1)"),
+}
+
+
+def _holding_status(asset: Asset, balance: Observation, held, the_mark: valuation.Mark) -> dict:
+    """Do we own it, what is it worth, can we exit: three verdicts apart from
+    whether it can be bought (1.8)."""
+    if balance.ok:
+        owned = Check(balance.value.raw > 0, f"{_q(balance.value)} {asset.symbol} at the pinned block")
+    else:
+        owned = Check(None, f"balance not read: {balance.status.value}: {balance.detail}")
+    if held.value is not None:
+        valued = Check(True, "at its own Chainlink mark")
+    else:
+        valued = Check(the_mark.check.value if balance.ok else None, held.value_reason)
+    return {"owned": _check(owned), "valued": _check(valued), "exit": _check(EXIT[asset.kind])}
+
+
 # --- the pipeline, per stock -----------------------------------------------------------------------
 
 def _judge(s: StockInputs, universe: Universe, rule: valuation.DivergenceRule
@@ -374,7 +400,10 @@ ABOUT = (
     "exact decimal text, times are UTC, and null means unknown, never zero. Each verdict is "
     "true, false or null, and null is undetermined, which blocks. `assets` holds one entry per "
     "stock with a pinned Chainlink feed; `summary` gives every asset's status in one line; "
-    "`rules` says what each status means. A quote is a price, not a fill.")
+    "`rules` says what each status means. `holdings` is everything the wallet holds, whatever its "
+    "status, with a `universe_status` (can it be bought) and a `holding_status` (is it owned, what "
+    "is it worth, can it be exited); a holding with no mark is carried without a value, never at "
+    "zero. A quote is a price, not a fill.")
 
 
 def build(inputs: Inputs, universe: Universe) -> Snapshot:
@@ -452,6 +481,10 @@ def build(inputs: Inputs, universe: Universe) -> Snapshot:
                        for e in entries],
             "findings": [[e["asset"]["symbol"], f["kind"], f["divergence_bps"]]
                          for e in entries for f in e["findings"]],
+            "holding_columns": ["symbol", "universe_status", "valued", "value_usd"],
+            "holdings": [[h["asset"]["symbol"], h["universe_status"]["value"],
+                          h["holding_status"]["valued"]["verdict"], h["value_usd"]]
+                         for h in holdings],
         },
     }
     return seal(document)
@@ -463,7 +496,9 @@ def _pin(pin) -> dict:
 
 def _holdings(inputs: Inputs, universe: Universe, verdicts: Mapping, marks: Mapping) -> list[dict]:
     """Cash and gas always, and every stock the wallet holds or whose balance is
-    unknown. A held stock with no mark is carried without a value, never at zero."""
+    unknown, whatever its universe status: a status change never drops a
+    holding (1.8). A held stock with no mark is carried without a value, never
+    at zero, and each row says whether it is owned, valued and exitable."""
     rows = []
     for marked in (inputs.cash, inputs.gas):
         the_mark = valuation.mark(marked.asset, marked.reading, marked.fresh)
@@ -499,6 +534,7 @@ def _holdings(inputs: Inputs, universe: Universe, verdicts: Mapping, marks: Mapp
             else {"price_usd": None, "verdict": _check(the_mark.check)},
             "value_usd": _q(held.value),
             "value_reason": held.value_reason,
-            "status": _status(status, rule, check),
+            "universe_status": _status(status, rule, check),
+            "holding_status": _holding_status(asset, balance, held, the_mark),
         })
     return sorted(out, key=lambda h: (h["asset"]["symbol"], h["asset"]["address"]))
