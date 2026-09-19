@@ -18,7 +18,8 @@ layer, for anything that would bypass the transports.
 
 On disk, one directory per capture:
 - `manifest.json`: the block, the endpoints, when it was captured and by which
-  commit, each file's sha256, and the snapshot the live build produced;
+  commit, each file's sha256, the raw answers' one hash, and the snapshot the
+  live build produced;
 - `<source>.jsonl.gz`: one exchange per line, in the order it began, its
   headers as sent except `Set-Cookie`, a server's session cookie, which no
   adapter reads and which does not belong in a repository;
@@ -43,6 +44,7 @@ import socket
 import threading
 import time
 from collections import deque
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterator, Mapping
 
@@ -239,10 +241,46 @@ def _pretty(document: Any) -> bytes:
     return json.dumps(document, indent=1, sort_keys=True, ensure_ascii=False).encode("utf-8") + b"\n"
 
 
-def write(directory: Path, *, recorders: Mapping[str, Recorder], manifest: Mapping[str, Any],
-          config_files: Mapping[str, bytes], snapshot_body: bytes) -> dict[str, Any]:
-    """Write a capture, masked by the credential redactor, then refuse it if any
-    declared credential value the environment holds is still anywhere in it."""
+def answers_sha256(answers: Mapping[str, str]) -> str:
+    """One hash for a capture's raw answers and clock tape, from each file's
+    sha256: what a snapshot cites, so every captured byte moves its hash."""
+    listing = json.dumps(dict(sorted(answers.items())), separators=(",", ":"))
+    return hashlib.sha256(listing.encode("utf-8")).hexdigest()
+
+
+def _is_answer(name: str) -> bool:
+    """The raw answers and the clock tape. Config copies are cited by the
+    snapshot's own config hashes; the snapshot and manifest are outputs."""
+    return name.endswith(".jsonl.gz") or name == CLOCK
+
+
+@dataclass(frozen=True)
+class Sealed:
+    """A capture's files, masked and checked, before a snapshot is built from them."""
+
+    files: Mapping[str, bytes]           # every file but the snapshot and the manifest
+    exchanges: Mapping[str, int]
+    clock_readings: Mapping[str, int]
+    masked: int
+
+    @property
+    def answers(self) -> dict[str, str]:
+        return {name: hashlib.sha256(data).hexdigest() for name, data in sorted(self.files.items())
+                if _is_answer(name)}
+
+    @property
+    def sha256(self) -> str:
+        return answers_sha256(self.answers)
+
+
+def _leaked(*blobs: bytes) -> list[str]:
+    return sorted({label for value, label in redaction.build_denylist().items()
+                   for data in blobs if value.encode("utf-8") in data})
+
+
+def seal(recorders: Mapping[str, Recorder], config_files: Mapping[str, bytes]) -> Sealed:
+    """A capture's files, masked by the credential redactor, then refused if any
+    declared credential value the environment holds is still anywhere in them."""
     redactor = redaction.Redactor()
     masked = 0
 
@@ -260,20 +298,29 @@ def write(directory: Path, *, recorders: Mapping[str, Recorder], manifest: Mappi
     files[CLOCK] = _pretty({source: r.readings for source, r in recorders.items()})
     for name, data in config_files.items():
         files[f"{CONFIG_DIR}/{name}"] = clean(data.decode("utf-8")).encode("utf-8")
-    files[SNAPSHOT] = snapshot_body
+    leaked = _leaked(*files.values())
+    if leaked:
+        raise ValueError(f"refusing a capture that still holds {', '.join(leaked)}")
+    return Sealed(files, {s: len(r.exchanges) for s, r in talkers.items()},
+                  {s: len(r.readings) for s, r in recorders.items()}, masked)
 
-    document = json.loads(clean(json.dumps(dict(manifest)))) | {
+
+def write(directory: Path, sealed: Sealed, *, manifest: Mapping[str, Any],
+          snapshot_body: bytes) -> dict[str, Any]:
+    """Write a sealed capture, the snapshot built from it, and its manifest."""
+    files = dict(sealed.files) | {SNAPSHOT: snapshot_body}
+    document = json.loads(redaction.Redactor().redact(json.dumps(dict(manifest)))) | {
         "format": FORMAT,
         "files": {name: {"sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}
                   for name, data in sorted(files.items())},
-        "exchanges": {source: len(r.exchanges) for source, r in talkers.items()},
+        "answers_sha256": sealed.sha256,
+        "exchanges": dict(sealed.exchanges),
         "headers_dropped": list(DROPPED_HEADERS),
-        "clock_readings": {source: len(r.readings) for source, r in recorders.items()},
+        "clock_readings": dict(sealed.clock_readings),
         "redaction": {"credentials_checked": sorted(set(redaction.build_denylist().values())),
-                      "strings_masked": masked},
+                      "strings_masked": sealed.masked},
     }
-    leaked = sorted({label for value, label in redaction.build_denylist().items()
-                     for data in [*files.values(), _pretty(document)] if value.encode("utf-8") in data})
+    leaked = _leaked(snapshot_body, _pretty(document))
     if leaked:
         raise ValueError(f"refusing to write a capture that still holds {', '.join(leaked)}")
     directory.mkdir(parents=True, exist_ok=True)
@@ -318,6 +365,17 @@ class Capture:
     @property
     def snapshot_body(self) -> bytes:
         return self._files[SNAPSHOT]
+
+    @property
+    def answers(self) -> dict[str, str]:
+        """Each raw-answer file's sha256, from the bytes on disk: an altered
+        file changes it, and with it the rebuilt snapshot."""
+        return {name: hashlib.sha256(data).hexdigest() for name, data in sorted(self._files.items())
+                if _is_answer(name)}
+
+    @property
+    def sha256(self) -> str:
+        return answers_sha256(self.answers)
 
     def replayer(self, source: str, endpoints: Mapping[str, str]) -> Replayer:
         return Replayer(source, endpoints, self.exchanges(source), self.readings.get(source, []))

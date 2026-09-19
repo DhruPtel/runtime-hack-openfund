@@ -95,8 +95,8 @@ def written(tmp_path, monkeypatch):
     monkeypatch.setenv("RPC_4663_MAINNET", SECRET_URL)
     recorder, *_ = live_run()
     recorder.exchanges[1]["body"] = {"text": f'{{"echo":"{SECRET_URL}"}}'}  # a body quoting it
-    manifest = cache.write(tmp_path, recorders={"chain": recorder}, manifest={"block": {}},
-                           config_files={"chain.json": b"{}"}, snapshot_body=b"{}\n")
+    sealed = cache.seal({"chain": recorder}, {"chain.json": b"{}"})
+    manifest = cache.write(tmp_path, sealed, manifest={"block": {}}, snapshot_body=b"{}\n")
     return manifest
 
 

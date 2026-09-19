@@ -361,7 +361,7 @@ def write_capture(directory: Path, built: Built, recorders: dict[str, cache.Reco
         "snapshot": {"sha256": built.snapshot.sha256, "bytes": len(built.snapshot.body)},
         "replay": f"PYTHONPATH=src python3 -m fund.run.snapshot --replay {directory.relative_to(ROOT)}",
     }
-    return cache.write(directory, recorders=recorders, manifest=manifest, config_files=config_files,
+    return cache.write(directory, cache.seal(recorders, config_files), manifest=manifest,
                        snapshot_body=built.snapshot.body)
 
 
