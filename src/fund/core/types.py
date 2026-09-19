@@ -102,6 +102,38 @@ def content_id(obj: Any) -> str:
     return hashlib.sha256(to_canonical(obj)).hexdigest()
 
 
+def _document(obj: Any) -> Any:
+    if obj is None or isinstance(obj, (bool, str)):
+        return obj
+    if isinstance(obj, float):
+        raise TypeError("a float is never encoded; write the number as decimal text")
+    if type(obj) is int:
+        if abs(obj) > MAX_SAFE_JSON_INT:
+            raise ValueError(f"{obj} exceeds 2**53; write it as decimal text")
+        return obj
+    if isinstance(obj, (list, tuple)):
+        return [_document(item) for item in obj]
+    if isinstance(obj, dict):
+        if not all(isinstance(key, str) for key in obj):
+            raise TypeError("every key is text")
+        return {key: _document(value) for key, value in obj.items()}
+    raise TypeError(f"cannot encode {type(obj).__name__} in a document")
+
+
+def document_bytes(obj: Any) -> bytes:
+    """A plain JSON document in canonical form: the plan, the gates' verdicts,
+    the decision record (3.3 to 3.7). The same rules as `to_canonical`, for
+    mappings, lists, text, booleans and small integers: sorted keys, no
+    whitespace, UTF-8, no float. Same document, same bytes."""
+    return json.dumps(_document(obj), sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+def document_id(obj: Any) -> str:
+    """sha256 of a document's canonical bytes."""
+    return hashlib.sha256(document_bytes(obj)).hexdigest()
+
+
 _INT_STR = re.compile(r"^-?(0|[1-9][0-9]*)$")
 
 

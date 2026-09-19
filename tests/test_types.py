@@ -604,3 +604,16 @@ def test_a_sampled_series_carries_one_sample_per_point_at_or_after_each_point():
         dataclasses.replace(closes, samples=tuple(Instant(c.epoch_ms - 7_200_000) for c in cuts))
     with pytest.raises(ValueError, match="oldest first"):
         dataclasses.replace(closes, samples=(cuts[1], cuts[0], cuts[2], cuts[3]))
+
+
+def test_a_document_has_one_byte_form_and_refuses_floats():
+    """3.5: the plan and the decision record are plain documents with an id."""
+    from fund.core.types import document_bytes, document_id
+    assert document_bytes({"b": [1, "x"], "a": None}) == b'{"a":null,"b":[1,"x"]}'
+    assert document_id({"a": 1, "b": 2}) == document_id({"b": 2, "a": 1})
+    for bad in ({"a": 0.5}, {"a": 2 ** 53}, {1: "x"}):
+        try:
+            document_bytes(bad)
+        except (TypeError, ValueError):
+            continue
+        raise AssertionError(f"{bad} was encoded")
