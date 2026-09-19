@@ -1158,9 +1158,88 @@ Verified H: 51 rules broken in a copy as each primitive was built, each caught b
 its own test. The five values the orientation found missing are held to one
 module each by `tests/test_boundaries.py`. 674 tests pass. **Stopped before 4.1.**
 
+## 4.1 — The mandate the operator approved
+**Date:** 2026-09-19 · **Commits:** 26d049f, 0e53157
+
+`config/mandate.json` is approved: by the operator, expiring 7 days later, allowing
+the 35 markable stocks with ETH and USDG, which is `config/registry/feed_map.json`'s
+37 exactly. `treasurer/mandate.py` loads it and refuses a null or placeholder field,
+and `core/gates.py` judges its term (approved, not revoked, not expired), S10's check
+of every leg an order trades — a held stock stays sellable (S8) — and the live budget,
+null until Phase 5, which blocks a live order and no paper one. Verified H: eight
+rules broken in a copy, each caught.
+
+## 4.2 — The intent, and the published key (S13)
+**Date:** 2026-09-19 · **Commits:** 542aa3d, 76e1d69
+
+`config/keys.json` publishes the fund's public key, and a record authorizes only
+against it, never against the key its envelope names: the signer's check, the intent,
+the chokepoint and `run/decide.py` all read it there. `treasurer/intent.py` turns a
+signed record into exactly the orders it approved, in the plan's order, each
+`prepared` with 4.0's id and key, and refuses the record whole unless it verifies and
+the mandate is in force. On the exit run's record: six orders, stable keys. Verified
+H: seven rules broken in a copy, each caught.
+
+## 4.3 — Orders, durable before the act
+**Date:** 2026-09-19 · **Commit:** 4fd5174
+
+One SQLite file (`store/schema.sql`, `store/db.py`). `store/orders.py` writes an
+order `prepared` and moves it only through 4.0's `transition`, committing before it
+returns and appending the move to the order's history. A restart keeps each order's
+state and key, an order added again keeps the state it reached, and two writers
+cannot both move one. Verified H: five rules broken in a copy, each caught, and a
+process killed straight after the write leaves the order `prepared` on disk.
+
+## 4.4 — The chokepoint, and gate set 2
+**Date:** 2026-09-19 · **Commits:** 85afba5, f548b11, be214c1
+
+Gate set 2 is S11 (a decision judged at most 15 minutes after its snapshot's block),
+the mandate's term at decision, and S10 on every order; records are
+`openfund.decision/3`. `treasurer/execute.admit` trusts nothing the decision computed:
+the published key, the record's own snapshot, the order as the record approved it, the
+mandate in force now, every gate again on a quote taken now through the venue's own
+interface, what the book holds (P4), and the floor on what has booked (P11). The exit
+run's six orders pass on fresh fake quotes; nine known-bad orders were each refused by
+their own rule, and seventeen rules broken in a copy were each caught.
+
+## 4.5, 4.6 — The paper executor, the journal, and the one path between them
+**Date:** 2026-09-19 · **Commits:** 67fa2b1, e2f4ffc, 5d07fd4
+
+`submit(order, quote) -> Outcome` is the interface the live executor will satisfy;
+the paper one fills at the quote's amounts exactly, marked paper, and a repeat under
+the same key returns the first outcome as Bankr's key does (F0.10.1). `store/journal.py`
+appends every event 4.0 defines and never edits one: the database refuses an edit, a
+delete, and a second fill for an order. `run_order` writes `submitted` before the act,
+which the executor sees on disk when it is asked to send, and writes the fill with the
+order's new state in one transaction. Verified H: fourteen rules broken in a copy,
+each caught.
+
+## 4.7 — Positions, derived and never written
+**Date:** 2026-09-19 · **Commits:** 687a22b, 6b5b1df
+
+`store/positions.py` has no table: a position is what the journal's events add up to,
+read through the ledger and valued only by `valuation.value`. Its statement reconciles
+the book exactly before printing anything — opened plus realised plus unrealised less
+costs equals NAV — and refuses to print a book that does not, down to 10⁻²⁰ of a
+dollar. Paper and real are separate statements and are never added. Verified H: four
+rules broken in a copy, each caught.
+
+## 4.8 ▶ — A whole paper cycle, from a capture to a book
+**Date:** 2026-09-19 · **Commits:** 477a50b, 7ae33cd, 6fb7047
+
+`make cycle-demo` runs two cycles on the committed capture and the exit run's four
+real reports, with the fake venue, a scripted vote and a scratch key of its own: no
+model call, no chain, nothing spent. Cycle one signed a `/3` record, wrote eight
+orders `prepared`, admitted and filled each on paper, and left a book of six positions
+and $35.97 cash at a NAV of $200.14; cycle two planned from that book and left $20.04
+against the $20 floor at $200.17. Both reconcile exactly. S12 is closed: a holding the
+snapshot cannot mark still signs a no-rebalance record that says why. Verified: six
+rules broken in a copy, each caught, among them orders written as they are attempted
+rather than before, which the kill drill catches. **Shown, not stopped.**
+
 ---
 
-## State at close — 2026-09-19, 4.0 built, stopped before 4.1
+## State at close — 2026-09-19, Batch B built: the fund acts on paper; next is 4.9
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -1174,17 +1253,22 @@ it. Where this note and git disagree, git is right.
 - Keys, signing and spend authority keep their full guard.
 - The operator is stopped at 2.1, 3.8, 4.11, 5.4, 6.6, 7.5 and 8.5. 2.1 was
   approved, and past 3.8 the operator asked for Phase 3's close. Then for the
-  orientation's fixes and 4.0, stopping before 4.1.
+  orientation's fixes and 4.0, and then for Batch B, 4.1 to 4.8, stopping after it.
 
 **The deadline** was given at about 11:00Z on 2026-09-19 as "about 16 hours":
 about Sun 2026-09-20 03:00Z. That is this note's arithmetic, not a time the
-operator wrote down. This note was written at about 21:50Z.
+operator wrote down. This note was written at about 22:45Z.
 
 **Check it in a minute.** Nothing here spends unless marked. The `python3 -m`
 commands need `PYTHONPATH=src`.
 - `git log --oneline -25` and `git status -sb`.
-- `make test`: 674 passed when this was written, in about 28 s. The runner and
+- `make test`: 756 passed when this was written, in about 35 s. The runner and
   risk tests start real subprocesses against a fake gateway on 127.0.0.1.
+- `make cycle-demo`: two whole paper cycles on the committed capture and the exit
+  run's four real reports, in about 8 s. A fake venue, a scripted risk vote and a
+  scratch signing key of its own: no model call, no chain, nothing spent. It writes
+  under `fixtures/live/cycle-demo/`, which is gitignored, and prints each cycle's
+  table, gates, orders and book.
 - `python3 -m fund.run.decide --snapshot fixtures/snapshots/66852293-253315c0e691
   --approved-reports --quotes Q --risk-reply R [--env-file E]` takes reports to
   a signed record and executes nothing. The flags:
@@ -1234,7 +1318,12 @@ commands need `PYTHONPATH=src`.
   decided under, a replay reads that copy, and a record's schema names its gate
   set as well as its layout.
 - **4.0** (entry above): twelve shared values in `core/orders.py`,
-  `core/ledger.py`, `core/cash.py` and `gates.settle`. No unit consumes them yet.
+  `core/ledger.py`, `core/cash.py` and `gates.settle`.
+- **Batch B, 4.1 to 4.8** (entries above). The fund acts on paper: an approved
+  mandate, intents from a signed record, durable order states, a chokepoint that
+  regates on a fresh quote, paper fills, a journal, positions derived from it, and
+  one command that runs the whole cycle. Gate set 2 (S10, S11, the mandate's term)
+  and records as `openfund.decision/3`.
 - **Decisions of 2026-09-19** (LESSONS): the pivot, and the Phase 2 decisions.
   Then the Phase 3 batch's:
   - a target starts at the weight held;
@@ -1250,21 +1339,32 @@ commands need `PYTHONPATH=src`.
   - `agents/risk.py` and `agents/briefs/risk.v1.md`;
   - `treasurer/sign.py`;
   - `run/decide.py`;
-  - `core/orders.py` and `core/ledger.py` (4.0).
+  - `core/orders.py` and `core/ledger.py` (4.0);
+  - `treasurer/mandate.py`, `treasurer/keys.py`, `treasurer/intent.py`,
+    `treasurer/execute.py`;
+  - `store/db.py`, `store/schema.sql`, `store/orders.py`, `store/journal.py`,
+    `store/positions.py`;
+  - `run/cycle.py` and `run/fake_venue.py`.
 
-  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 17.
+  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 9 —
+  `run/startup.py` (4.9), `treasurer/reconcile.py` and `adapters/bankr_exec.py`
+  (Phase 5), `core/books.py` and `core/attribution.py` (Phase 6), `store/publish.py`
+  and the two surfaces (Phase 7), `run/schedule.py` (Phase 8).
 
 ### Next
-- **Phase 4's Batch B, from 4.1,** in `planning/PHASE-4.md`. Nothing from 4.1
-  is started. The six decisions are made (LESSONS), and each waits for its unit:
-  - 4.1 writes `mandate.json`: approved by the operator, a 7-day expiry, the 35
-    markable stocks plus ETH and USDG. S10 needs USDG in it before 4.4;
-  - 4.2 writes `config/keys.json`, the public key only;
-  - 4.4 builds S11 at 15 minutes, as gate set 2 and a new record schema;
-  - 4.12's refused swaps are authorized.
-
-  Average cost, a fee kept out of basis, and paper cash as USDG at its own mark
-  are already in 4.0.
+- **Batch C: 4.9 and 4.10,** then the stop at 4.11. Nothing from 4.9 is started.
+  - **4.9** resolves every order left `submitted` or `unknown` before a new cycle,
+    re-sent under its key, and takes one lock so two runners cannot both spend.
+    `run_order` leaves such an order alone today, and a `prepared` order found at
+    startup is 4.9's to admit again or refuse — with it, the snapshot's age at
+    submission, which S11 checks only at decision.
+  - **4.10** is the crash drill on the fake executor. The pieces are there: the
+    state is written before the act, the fill and the state are one write, and the
+    journal refuses a second fill for an order.
+  - **4.11 is a stop.** Its fixture will use 4.8's rule for the paper book's
+    opening, `capital_usd` of USDG.
+- **All six decisions are applied** except 4.12's refused swaps, which wait for
+  4.12 itself.
 - **Stops:** 2.1, 3.8, **4.11**, 5.4, 6.6, 7.5 and 8.5. 4.11 was added by the
   operator on 2026-09-19. `CLAUDE.md`'s list is owed the same; it was outside
   this pass's paths.
@@ -1282,13 +1382,13 @@ commands need `PYTHONPATH=src`.
   - 2.0's choice, (a), (b) or (c);
   - 2.8;
   - the page slice.
-- **Owed to later Phase 4 units, from 4.0** (LESSONS, "4.0: what building…"):
-  - whether the paper book opens with 200 USDG ($199.98) or $200 of it: 4.8 and
-    4.11;
-  - 4.8 cannot replay the exit run's risk reply: a fake venue and a scripted
-    reply, as 3.7 used;
-  - a `prepared` order found at startup: 4.9;
-  - 4.4 matches a quote to an `Order` with `orders.quote_is_for`.
+- **Owed to later Phase 4 units, after Batch B:**
+  - the paper book opens with `capital_usd` of USDG — 200 USDG, $199.98 at the
+    exit run's mark — chosen at 4.8 and open to the operator;
+  - the snapshot's age at submission, and a `prepared` order found at startup: 4.9;
+  - `.env` split per role, and the treasurer as its own process: 4.12;
+  - no cycle books a fee or an inference cost yet: the journal keeps both, and
+    4.11's fixture is where they are first used.
 - **Owed from Phase 3:**
   - the mandate is provisional: 4.1 replaces the allowed assets and the
     placeholder approvals;
@@ -1377,6 +1477,11 @@ commands need `PYTHONPATH=src`.
   $0.099454, 45.9 s, 29,202 tokens in. The balance was not re-read.
 - **The exit run's decision:** eight buys of $164.06 planned, six approved,
   and two vetoed by the risk agent. It leaves $73.44 of paper cash.
+- **The paper cycles of 4.8's demo,** on the same capture and reports, with the
+  vote scripted to approve: cycle one filled eight buys of $164.01 and left six
+  positions and 35.97734 USDG, a NAV of $200.14; cycle two planned from that book,
+  filled six more and left 20.046113 USDG at the $20 floor, a NAV of $200.17. Both
+  reconcile exactly.
 - **The same six, filled on paper in 4.0's tests** from 200 USDG at the recorded
   quotes: 73.430231 USDG left, $73.42 at the snapshot's USDG mark of 0.99992279.
   The 200 USDG itself is $199.98.
@@ -1404,7 +1509,7 @@ commands need `PYTHONPATH=src`.
 Checked locally, with no fetch. `origin/main` is `f145540`, pushed by the
 operator at about 20:49Z: everything through Phase 3's close and the Phase 4 plan.
 Every commit from `0f64916` (3.9 hardened) to the one that last changed this
-note is committed and **not pushed**.
+note — 3.9's hardening, 4.0, and Batch B — is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** LESSONS holds them in full.
