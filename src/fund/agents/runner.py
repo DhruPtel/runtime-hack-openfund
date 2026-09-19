@@ -271,3 +271,75 @@ def run_cycle(snapshot_path: Path, key_source: KeySource, *, cycle_dir: Path,
     events.write(event="cycle finished", cycle=cycle_id, partial=cycle["partial"],
                  counts=cycle["counts"])
     return cycle
+
+
+# --- the live entry point (unit 2.6) -------------------------------------------------------------
+
+LIVE_CYCLES = SRC.parent / "fixtures" / "live" / "cycles"  # gitignored, beside the live captures
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Run analysts live on one snapshot.
+
+        PYTHONPATH=src python3 -m fund.agents.runner --snapshot PATH [--seats a,b]
+            [--retries N] [--confirm]
+
+    Without `--confirm` it prints what it would run and sends nothing. With it,
+    every call is billed. Keys are read from `.env` into a mapping and never into
+    this process's own environment. Each analyst gets its own environment, built
+    from nothing (above), and the check against treasurer keys runs before any
+    process starts.
+
+    The key source is the shared `BANKR_LLM_KEY`. 2.0's per-agent choice is open.
+    Each seat's report therefore carries the unassigned agent address: no agent's
+    own account paid for it. Before a live run, `probes/keymap.py` must show this
+    key refused by the Wallet API and the Agent API (LESSONS 2026-09-19).
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="fund.agents.runner")
+    parser.add_argument("--snapshot", required=True, type=Path)
+    parser.add_argument("--seats", default=None, help="comma-separated; default every seat")
+    parser.add_argument("--retries", type=int, default=None,
+                        help="override retry_budget_per_worker for this run")
+    parser.add_argument("--cycle-dir", type=Path, default=None)
+    parser.add_argument("--confirm", action="store_true", help="send the calls; they are billed")
+    args = parser.parse_args(argv)
+
+    settings = Settings.from_config()
+    if args.retries is not None:
+        settings = Settings(**{**settings.__dict__, "retry_budget": args.retries})
+    seats = args.seats.split(",") if args.seats else None
+    environ = {**config.parse_env_file(config.ENV_FILE), **os.environ}
+    keys = SharedGatewayKey(environ)
+    chosen = seats or [a["id"] for a in config.load_json("analysts.json")["analysts"]]
+    for seat in chosen:
+        refuse_spend_authority(keys.for_seat(seat), environ)
+
+    print(f"snapshot  {args.snapshot}  sha256 "
+          f"{hashlib.sha256(args.snapshot.read_bytes()).hexdigest()}")
+    print(f"seats     {', '.join(chosen)}")
+    print(f"key       {keys.for_seat(chosen[0]).source}, agent {keys.for_seat(chosen[0]).agent}")
+    print(f"model     {settings.model}, max {settings.max_tokens} output tokens, transport "
+          f"{settings.transport_timeout_s}s, worker {settings.worker_deadline_s}s, "
+          f"retries {settings.retry_budget}, width {settings.width}")
+    calls = len(chosen) * (1 + settings.retry_budget)
+    print(f"at most   {calls} billed call(s)")
+    if not args.confirm:
+        print("\nNothing sent. Re-run with --confirm to send the calls.")
+        return 0
+
+    cycle_dir = args.cycle_dir or LIVE_CYCLES / datetime.now(timezone.utc).strftime(
+        "%Y%m%dT%H%M%SZ")
+    cycle = run_cycle(args.snapshot, keys, cycle_dir=cycle_dir, settings=settings,
+                      seats=chosen, environ=environ)
+    print(f"\ncycle     {cycle['cycle']}  in {cycle_dir}")
+    for seat, slot in cycle["seats"].items():
+        print(f"  {seat:18} {slot['status']:8} reason={slot.get('reason')}  "
+              f"attempts={len(slot.get('attempts') or ())}  cost={slot.get('cost', {}).get('usd')}")
+    print(f"partial   {cycle['partial']}   cost {cycle['cost']['usd']} (an estimate)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
