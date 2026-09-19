@@ -132,6 +132,11 @@ def _with_deadline(fn: Callable[[], Any], deadline_s: float) -> Any:
     return box["value"]
 
 
+def _missing_state(error: dict) -> bool:
+    message = str(error.get("message", ""))
+    return error.get("code") == -32000 and "historical state" in message and "not available" in message
+
+
 class RpcClient:
     """JSON-RPC over an ordered list of endpoints.
 
@@ -139,7 +144,12 @@ class RpcClient:
     - a hang, a dead connection or an unparseable body moves straight on to the
       next endpoint;
     - a 429 or 5xx, or a JSON-RPC 429, also moves on, and is retried on the
-      next pass.
+      next pass;
+    - so does "historical state ... is not available" for the pinned block:
+      seen once in ~100 reads at a block a minute old, never in 326 reads of
+      one block over 9 minutes (2026-09-19), so a backend's gap, not an age
+      limit. A read by block hash cannot answer from another block, so a
+      retry is safe. "header not found" is not retried: it can mean a reorg.
 
     Passes are separated by a doubling backoff, up to `attempts` passes. Every
     request waits out `min_interval_s` since the previous one.
@@ -208,8 +218,13 @@ class RpcClient:
                 except ValueError:
                     failures.append((endpoint.name, "a 200 whose body is not JSON"))
                     continue
-                if isinstance(parsed, dict) and (parsed.get("error") or {}).get("code") == 429:
+                error = (parsed.get("error") or {}) if isinstance(parsed, dict) else {}
+                if error.get("code") == 429:
                     failures.append((endpoint.name, "rate limited: JSON-RPC 429"))
+                    continue
+                if _missing_state(error):
+                    failures.append((endpoint.name, "pinned block's state not available: "
+                                                    + self._scrub(str(error.get("message")))))
                     continue
                 return parsed
         raise RpcUnavailable(failures)

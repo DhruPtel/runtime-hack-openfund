@@ -71,6 +71,29 @@ def test_when_every_endpoint_fails_the_error_names_them_and_hides_their_urls():
     assert "<PRIMARY>" in str(failure.value)
 
 
+def test_a_backend_missing_the_pinned_state_is_retried():
+    body = json.dumps({"jsonrpc": "2.0", "id": 1, "error": {"code": -32000, "message":
+                       "historical state 61928c68 is not available"}}).encode()
+    replies = iter([(200, body), ok("0x4")])
+    sleeps: list[float] = []
+    rpc = client("ONLY", transport=lambda *a: next(replies), sleeps=sleeps)
+    assert rpc.call("eth_call", []) == "0x4"
+    assert sleeps == [1.0]
+
+
+def test_header_not_found_is_an_answer_and_is_not_retried():
+    body = json.dumps({"jsonrpc": "2.0", "id": 1,
+                       "error": {"code": -32000, "message": "header not found"}}).encode()
+    used = []
+
+    def transport(*args):
+        used.append(1)
+        return 200, body
+
+    with pytest.raises(chain.RpcError, match="header not found"):
+        client("ONLY", transport=transport).call("eth_call", [])
+    assert len(used) == 1
+
 def test_a_403_says_it_may_be_the_missing_user_agent():
     with pytest.raises(chain.RpcUnavailable) as failure:
         client("ONLY", transport=lambda *a: (403, b"forbidden"), attempts=1).call("eth_chainId", [])
