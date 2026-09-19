@@ -16,8 +16,8 @@ import pathlib
 from types import MappingProxyType
 
 from fund.adapters import bankr_quote, chain_4663
-from fund.core import snapshot, valuation
-from fund.core.types import BPS, USD, Check, FetchStatus, Fixed, Instant
+from fund.core import snapshot, universe, valuation
+from fund.core.types import BPS, USD, AssetId, Check, FetchStatus, Fixed, Instant
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SRC = REPO / "src"
@@ -374,3 +374,17 @@ def test_the_status_is_the_first_rule_in_the_recorded_order_that_fails():
                                                    and status["rule"] != first):
             wrong[(first, second)] = (status["value"], status["rule"])
     assert wrong == {}
+
+
+def test_an_asset_deployed_on_several_chains_is_found_on_ours():
+    """Nothing assumes a registry asset has one deployment (F0.8.1; PHASE-0-1 1.1,
+    1.2): an asset listed on another chain first is still found on 4663."""
+    from test_universe import registry_asset
+
+    address = "0x" + "ab" * 20
+    item = registry_asset("AAA", address)
+    item["deployments"].insert(0, {"chainId": 1, "contractAddress": "0x" + "cd" * 20,
+                                   "networkName": "Ethereum"})
+    records = universe.parse_registry(json.dumps({"assets": [item]}).encode())
+    ours = records[AssetId(4663, address)]
+    assert len(ours.deployments) == 2 and ours.deploys(AssetId(4663, address))
