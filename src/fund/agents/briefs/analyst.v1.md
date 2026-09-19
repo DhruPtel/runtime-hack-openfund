@@ -55,6 +55,10 @@ When a figure belongs to another asset, name that asset in the citation:
 Always write a field's full path as the snapshot nests it: `[quote.swap_impact_bps]`,
 not `[swap_impact_bps]`.
 
+`corroboration.divergence_bps` is the mark less GeckoTerminal's price, over
+GeckoTerminal's price, in basis points: positive when the mark is above
+GeckoTerminal, negative when it is below.
+
 A figure that is a single field must be that field's value, to the precision you
 write. Code checks each one against the snapshot, and a figure that does not match
 refuses the whole report. A computed figure, such as a change, a correlation or a
