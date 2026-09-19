@@ -1527,3 +1527,56 @@ largest cost line in the project. Two calls:
 
 They measure whether the gateway honours cache control, and what it saves.
 **Affects:** 2.4, 6.3; PLAN §10.
+
+## 2026-09-18 — Daily closes measured and adopted: the input halves, a call costs 42% less, and the reports use history as much as before
+The decision to thin the history was conditional, so it was measured first
+(`research/findings.md` §1.8a). A snapshot with one close a day over 30 days:
+- **Size:** 189,357 bytes and 763 points, against 335,294 and 4,628.
+- **One analyst call:** 94,716 tokens in and $0.264, against 185,168 and
+  $0.454.
+- **How the reports used history:** 35 of 35 cited the timeline, 18 quoted
+  dated points, and none said `NO_CALL`. 1.7's two *identical* calls spanned
+  20–35, 10–31 and 1–16 on the same counts, so the daily call sits inside that
+  range. It is not worse on any count. That is one call and a proxy, not a
+  grade.
+- **The cycle:** $1.11 instead of $1.87. At $0.25 a record it is covered by
+  4.4 sales.
+
+The series says what it does across a gap, rather than interpolating:
+- a day whose 20:00Z cut falls in the closed session has no close;
+- a day with no new round since the previous close has none, as on Labor Day;
+- the latest round is always last, so freshness still judges the newest round.
+
+Adopted in `config/chain.json`. Two cautions:
+- 20:00Z is 16:00 in New York only in daylight time;
+- the proxy that caught the reports' dates first missed them, because they are
+  written `08-20`, and it was corrected before this entry.
+**Affects:** 1.3's series, 1.6, 1.7's cost, 1.9, 2.x; PLAN §8, §10;
+`config/chain.json`.
+
+## 2026-09-18 — The gateway does not honour prompt caching
+Two `/v1/messages` calls were made:
+- both marked the system prompt and the snapshot `cache_control: ephemeral`;
+- the second read the same prefix under a different analyst's scope, 62 s
+  after the first.
+
+Both billed the full ~94,720 input tokens at $2/M. Neither `usage` block
+carries a cache field, and the gateway's own settled `/v1/usage` records zero
+cache reads and writes, although its price list offers both. So the halving
+F1.7.6 priced is not available through this path. Other request shapes are
+untested, since the decision allowed two calls. The cycle stays at $1.11,
+uncached.
+**Affects:** 2.4, 6.3; PLAN §10.
+
+## 2026-09-18 — A short series left an asset tradeable, a defect separate from the missing retry
+1.7's SPCX series stopped after one point on `missing trie node … layer
+stale`, which the chain client did not retry. That is now retried. But
+retrying only makes the error rarer. The status pipeline never read the
+series' coverage, so any series that fell short left its asset `tradeable`,
+whether from a read failing partway, a round cap, or a young feed.
+- **The fix.** A `history` rule now runs after the mark: coverage false is
+  `short_history`, refused, and coverage undetermined is `short_history`,
+  undetermined.
+- **The reasoning.** An analyst reasons from the series, and a buy on one
+  point is a buy on no history.
+**Affects:** 1.6's status order, 1.11; `core/snapshot.py`.
