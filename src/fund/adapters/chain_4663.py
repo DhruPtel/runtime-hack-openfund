@@ -525,6 +525,62 @@ class ChainReader:
                       points=points, window_start=window_start, coverage=coverage,
                       detail=f"{len(points)} rounds, phase {phase}")
 
+    def daily_closes(self, asset: AssetId, feed: FeedRef, *, days: int, cut_s: int,
+                     closure: "WeeklyClosure | None", max_rounds: int,
+                     scale_break_ratio: int) -> Series:
+        """One close a day for `days` days up to the pinned block, then the latest round.
+
+        A day's close is the round in effect at `cut_s` seconds after 00:00Z that
+        day. No close is invented (DECISION 2026-09-18):
+        - a day whose cut falls inside the feed's inferred closed session has no
+          close, so a weekend is a gap and never a carried-forward price;
+        - a day whose round is the previous close's has no close either: nothing
+          was published between them, as on a holiday;
+        - the latest round is always the last point, so freshness and the mark
+          judge the newest round and not a close hours old.
+
+        The rounds come from `price_series`, walked back to the first cut, so its
+        stops apply unchanged: the phase start, `max_rounds`, a scale break, a
+        failed read. The coverage says how many days have no close, and why.
+        """
+        block_s = self.block.timestamp.epoch_ms // 1000
+        last_cut = (block_s - cut_s) // 86400 * 86400 + cut_s
+        cuts = [last_cut - k * 86400 for k in range(days - 1, -1, -1)]
+        closed = [c for c in cuts if closure is not None and closure.contains(c)]
+        open_cuts = [c for c in cuts if c not in closed]
+        full = self.price_series(asset, feed, window_s=block_s - open_cuts[0],
+                                 max_rounds=max_rounds, scale_break_ratio=scale_break_ratio)
+        if full.status is not FetchStatus.OK:
+            return full
+        times = [p.source_time.epoch_ms // 1000 for p in full.points]
+        points: list[Observation] = []
+        samples: list[Instant] = []
+        repeated = before_history = 0
+        for cut in open_cuts:
+            i = bisect.bisect_right(times, cut) - 1
+            if i < 0:
+                before_history += 1
+            elif points and full.points[i].source_ref == points[-1].source_ref:
+                repeated += 1
+            else:
+                points.append(full.points[i])
+                samples.append(Instant.from_seconds(cut))
+        closes = len(points)
+        if not points or full.newest.source_ref != points[-1].source_ref:
+            points.append(full.newest)
+            samples.append(self.block.timestamp)
+        cut = f"{cut_s // 3600:02d}:{cut_s % 3600 // 60:02d}Z"
+        note = (f"{closes} daily closes at {cut} over {days} days, then the latest round; "
+                f"{len(closed)} days fell in the closed session and have no close; {repeated} had "
+                f"no new round since the previous close (a holiday or a silent feed), so no close")
+        if before_history:
+            note += f"; {before_history} fell before the history's start"
+        return Series(asset=asset, source=full.source, fetch_time=full.fetch_time,
+                      status=FetchStatus.OK, points=tuple(points), samples=tuple(samples),
+                      window_start=Instant.from_seconds(open_cuts[0]),
+                      coverage=Check(full.coverage.value, f"{full.coverage.reason}; {note}"),
+                      detail=f"daily closes from {len(full.points)} rounds; {full.detail}")
+
     def _walk_back(self, walked: list[Round], proxy: str, phase: int, number: int, count: int,
                    window_start: Instant, scale_break_ratio: int) -> Check | None:
         """Read up to `count` rounds below `number`, appending each good one to
@@ -751,6 +807,10 @@ SESSIONS = Path(__file__).resolve().parents[3] / "config" / "sessions.json"
 #: in open-session time where a closed session is inferred.
 STALENESS_RULE = "per_feed_heartbeat_plus_margin_in_open_session"
 
+#: How a snapshot's price series is taken: every round over the window (1.3), or
+#: one close a day (DECISION 2026-09-18, measured before it is adopted).
+SAMPLINGS = ("every_round", "daily_close")
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -769,6 +829,8 @@ class Settings:
     user_agent: str
     staleness_margin_s: int
     sessions: Mapping[str, WeeklyClosure]
+    sampling: str = "every_round"
+    cut_s: int = 72000
 
     @classmethod
     def load(cls, chain_path: Path = CHAIN_CONFIG, thresholds_path: Path = THRESHOLDS,
@@ -777,6 +839,8 @@ class Settings:
         t = json.loads(thresholds_path.read_text())
         if t["feed_staleness_rule"] != STALENESS_RULE:
             raise ValueError(f"unknown staleness rule {t['feed_staleness_rule']!r}")
+        if c["series_sampling"] not in SAMPLINGS:
+            raise ValueError(f"unknown series sampling {c['series_sampling']!r}")
         closed = json.loads(sessions_path.read_text())["closed"]
         sessions = MappingProxyType({
             label: WeeklyClosure(label, span["start_seconds_after_monday_utc"],
@@ -790,7 +854,8 @@ class Settings:
                    chunk=c["multicall_chunk"], window_s=c["series_window_seconds"],
                    max_rounds=c["series_max_rounds"],
                    scale_break_ratio=c["series_scale_break_ratio"], user_agent=c["user_agent"],
-                   staleness_margin_s=t["feed_staleness_margin_seconds"], sessions=sessions)
+                   staleness_margin_s=t["feed_staleness_margin_seconds"], sessions=sessions,
+                   sampling=c["series_sampling"], cut_s=c["series_daily_cut_utc_seconds"])
 
     def client(self, secret: Callable[[str], str], transport: Transport | None = None) -> RpcClient:
         """`secret` is `Config.secret`: the URLs come from the role's credentials."""

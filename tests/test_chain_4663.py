@@ -803,3 +803,73 @@ def test_a_missing_trie_node_is_missing_state_too_and_is_retried():
     sleeps: list[float] = []
     assert client("ONLY", transport=lambda *a: next(replies), sleeps=sleeps).call("eth_call", []) == "0x5"
     assert sleeps == [1.0]
+
+
+# --- daily closes (DECISION 2026-09-18, measured before it is adopted) ------------------------
+
+def two_weeks_of_weekdays(silent=(MONDAY - 5 * DAY,)) -> list[tuple[int, int]]:
+    """Rounds at 00, 06, 12 and 18Z on weekdays from Mon 2026-09-07 up to the
+    block (Mon 09-21 14:13Z), none on the days in `silent`."""
+    out, day = [], MONDAY - 14 * DAY
+    while day <= T:
+        if chain.week_position(day) < 5 * DAY and day not in silent:
+            out += [(25_000_000_000 + len(out), day + h * HOUR) for h in (0, 6, 12, 18)
+                    if day + h * HOUR <= T]
+        day += DAY
+    return out
+
+
+def closes(fake, closure=EQUITY_CLOSED["us_equities_24/5"], days=10):
+    return reader(rpc_for(fake)).daily_closes(
+        AssetId(CHAIN, addr(11)), feed(addr(1)), days=days, cut_s=20 * HOUR, closure=closure,
+        max_rounds=5000, scale_break_ratio=10_000)
+
+
+def test_daily_closes_skip_the_weekend_and_a_silent_day_and_end_with_the_latest_round():
+    fake = FakeChain()
+    fake.feeds[addr(1)] = two_weeks_of_weekdays()  # Wed 09-16 is silent, like a holiday
+    s = closes(fake)
+    stamp = lambda i: time.strftime("%a %m-%d %H:%M", time.gmtime(i.epoch_ms // 1000))  # noqa: E731
+    assert [stamp(p.source_time) for p in s.points] == [
+        "Fri 09-11 18:00", "Mon 09-14 18:00", "Tue 09-15 18:00", "Thu 09-17 18:00",
+        "Fri 09-18 18:00", "Mon 09-21 12:00"]
+    assert [stamp(x) for x in s.samples[:-1]] == [
+        "Fri 09-11 20:00", "Mon 09-14 20:00", "Tue 09-15 20:00", "Thu 09-17 20:00", "Fri 09-18 20:00"]
+    assert s.samples[-1] == BLOCK.timestamp  # the latest round, sampled at the block
+    assert s.coverage.value is True and "5 daily closes at 20:00Z over 10 days" in s.coverage.reason
+    assert "4 days fell in the closed session" in s.coverage.reason
+    assert "1 had no new round since the previous close" in s.coverage.reason
+    assert chain.series_freshness(s, feed(addr(1)), BLOCK.timestamp, MARGIN, EQUITY_CLOSED).value is True
+
+
+def test_without_a_closed_session_a_weekend_repeats_friday_and_is_still_no_close():
+    fake = FakeChain()
+    fake.feeds[addr(1)] = two_weeks_of_weekdays(silent=())
+    s = closes(fake, closure=None)
+    assert len(s.points) == 7 and "0 days fell in the closed session" in s.coverage.reason
+    assert "4 had no new round since the previous close" in s.coverage.reason  # Sat, Sun, twice
+
+
+def test_daily_closes_keep_the_walks_stops_a_feed_younger_than_the_window_is_short():
+    fake = FakeChain()
+    fake.feeds[addr(1)] = [r for r in two_weeks_of_weekdays() if r[1] >= MONDAY - 6 * DAY]
+    s = closes(fake)
+    assert s.coverage.value is False and "round 1" in s.coverage.reason
+
+
+def test_daily_closes_over_an_unreachable_rpc_are_no_series():
+    s = reader(dead_rpc()).daily_closes(AssetId(CHAIN, addr(11)), feed(addr(1)), days=10,
+                                        cut_s=20 * HOUR, closure=None, max_rounds=5000,
+                                        scale_break_ratio=10_000)
+    assert s.status is FetchStatus.UNREACHABLE and s.points == () and s.coverage.value is None
+
+
+def test_settings_carry_the_sampling_and_refuse_an_unknown_one(tmp_path):
+    s = chain.Settings.load()
+    assert s.sampling in chain.SAMPLINGS and s.cut_s == 20 * HOUR
+    doc = json.loads(chain.CHAIN_CONFIG.read_text())
+    doc["series_sampling"] = "hourly"
+    path = tmp_path / "chain.json"
+    path.write_text(json.dumps(doc))
+    with pytest.raises(ValueError, match="unknown series sampling"):
+        chain.Settings.load(chain_path=path)
