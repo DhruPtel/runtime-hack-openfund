@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from decimal import Decimal
 from pathlib import Path
 
@@ -19,7 +20,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 
 from fund.agents import risk, runner
-from fund.core import plan
+from fund import config
+from fund.core import plan, record
 from fund.core.types import Instant, document_id
 from fund.run import decide
 from fund.store import reports
@@ -67,7 +69,7 @@ def scripted(plan_document, veto=()) -> str:
 
 
 def run(tmp_path, *, quotes, g=None, reply=None, holdings=None, cash="200", key=True,
-        environ=SHARED):
+        environ=SHARED, config_dir=None):
     tmp_path.mkdir(parents=True, exist_ok=True)
     env_file = tmp_path / "treasurer.env"
     env_file.write_text(f"SIGNING_KEY={SEED}\n" if key else "")
@@ -82,7 +84,7 @@ def run(tmp_path, *, quotes, g=None, reply=None, holdings=None, cash="200", key=
         risk_credential=None if reply else runner.SharedGatewayKey(environ).for_seat("risk"),
         risk_agent=runner.SharedGatewayKey(environ).for_seat("risk").agent,
         environ=environ, recorded_reply=reply, store=reports.ReportStore(tmp_path / "store"),
-        env_file=env_file)
+        env_file=env_file, config_dir=config_dir)
 
 
 def test_four_approved_reports_become_a_signed_decision(gateway, tmp_path, monkeypatch):
@@ -154,6 +156,33 @@ def test_the_same_recorded_inputs_rebuild_the_same_record_bytes(tmp_path):
     assert first["decision_id"] == second["decision_id"]
     assert (tmp_path / "a" / "out" / "record.json").read_bytes() == (
         tmp_path / "b" / "out" / "record.json").read_bytes()
+
+
+def test_a_decision_reads_its_config_from_one_directory_and_carries_a_copy(tmp_path):
+    """What the decision parses, what its record hashes and what its cycle carries are
+    the same bytes, from the directory it was given (3.9: a replay passes the copy)."""
+    expected = written()
+    quotes, reply = quotes_file(tmp_path), scripted(expected)
+    done = run(tmp_path / "a", quotes=quotes, reply=reply)
+    carried = tmp_path / "a" / "out" / "config"
+    assert sorted(p.name for p in carried.iterdir()) == sorted(record.CONFIG_FILES)
+    assert done["record"]["config"] == {
+        p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in carried.iterdir()} == {
+        name: hashlib.sha256((config.CONFIG_DIR / name).read_bytes()).hexdigest()
+        for name in record.CONFIG_FILES}
+    assert done["plan"]["orders"]
+
+    other = tmp_path / "other"
+    shutil.copytree(carried, other)
+    thresholds = json.loads((other / "thresholds.json").read_text())
+    thresholds["cash_floor_usd"] = "1000"  # above the whole book: nothing can be bought
+    (other / "thresholds.json").write_text(json.dumps(thresholds))
+    elsewhere = run(tmp_path / "b", quotes=quotes, reply=reply, config_dir=other)
+    assert elsewhere["plan"]["orders"] == []
+    assert elsewhere["record"]["config"]["thresholds.json"] == hashlib.sha256(
+        (other / "thresholds.json").read_bytes()).hexdigest()
+    assert (tmp_path / "b" / "out" / "config" / "thresholds.json").read_bytes() == (
+        other / "thresholds.json").read_bytes()
 
 
 def test_the_command_runs_from_its_arguments(tmp_path, capsys):

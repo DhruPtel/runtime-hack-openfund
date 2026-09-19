@@ -163,10 +163,11 @@ def quotes_file(observations: Mapping[int, Observation], judged_at: Instant, lab
 
 
 def judge(intents: Sequence[plan.Intent], observations: Mapping[int, Observation],
-          judged_at: Instant) -> dict[int, plan.QuoteSeen]:
+          judged_at: Instant, thresholds: Mapping[str, Any]) -> dict[int, plan.QuoteSeen]:
     """Every fresh quote judged at one instant by the one definition of quote age
-    and impact. An order with no quote is left out, and its gate blocks."""
-    limits = bankr_quote.Limits.from_thresholds(config.load_json("thresholds.json"))
+    and impact, under the decision's own `thresholds.json`. An order with no quote
+    is left out, and its gate blocks."""
+    limits = bankr_quote.Limits.from_thresholds(thresholds)
     out = {}
     for intent in intents:
         if intent.index in observations:
@@ -207,6 +208,12 @@ def _write(path: Path, document: Any) -> None:
     path.write_text(json.dumps(document, indent=1, sort_keys=True, ensure_ascii=False) + "\n")
 
 
+def read_config(config_dir: Path) -> dict[str, bytes]:
+    """The bytes of each config file a decision reads, read once. What the decision
+    parses, what its record hashes and what its cycle carries are the same bytes."""
+    return {name: (config_dir / name).read_bytes() for name in record.CONFIG_FILES}
+
+
 def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping[str, Amount],
            cash_usd: Decimal, out_dir: Path,
            quotes: Callable[[Sequence[plan.Intent]], tuple[dict[int, Observation], Instant]],
@@ -214,8 +221,14 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
            risk_credential: runner.SeatCredential | None, risk_agent: str,
            environ: Mapping[str, str],
            recorded_reply: str | None, store: report_store.ReportStore,
-           env_file: Path | None, layout: int = plan.LAYOUT) -> dict[str, Any]:
+           env_file: Path | None, layout: int = plan.LAYOUT,
+           config_dir: Path | None = None) -> dict[str, Any]:
     """The whole path from calls to a signed record. Returns what it wrote.
+
+    The config is read from `config_dir`, `config/` unless a replay names the copy
+    its cycle carries, and a copy of what was read is written beside the record as
+    `config/`. The record holds each file's sha256, so a replay can rebuild it
+    from the cycle alone, whatever the working tree's config says by then (3.9).
 
     `risk_agent` is the risk seat's identity from its key source, the same whether
     the vote is asked live or read from a recording. Until the 3.8 sweep it was
@@ -227,8 +240,13 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
     out_dir.mkdir(parents=True, exist_ok=True)
 
     accepted, refused = check(offered, snapshot, snapshot_sha256)
-    thresholds, mandate = config.load_json("thresholds.json"), config.load_json("mandate.json")
-    models, analysts = config.load_json("models.json"), config.load_json("analysts.json")
+    config_bytes = read_config(config.CONFIG_DIR if config_dir is None else config_dir)
+    thresholds, mandate, models, analysts = (json.loads(config_bytes[name]) for name in (
+        "thresholds.json", "mandate.json", "models.json", "analysts.json"))
+    carried = out_dir / "config"
+    carried.mkdir(exist_ok=True)
+    for name, data in config_bytes.items():
+        (carried / name).write_bytes(data)
     limits = gates.Limits.from_config(thresholds, mandate, models)
 
     the_book = plan.book(holdings, cash_usd, snapshot)
@@ -244,9 +262,9 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
     intents = plan.size(proposal, the_book, snapshot, limits)
     observations, judged_at = quotes(intents)
     _write(out_dir / "quotes.json", quotes_file(observations, judged_at, quote_label))
-    written = plan.write(intents, judge(intents, observations, judged_at), proposal=proposal,
-                         the_book=the_book, snapshot=snapshot, snapshot_sha256=snapshot_sha256,
-                         judged_at=judged_at, layout=layout)
+    written = plan.write(intents, judge(intents, observations, judged_at, thresholds),
+                         proposal=proposal, the_book=the_book, snapshot=snapshot,
+                         snapshot_sha256=snapshot_sha256, judged_at=judged_at, layout=layout)
     plan_sha256 = document_id(written)
 
     outcome = risk.review(written, plan_sha256, snapshot=snapshot, mandate=mandate,
@@ -255,8 +273,7 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
                           credential=risk_credential, environ=environ,
                           recorded_reply=recorded_reply, store=store)
 
-    config_sha256 = {name: hashlib.sha256((config.CONFIG_DIR / name).read_bytes()).hexdigest()
-                     for name in record.CONFIG_FILES}
+    config_sha256 = {name: hashlib.sha256(data).hexdigest() for name, data in config_bytes.items()}
     the_record = record.build(
         snapshot=snapshot, snapshot_sha256=snapshot_sha256,
         reports=[{"seat": o.seat, "agent": o.agent, "text": o.text,
