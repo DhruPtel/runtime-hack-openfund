@@ -1,5 +1,6 @@
 {
-  "_about": "What the universe pins (unit 1.2). `inputs` are third-party bytes stored beside this file under their sha256, which is their version (0.8 decision). A version bump is an explicit edit, made through core/universe.py accept(); the loader never refreshes. `issuer_beacon`, `cash_leg` and `gas` are our own pins, each with its provenance.",
+  "_about": "What the universe pins (unit 1.2). `inputs` are third-party bytes stored beside this file under their sha256, which is their version (0.8 decision). A version bump is an explicit edit, made through core/universe.py accept(); the loader never refreshes. `issuer_beacon`, `cash_leg` and `gas` are our own pins, each with its provenance. `carried` lists assets the registry dropped while the fund held them, with their last record; accept() writes it, and their balances are still read so a holding never leaves the book (1.8).",
+  "carried": {},
   "cash_leg": {
     "_provenance": "USDG. decimals() read on chain at block 65,979,130, agreeing with the quote response and the CoinGecko list; two documented sources said 18 (findings F0.3.1). Genuine, and not a registry asset: every stock check rejects it as a stock (F0.8.2).",
     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
