@@ -369,6 +369,13 @@ def _position(amount: Amount, cost: Decimal, snapshot: Mapping[str, Any]) -> Pos
     return Position(amount, cash.worth(amount, cash.mark_of(snapshot, amount.asset.address)), cost)
 
 
+def booked(events: Iterable[Event]) -> dict[str, Fill]:
+    """Every order the ledger holds a fill for, by order id. A restart reads it to
+    learn whether an order it left in flight was booked (4.9), which is the only
+    thing that can tell it apart from one that never filled."""
+    return {event.order_id: event for event in events if isinstance(event, Fill)}
+
+
 def cash_held(events: Iterable[Event], *, book: str,
               snapshot: Mapping[str, Any]) -> tuple[Amount, Decimal]:
     """P5: the book's cash, the cash leg it holds (USDG), and what that is worth at

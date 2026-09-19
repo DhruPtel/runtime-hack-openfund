@@ -173,6 +173,45 @@ def test_an_order_the_chokepoint_refuses_is_written_refused_and_books_nothing(tm
         "Opening"]
 
 
+def test_an_order_left_in_flight_by_a_killed_run_is_resolved_at_the_next_startup(tmp_path):
+    """The run is killed the moment the first order is written `submitted`, before the
+    executor answers. The next cycle's startup settles it — nothing was booked, so it
+    never filled — and then decides again."""
+    config_dir, env_file = paper(tmp_path)
+    script = textwrap.dedent(f"""
+        import os, signal, sys
+        sys.path[:0] = [{str(REPO / 'src')!r}]
+        from pathlib import Path
+        from fund.core.types import Instant
+        from fund.run import cycle, decide
+        from fund.store import db
+
+        def kill_on_submit(step, what):
+            if step == "submitted":
+                os.kill(os.getpid(), signal.SIGKILL)
+
+        cycle.cycle(snapshot_path=Path({str(CAPTURE)!r}),
+                    offered=decide.cycle_reports(Path({str(REPORTS)!r})),
+                    conn=db.connect({str(tmp_path / 'fund.sqlite')!r}),
+                    out_dir=Path({str(tmp_path / 'killed')!r}), at=Instant({clock(4).epoch_ms}),
+                    config_dir=Path({str(config_dir)!r}), env_file=Path({str(env_file)!r}),
+                    checkpoint=kill_on_submit)
+    """)
+    done = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
+    assert done.returncode == -signal.SIGKILL, done.stderr[-2000:]
+    conn = db.connect(tmp_path / "fund.sqlite")
+    left = {o.state for o in OrderStore(conn).all()}
+    assert OrderState.SUBMITTED in left and [
+        type(e).__name__ for e in Journal(conn).events()] == ["Opening"]
+
+    ran = run(tmp_path, minutes=8, conn=conn, config_dir=config_dir, env_file=env_file,
+              out="after")
+    settled = {r.state for r in ran.resolved}
+    assert settled == {OrderState.FAILED, OrderState.REFUSED}  # the one sent, and those not
+    assert all(o.state is not OrderState.SUBMITTED for o in OrderStore(conn).all())
+    assert ran.filled and ran.book.nav_usd > 0  # and the cycle went on to trade
+
+
 def test_nothing_is_attempted_before_every_order_is_written_prepared(tmp_path):
     """The run is killed at the checkpoint, after the orders are written and before the
     first is admitted. On reopen they are all prepared and nothing is booked."""

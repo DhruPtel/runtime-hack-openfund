@@ -6,6 +6,8 @@
     make cycle-demo     the same, twice, on the exit run's capture and reports
 
 From a capture to a book:
+0. **the lock and the last run** (4.9, 4.10): one runner holds the lock, and every
+   order the last run left is resolved before this one is accepted;
 1. **the ledger** opens the paper book once, with `capital_usd` of USDG at the
    snapshot's own mark for it (the operator's decision: paper cash is USDG);
 2. **the reports** are read and checked again against this snapshot (2.2);
@@ -49,7 +51,7 @@ from fund.agents import risk
 from fund.core import cash, gates, ledger, plan
 from fund.core.types import Amount, Instant, document_id
 from fund.adapters import fake_venue
-from fund.run import decide
+from fund.run import decide, startup
 from fund.store import db, positions
 from fund.store.journal import Journal
 from fund.store.orders import OrderStore
@@ -71,6 +73,7 @@ class Cycle:
     orders: list[execute.Done]
     book: Any | None
     statement: str
+    resolved: list[startup.Resolved] = ()
 
     @property
     def filled(self) -> list[execute.Done]:
@@ -108,8 +111,11 @@ def cycle(*, snapshot_path: Path, offered: Sequence[decide.Offered], conn: Any, 
           at: Instant, config_dir: Path, env_file: Path | None,
           venue: execute.Venue | None = None, executor: execute.Executor | None = None,
           vote: str = "approve", checkpoint: Callable[..., None] | None = None) -> Cycle:
-    """One paper cycle: reports to a signed decision to fills to a book."""
+    """One paper cycle: reports to a signed decision to fills to a book.
+
+    The caller holds the lock (`startup.owning`) around this."""
     snapshot = json.loads(snapshot_path.read_bytes())
+    resolved = startup.resolve(conn)  # what the last run left, before this one decides
     store, journal = OrderStore(conn), Journal(conn)
     thresholds = config.load_json("thresholds.json", config_dir)
     open_paper_book(journal, snapshot, Decimal(str(thresholds["capital_usd"])))
@@ -122,7 +128,7 @@ def cycle(*, snapshot_path: Path, offered: Sequence[decide.Offered], conn: Any, 
         done = decide.no_rebalance(snapshot_path=snapshot_path, offered=offered, out_dir=out_dir,
                                    why=str(unvalued), at=at, env_file=env_file,
                                    config_dir=config_dir)
-        return Cycle(done, [], None, f"no rebalance: {unvalued}")
+        return Cycle(done, [], None, f"no rebalance: {unvalued}", resolved)
 
     def quotes(intents):
         return ({i.index: venue.quote(bankr_quote.QuoteRequest(i.sell, i.buy, i.buy_decimals))
@@ -149,7 +155,7 @@ def cycle(*, snapshot_path: Path, offered: Sequence[decide.Offered], conn: Any, 
     except intent.IntentError as refused:  # nothing authorizes: no order is written
         book = positions.read(journal, book=ledger.PAPER, snapshot=snapshot)
         return Cycle(done, [], book, f"no orders: {refused}\n\n"
-                     + positions.statement(book, snapshot))
+                     + positions.statement(book, snapshot), resolved)
     for order in orders:  # written before anything is attempted
         store.add(order)
     if checkpoint is not None:
@@ -165,11 +171,13 @@ def cycle(*, snapshot_path: Path, offered: Sequence[decide.Offered], conn: Any, 
     decide._write(out_dir / "orders.json", [
         {"order_id": d.order.order_id, "state": d.order.state.value,
          "reason": d.order.state_reason, "booked": d.booked} for d in ran])
-    return Cycle(done, ran, book, statement)
+    return Cycle(done, ran, book, statement, resolved)
 
 
 def summary(ran: Cycle) -> str:
-    lines = [decide.summary(ran.decision), "",
+    lines = [f"startup    resolved {r.order_id.rpartition('/')[2]}: {r.state.value}, {r.why}"[:150]
+             for r in ran.resolved]
+    lines += [decide.summary(ran.decision), "",
              "--- the treasurer: the decision above executed nothing; these orders did ---", ""]
     for done in ran.orders:
         lines.append(f"order {done.order.order_id.rpartition('/')[2]:>2}  "
@@ -215,12 +223,13 @@ def demo(out_dir: Path = DEMO, runs: int = 2) -> list[Cycle]:
                                    .replace("Z", "+00:00"))
     conn = db.connect(out_dir / "fund.sqlite")
     ran = []
-    for number in range(runs):
-        at = Instant(int((block + timedelta(minutes=4 * (number + 1))).timestamp() * 1000))
-        ran.append(cycle(snapshot_path=snapshot_path,
-                         offered=decide.cycle_reports(EXIT_RUN / "cycle"), conn=conn,
-                         out_dir=out_dir / f"cycle-{number + 1}", at=at, config_dir=config_dir,
-                         env_file=env_file))
+    with startup.owning(conn):  # one runner spends, or none (4.10)
+        for number in range(runs):
+            at = Instant(int((block + timedelta(minutes=4 * (number + 1))).timestamp() * 1000))
+            ran.append(cycle(snapshot_path=snapshot_path,
+                             offered=decide.cycle_reports(EXIT_RUN / "cycle"), conn=conn,
+                             out_dir=out_dir / f"cycle-{number + 1}", at=at,
+                             config_dir=config_dir, env_file=env_file))
     return ran
 
 
@@ -248,8 +257,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     offered = (decide.approved_reports() if args.approved_reports
                else decide.cycle_reports(args.cycle))
     at = Instant(int(datetime.fromisoformat(args.at.replace("Z", "+00:00")).timestamp() * 1000))
-    ran = cycle(snapshot_path=snapshot_path, offered=offered, conn=db.connect(args.db),
-                out_dir=args.out, at=at, config_dir=args.config_dir, env_file=args.env_file)
+    conn = db.connect(args.db)
+    with startup.owning(conn):
+        ran = cycle(snapshot_path=snapshot_path, offered=offered, conn=conn, out_dir=args.out,
+                    at=at, config_dir=args.config_dir, env_file=args.env_file)
     print(summary(ran))
     return 0
 

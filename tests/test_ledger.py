@@ -313,7 +313,9 @@ def test_every_reader_names_its_book_and_none_has_a_default():
     import inspect
     readers = [f for name, f in vars(ledger).items() if inspect.isfunction(f)
                and not name.startswith("_") and "events" in inspect.signature(f).parameters
-               and name != "planner_book"]  # the planner plans the paper book only, by name
+               and name not in ("planner_book", "booked")]
+    # `planner_book` plans the paper book only, by name; `booked` answers whether an
+    # order id has a fill at all, which is not a figure of either book (4.9 reads it)
     assert {f.__name__ for f in readers} >= {"holdings", "cash_held", "value"}
     for reader in readers:
         book = inspect.signature(reader).parameters.get("book")

@@ -31,3 +31,13 @@ CREATE TRIGGER IF NOT EXISTS events_append_only_update BEFORE UPDATE ON events
     BEGIN SELECT RAISE(ABORT, 'the journal is append-only'); END;
 CREATE TRIGGER IF NOT EXISTS events_append_only_delete BEFORE DELETE ON events
     BEGIN SELECT RAISE(ABORT, 'the journal is append-only'); END;
+
+-- The single-owner lock (4.10). One row, so two runners cannot both spend (PLAN §4).
+-- `host` and `pid` are there so a runner that died on this host can be taken over;
+-- a holder anywhere else never is.
+CREATE TABLE IF NOT EXISTS runner_lock (
+    id    INTEGER PRIMARY KEY CHECK (id = 1),
+    owner TEXT NOT NULL,
+    host  TEXT NOT NULL,
+    pid   INTEGER NOT NULL
+);
