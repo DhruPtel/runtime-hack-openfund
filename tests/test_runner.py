@@ -315,3 +315,62 @@ def test_the_unassigned_agent_cannot_be_read_as_an_address():
     assert token.isalpha() and token.isascii()
     header = analyst.render("price-integrity", SNAPSHOT.read_bytes(), token).header
     assert header.split()[2] == token and header.startswith(f"REPORT price-integrity {token} ")
+
+
+# --- the live entry point, main() (2.6) -------------------------------------------------------------
+
+FAKE_ENV = {"BANKR_LLM_KEY": "bk_fake_llm_key_from_the_env_file_0001",
+            "BANKR_KEY_EXEC": "bk_fake_exec_key_from_the_env_file_0002",
+            "SIGNING_KEY": "fake_signing_key_from_the_env_file_0003"}
+
+
+@pytest.fixture
+def env_file(tmp_path, monkeypatch):
+    """A .env of fake values, and no real credential in this process's environment,
+    whatever an earlier test loaded."""
+    from fund import config
+    for credential in credentials.CREDENTIALS:
+        monkeypatch.delenv(credential.name, raising=False)
+
+    def write(values):
+        path = tmp_path / ".env"
+        path.write_text("".join(f"{k}={v}\n" for k, v in values.items()))
+        monkeypatch.setattr(config, "ENV_FILE", path)
+        return path
+
+    return write
+
+
+def test_without_confirm_it_prints_the_plan_and_sends_nothing(env_file, monkeypatch, capsys):
+    env_file(FAKE_ENV)
+    monkeypatch.setattr(runner, "run_cycle", lambda *a, **k: pytest.fail("a cycle started"))
+    assert runner.main(["--snapshot", str(SNAPSHOT), "--seats", "price-integrity",
+                        "--retries", "0"]) == 0
+    out = capsys.readouterr().out
+    assert "at most   1 billed call(s)" in out and "Nothing sent" in out
+    assert f"BANKR_LLM_KEY (shared), agent {runner.UNASSIGNED_AGENT}" in out
+    assert FAKE_ENV["BANKR_LLM_KEY"] not in out
+    assert runner.main(["--snapshot", str(SNAPSHOT)]) == 0  # every seat, config's one retry
+    assert "at most   8 billed call(s)" in capsys.readouterr().out
+
+
+def test_a_treasurer_key_stops_even_the_dry_run(env_file, capsys):
+    env_file({**FAKE_ENV, "BANKR_LLM_KEY": FAKE_ENV["BANKR_KEY_EXEC"]})
+    with pytest.raises(runner.SpendAuthorityError, match="BANKR_KEY_EXEC"):
+        runner.main(["--snapshot", str(SNAPSHOT), "--seats", "price-integrity"])
+    assert "billed" not in capsys.readouterr().out
+
+
+def test_confirm_runs_one_cycle_with_the_key_from_the_env_file(env_file, gateway, monkeypatch,
+                                                               tmp_path, capsys):
+    env_file(FAKE_ENV)
+    g = gateway({"price-integrity": [("report", no_calls("price-integrity"))]})
+    monkeypatch.setattr(runner.Settings, "from_config", classmethod(lambda cls: settings(g.url)))
+    assert runner.main(["--snapshot", str(SNAPSHOT), "--seats", "price-integrity",
+                        "--retries", "0", "--cycle-dir", str(tmp_path / "cycle"),
+                        "--confirm"]) == 0
+    assert len(g.requests) == 1 and g.requests[0]["key"] == FAKE_ENV["BANKR_LLM_KEY"]
+    cycle = json.loads((tmp_path / "cycle" / "cycle.json").read_text())
+    assert cycle["seats"]["price-integrity"]["status"] == "no_call" and cycle["partial"] is False
+    out = capsys.readouterr().out
+    assert "partial   False" in out and FAKE_ENV["BANKR_LLM_KEY"] not in out
