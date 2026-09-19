@@ -794,9 +794,9 @@ a "wrong if" per call. **Shown at the stop and waiting for the operator.**
 
 Built `agents/schema.py`, stdlib only. It parses a report into what the
 aggregator reads (seat, agent, snapshot; per call the address, word and
-confidence) and refuses a bad report by a named rule, never an exception. The
-rules are header, call shape, vocabulary, confidence, asset, coverage,
-no-calls, citation and figure. The artifact is `tests/test_schema.py`, 31 tests
+confidence) and refuses a bad report by a named rule, never an exception: header,
+call shape, vocabulary, confidence, asset, coverage, no-calls, citation or
+figure. The artifact is `tests/test_schema.py`, 31 tests
 that parse the four approved examples straight from `REPORT-FORMAT.md` and catch
 five fabricated figures, each named with its field and true value. The examples
 also caught a wrong rounding rule in the validator: AMZN's 266.085 is correctly
