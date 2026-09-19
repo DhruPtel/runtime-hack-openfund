@@ -23,12 +23,14 @@
   "_divergence_note": "Two tiers, both numbers provisional. Chainlink-vs-GeckoTerminal divergence tracks the corroborating pool's liquidity, not the feed's quality (findings F0.4.5): ~20 bps median above $1M of 24h pool volume, up to 610 bps below it. Above corroborator_min_volume_usd_24h the veto fires past divergence_max_bps. Below it the asset is excluded from the universe, not held, rather than vetoed every cycle. The tier does not make a liquid name safe: AMZN diverged 499 bps on $2.19M of volume, which this veto must catch. The check is cross-source and independent of the execution venue, because GeckoTerminal covers 32 of 32 addressable tokens (F0.4.2).",
   "_divergence_resolved_by": "0.4 checkpoint decision (tracker/LESSONS.md 2026-09-18). Tightening either number is a config change, not a release.",
 
-  "max_position_weight": null,
+  "max_position_weight": "0.25",
+  "_max_position_weight_note": "A fraction of the paper NAV: two $25 orders in one name at $200. The aggregator never raises a position past it, and a buy's step is a fraction of it (core/aggregate.py). Decimal text, never a float.",
   "turnover_max_bps": null,
-  "cash_floor_usd": null,
-  "_position_limits_resolved_by": "unit 3.4",
+  "cash_floor_usd": "20",
+  "_cash_floor_note": "10% of the $200 paper capital. The aggregator funds new buys only from cash above it; the gate checks the plan against it. Decimal text.",
+  "_position_limits_resolved_by": "max_position_weight and cash_floor_usd set at 3.1 (operator, 2026-09-19, the Phase 3 batch brief, as planning/SIMPLIFICATION.md proposed). Provisional. turnover_max_bps is set at 3.4.",
 
-  "quorum_min_analysts": null,
-  "_quorum_note": "Defined against a roster of 4.",
-  "_quorum_resolved_by": "unit 3.1"
+  "quorum_min_analysts": 3,
+  "_quorum_note": "Defined against a roster of 4: one failed seat still decides, two do not. Below it the cycle keeps every holding (core/aggregate.py).",
+  "_quorum_resolved_by": "Set at 3.1 (operator, 2026-09-19, the Phase 3 batch brief, as planning/SIMPLIFICATION.md proposed). Provisional."
 }

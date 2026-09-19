@@ -6,6 +6,8 @@
   "max_calls_per_report": 6,
   "_max_calls_note": "At most six CALL lines, only on assets the snapshot marks tradeable. Silence is no view (planning/REPORT-FORMAT.md, Coverage).",
   "confidence": ["low", "medium", "high"],
+  "confidence_weights": {"low": "0.25", "medium": "0.5", "high": "0.75"},
+  "_confidence_weights_note": "Set at 3.1 (2026-09-19), provisional: the batch brief left the mapping to the build, to be shown at 3.2 and tuned once a real cycle is seen. Evenly spaced, and high is not certainty: a high caution cuts a direction call by three quarters and does not zero it, because refusing a trade is risk's job, not the aggregator's. Exact decimals, so every score is exact.",
   "vocabularies": {
     "direction": ["buy", "hold", "sell"],
     "condition": ["proceed", "caution"]
