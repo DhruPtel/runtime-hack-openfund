@@ -269,12 +269,12 @@ def test_each_named_exception_obeys_the_threshold_it_is_given():
     so a threshold that is not the configured one changes the verdict."""
     from test_bankr_quote import FETCHED as QUOTED, TWENTY_FIVE, parsed, recorded
     from test_chain_4663 import BLOCK, DAY, addr, feed, reading_aged
-    from test_valuation import AMZN, FRESH, gecko, reading
+    from test_valuation import AMZN, FRESH, LIVE, gecko, reading
 
     def divergence(max_bps: int, min_volume: int) -> str | None:
         rule = valuation.DivergenceRule(max_bps=Fixed(max_bps, 0, BPS),
                                         min_volume_usd=Fixed(min_volume, 0, USD))
-        mark = valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH)  # 252.60
+        mark = valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH, LIVE)  # 252.60
         return valuation.cross_check(mark, *gecko(AMZN, "253.61"), rule, independent=True).rule
 
     def quote(max_age: int, max_impact: int) -> str | None:

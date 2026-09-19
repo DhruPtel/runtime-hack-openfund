@@ -71,12 +71,14 @@ def quote_for(asset, impact: int, at=SAT + 2 * HOUR + 10) -> Observation:
 
 def stock(symbol, *, answers=(25_000_000_000, 25_100_000_000, 25_260_000_000), corroborator="252.70",
           volume="2193251.17", impact=18, closed=True, fresh=Check(True, "fresh in open-session time"),
+          unpaused=Check(True, "the token's oraclePaused() is false at block 66700000"),
           corroboration=None, reach=True) -> snapshot.StockInputs:
     asset = U.stock(listed(symbol), BEACON)
     series = week(asset, answers, reach=reach)
     trade_ok = impact <= 50
     return snapshot.StockInputs(
-        asset=asset, reading=series.newest, fresh=fresh, series=series, closed_session=closed,
+        asset=asset, reading=series.newest, fresh=fresh, unpaused=unpaused, series=series,
+        closed_session=closed,
         corroboration=corroboration or offchain(Price.parse(corroborator, asset.id, USD)),
         volume=offchain(Fixed.parse(volume, USD)), independent=True, quote=quote_for(asset, impact),
         tradeable=Check(True, "quoted at the size asked") if trade_ok else
@@ -246,6 +248,16 @@ def test_a_stale_mark_is_no_mark_at_freshness():
     assert e["mark"]["price_usd"] is None
 
 
+def test_a_paused_feed_is_no_mark_at_paused_and_the_entry_says_so():
+    paused = Check(False, "the token's oraclePaused() is true at block 66700000: Chainlink holds "
+                          "the feed at its last value while a corporate action is applied")
+    e = entry(snapshot.build(inputs(stock("NVDA", unpaused=paused)), U), "NVDA")
+    assert e["status"]["value"] == "no_mark" and e["status"]["rule"] == "paused"
+    assert e["status"]["verdict"] is False and "corporate action" in e["status"]["reason"]
+    assert e["mark"]["unpaused"]["verdict"] is False and e["mark"]["price_usd"] is None
+    assert e["mark"]["fresh"]["verdict"] is True  # fresh, and still no mark: not a staleness
+
+
 def test_a_short_series_says_it_is_short_and_the_asset_is_not_tradeable():
     e = entry(snapshot.build(inputs(stock("NVDA", reach=False)), U), "NVDA")
     assert e["timeline"]["coverage"]["verdict"] is False and "3 days after" in e["timeline"]["coverage"]["reason"]
@@ -372,7 +384,7 @@ def test_a_daily_close_timeline_names_each_close_and_ends_with_the_latest_round(
     assert t["columns"] == ["close_of", "updated_at", "price_usd"]
     assert t["points"][0] == ["2026-09-10", "2026-09-10T20:00:00Z", "250"]
     assert t["points"][-1] == ["latest", "2026-09-18T20:00:00Z", "252.6"]
-    assert snap.document["schema"] == "openfund.snapshot/3"
+    assert snap.document["schema"] == "openfund.snapshot/4"
 
 
 def test_the_snapshot_names_its_capture_or_says_why_it_has_none():

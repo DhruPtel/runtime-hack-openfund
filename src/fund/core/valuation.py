@@ -5,7 +5,11 @@ of the feed pinned to its address by 1.2, and the reading must come from that
 feed's proxy. It is matched by address, never by ticker: a counterfeit chooses
 its own ticker and would inherit the real feed by name (F0.8.1, F0.8.3). A mark
 must also be fresh, as 1.3 judges freshness: heartbeat plus margin in
-open-session time (DECISION 2026-09-18).
+open-session time (DECISION 2026-09-18). A stock's mark also needs its token's
+oracle unpaused. Chainlink holds a Robinhood feed at its last value while the
+token's `oraclePaused()` is true, which is while a corporate action is applied.
+To the rounds, that is silence like a closed market, so the flag is read, and a
+paused feed is refused at its own rule, not as stale (1.11).
 
 **The multiplier is not applied again.** Per the documentation, a Chainlink
 answer for a stock token already incorporates `uiMultiplier()`. 0.4 could not
@@ -64,7 +68,8 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from .types import (
-    BPS, USD, Amount, Asset, AssetId, Check, Fixed, Holding, Observation, Price, UniverseStatus,
+    BPS, USD, Amount, Asset, AssetId, AssetKind, Check, Fixed, Holding, Observation, Price,
+    UniverseStatus,
 )
 
 # --- rules: each refusal names the one that refused ------------------------------
@@ -72,6 +77,7 @@ from .types import (
 RULE_MARKABILITY = "markability"            # no Chainlink feed pinned for the address
 RULE_READING = "reading"                    # the feed was not read
 RULE_FEED_MATCH = "feed-match"              # the reading is not the pinned feed's answer for this asset
+RULE_PAUSED = "paused"                      # the stock token's oracle is paused, or its flag unread
 RULE_FRESHNESS = "freshness"                # the newest round is stale, or its age undetermined
 RULE_BALANCE = "balance"                    # the holding's balance was not read
 RULE_CORROBORATION = "corroboration"        # the corroborating price is missing
@@ -99,10 +105,14 @@ class Mark:
         return self.reading.value if self.check.passes else None
 
 
-def mark(asset: Asset, reading: Observation | None, fresh: Check) -> Mark:
+def mark(asset: Asset, reading: Observation | None, fresh: Check,
+         unpaused: Check | None = None) -> Mark:
     """Judge `reading` as `asset`'s mark. The rules run in a fixed order, and the
-    first that does not pass is named: markability, reading, feed match,
-    freshness. `fresh` is 1.3's verdict on this reading."""
+    first that does not pass is named: markability, reading, feed match, pause,
+    freshness. `fresh` is 1.3's verdict on this reading. `unpaused` is the
+    stock token's `oraclePaused()` read at the same block, True when the flag
+    is false. A stock with no verdict is undetermined, so leaving it out blocks.
+    Cash and gas carry no flag, and are given none."""
     def refused(rule: str, value: bool | None, reason: str) -> Mark:
         return Mark(asset.id, reading, Check(value, f"[{rule}] {reason}"), rule)
 
@@ -120,6 +130,13 @@ def mark(asset: Asset, reading: Observation | None, fresh: Check) -> Mark:
         return refused(RULE_FEED_MATCH, False,
                        f"not the answer of the feed pinned to this address ({proxy}): "
                        f"{reading.source.system}:{reading.source.locator}")
+    if asset.kind is AssetKind.STOCK:
+        if unpaused is None:
+            return refused(RULE_PAUSED, None, "the token's oraclePaused() was not read")
+        if not unpaused.passes:
+            return refused(RULE_PAUSED, unpaused.value, unpaused.reason or "not judged unpaused")
+    elif unpaused is not None:
+        raise ValueError("only a stock token carries an oracle pause flag")
     if not fresh.passes:
         return refused(RULE_FRESHNESS, fresh.value, fresh.reason or "not judged fresh")
     return Mark(asset.id, reading, Check(True, f"{asset.feed.name} at {proxy}, round "

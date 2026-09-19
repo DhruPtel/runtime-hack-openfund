@@ -281,7 +281,8 @@ def prove() -> int:
     stocks = sorted((a for a in u.feeds if a in u.records), key=lambda a: symbol[a])
     beacon = Check(None, "not read by this proof; chain_4663 --prove reads all 35")
     assets = {a: u.stock(a, beacon) for a in stocks}
-    marks = {a: valuation.mark(assets[a], rounds[a], fresh[a]) for a in stocks}
+    unpaused = read.unpaused(stocks)
+    marks = {a: valuation.mark(assets[a], rounds[a], fresh[a], unpaused[a]) for a in stocks}
     g = gs.gecko()
     batches = g.fetch(stocks)
     corroborated = {}
@@ -334,7 +335,8 @@ def prove() -> int:
                              source_time=None, fetch_time=old_reading.fetch_time, block=None,
                              status=FetchStatus.OK, detail="probe 0.4's capture")
     recorded = valuation.cross_check(
-        valuation.mark(assets[amzn], old_reading, Check(True, "fresh when probe 0.4 read it")),
+        valuation.mark(assets[amzn], old_reading, Check(True, "fresh when probe 0.4 read it"),
+                       Check(True, "not read by probe 0.4; this recorded case is about divergence")),
         old_price, old_volume, rule, independent=True)
     print(f"   recorded (probe 0.4, block {r['block']}, F0.4.5): AMZN feed 252.60 against GeckoTerminal "
           f"{r['gecko_price']} on ${usd(old_volume.value, 0)}: tier {recorded.tier}; "

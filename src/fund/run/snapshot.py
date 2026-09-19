@@ -70,6 +70,7 @@ class ChainRead:
     series: dict[AssetId, Series]          # each stock's rounds over the window
     beacons: dict[AssetId, Check]          # each stock's beacon cross-check, held ones included
     balances: dict[AssetId, Observation]   # the wallet: cash, gas, every registry asset
+    unpaused: dict[AssetId, Check]         # each stock token's oraclePaused(), as a verdict (1.11)
 
 
 @dataclass(frozen=True)
@@ -110,6 +111,7 @@ def read_chain(settings: chain_4663.Settings, rpc: chain_4663.RpcClient, u: univ
     read = settings.reader(rpc, block, clock)
     stocks = stocks_of(u)
     readings = read.latest_rounds(dict(u.feeds))
+    unpaused = read.unpaused(stocks)
     def series_of(a: AssetId) -> Series:
         feed = u.feeds[a]
         if settings.sampling == "daily_close":
@@ -132,7 +134,7 @@ def read_chain(settings: chain_4663.Settings, rpc: chain_4663.RpcClient, u: univ
     held_outside = [a for a, b in balances.items() if a in u.records and a not in u.feeds
                     and b.ok and b.value.raw > 0]
     beacons = u.cross_check_beacons(read.beacon_slots(stocks + held_outside))  # disagreement raises
-    return ChainRead(block, readings, series, beacons, balances)
+    return ChainRead(block, readings, series, beacons, balances, unpaused)
 
 
 def cash_mark(chain: ChainRead, u: universe.Universe, settings: chain_4663.Settings) -> valuation.Mark:
@@ -182,6 +184,10 @@ def _rules(settings: chain_4663.Settings, rule: valuation.DivergenceRule,
                       f"Closed sessions, inferred from the feeds' own rounds: {spans}. A market "
                       f"holiday is not modelled and reads as stale. A round dated inside a closed "
                       f"span leaves freshness undetermined."),
+        "paused": ("A stock has no mark while its token's oraclePaused() is true at the pinned "
+                   "block: Chainlink holds the feed at its last value while a corporate action is "
+                   "applied, which the rounds cannot tell from a closed market. A flag that could "
+                   "not be read is undetermined, and blocks."),
         "corroboration": (f"GeckoTerminal's token-level price and 24h volume, independent of the "
                           f"venue. Below ${q(rule.min_volume_usd)} of 24h volume the asset is "
                           f"excluded. Above it, a divergence past {q(rule.max_bps)} bps is vetoed "
@@ -232,6 +238,7 @@ def assemble(chain: ChainRead, offchain: OffchainRead, u: universe.Universe,
         c = offchain.corroborations[a]
         stocks.append(snapshot.StockInputs(
             asset=u.stock(a, chain.beacons[a]), reading=chain.readings[a], fresh=fresh(a),
+            unpaused=chain.unpaused[a],
             series=chain.series[a], closed_session=feed.market_hours in closed,
             corroboration=c.price, volume=c.volume_24h, independent=gecko.INDEPENDENT_OF_VENUE,
             quote=offchain.quotes[a],

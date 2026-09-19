@@ -22,7 +22,8 @@ document is its output (LESSONS 2026-09-18).
 - `asset`: symbol, name, address, decimals, ISIN;
 - `identity`, `standing`, `beacon`, `markability`: 1.2's four rules, kept
   separate;
-- `mark`: the Chainlink price, its round, and whether it is fresh;
+- `mark`: the Chainlink price, its round, whether it is fresh, and, for a
+  stock, whether its token's oracle is unpaused (1.11);
 - `corroboration`: GeckoTerminal's price and volume, the divergence, the tier,
   and the session;
 - `quote`: the venue's price at the nominal size, its age and impact,
@@ -77,7 +78,7 @@ from .types import (
 )
 from .universe import Universe
 
-SCHEMA = "openfund.snapshot/3"  # /2 (1.8): sampled timelines, holdings' two statuses; /3 (1.9): the capture
+SCHEMA = "openfund.snapshot/4"  # /2 (1.8): sampled timelines, holdings' two statuses; /3 (1.9): the capture; /4 (1.11): the oracle pause flag
 
 RULE_BLOCK_PIN = "block-pin"
 RULE_AFTER_PIN = "after-pin"
@@ -107,6 +108,7 @@ class StockInputs:
     asset: Asset
     reading: Observation         # the feed's latest round, at the pinned block
     fresh: Check                 # 1.3's verdict on it, in open-session time
+    unpaused: Check              # the token's oraclePaused() is false at the pinned block (1.11)
     series: Series               # the feed's own rounds, at the pinned block
     closed_session: bool         # the feed's schedule is in its inferred closed span at the block
     corroboration: Observation   # GeckoTerminal's price
@@ -261,11 +263,14 @@ def _asset(asset: Asset) -> dict:
     return out
 
 
-def _mark(asset: Asset, reading: Observation, fresh: Check, the_mark: valuation.Mark) -> dict:
+def _mark(asset: Asset, reading: Observation, fresh: Check, the_mark: valuation.Mark,
+          unpaused: Check | None = None) -> dict:
     # A passing mark's own reason repeats the fields beside it; a failing one says why.
     verdict = ({"verdict": True, "reason": "the fresh answer of the feed pinned to this address"}
                if the_mark.check.passes else _check(the_mark.check))
     out = {"price_usd": _q(the_mark.price), "fresh": _check(fresh), "verdict": verdict}
+    if unpaused is not None:
+        out["unpaused"] = _check(unpaused)
     if asset.feed is not None:
         out |= {"feed": asset.feed.name, "feed_proxy": asset.feed.proxy.address}
     if reading is not None:
@@ -370,7 +375,7 @@ def _holding_status(asset: Asset, balance: Observation, held, the_mark: valuatio
 def _judge(s: StockInputs, universe: Universe, rule: valuation.DivergenceRule
            ) -> tuple[UniverseStatus, str | None, Check, valuation.Mark, valuation.CrossCheck]:
     """The status is the first rule in ORDER that does not pass."""
-    the_mark = valuation.mark(s.asset, s.reading, s.fresh)
+    the_mark = valuation.mark(s.asset, s.reading, s.fresh, s.unpaused)
     cross = valuation.cross_check(the_mark, s.corroboration, s.volume, rule,
                                   independent=s.independent, closed_session=s.closed_session)
     admitted = universe.admission(s.asset)
@@ -467,7 +472,7 @@ def build(inputs: Inputs, universe: Universe) -> Snapshot:
             "standing": _check(universe.standing(s.asset.id)),
             "beacon": _check(s.asset.beacon),
             "markability": _check(s.asset.markability),
-            "mark": _mark(s.asset, s.reading, s.fresh, the_mark),
+            "mark": _mark(s.asset, s.reading, s.fresh, the_mark, s.unpaused),
             "corroboration": _corroboration(s, cross),
             "quote": _quote(s, inputs.built_at, cash_symbol),
             "findings": ([_finding(cross.finding)]
@@ -535,7 +540,7 @@ def _holdings(inputs: Inputs, universe: Universe, verdicts: Mapping, marks: Mapp
     rows = []
     for marked in (inputs.cash, inputs.gas):
         the_mark = valuation.mark(marked.asset, marked.reading, marked.fresh)
-        rows.append((marked.asset, marked.reading, marked.fresh, the_mark,
+        rows.append((marked.asset, marked.reading, marked.fresh, None, the_mark,
                      UniverseStatus.NOT_A_STOCK, None,
                      Check(True, "the cash leg" if marked.asset.kind is AssetKind.CASH
                            else "the gas asset")))
@@ -548,22 +553,23 @@ def _holdings(inputs: Inputs, universe: Universe, verdicts: Mapping, marks: Mapp
         if asset_id in by_id:
             s = by_id[asset_id]
             status, rule, check = verdicts[asset_id]
-            rows.append((s.asset, s.reading, s.fresh, marks[asset_id], status, rule, check))
+            rows.append((s.asset, s.reading, s.fresh, s.unpaused, marks[asset_id], status, rule,
+                         check))
         else:
             asset = inputs.held_outside[asset_id]
             admitted = universe.admission(asset)
             no_feed = valuation.mark(asset, None, Check(None, "no feed to read"))
-            rows.append((asset, None, None, no_feed, admitted.universe_status or
+            rows.append((asset, None, None, None, no_feed, admitted.universe_status or
                          UniverseStatus.UNMARKABLE, admitted.rule, admitted.decision))
     out = []
-    for asset, reading, fresh, the_mark, status, rule, check in rows:
+    for asset, reading, fresh, unpaused, the_mark, status, rule, check in rows:
         balance = inputs.balances[asset.id]
         held = valuation.value_holding(asset, balance, the_mark, universe_status=status,
                                        universe_reason=check.reason)
         out.append(_read(balance) | {
             "asset": _asset(asset),
             "balance": _q(balance.value) if balance.ok else None,
-            "mark": _mark(asset, reading, fresh, the_mark) if reading is not None or fresh
+            "mark": _mark(asset, reading, fresh, the_mark, unpaused) if reading is not None or fresh
             else {"price_usd": None, "verdict": _check(the_mark.check)},
             "value_usd": _q(held.value),
             "value_reason": held.value_reason,

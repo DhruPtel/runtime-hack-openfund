@@ -20,6 +20,7 @@ CHAIN = 4663
 BLOCK = BlockRef(CHAIN, 66354932, Instant.from_seconds(1789746000))
 FETCHED = Instant.from_seconds(1789746005)
 FRESH = Check(True, "age 50s of open session against heartbeat 86400s + margin 3600s")
+LIVE = Check(True, "the token's oraclePaused() is false at block 66354932")
 BEACON = Check(True, "not what these tests are about")
 RULE = valuation.DivergenceRule(max_bps=Fixed(100, 0, "bps"), min_volume_usd=Fixed(1_000_000, 0, USD))
 
@@ -85,7 +86,7 @@ def test_value_does_not_apply_the_multiplier_again():
     multiplier = nvda.registry.current_multiplier
     assert multiplier.raw != 10 ** multiplier.decimals
     held = valuation.value_holding(nvda, balance(nvda, 10**18),
-                                   valuation.mark(nvda, reading(nvda, 25260000000), FRESH),
+                                   valuation.mark(nvda, reading(nvda, 25260000000), FRESH, LIVE),
                                    universe_status=UniverseStatus.TRADEABLE, universe_reason=None)
     assert held.value.same_value(Fixed.parse("252.6", USD))
 
@@ -93,18 +94,18 @@ def test_value_does_not_apply_the_multiplier_again():
 # --- the mark -----------------------------------------------------------------------------
 
 def test_the_pinned_feeds_fresh_answer_is_the_mark():
-    m = valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH)
+    m = valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH, LIVE)
     assert m.check.passes and m.rule is None and m.price == Price(25260000000, 8, AMZN.id, USD)
 
 
 def test_an_answer_from_another_feed_is_refused_at_feed_match():
     # GME's feed, labelled as AMZN: the ticker-style mistake 1.2's address map exists to stop.
-    m = valuation.mark(AMZN, reading(AMZN, 2255175000, proxy=GME.feed.proxy.address), FRESH)
+    m = valuation.mark(AMZN, reading(AMZN, 2255175000, proxy=GME.feed.proxy.address), FRESH, LIVE)
     assert m.rule == valuation.RULE_FEED_MATCH and m.check.value is False and m.price is None
 
 
 def test_a_reading_priced_for_another_asset_is_refused_at_feed_match():
-    m = valuation.mark(AMZN, reading(AMZN, 25260000000, base=GME.id), FRESH)
+    m = valuation.mark(AMZN, reading(AMZN, 25260000000, base=GME.id), FRESH, LIVE)
     assert m.rule == valuation.RULE_FEED_MATCH
 
 
@@ -113,12 +114,32 @@ def test_a_reading_priced_for_another_asset_is_refused_at_feed_match():
     (Check(None, "a round inside the closed span contradicts the inference"), None),
 ])
 def test_a_mark_that_is_not_fresh_is_refused_at_freshness(fresh, value):
-    m = valuation.mark(AMZN, reading(AMZN, 25260000000), fresh)
+    m = valuation.mark(AMZN, reading(AMZN, 25260000000), fresh, LIVE)
     assert m.rule == valuation.RULE_FRESHNESS and m.check.value is value and m.price is None
 
 
+STALE = Check(False, "a gap this long in an open session is stale")
+
+
+@pytest.mark.parametrize("unpaused, value", [
+    (Check(False, "the token's oraclePaused() is true at block 66841212"), False),
+    (Check(None, "the token's oraclePaused() reverted"), None),
+    (None, None),                                  # a stock whose flag was never read
+])
+def test_a_paused_feed_is_refused_at_paused_not_at_freshness(unpaused, value):
+    # A paused feed is silent, so it is often stale too: the pause is named, because it says why.
+    m = valuation.mark(AMZN, reading(AMZN, 25260000000), STALE, unpaused)
+    assert m.rule == valuation.RULE_PAUSED and m.check.value is value and m.price is None
+
+
+def test_only_a_stock_token_carries_a_pause_flag():
+    assert valuation.mark(USDG, reading(USDG, 100_020_000), FRESH).check.passes
+    with pytest.raises(ValueError, match="only a stock token"):
+        valuation.mark(USDG, reading(USDG, 100_020_000), FRESH, LIVE)
+
+
 def test_an_unread_feed_is_undetermined_at_reading():
-    m = valuation.mark(AMZN, reading(AMZN, 0, status=FetchStatus.UNREACHABLE), FRESH)
+    m = valuation.mark(AMZN, reading(AMZN, 0, status=FetchStatus.UNREACHABLE), FRESH, LIVE)
     assert m.rule == valuation.RULE_READING and m.check.value is None
 
 
@@ -136,7 +157,7 @@ def test_an_unread_balance_is_not_a_zero_balance():
     unread = Observation(value=None, source=Source("erc20-balance", AMZN.id.address), source_time=None,
                          fetch_time=FETCHED, block=BLOCK, status=FetchStatus.UNREACHABLE,
                          detail="[transport] refused")
-    held = valuation.value_holding(AMZN, unread, valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
+    held = valuation.value_holding(AMZN, unread, valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH, LIVE),
                                    universe_status=UniverseStatus.TRADEABLE, universe_reason=None)
     assert held.value is None and held.value_reason.startswith("[balance]")
 
@@ -167,7 +188,7 @@ def test_divergence_is_the_mark_against_the_corroborator_signed():
 
 def test_the_recorded_amzn_case_is_vetoed_on_a_liquid_name():
     price, volume = gecko(AMZN, "265.87982073")
-    check = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
+    check = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH, LIVE),
                                   price, volume, RULE, independent=True)
     assert check.rule == valuation.RULE_DIVERGENCE and check.verdict.value is False
     assert check.tier == "above-line" and check.divergence == Fixed(-49947, 2, "bps")  # -499.4669
@@ -176,7 +197,7 @@ def test_the_recorded_amzn_case_is_vetoed_on_a_liquid_name():
 
 def test_a_thin_corroborator_excludes_the_asset_rather_than_vetoing_it():
     price, volume = gecko(AMZN, "265.87982073", volume="3502.1")  # EWY's volume, F0.4.5
-    check = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
+    check = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH, LIVE),
                                   price, volume, RULE, independent=True)
     assert check.rule == valuation.RULE_CORROBORATOR_LINE and check.tier == "below-line"
     assert check.universe_status is UniverseStatus.BELOW_CORROBORATOR_LINE
@@ -192,14 +213,14 @@ def test_a_thin_corroborator_excludes_the_asset_rather_than_vetoing_it():
 ])
 def test_the_veto_limit_is_on_the_magnitude(corroborator, passes):
     price, volume = gecko(AMZN, corroborator)
-    check = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
+    check = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH, LIVE),
                                   price, volume, RULE, independent=True)
     assert check.verdict.passes is passes and check.tier == "above-line"
 
 
 def test_a_volume_exactly_on_the_line_is_above_it():
     price, volume = gecko(AMZN, "252.60", volume="1000000")
-    check = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
+    check = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH, LIVE),
                                   price, volume, RULE, independent=True)
     assert check.tier == "above-line" and check.verdict.passes
 
@@ -209,7 +230,7 @@ def test_absent_corroboration_is_undetermined_not_agreement(status):
     source = Source("geckoterminal", f"networks/robinhood/tokens/{AMZN.id.address}")
     missing = Observation(value=None, source=source, source_time=None, fetch_time=FETCHED, block=None,
                           status=status, detail="GeckoTerminal answered and did not list this address")
-    check = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
+    check = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH, LIVE),
                                   missing, missing, RULE, independent=True)
     assert check.rule == valuation.RULE_CORROBORATION and check.verdict.value is None
     assert check.divergence is None and not check.verdict.passes
@@ -217,7 +238,7 @@ def test_absent_corroboration_is_undetermined_not_agreement(status):
 
 def test_a_missing_volume_leaves_the_tier_undetermined():
     price, volume = gecko(AMZN, "252.60", volume=None)
-    check = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
+    check = valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH, LIVE),
                                   price, volume, RULE, independent=True)
     assert check.rule == valuation.RULE_VOLUME and check.verdict.value is None and check.tier is None
 
@@ -251,7 +272,7 @@ def test_a_null_threshold_blocks_and_a_float_is_refused():
 
 def amzn_check(corroborator: str, *, closed: bool, volume: str = "2193251.17210313"):
     price, traded = gecko(AMZN, corroborator, volume=volume)
-    return valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
+    return valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH, LIVE),
                                  price, traded, RULE, independent=True, closed_session=closed)
 
 
@@ -276,5 +297,5 @@ def test_a_corroborator_volume_that_is_not_usd_is_refused():
     tokens = Observation(value=Amount(1, 18, AMZN.id), source=price.source, source_time=None,
                          fetch_time=FETCHED, block=None, status=FetchStatus.OK)
     with pytest.raises(TypeError, match="USD"):
-        valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH),
+        valuation.cross_check(valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH, LIVE),
                               price, tokens, RULE, independent=True)

@@ -67,6 +67,7 @@ class RecordedChain:
         self.balances = {U.cash_leg.address: 78_742, CRM.address: 10**18}
         self.native = 460_162_486_507_929
         self.beacon = U.issuer_beacon.address
+        self.paused: set[str] = set()  # tokens whose oraclePaused() answers true
         self.block_params: list = []
 
     def transport(self, url, body, timeout):
@@ -119,6 +120,9 @@ class RecordedChain:
             return (True, self.round(n, *rounds[n - 1])) if 1 <= n <= len(rounds) else (False, b"")
         if selector == chain_4663.SEL_BALANCE_OF:
             return True, word(self.balances.get(target, 0))
+        if selector == chain_4663.SEL_ORACLE_PAUSED and target in (NVDA.address, AMZN.address,
+                                                                   CLSK.address):
+            return True, word(target in self.paused)
         return False, b""
 
     @staticmethod
@@ -257,6 +261,16 @@ def test_a_beacon_that_disagrees_stops_the_build():
     chain.beacon = "0x" + "66" * 20
     with pytest.raises(universe.BeaconDisagreement):
         build(chain)
+
+
+def test_a_token_whose_oracle_is_paused_on_chain_has_no_mark_at_paused():
+    chain = RecordedChain()
+    chain.paused.add(NVDA.address)
+    built = build(chain)
+    nvda, amzn = entry(built, "NVDA"), entry(built, "AMZN")
+    assert (nvda["status"]["value"], nvda["status"]["rule"]) == ("no_mark", "paused")
+    assert f"true at block {BLOCK_NUMBER}" in nvda["mark"]["unpaused"]["reason"]
+    assert amzn["mark"]["unpaused"]["verdict"] is True and amzn["status"]["rule"] != "paused"
 
 
 def test_with_daily_closes_the_live_path_takes_one_close_a_day_and_none_at_the_weekend():
