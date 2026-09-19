@@ -21,11 +21,17 @@ the snapshot plus the first line.
 from __future__ import annotations
 
 import hashlib
+import json
+import os
+import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
 from fund import config
+from fund.adapters import bankr_llm
+from fund.agents import schema
 
 BRIEFS = Path(__file__).resolve().parent / "briefs"
 SHARED_BRIEF = "analyst.v1.md"
@@ -73,3 +79,117 @@ def render(seat: str, snapshot: bytes, agent: str, *, analysts: Mapping[str, Any
             + f"\n\nWrite your report now. Its first line must be exactly:\n{header}\n")
     return Brief(seat=seat, system=system, user=user, files=(entry["brief"], SHARED_BRIEF),
                  snapshot_sha256=digest, header=header)
+
+
+# --- the worker (unit 2.4) -----------------------------------------------------------------------
+#
+# Each analyst runs as its own process, started by `agents/runner.py` with an
+# environment built from nothing: its one gateway key under KEY_VARIABLE, plus
+# PATH and PYTHONPATH. It takes that key from its environment and nowhere else.
+# It never calls `config.load()` or `config.load_environment()`, which would merge
+# the whole of `.env`, execution and signing keys included, into its environment.
+# What it is given arrives in a job file with no secret in it. What it writes goes
+# to the result slot the runner allocated before starting it.
+#
+# One call, then at most one retry, and only for a reply that arrived and was
+# refused as malformed: unparseable, cut off at the output cap, or refused by the
+# 2.2 checks. Never for a timeout, a transport failure or a refusal from the
+# gateway. A timed-out call is still billed (F0.9.3), and retrying it doubles the
+# bill for nothing. The retry must fit in what is left of the worker's deadline.
+
+KEY_VARIABLE = "OPENFUND_GATEWAY_KEY"
+
+
+def _attempt_record(number: int, reply: bankr_llm.Reply, refusals: tuple = ()) -> dict:
+    return {"attempt": number, "elapsed_ms": reply.elapsed_ms, "http_status": reply.status,
+            "error": reply.error, "finish_reason": reply.finish_reason, "usage": dict(reply.usage),
+            "request_id": reply.request_id, "refusals": [str(r) for r in refusals],
+            "body": reply.body}
+
+
+def run(job: Mapping[str, Any], key: str, *, send: Any = None,
+        clock: Any = None) -> dict[str, Any]:
+    """One analyst's whole turn. Returns its result, never raises for anything the
+    model or the network does."""
+    clock = time.monotonic if clock is None else clock
+    started = clock()
+    snapshot = Path(job["snapshot_path"]).read_bytes()
+    result: dict[str, Any] = {
+        "seat": job["seat"], "agent": job["agent"], "status": "failed", "reason": None,
+        "detail": None, "attempts": [], "report": None, "report_text": None,
+        "snapshot_sha256": hashlib.sha256(snapshot).hexdigest(),
+    }
+    if result["snapshot_sha256"] != job["snapshot_sha256"]:
+        result.update(reason="snapshot", detail="the snapshot on disk is not the one named")
+        return result
+
+    brief = render(job["seat"], snapshot, job["agent"])
+    contract = schema.Contract.load(job["seat"])
+    document = json.loads(snapshot)
+    result.update(brief_files=list(brief.files), brief_sha256=brief.sha256)
+    margin = job["worker_deadline_s"] - job["transport_timeout_s"]
+    user = brief.user
+    for number in range(1, 2 + job["retry_budget"]):
+        left = job["worker_deadline_s"] - (clock() - started) - margin
+        timeout_s = min(job["transport_timeout_s"], left)
+        if timeout_s <= 0:
+            result.update(reason="no time", detail="no time left in the worker deadline "
+                          "for another attempt")
+            break
+        reply = bankr_llm.complete(key, model=job["model"], system=brief.system, user=user,
+                                   max_tokens=job["max_tokens"], timeout_s=timeout_s,
+                                   base_url=job["gateway_url"], send=send)
+        if reply.error == "timeout" or (reply.error or "").startswith("transport"):
+            result["attempts"].append(_attempt_record(number, reply))
+            result.update(reason="timeout" if reply.error == "timeout" else "transport",
+                          detail=reply.error)
+            break  # billed or not, a lost call is never retried
+        if reply.status != 200:
+            result["attempts"].append(_attempt_record(number, reply))
+            result.update(reason="refused", detail=f"HTTP {reply.status}: {reply.body[:300]}")
+            break
+        if reply.error or reply.finish_reason == "length":
+            refusals = (schema.Refusal("truncated" if reply.finish_reason == "length"
+                                       else "unreadable",
+                                       reply.error or "the reply stopped at the output cap"),)
+            verdict = None
+        else:
+            verdict = schema.validate(reply.text, document, contract=contract,
+                                      agent=job["agent"], snapshot_sha256=brief.snapshot_sha256)
+            refusals = verdict.refusals
+        result["attempts"].append(_attempt_record(number, reply, refusals))
+        if verdict is not None and verdict.ok:
+            result.update(status="no_call" if verdict.report.no_calls else "ok", reason=None,
+                          detail=None, report=verdict.report.as_dict(),
+                          report_text=verdict.report.text)
+            break
+        result.update(reason="invalid", detail="; ".join(str(r) for r in refusals),
+                      last_reply_text=reply.text[:20000])
+        user = (brief.user + "\n\nYour previous reply was refused: "
+                + "; ".join(str(r) for r in refusals)
+                + "\nWrite the whole report again, in the required format.\n")
+    return result
+
+
+def main(argv: list[str] | None = None) -> int:
+    """`python -m fund.agents.analyst --job <path>`, as the runner starts it."""
+    args = sys.argv[1:] if argv is None else argv
+    job = json.loads(Path(args[args.index("--job") + 1]).read_text())
+    key = os.environ.get(KEY_VARIABLE, "")
+    try:
+        result = run(job, key)
+    except Exception as error:  # a bug in the worker fails its seat, not the cycle
+        result = {"seat": job.get("seat"), "agent": job.get("agent"), "status": "failed",
+                  "reason": "crashed", "detail": f"{type(error).__name__}: {error}",
+                  "attempts": []}
+    # Names only, never values: the evidence the isolation test reads.
+    result["environment_names"] = sorted(os.environ)
+    text = json.dumps(result, indent=1, sort_keys=True)
+    if key:
+        text = text.replace(key, "[GATEWAY_KEY]")
+    Path(job["result_path"]).write_text(text + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
