@@ -13,19 +13,9 @@ CREATE TABLE IF NOT EXISTS orders (
     body            TEXT NOT NULL
 );
 
--- Every move an order made, appended, never edited: the order's history.
-CREATE TABLE IF NOT EXISTS order_moves (
-    order_id  TEXT NOT NULL REFERENCES orders (order_id),
-    revision  INTEGER NOT NULL,
-    from_state TEXT,
-    to_state  TEXT NOT NULL,
-    reason    TEXT,
-    PRIMARY KEY (order_id, revision)
-);
-CREATE TRIGGER IF NOT EXISTS order_moves_append_only_update BEFORE UPDATE ON order_moves
-    BEGIN SELECT RAISE(ABORT, 'order_moves is append-only'); END;
-CREATE TRIGGER IF NOT EXISTS order_moves_append_only_delete BEFORE DELETE ON order_moves
-    BEGIN SELECT RAISE(ABORT, 'order_moves is append-only'); END;
+-- An order's moves are not kept: the state it is in, and why, is the row above, and
+-- nothing in the fund reads a history (CLAUDE.md, no function without a caller). The
+-- journal keeps what moved value.
 
 -- The journal (4.6): every event that moves value, appended in order and never edited.
 -- `body` is core/ledger.encode's document; `kind` and `order_id` are repeated from it

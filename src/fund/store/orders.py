@@ -10,13 +10,14 @@ Two writers cannot both move one order: each move names the revision it moves fr
 and a row another writer moved first refuses. An order added again, after a restart
 lists a decision's orders again, keeps the state it has: it is never written back to
 `prepared`, and its key never changes.
+
+The row holds the state an order is in and why. No history is kept: nothing reads one
+(CLAUDE.md). What moved value is the journal's, and it is append-only.
 """
 
 from __future__ import annotations
 
 import sqlite3
-from typing import Any
-
 from fund.core import orders
 from fund.core.types import Execution, Order, OrderState, from_canonical, to_canonical
 from fund.store.db import transaction
@@ -60,8 +61,6 @@ class OrderStore:
                               "body) VALUES (?, ?, ?, 0, ?)",
                               (order.order_id, order.idempotency_key, order.state.value,
                                _body(order)))
-            self.conn.execute("INSERT INTO order_moves VALUES (?, 0, NULL, ?, NULL)",
-                              (order.order_id, order.state.value))
         return order
 
     def get(self, order_id: str) -> Order | None:
@@ -83,17 +82,9 @@ class OrderStore:
                 (moved.state.value, revision + 1, _body(moved), order_id, revision))
             if done.rowcount != 1:
                 raise StoreError(f"order {order_id} was moved by another writer")
-            self.conn.execute("INSERT INTO order_moves VALUES (?, ?, ?, ?, ?)",
-                              (order_id, revision + 1, current.state.value, moved.state.value,
-                               reason))
         return moved
 
     def all(self) -> list[Order]:
         """Every order, in the order it was written."""
         return [_order(body) for (body,) in
                 self.conn.execute("SELECT body FROM orders ORDER BY rowid")]
-
-    def history(self, order_id: str) -> list[dict[str, Any]]:
-        return [{"revision": r, "from": f, "to": t, "reason": why} for r, f, t, why in
-                self.conn.execute("SELECT revision, from_state, to_state, reason FROM order_moves "
-                                  "WHERE order_id = ? ORDER BY revision", (order_id,))]

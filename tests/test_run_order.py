@@ -84,8 +84,6 @@ def test_an_order_is_prepared_then_submitted_then_confirmed_with_its_fill(tmp_pa
     assert done.order.state is OrderState.CONFIRMED and done.booked
     reopened = Journal(db.connect(tmp_path / "fund.sqlite")).events()
     assert reopened[-1] == done.outcome.fill
-    assert [h["to"] for h in store.history(SIX[0].order_id)] == ["prepared", "submitted",
-                                                                 "confirmed"]
 
 
 def test_the_six_orders_fill_once_each_and_the_book_follows_the_ledger(tmp_path):

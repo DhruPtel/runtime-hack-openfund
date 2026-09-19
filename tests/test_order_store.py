@@ -45,9 +45,8 @@ def test_each_move_is_on_disk_before_it_returns(tmp_path):
     store.move(order.order_id, S)
     assert opened(tmp_path / "fund.sqlite").get(order.order_id).state is S
     store.move(order.order_id, U, reason="timeout")
-    assert opened(tmp_path / "fund.sqlite").get(order.order_id).state is U
-    assert [(h["from"], h["to"]) for h in store.history(order.order_id)] == [
-        (None, "prepared"), ("prepared", "submitted"), ("submitted", "unknown")]
+    reopened = opened(tmp_path / "fund.sqlite").get(order.order_id)
+    assert reopened.state is U and reopened.state_reason == "timeout"
 
 
 def test_a_move_the_table_does_not_allow_is_refused_and_nothing_is_written(tmp_path):
@@ -55,7 +54,7 @@ def test_a_move_the_table_does_not_allow_is_refused_and_nothing_is_written(tmp_p
     order = store.add(prepared(1))
     with pytest.raises(moves.IllegalMove, match="prepared → confirmed"):
         store.move(order.order_id, C)
-    assert store.get(order.order_id).state is P and len(store.history(order.order_id)) == 1
+    assert store.get(order.order_id).state is P
 
 
 def test_an_unknown_order_keeps_its_key_across_a_restart_and_is_sent_again_under_it(tmp_path):
@@ -102,14 +101,6 @@ def test_a_live_orders_evidence_is_kept_with_its_state(tmp_path):
     store.move(live.order_id, S)
     store.move(live.order_id, C, execution=swap_execution())
     assert opened(tmp_path / "fund.sqlite").get(live.order_id).execution == swap_execution()
-
-
-def test_the_order_moves_are_append_only(tmp_path):
-    store = opened(tmp_path / "fund.sqlite")
-    store.add(prepared(1))
-    for sql in ("UPDATE order_moves SET to_state = 'confirmed'", "DELETE FROM order_moves"):
-        with pytest.raises(Exception, match="append-only"):
-            store.conn.execute(sql)
 
 
 def test_a_prepared_order_survives_the_process_being_killed_right_after_the_write(tmp_path):

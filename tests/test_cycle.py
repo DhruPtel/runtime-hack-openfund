@@ -78,10 +78,6 @@ def test_a_whole_paper_cycle_runs_from_the_capture_to_a_book(tmp_path):
     assert len(ran.orders) == 8 and len(ran.filled) == 8 and ran.refused == []
     assert all(d.order.state is OrderState.CONFIRMED for d in ran.orders)
 
-    store = OrderStore(db.connect(tmp_path / "fund.sqlite"))
-    for done in ran.orders:
-        assert [h["to"] for h in store.history(done.order.order_id)] == [
-            "prepared", "submitted", "confirmed"]
     events = Journal(db.connect(tmp_path / "fund.sqlite")).events()
     assert [type(e).__name__ for e in events] == ["Opening"] + ["Fill"] * 8
     book = ran.book
