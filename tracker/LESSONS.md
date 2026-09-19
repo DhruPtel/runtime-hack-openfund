@@ -1140,8 +1140,8 @@ when the launch regime's scale break ends, to 2026-09-19 00:01Z.
   Day observed) and Mon 7 September (Labor Day) each silenced every feed for 24
   more hours: 72.0 h and 72.6 h quiet. Replayed over all history, the rule with
   the span is never stale on any weekday or weekend except these two holidays:
-  - on 3 July, 29 of 35 feeds were stale from Friday afternoon until Monday's
-    open;
+  - on 3 July, 28 of the 34 feeds then live were stale until Monday's open,
+    most of them from Friday afternoon;
   - on 7 September, 34 of 35 were stale for the last 1–23 h of Monday.
 
   Without the span, all 35 go stale every weekend.
