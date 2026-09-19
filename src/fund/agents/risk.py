@@ -338,6 +338,7 @@ def review(plan: Mapping[str, Any], plan_sha256: str, *, reports: Sequence[Repor
                 k: reply.get(k) for k in ("status", "reason", "recorded", "report_id", "agent",
                                           "key_source", "request_id", "elapsed_ms", "cost",
                                           "http_status", "environment_names")},
+            "reply_text": None if not (reply and reply.get("reply_text")) else reply["reply_text"],
             "reply_sha256": None if not (reply and reply.get("reply_text")) else hashlib.sha256(
                 reply["reply_text"].encode("utf-8")).hexdigest(),
             "decision": decide(gate_report, votes, no_votes)}
