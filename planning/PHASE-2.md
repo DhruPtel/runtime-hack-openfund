@@ -7,8 +7,9 @@
 - 2.6 onward needs a live key, and `BANKR_LLM_KEY` is still not read-only.
 
 Nothing has run live. This file was written as the plan before any Phase 2 work,
-and each unit below now carries a note on what was built. It gives each unit at the minimal scope approved
-in `SIMPLIFICATION.md`, in the shape `PHASE-0-1.md` uses:
+and each unit below now carries a note on what was built. It gives each unit at
+the minimal scope approved in `SIMPLIFICATION.md`, in the shape `PHASE-0-1.md`
+uses:
 - the goal;
 - what gets built;
 - the artifact;

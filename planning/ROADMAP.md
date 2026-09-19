@@ -126,9 +126,9 @@ The reports are the product. Design them before writing the code that makes them
 | 2.0 | SIWE agent wallet, proven once (added 2026-09-19, `PHASE-2.md`) | One account made with `bankr login siwe`, then measured: its own address, a refused transaction, the Agent API off, and the gateway reached. Before anything assumes five. |
 | 2.1 ▶ | Report format designed by hand, before any code | **Stop.** Four hand-written example reports, one per seat, in the two vocabularies, read and approved before any code consumes them. |
 | 2.2 | Output schema, hard validation, `NO_CALL`, address-scoped claims | One validator: types, the vocabulary, addresses in the tradeable set, field paths present, the snapshot hash echoed back. |
-| 2.3 | Brief format: mandate, scope boundaries, snapshot bytes, effort scaling. Scopes are disjoint in QUESTION, not necessarily in asset set — two analysts may both look at every asset provided they ask different things of it; the failure mode is two analysts asking the same question of overlapping assets | One versioned brief. Every seat sees the whole universe and differs in question. |
+| 2.3 | Brief format: mandate, scope boundaries, snapshot bytes, effort scaling. Scopes are disjoint in QUESTION, not necessarily in asset set — two analysts may both look at every asset provided they ask different things of it; the failure mode is two analysts asking the same question of overlapping assets | One versioned brief file per seat, plus a shared output contract. The seat's question comes from config. Every seat sees the whole universe and differs in question. |
 | 2.4 | Runner: bounded width, deadlines, retries, fallback, partial-failure flag | Four processes in parallel, each holding only its own key. One retry, a failed worker named, and an event log. |
-| 2.5 | Per-call token accounting, reconciled to provider usage | The `usage` block, plus each agent's own credit balance before and after. No `/v1/usage` reconciliation. |
+| 2.5 | Per-call token accounting, reconciled to provider usage | Each call's cost from its own `usage` block at the listed price, labelled an estimate. The aggregate is checked against a settled `/v1/usage` window, never a before-and-after delta (2026-09-19). |
 | 2.6 ▶ | First real report from a real snapshot | One call on the committed snapshot, with cost and latency. Shown, not stopped. |
 | 2.7 | Immutable content-addressed report store | Canonical JSON files named by sha256, written once. |
 | 2.8 ▶ | Failure drill | Three offline tests: malformed, hung, `NO_CALL`. Shown, not stopped. |
@@ -290,7 +290,7 @@ presented.
 |---|---|---|
 | 6.1 | Statement builder over sealed inputs | NAV as two labelled figures, real and paper, and four lines: revenue, costs, expenses, net. |
 | 6.2 | Reconciliation against balances and settlements; exceptions shown | The journal against RPC balances and `PaymentSettled`, with differences listed. |
-| 6.3 | Cost with estimate flags, reconciled to provider usage | Per agent, from its own account's balance. |
+| 6.3 | Cost with estimate flags, reconciled to provider usage | Per agent, the sum of its calls' estimates, with the aggregate checked against a settled `/v1/usage` window, as 2.5 builds it. |
 | 6.4 | Funded contribution: realized P&L allocated once, with residual | Shares per executed order with a residual. No dollars while marks are frozen. |
 | 6.5 | Call accuracy: hypothetical, labelled, never mixed into profit | Stored and labelled hypothetical. "Not yet scorable" over a weekend. |
 | 6.6 ▶ | The first real statement | **Stop.** |
