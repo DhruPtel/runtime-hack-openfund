@@ -269,7 +269,8 @@ re-evaluate before detailing the next.
 >   Only ceremony goes, such as the mandate's hash-and-replay.
 > - **Ten units are equal,** because a reduced version would be a different
 >   thing: 3.7, 4.2, 4.3, 4.7, 4.12, 5.2, 5.4, 7.4, 7.5 and 8.2.
-> - **Stops:** 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1 is the report format. The
+> - **Stops:** 2.1, 3.8, 4.11, 5.4, 6.6, 7.5 and 8.5 (4.11 added 2026-09-19). 2.1 is the
+>   report format. The
 >   operator reads it before any code consumes it, and that was never spent
 >   (corrected 2026-09-19, LESSONS). Every other ▶ is shown, not stopped.
 > - **Phase 2 opens with 2.0,** which proves one SIWE agent account before

@@ -59,7 +59,8 @@ units; this keeps every unit and cuts its depth.
 - **Output.** Reports are a summary and a few key values. Books are a NAV and
   four lines.
 - **Edge cases.** Handled if likely. Recorded here if not.
-- **Stops:** 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1 is the report format, and the
+- **Stops:** 2.1, 3.8, 4.11, 5.4, 6.6, 7.5 and 8.5 (4.11 added by the operator,
+  2026-09-19, at Phase 4's planning). 2.1 is the report format, and the
   operator reads it before any code consumes it. This corrects an earlier line
   here that called 2.1's stop spent (LESSONS 2026-09-19). Every other ▶ is shown,
   not stopped.

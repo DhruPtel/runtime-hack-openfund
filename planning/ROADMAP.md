@@ -15,7 +15,8 @@ checkpoint isn't a demo, it's a decision point where the plan can bend.
 - **The tables.** From Phase 2 each table has a third column. *Goal* is the full
   version. *Minimal* is what gets built. `SIMPLIFICATION.md` has each unit's
   full version and what it gives up.
-- **The stops.** 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5 stop for the operator. 2.1 is
+- **The stops.** 2.1, 3.8, 4.11, 5.4, 6.6, 7.5 and 8.5 stop for the operator (4.11
+  added 2026-09-19, `PHASE-4.md`). 2.1 is
   the report format, which the operator reads before any code consumes it.
   Every other ▶ below is shown, not stopped. The ▶ write-ups describe the full
   checkpoints.
@@ -209,6 +210,7 @@ Make the money path correct before it touches money.
 
 | Unit | Goal (full version) | Minimal: what gets built |
 |---|---|---|
+| 4.0 | Shared primitives, before any unit (added 2026-09-19, the design lesson; `PHASE-4.md`) | Order state and transitions, order identity and key, fill, holdings, cash, cost basis, realised and unrealised value: each one function in `core/`, tested with its rules broken in a copy. |
 | 4.1 | Mandate: bounds, wallet, assets, budget, expiry, revocation | Loaded, with nulls refused and bounds checked. No hash-and-replay of approvals. |
 | 4.2 | Execution intent with stable idempotency key | **Equal in substance.** Orders from the signed record, each keyed by decision id and index. |
 | 4.3 | Durable order state machine, written before action | **Equal in substance.** Five states, each written before its act. No reservations, because orders run one at a time. |
@@ -219,7 +221,7 @@ Make the money path correct before it touches money.
 | 4.8 ▶ | A full paper cycle end to end | `make cycle-demo` end to end. Shown, not stopped. |
 | 4.9 | Startup reconciliation and single-owner lock | Unresolved orders resolved before a new cycle, and one lock row. |
 | 4.10 ▶ | Crash drill | One offline test: killed after `submitted`, resolved once. Shown, not stopped. |
-| 4.11 ▶ | Known-answer accounting fixture | A small fixture checked for positions and value. 6.1 adds the four lines, and it is shown at 6.6's stop. |
+| 4.11 ▶ | Known-answer accounting fixture | **Stop** (the operator, 2026-09-19). A small fixture checked for positions, cash, basis and value by hand. 6.1 adds the four lines. |
 | 4.12 | Treasurer as its own process with its own credentials; deployed-isolation test | **Equal in substance.** Its own process with the execution and signing keys; isolation tests from every agent's environment. One machine, no separate host. |
 
 **▶ 4.8 — the whole machine**
@@ -384,7 +386,7 @@ that correctly decides not to trade.
 
 Twenty-seven playtime checkpoints. The five that can most change the plan:
 
-*From Phase 2, since 2026-09-19:* only 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5 stop.
+*From Phase 2, since 2026-09-19:* only 2.1, 3.8, 4.11, 5.4, 6.6, 7.5 and 8.5 stop.
 4.11 is shown at 6.6's stop.
 
 1. **0.11** — do the probes kill an assumption?
