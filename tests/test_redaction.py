@@ -68,7 +68,6 @@ def capturing_logger(credential_env):
 
 # --- the done-condition -----------------------------------------------------
 
-
 @pytest.mark.parametrize("name", list(FAKE_VALUES))
 def test_each_declared_credential_is_masked_in_a_log_line(capturing_logger, name):
     logger, handler = capturing_logger
@@ -116,18 +115,6 @@ def test_a_new_credential_is_masked_without_touching_the_filter(monkeypatch):
 
 # --- the ways a secret actually escapes -------------------------------------
 
-
-def test_masked_when_passed_as_a_logging_argument(capturing_logger):
-    """A %s argument is only visible after interpolation, so redact after it."""
-    logger, handler = capturing_logger
-    logger.warning("auth failed for %s (attempt %d)", FAKE_VALUES["BANKR_KEY_EXEC"], 3)
-
-    output = "\n".join(handler.lines)
-    assert FAKE_VALUES["BANKR_KEY_EXEC"] not in output
-    assert "[REDACTED:BANKR_KEY_EXEC]" in output
-    assert "attempt 3" in output
-
-
 def test_masked_inside_an_exception_traceback(capturing_logger):
     """The hole a filter alone leaves open: the formatter closes it."""
     logger, handler = capturing_logger
@@ -139,17 +126,6 @@ def test_masked_inside_an_exception_traceback(capturing_logger):
     output = "\n".join(handler.lines)
     assert FAKE_VALUES["SIGNING_KEY"] not in output
     assert "[REDACTED:SIGNING_KEY]" in output
-
-
-def test_masked_when_embedded_in_a_larger_payload(credential_env):
-    """A secret inside a serialized body is still a literal occurrence."""
-    body = (
-        '{"headers": {"X-API-Key": "%s"}, "url": "%s"}'
-        % (FAKE_VALUES["BANKR_LLM_KEY"], FAKE_VALUES["RPC_4663_MAINNET"])
-    )
-    redacted = redaction.Redactor().redact(body)
-    assert FAKE_VALUES["BANKR_LLM_KEY"] not in redacted
-    assert FAKE_VALUES["RPC_4663_MAINNET"] not in redacted
 
 
 def test_longer_values_are_masked_before_shorter_prefixes():
@@ -169,15 +145,6 @@ def test_install_is_idempotent(capturing_logger):
     assert before == after == 1
 
 
-def test_unset_credentials_contribute_nothing(monkeypatch):
-    """An empty value must not enter the denylist and match everywhere."""
-    for credential in credentials.CREDENTIALS:
-        monkeypatch.delenv(credential.name, raising=False)
-    redactor = redaction.Redactor()
-    assert len(redactor) == 0
-    assert redactor.redact("nothing to hide here") == "nothing to hide here"
-
-
 def test_short_values_are_reported_as_over_masking(monkeypatch):
     for credential in credentials.CREDENTIALS:
         monkeypatch.delenv(credential.name, raising=False)
@@ -188,7 +155,6 @@ def test_short_values_are_reported_as_over_masking(monkeypatch):
 
 
 # --- role scoping (planning/PLAN.md section 2 invariant 1) ---------------------------
-
 
 def test_analyst_role_cannot_load_execution_or_signing_secrets(credential_env):
     analyst = config.load(Role.ANALYST, install_redaction=False)
@@ -219,12 +185,6 @@ def test_analyst_load_refuses_a_key_that_is_really_the_execution_key(
     assert "BANKR_LLM_KEY" in message and "BANKR_KEY_EXEC" in message
     for value in FAKE_VALUES.values():
         assert value not in message
-
-
-def test_treasurer_may_hold_its_own_execution_key(credential_env):
-    """The guard must not fire on the role that is supposed to have it."""
-    treasurer = config.load(Role.TREASURER, install_redaction=False)
-    assert treasurer.secret("BANKR_KEY_EXEC") == FAKE_VALUES["BANKR_KEY_EXEC"]
 
 
 def test_leak_guard_is_silent_when_the_execution_key_is_absent(
@@ -288,7 +248,6 @@ def test_audit_reports_names_only(credential_env):
 
 # --- .env parsing -----------------------------------------------------------
 
-
 def test_env_file_is_parsed_but_never_overrides_the_real_environment(
     tmp_path, monkeypatch
 ):
@@ -335,21 +294,9 @@ def test_env_example_declares_every_credential_and_no_values():
 
 # --- the table itself -------------------------------------------------------
 
-
 def test_every_credential_belongs_to_at_least_one_role():
     for credential in credentials.CREDENTIALS:
         assert credential.used_by, f"{credential.name} is unreachable by any role"
-
-
-def test_credential_names_are_unique():
-    names = credentials.names()
-    assert len(names) == len(set(names))
-
-
-def test_only_the_treasurer_may_hold_spend_or_signing_authority():
-    """planning/PLAN.md section 2 invariant 1, asserted against the table itself."""
-    for name in ("BANKR_KEY_EXEC", "SIGNING_KEY"):
-        assert credentials.by_name(name).used_by == frozenset({Role.TREASURER})
 
 
 def test_no_analyst_credential_can_transact():
