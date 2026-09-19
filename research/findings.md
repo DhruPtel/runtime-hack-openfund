@@ -3484,3 +3484,183 @@ arithmetic.**
   like.
 - **Caching was tested on one endpoint, in one request shape, twice.**
 - **Spent: $0.782714.** The balance went from $1.719862 to $0.937148.
+
+---
+
+## 2.0 — Can SIWE make an agent account? Measured once
+
+**Date:** 2026-09-19 · **Method:**
+- one `bankr login siwe` (installed CLI 0.3.37) under a separate config file;
+- the SIWE key fed in from a file by `probes/siwe/hook.mjs`, which also kept
+  the login's own answer;
+- then `PYTHONPATH=src python3 -m probes.siwe_agent --confirm`.
+
+**Captures:** the gitignored `probes/out/siwe_agent.json`. The login record and
+the agent's key and config sit outside the repository, in
+`~/.openfund/agents/price-integrity/`, mode 0600.
+
+**The question.** Phase 2 assumes each agent has its own Bankr account and
+address, a key that cannot transact, the Agent API off, and access to the LLM
+gateway so it pays for its own inference. The CLI's help and source cast doubt
+on the last: the SIWE request never asks for the gateway (LESSONS 2026-09-19).
+**Each property was tested by what the key does,** not by a flag.
+
+| Requirement | Result | Verdict |
+|---|---|---|
+| Its own address, distinct from the fund's | `0x42a9…3d27`, not the fund's and not the signer's | **pass**, measured |
+| Its key cannot transact | a signature and a quoted swap each refused 403 "Read-only API key" | **pass**, measured |
+| Agent API off | `/agent/prompt` refused 403 "Agent API access not enabled" | **pass**, measured |
+| Reaches the LLM gateway | every gateway call refused 403 "does not have LLM Gateway access enabled" | **fail**, measured |
+| Can buy its own credits | the top-up refused 403 at the gateway toggle, before anything else was checked | **fail** for this key; read-only's own effect **unresolved** |
+
+### F2.0.1 — The account exists, with its own address
+
+**Confidence: measured. Verdict: pass.**
+
+The login returned `walletAddress` `0x42a9bd235aedd68e9f2881710577105cb46e3d27`.
+- `/wallet/me` and `/wallet/portfolio`, read with the new key, name the same
+  address.
+- It is neither the fund's `0x93fa…a3da` nor the SIWE signer's
+  `0x45e1E65c…94bd1`.
+- `/wallet/me` lists the account's one identity as a social account of
+  platform `api`, whose username is the signer's address.
+
+So the signer is the account's sign-in identity, and **the wallet is a new
+Bankr-custodied wallet, not the signer's own address.** The CLI's source implied
+this; this measures it. A never-issued key drew 401 on the same endpoint.
+
+### F2.0.2 — The login reports one flag: `readOnly: true`
+
+**Confidence: measured.**
+- **Sent:** `readOnly: true`, `walletApiEnabled: true`, `agentApiEnabled:
+  false`, `tokenLaunchApiEnabled: false`, and no `llmGatewayEnabled`.
+- **Answered:** `success`, `apiKey`, `walletAddress` and `readOnly: true`.
+  Nothing more.
+
+So "the key's flags as the API reports them" is `readOnly` alone. The Agent API
+and the gateway are not reported, and F2.0.3 to F2.0.5 establish them by
+behaviour.
+
+### F2.0.3 — The key cannot transact, and says why
+
+**Confidence: measured. Verdict: pass.**
+
+| Request, with the agent key | Answer |
+|---|---|
+| `POST /wallet/sign`, `personal_sign` of a plain message | **403** `{"error":"Read-only API key","message":"This API key has read-only access and cannot sign messages or transactions. …"}` |
+| `POST /wallet/swap`, 0.00003 ETH → USDG on 4663, with a live quote's `minBuyAmount` and `quoteId` | **403** `{"error":"Read-only API key","message":"This API key has read-only access and cannot execute swaps. …"}` |
+| `POST /wallet/sign` with a never-issued key (control) | **401** |
+
+**Why the refusals are attributable.**
+- A signature needs no balance, so the empty wallet cannot be why it was
+  refused.
+- Both bodies name the permission, and the swap's quote succeeded first (200).
+- The wallet was read empty on every chain it could spend from, before and
+  after: 0 ETH on 4663, 0 ETH and 0 USDC on Base. **Nothing could have moved,
+  and nothing did.**
+
+The one signing surface that exists, `/wallet/sign`, is guarded by the
+read-only toggle.
+
+### F2.0.4 — The Agent API is off, measured by refusal
+
+**Confidence: measured. Verdict: pass.**
+- **`/agent/prompt`,** with a prompt asking for no action, drew **403**
+  `{"error":"Agent API access not enabled", …}`. This settles for this key
+  what F0.2.5 could not settle by a read. A refused write names the toggle,
+  where a read of an unknown job did not.
+- **`POST /agent/sign`** drew **404** `Cannot POST /agent/sign`. The route
+  `research/bankr-claude.md` lists (from `bankr-sign-submit-api/SKILL.md`)
+  does not exist at `api.bankr.bot` for POST. The signing surface is
+  `/wallet/sign` (F2.0.3).
+
+### F2.0.5 — The key cannot reach the LLM gateway
+
+**Confidence: measured. Verdict: fail, against the plan.**
+- `GET /v1/credits`, `GET /v1/models` and `POST /v1/chat/completions` (5
+  tokens, `claude-sonnet-5`) all drew **403** `{"error":{"message":"This API
+  key does not have LLM Gateway access enabled. Enable it in your API key
+  settings at bankr.bot/api-keys","type":"auth_error"}}`.
+- **This is the same body `BANKR_KEY_READ` draws,** and that key is the known
+  gateway-off control (F0.2.4). A never-issued key drew 401.
+- It agrees with the CLI's source: the SIWE request never sends
+  `llmGatewayEnabled`. **For this key, measured, the server's default is off.**
+
+Without the gateway, the agent cannot run inference on its own account at all.
+
+### F2.0.6 — The agent cannot buy its own credits with this key
+
+**Confidence: the refusal is measured. The read-only question is unresolved.**
+
+`POST /llm/credits/topup` is the call `bankr llm credits add` makes. It was
+sent for $1 from Base, from a wallet read as holding 0 USDC, so it could not
+spend. It drew **403** `{"error":"LLM Gateway access not enabled", …}`.
+
+The gateway check fires first. **So whether a read-only key *with* gateway
+access could buy credits is not measured.** The top-up moves the wallet's USDC,
+and read-only might refuse it too.
+
+### F2.0.7 — The fund's session and both secrets stayed where they belong
+
+**Confidence: measured.**
+- **The fund's CLI config** hashed `ae5bcd22…` before and after, and
+  `bankr whoami` still answers `0x93fa…a3da`.
+- **The agent key** was written only to its own config file, outside the
+  repository, and is masked in every capture.
+- **The SIWE key** never appeared on a command line: the hook spliced it in
+  inside the process. It never entered the probe that tested the agent key.
+- **A scan of the working tree,** gitignored files included, finds neither
+  secret.
+
+### Verdict
+
+**The five-wallet plan cannot proceed as designed through SIWE alone.**
+- Three of the four requirements hold, each measured by a refusal that names
+  its reason.
+- The fourth fails: the key cannot reach the LLM gateway. So the agent can
+  neither run inference nor buy credits on its own account.
+
+**The options** are recorded, not chosen:
+- **(a) Email sign-ups.** `bankr login email <address> --llm`, which is the CLI
+  path that sends `llmGatewayEnabled` (documented by code, **not tested**),
+  with `--read-only --no-agent-api --no-token-launch`. It costs five email
+  identities and five one-time codes. Whether plus-addressing gives distinct
+  accounts is unknown. Each key would need the same four measurements.
+- **(b) The dashboard.** The 403 itself names `bankr.bot/api-keys`. Whether a
+  SIWE-made account can sign in there is **unknown**. Its only identity is the
+  `api` account keyed to the signer. Signing in with a browser wallet would
+  expose the SIWE key in a new place.
+- **(c) Own wallets, inference on the fund's key.** **Available now,
+  measured.**
+  - Each agent keeps an account like this one: its own address, read-only,
+    Agent API off.
+  - Its inference bills to the fund's `BANKR_LLM_KEY`, which reaches the
+    gateway (F0.6.1) and holds $0.937148.
+  - It gives up "each agent pays for its own inference", and per-agent cost
+    goes back to F0.6.4's aggregate.
+- **Untested, recorded rather than tried:** a direct `/cli/siwe/verify` with
+  `llmGatewayEnabled: true`. That is the field the email flow's key creation
+  takes. Whether the SIWE route accepts it is unknown, and trying it mints a
+  second key on this account.
+- **Ruled out:** one shared wallet.
+
+### What 2.0 changes
+
+| Change | Where |
+|---|---|
+| The five-wallet plan waits on the operator's choice among (a), (b) and (c). 2.4's credential rows wait with it. | `planning/PHASE-2.md` 2.0 and 2.4 |
+| One agent account exists: `price-integrity`, `0x42a9…3d27`. Its key is outside the repository and not in `.env`. | — |
+| A refused write names its toggle, so the Agent API's state is measurable. That is cheaper than F0.2.5 thought. | F0.2.5 |
+| `POST /agent/sign` does not exist at `api.bankr.bot`. | `research/bankr-claude.md` |
+
+### Method limitations
+
+- **One account, one key, one moment.** The gateway default could differ by
+  account type or change over time.
+- **The refusals were all sent to an empty wallet.** They are attributable
+  because each body names the permission, and because a signature needs no
+  balance.
+- **Not tried:** `/wallet/submit`, `/wallet/transfer`, typed-data signing.
+  F2.0.3's body says read-only refuses "messages or transactions".
+- **Spent: $0.** Nothing was bought, nothing moved, and every attempt was sent
+  once.
