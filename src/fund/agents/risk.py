@@ -83,8 +83,10 @@ class Settings:
     gateway_url: str = bankr_llm.GATEWAY
 
     @classmethod
-    def from_config(cls) -> "Settings":
-        models = config.load_json("models.json")
+    def from_config(cls, config_dir: Path | None = None) -> "Settings":
+        """From `models.json` in `config_dir`, or `config/` without one. A replay
+        passes the copy its cycle carries (3.9), never the working tree."""
+        models = config.load_json("models.json", config_dir)
         return cls(model=models["risk_model"], max_tokens=models["max_output_tokens"],
                    transport_timeout_s=models["transport_timeout_seconds"],
                    worker_deadline_s=models["worker_deadline_seconds"],
