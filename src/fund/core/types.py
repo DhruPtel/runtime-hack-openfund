@@ -1012,13 +1012,15 @@ class PinnedInput:
 # --- orders and the evidence that one executed ---------------------------------
 
 class OrderState(enum.Enum):
-    """The durable states of PLAN §4, each written before the action it describes."""
+    """The durable states of PLAN §4, each written before the action it describes.
+    Which moves between them exist is `core/orders.py`'s (4.0, P1)."""
 
     PREPARED = "prepared"
     SUBMITTED = "submitted"
     UNKNOWN = "unknown"      # timeout, dropped connection, or 409 in flight
     CONFIRMED = "confirmed"
-    FAILED = "failed"
+    FAILED = "failed"        # an evidenced failure, after sending
+    REFUSED = "refused"      # refused by the chokepoint before sending: nothing sent (4.0, P12)
 
 
 class ExecutionMode(enum.Enum):
@@ -1179,11 +1181,12 @@ class Order:
             raise ValueError("an order sells one asset for another, min_buy in the bought one")
         if self.wallet.chain_id != self.sell.asset.chain_id:
             raise ValueError("the wallet is on the order's chain")
-        if self.state in (OrderState.UNKNOWN, OrderState.FAILED):
+        if self.state in (OrderState.UNKNOWN, OrderState.FAILED, OrderState.REFUSED):
             _text("state_reason", self.state_reason)
         if self.execution is not None and self.state in (OrderState.PREPARED,
-                                                         OrderState.SUBMITTED):
-            raise ValueError("no execution evidence exists before an outcome")
+                                                         OrderState.SUBMITTED,
+                                                         OrderState.REFUSED):
+            raise ValueError("no execution evidence exists before an outcome, or without a send")
         if self.mode is ExecutionMode.PAPER:
             if self.execution is not None:
                 raise ValueError("a paper order has no chain evidence")
