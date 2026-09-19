@@ -2684,3 +2684,50 @@ old plan's hash.
   a stop, at the operator's word. `CLAUDE.md`'s stop list does not say so yet:
   it is outside this pass's paths, and is owed.
 **Affects:** 3.3, 3.7, 3.9, 2.3; every later record; Phase 4; `CLAUDE.md`.
+
+## 2026-09-19 — 3.9's replay read the working tree's config, and judged by today's gates
+**What we believed.** 3.9 rebuilt the exit run's record from its recorded inputs
+alone.
+
+**What the orientation after Phase 3 found.** The record names the sha256 of
+four config files, but the replay read `config/` from the working tree, and the
+cycle kept no copy. 4.1 rewrites `mandate.json`, so the first unit of Batch B
+would have failed the byte-for-byte test, and so would S11's new threshold or a
+retuned confidence weight. The record also holds `gates.evaluate`'s output, and
+only the plan's layout was versioned, so S10 and S11 would have changed the
+rebuild too. Building the fix found two more reads of the tree on the replay's
+path: the validator's contract (`analysts.json`) and the quote verdicts
+(`thresholds.json`).
+
+**What changed.**
+- A decision reads its config once, from one directory, and writes the copy it
+  read beside its record. Both recorded cycles now carry theirs, and
+  `decide.replay` reads that copy and refuses one that is not what the record
+  names.
+- A record's schema names its gate set beside its plan's layout, and a replay
+  judges by that set. Set 1 is the Phase 3 gates; S10 and S11 make set 2 at 4.4.
+- `risk.Settings.from_config` takes the directory: one change in `agents/`,
+  approved.
+
+Nine rules broken in a copy, each caught (LOGS, "3.9 hardened").
+**Affects:** 3.9, 4.1, 4.4, every later record; `run/decide.py`, `core/gates.py`,
+`core/record.py`, `agents/risk.py`, `fixtures/cycles/`.
+
+## 2026-09-19 — DECISIONS for Phase 4, and the five values 4.0 was missing
+*The operator's, before 4.0.*
+- **Cost basis:** average cost. **A fee is not basis:** it is its own cost line,
+  as 6.1 shows it (asked at 4.0).
+- **Paper cash:** USDG units at USDG's own mark, not assumed to be a dollar.
+- **The mandate:** approved by the operator, a 7-day expiry, and the 35 markable
+  stocks plus ETH and USDG. 4.1 writes it.
+- **The published key:** `config/keys.json`, the public half only. 4.2 writes it.
+- **S11:** a snapshot at most 15 minutes old. The 17:13Z decision came 11 hours
+  after its snapshot. 4.4 builds it, as gate set 2.
+- **4.12's refused swaps:** authorized.
+
+The orientation also found five values that several Phase 4 units would each
+have computed: events that are not fills, the paper and real books, a book's NAV
+and its cash leg, cash partway through a decision, and a refused order's state.
+The same class as the three cash bugs of the 3.8 sweep. They join 4.0 as P8 to
+P12 (`planning/PHASE-4.md`).
+**Affects:** 4.0 to 4.12, 6.1, 6.2; `planning/PHASE-4.md`.
