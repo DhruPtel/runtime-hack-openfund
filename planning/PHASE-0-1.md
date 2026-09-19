@@ -912,9 +912,10 @@ pinned block may enter. Then it applies, in order:
 2. **The corroborator line** (1.4, `config/thresholds.json`): below $1M of 24h
    volume, the asset is excluded from the universe.
 3. **The divergence veto** above that line, past 100 bps, **in an open session
-   only**. In a closed session the mark stands at the last round, and the
-   divergence is carried in the entry as a finding for the decision record
-   (DECISION, LESSONS 2026-09-18).
+   only**. In a closed session the mark stands at the last round. A divergence
+   past the open-session limit is carried in the entry as a finding for the
+   decision record, and a smaller one stays in the corroboration block
+   (DECISIONs, LESSONS 2026-09-18).
 4. **Tradeability**, defined operationally: a quote at the intended size
    succeeded; its age is within 60 s; and its impact is known and at most 50 bps
    signed, **or null — and null blocks**. There is no depth term. Pools exist

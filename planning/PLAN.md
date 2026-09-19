@@ -611,10 +611,11 @@ mandate.
   `config/thresholds.json` (0.4 checkpoint). **The veto fires in an open
   session only** (DECISION 2026-09-18). In an inferred closed session the feed
   is frozen and the pools trade on, so divergence measures movement since the
-  close. The mark stays at the last published price, and the divergence is
-  recorded as a finding that reaches the decision record, so a buyer sees the
-  pool moved while the feed was frozen. *Not yet in code: 1.4's
-  `cross_check()` still vetoes in a closed session.*
+  close. The mark stays at the last published price. A divergence past the
+  open-session limit is recorded as a finding that reaches the decision
+  record, so a buyer sees the pool moved while the feed was frozen, and a
+  smaller one stays visible in the corroboration block (DECISION 2026-09-18).
+  In code since 1.6.
 - **No Chainlink feed, not held.** An asset without a feed has no mark
   independent of the venue we trade on, so feed presence is a membership
   condition. That caps the investable universe at the 35 equity feeds
