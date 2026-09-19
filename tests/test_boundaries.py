@@ -13,8 +13,9 @@ import dataclasses
 import json
 import pathlib
 
-from fund.adapters import bankr_quote
+from fund.adapters import bankr_quote, chain_4663
 from fund.core import valuation
+from fund.core.types import BPS, USD, Fixed, Instant
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SRC = REPO / "src"
@@ -234,3 +235,60 @@ def test_one_gate_definition_names_its_three_exceptions():
     assert elsewhere == {}
     assert {site for site in NAMED_EXCEPTIONS if site not in found} == set(), \
         "a named exception no longer compares: take it off the list"
+
+
+# --- no threshold literal outside config ------------------------------------------------------
+
+def _gate_values() -> set[int]:
+    """The values of every threshold the code reads by name."""
+    source = "\n".join(p.read_text() for p in MODULES.values())
+    return {v for k, v in THRESHOLDS.items()
+            if k in THRESHOLD_KEYS and type(v) is int and f'"{k}"' in source}
+
+
+def test_no_threshold_value_is_written_into_a_comparison():
+    """A threshold appears as a literal nowhere outside config/ (CODEBASE §8): no
+    ordering comparison under src/ carries a number that a read threshold holds."""
+    values = _gate_values()
+    assert {25, 50, 60, 100, 3600, 1_000_000} <= values
+    literal = []
+    for module, path in MODULES.items():
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Compare) and any(isinstance(op, ORDERING) for op in node.ops):
+                literal += [f"{module}:{node.lineno}: {ast.unparse(node)}" for sub in ast.walk(node)
+                            if isinstance(sub, ast.Constant) and type(sub.value) in (int, float)
+                            and sub.value in values]
+    assert literal == []
+
+
+def test_each_named_exception_obeys_the_threshold_it_is_given():
+    """The three exceptions take their numbers as arguments (DECISION 2026-09-18),
+    so a threshold that is not the configured one changes the verdict."""
+    from test_bankr_quote import FETCHED as QUOTED, TWENTY_FIVE, parsed, recorded
+    from test_chain_4663 import BLOCK, DAY, addr, feed, reading_aged
+    from test_valuation import AMZN, FRESH, gecko, reading
+
+    def divergence(max_bps: int, min_volume: int) -> str | None:
+        rule = valuation.DivergenceRule(max_bps=Fixed(max_bps, 0, BPS),
+                                        min_volume_usd=Fixed(min_volume, 0, USD))
+        mark = valuation.mark(AMZN, reading(AMZN, 25260000000), FRESH)  # 252.60
+        return valuation.cross_check(mark, *gecko(AMZN, "253.61"), rule, independent=True).rule
+
+    def quote(max_age: int, max_impact: int) -> str | None:
+        limits = bankr_quote.Limits(max_age=Fixed(max_age, 0, "s"),
+                                    max_impact=Fixed(max_impact, 0, BPS), nominal=Fixed(25, 0, USD))
+        ten_seconds_later = Instant(QUOTED.epoch_ms + 10_000)
+        return bankr_quote.tradeability(parsed(recorded(swapImpactBps=18)), TWENTY_FIVE,
+                                        ten_seconds_later, limits).rule
+
+    def fresh(margin_s: int) -> bool | None:
+        return chain_4663.freshness(reading_aged(DAY + 5_400), feed(addr(1)), BLOCK.timestamp,
+                                    margin_s).value
+
+    # A 39.8 bps divergence on $2.19M of volume, a quote 10 s old at 18 bps, and a
+    # round 90 minutes past its heartbeat: each verdict follows the number given.
+    assert (divergence(1000, 1_000_000), divergence(10, 1_000_000), divergence(1000, 5_000_000)) \
+        == (None, valuation.RULE_DIVERGENCE, valuation.RULE_CORROBORATOR_LINE)
+    assert (quote(60, 500), quote(5, 500), quote(60, 5)) \
+        == (None, bankr_quote.RULE_QUOTE_AGE, bankr_quote.RULE_IMPACT)
+    assert (fresh(7_200), fresh(3_600)) == (True, False)
