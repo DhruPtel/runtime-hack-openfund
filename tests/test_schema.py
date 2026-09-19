@@ -480,3 +480,42 @@ def test_a_report_with_no_call_and_no_abstention_is_still_refused():
     v = verdict(no_calls_example().replace("\nNO CALLS", "\nNothing to add.", 1),
                 "cross-asset-macro")
     assert rules(v) == {"no-calls"}
+
+
+# --- S2: basis points and the sign of divergence_bps -------------------------------------------------
+
+def _integrity_line(symbol: str, line: str) -> str:
+    """price-integrity's approved report with one figure line added under a call."""
+    text = example("price-integrity")
+    head = next(l for l in text.splitlines() if l.startswith(f"CALL {symbol} "))
+    return text.replace(head, head + "\n" + line, 1)
+
+
+@pytest.mark.parametrize("symbol, line, ok", [
+    ("AMZN", "- 450.32 bps above the mark [corroboration.divergence_bps]", True),
+    ("AMZN", "- -450.32 bps [corroboration.divergence_bps]", True),
+    ("AMD", "- a -105.98 bps divergence [corroboration.divergence_bps]", True),
+    ("MSTR", "- the venue sits 54 bps below GeckoTerminal, a -183.84 bps divergence "
+             "[quote.venue_price_usd, corroboration.price_usd, corroboration.divergence_bps]", True),
+    ("AMZN", "- 460.32 bps above the mark [corroboration.divergence_bps]", False),
+    ("MSTR", "- the venue sits 84 bps below GeckoTerminal, a -183.84 bps divergence "
+             "[quote.venue_price_usd, corroboration.price_usd, corroboration.divergence_bps]", False),
+])
+def test_a_bps_figure_is_the_field_in_either_sign_or_computed_from_cited_prices(symbol, line, ok):
+    """At the sweep, `450.32 bps above` against AMZN's -450.32 was refused, and so was
+    a computed gap on a line that also cites divergence_bps. A bps figure that is
+    neither the field nor one step from cited prices still refuses."""
+    v = verdict(_integrity_line(symbol, line), "price-integrity")
+    assert v.ok is ok, v.refusals
+
+
+def test_the_brief_states_the_sign_of_divergence_bps_and_the_capture_agrees():
+    from fund.agents import analyst
+    shared = (analyst.BRIEFS / "analyst.v1.md").read_text()
+    assert "positive when the mark is above" in shared
+    for symbol, sign in (("AMD", 1), ("AMZN", -1)):
+        entry = next(a for a in SNAPSHOT["assets"] if a["asset"]["symbol"] == symbol)
+        mark, gecko = (float(entry["mark"]["price_usd"]),
+                       float(entry["corroboration"]["price_usd"]))
+        assert (mark > gecko) == (sign > 0)
+        assert (float(entry["corroboration"]["divergence_bps"]) > 0) == (sign > 0)

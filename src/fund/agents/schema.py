@@ -63,7 +63,9 @@ chance, and the fabrication check would be weaker for it.
   fabricated (S1). A figure that is no such step still refuses;
 - a figure in bps, unless its line cites a field that is itself in bps, such as
   `quote.swap_impact_bps` or `corroboration.divergence_bps`. Then it names that
-  field and is checked against it;
+  field, in either sign, since a direction may be said in words ("450.32 bps
+  above"), or it is one step from two prices the line cites; otherwise it is
+  refused (S2);
 - anything on a line that cites only a whole series (`[timeline]`).
 
 2.6's first real report wrote five divergences it had computed between prices
@@ -580,7 +582,9 @@ def _check_figure(figure: Figure, fields: list[_Resolved], *, loose: bool,
         scale = Decimal(1_000_000) if kind == "millions" else Decimal(1)
         if any(_matches(claim, v / scale) for _, v in _fits(kind, singles)):
             continue
-        if kind == "plain" and _derived(claim, [v for _, v in singles]):
+        if kind == "bps" and any(_matches(-claim, v) for _, v in _fits(kind, singles)):
+            continue  # the field, its direction said in words: "450.32 bps above" (S2)
+        if kind in ("plain", "bps") and _derived(claim, [v for _, v in singles]):
             continue  # computed from the fields the line cites, as the brief asks
         held = held if held is not None else [(f, _number(f.value)) for f in pool()]
         match = next((f for f, v in _fits(kind, held) if _matches(claim, v / scale)), None)
