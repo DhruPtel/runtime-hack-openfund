@@ -437,7 +437,8 @@ def test_p8_only_the_ledger_reads_a_fill_or_decides_what_an_event_does():
 
 def test_p9_only_the_ledger_decides_which_book_an_event_is_in():
     """No module outside core/ledger.py compares against a book's name or reads an
-    event's book. `plan.book` is the planner's function, not a book."""
+    event's book. `plan.book` is the planner's function, not a book, and a computed
+    book's own label is `BookValue.book_name`, so `.book` here is always an event's."""
     found = []
     for module, tree in _outside("fund.core.ledger"):
         for node in ast.walk(tree):

@@ -41,8 +41,8 @@ def reconciles(value: ledger.BookValue) -> Decimal:
         residual = value.nav_usd - (value.opened_usd + value.realised_usd
                                     + value.unrealised_usd - value.costs_usd)
     if residual != 0:
-        raise BooksDisagree(f"the {value.book} book's NAV is {value.nav_usd}, and its lines make "
-                            f"{value.nav_usd - residual}: a difference of {residual}")
+        raise BooksDisagree(f"the {value.book_name} book's NAV is {value.nav_usd}, and its lines "
+                            f"make {value.nav_usd - residual}: a difference of {residual}")
     return residual
 
 
@@ -65,7 +65,7 @@ def statement(value: ledger.BookValue, snapshot: Mapping[str, Any]) -> str:
     symbols = {a["asset"]["address"]: a["asset"]["symbol"]
                for a in [*snapshot["assets"], *snapshot["holdings"]]}
     block = snapshot["block"]
-    lines = [f"the {value.book} book at block {block['number']} ({block['time']})",
+    lines = [f"the {value.book_name} book at block {block['number']} ({block['time']})",
              _row("asset", "units", "value", "basis", "unrealised")]
     for asset, position in sorted(value.positions.items(),
                                   key=lambda p: symbols.get(p[0].address, p[0].address)):

@@ -420,7 +420,7 @@ class BookValue:
     """One book at the snapshot's marks: its cash, every other holding as a position
     (ETH included), its NAV, and the lines that explain it."""
 
-    book: str
+    book_name: str  # not `book`: only an event has one, and only this module reads it (P9)
     cash: Position
     positions: Mapping[AssetId, Position]
     nav_usd: Decimal
@@ -445,7 +445,7 @@ def value(events: Iterable[Event], *, book: str, snapshot: Mapping[str, Any]) ->
     held = dict(walked.held)
     money = _position(*held.pop(asset, (Amount(0, decimals, asset), Decimal(0))), snapshot)
     positions = {a: _position(amount, cost, snapshot) for a, (amount, cost) in held.items()}
-    return BookValue(book=book, cash=money, positions=positions,
+    return BookValue(book_name=book, cash=money, positions=positions,
                      nav_usd=cash.nav(money.value_usd, [p.value_usd for p in positions.values()]),
                      opened_usd=walked.opened, realised_usd=walked.realised,
                      costs_usd=walked.costs, expenses_usd=walked.expenses)
