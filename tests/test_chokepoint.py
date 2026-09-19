@@ -21,7 +21,7 @@ from fund import config
 from fund.core import cash, gates, ledger, orders
 from fund.core.types import USD, Amount, Instant, Price
 from fund.run.fake_venue import FakeVenue
-from fund.treasurer import execute, intent, mandate, sign
+from fund.treasurer import execute, intent, keys, mandate, sign
 
 REPO = Path(__file__).resolve().parents[1]
 CYCLE = REPO / "fixtures" / "cycles" / "20260919T202259Z" / "decision"
@@ -35,7 +35,7 @@ OTHER_SNAPSHOT = (REPO / "fixtures" / "snapshots" / "66852293-253315c0e691"
 MANDATE = mandate.load()
 THRESHOLDS = config.load_json("thresholds.json")
 LIMITS = gates.Limits.from_config(THRESHOLDS, MANDATE, config.load_json("models.json"))
-PUBLISHED = sign.published_key()
+PUBLISHED = keys.published_key()
 AT = Instant(int(datetime.fromisoformat(MANDATE["approved_at"].replace("Z", "+00:00"))
                  .timestamp() * 1000) + 3_600_000)
 USDG, _ = cash.cash_leg(SNAPSHOT)

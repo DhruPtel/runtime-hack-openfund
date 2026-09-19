@@ -22,7 +22,8 @@ only when all of these hold:
 Anything else is refused, and the reason is named.
 
 **The trusted key is the published one** (S13, 4.2): `config/keys.json`, the public
-half only, read by `published_key`. Never the key an envelope names: an envelope
+half only, read by `treasurer/keys.py`, which needs no secret and which anything may
+import. Never the key an envelope names: an envelope
 signed by any key names that key, so checking against it proves nothing.
 """
 
@@ -44,8 +45,8 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from fund import config
 from fund.core.types import Check
 from fund.credentials import Role
+from fund.treasurer.keys import ALGORITHM, published_key
 
-ALGORITHM = "ed25519"
 _SEED = re.compile(r"^[0-9a-fA-F]{64}$")
 
 
@@ -92,19 +93,6 @@ def authorizes(envelope: Mapping[str, Any], record: bytes, trusted_public_key: s
         return Check(False, "the signature does not verify against the record's bytes")
     return Check(True, f"signed by {trusted_public_key[:16]}… over decision "
                        f"{envelope['decision_id'][:16]}…")
-
-
-def published_key(config_dir: Path | None = None) -> str | None:
-    """The fund's published decision-signing key, from `keys.json` in `config_dir`
-    (`config/` without one). None if none is published: then nothing authorizes."""
-    try:
-        keys = config.load_json("keys.json", config_dir)
-    except FileNotFoundError:
-        return None
-    signing = keys.get("decision_signing") or {}
-    if signing.get("algorithm") != ALGORITHM or not isinstance(signing.get("public_key"), str):
-        return None
-    return signing["public_key"]
 
 
 def treasurer_key(env_file: Path | None = None) -> Ed25519PrivateKey:

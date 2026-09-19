@@ -28,7 +28,7 @@ from fund.core.types import (
     Amount, AssetId, ChainAddress, ExecutionMode, Instant, Order, OrderState, from_canonical,
 )
 from fund.treasurer import mandate as mandates
-from fund.treasurer import sign
+from fund.treasurer import keys, sign
 
 
 class IntentError(ValueError):

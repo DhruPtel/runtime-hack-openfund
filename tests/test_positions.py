@@ -27,7 +27,7 @@ def kept(tmp_path) -> Journal:
 
 
 def test_a_position_is_what_the_journals_events_add_up_to(tmp_path):
-    paper = positions.book(kept(tmp_path), book="paper", snapshot=SNAPSHOT)
+    paper = positions.read(kept(tmp_path), book="paper", snapshot=SNAPSHOT)
     held = {asset.address: position for asset, position in paper.positions.items()}
     for fill in SIX:
         bought = held[fill.got.asset.address]
@@ -42,8 +42,8 @@ def test_a_position_is_what_the_journals_events_add_up_to(tmp_path):
 
 def test_the_two_books_are_kept_apart_and_never_added(tmp_path):
     journal = kept(tmp_path)
-    paper = positions.book(journal, book="paper", snapshot=SNAPSHOT)
-    real = positions.book(journal, book="real", snapshot=SNAPSHOT)
+    paper = positions.read(journal, book="paper", snapshot=SNAPSHOT)
+    real = positions.read(journal, book="real", snapshot=SNAPSHOT)
     assert ETH in real.positions and ETH not in paper.positions
     assert real.expenses_usd == Decimal("0.099454") and paper.expenses_usd == 0
     shown = positions.statement(paper, SNAPSHOT) + positions.statement(real, SNAPSHOT)
@@ -52,7 +52,7 @@ def test_the_two_books_are_kept_apart_and_never_added(tmp_path):
 
 
 def test_the_statement_reconciles_before_it_prints(tmp_path):
-    paper = positions.book(kept(tmp_path), book="paper", snapshot=SNAPSHOT)
+    paper = positions.read(kept(tmp_path), book="paper", snapshot=SNAPSHOT)
     assert positions.reconciles(paper) == 0
     shown = positions.statement(paper, SNAPSHOT)
     assert "= NAV" in shown and "exactly" in shown
@@ -67,7 +67,7 @@ def test_the_statement_reconciles_before_it_prints(tmp_path):
 
 
 def test_the_costs_of_the_real_book_come_off_its_nav_and_inference_never_does(tmp_path):
-    real = positions.book(kept(tmp_path), book="real", snapshot=SNAPSHOT)
+    real = positions.read(kept(tmp_path), book="real", snapshot=SNAPSHOT)
     with localcontext(cash.EXACT):
         assert real.nav_usd == (real.opened_usd + real.realised_usd + real.unrealised_usd
                                 - real.costs_usd)

@@ -16,13 +16,13 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from fund.core import orders
 from fund.core.types import ExecutionMode, Instant, OrderState, from_canonical
-from fund.treasurer import intent, mandate, sign
+from fund.treasurer import intent, keys, mandate, sign
 
 REPO = Path(__file__).resolve().parents[1]
 DECISION = REPO / "fixtures" / "cycles" / "20260919T202259Z" / "decision"
 RECORD = (DECISION / "record.json").read_bytes()
 ENVELOPE = json.loads((DECISION / "envelope.json").read_text())
-PUBLISHED = sign.published_key()
+PUBLISHED = keys.published_key()
 MANDATE = mandate.load()
 PROVISIONAL = json.loads((DECISION / "config" / "mandate.json").read_text())
 

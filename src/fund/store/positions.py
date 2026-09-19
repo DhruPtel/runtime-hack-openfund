@@ -30,8 +30,8 @@ class BooksDisagree(ValueError):
     """A book's NAV is not what its own lines add up to. Nothing is shown."""
 
 
-def book(journal: Journal, *, book: str, snapshot: Mapping[str, Any]) -> ledger.BookValue:
-    """One book, from the journal's events alone."""
+def read(journal: Journal, *, book: str, snapshot: Mapping[str, Any]) -> ledger.BookValue:
+    """One book's positions, from the journal's events alone."""
     return ledger.value(journal.events(), book=book, snapshot=snapshot)
 
 
