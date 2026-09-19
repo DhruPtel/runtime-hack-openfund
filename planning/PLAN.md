@@ -325,7 +325,10 @@ what each finding changed, is in `PHASE-0-1.md`.*
 - **1.8** Held-but-untradeable handling: an asset out of the buy universe remains
   a holding with explicit valuation and execution status. There are five ways
   out, each with its own status — listed-but-not-ACTIVE among them — and USDG
-  and ETH are carried as holdings.
+  and ETH are carried as holdings. *Built:* every holding row carries a
+  universe status and a holding status (owned, valued, exit). An asset the
+  registry drops while held is carried, so it never leaves the book. Each way
+  out is tested.
 - **1.9** ▶ **Fixture generation and offline replay:** *Show: the same command
   producing a byte-identical snapshot from a fixture, network off.* Fixtures are
   the only mechanism for historical reproducibility, because no archive RPC is

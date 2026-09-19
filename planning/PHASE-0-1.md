@@ -1106,6 +1106,37 @@ where it can be, flagged, and never dropped. What the record adds:
 and each time the position survives with its named status. USDG and ETH appear
 in the book, valued from their feeds.
 
+**Built:**
+- **Two statuses on every holding row.** The snapshot's holdings rows carry a
+  `universe_status` and a `holding_status`:
+  - `owned`: the balance, or why it was not read;
+  - `valued`: true at its own mark, and false or undetermined with the reason
+    otherwise, never zero and never the venue quote;
+  - `exit`: true for cash, and *not assessed* for ETH and stocks, since Phase
+    1 reads no sell quote and a stock sale is paper (F0.5.1).
+- **The quiet way out, closed.** An asset the registry drops while it is held
+  was the only way a holding could leave the book: after an acknowledged
+  removal, nothing read its balance. `accept()` now writes it to
+  `pins.json`'s `carried` list, and the live read keeps reading it
+  (LESSONS 2026-09-18).
+- **The history rule.** A short series now blocks tradeability
+  (`short_history`).
+
+**Met**, offline, by `tests/test_holdings.py` (24 tests):
+- a held NVDA is taken out **ten ways**: the five here, with identity in doubt
+  both as a carried delisting and as an unread beacon, and the four
+  per-snapshot statuses 1.6 and 1.8 added;
+- each keeps its row, balance and status, and is valued at its mark or
+  carried at null with a reason;
+- the set of holdings is identical before and after each change;
+- a test fails if a way-out status has no case;
+- three mutations that drop or zero a holding were each caught;
+- `tests/test_run_snapshot.py` proves the carried route through the live
+  path.
+
+**Live,** at block 66750551, USDG and ETH carry both statuses, valued from their
+own feeds. The wallet holds no stock, so the stock routes are proven offline.
+
 **Risk:** this is the quiet bug that makes a portfolio report lie, and there are
 now five doors instead of one.
 
