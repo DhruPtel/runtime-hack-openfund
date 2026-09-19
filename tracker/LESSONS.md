@@ -1017,3 +1017,36 @@ from the chain adapter.
   but it does not vary by session. Making it vary would change the decided rule
   (the weekend entry above).
 **Affects:** 1.4, 1.5, 1.8; `planning/CODEBASE.md`.
+
+## 2026-09-18 — The feed verdict names a schedule, not a session, so the weekend decision is not recorded
+**What we believed.** 1.3's closing summary told the operator that "the market
+session is named in each verdict". A weekend decision was drafted on that
+premise:
+- a gap inside a closed session is expected, and the last round stands as the
+  mark;
+- a gap during an open session stays stale and blocks.
+
+**What the record holds.** The verdict's reason carries the feed's
+`marketHours` from the pinned Chainlink directory: `us_equities_24/5` for 35
+feeds and `Crypto` for 22. That names a schedule. Nothing pinned, configured or
+measured says when the schedule is open. There are no hours, no timezone or
+daylight-saving rule, and no holiday calendar.
+
+**What one weekend showed.**
+- Every equity feed's first round came at Monday 00:00Z (Sunday 20:00 EDT).
+- Friday's last rounds fell between 12:49Z and 00:01Z Saturday. A quiet feed's
+  last round says when its price last moved, not when the session closed.
+- SGOV, which updates on its heartbeat alone, published at 00:01Z Saturday. So
+  the feed was still running at 20:01 ET on Friday.
+- If the schedule follows New York time, its UTC boundaries move by an hour on
+  1 November 2026. That is unmeasured.
+
+**What we did.** The operator's instruction was to stop if the session data
+could not carry the rule, and it cannot, so we stopped. The weekend decision is
+**not recorded**, and PLAN §13 is unchanged. The rule in force is still the
+feed's heartbeat plus 3,600 s. Under it, every equity feed's newest point goes
+stale for about 23–35 h each weekend. To carry the decision, a closed session
+needs a definition the operator chooses: a documented schedule pinned as the
+directory is, with daylight saving and holidays, or a rule drawn from observed
+rounds.
+**Affects:** 1.4 (whether a weekend price may be a mark), 1.6, 1.8, 1.11; PLAN §13.
