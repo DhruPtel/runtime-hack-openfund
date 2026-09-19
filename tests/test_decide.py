@@ -17,7 +17,9 @@ from pathlib import Path
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
+from cryptography.hazmat.primitives.serialization import (
+    Encoding, NoEncryption, PrivateFormat, PublicFormat,
+)
 
 from fund.agents import risk, runner
 from fund import config
@@ -46,6 +48,18 @@ def gateway():
     yield make
     for g in made:
         g.close()
+
+
+def published(tmp_path) -> Path:
+    """The config, with this test's scratch key published in `keys.json` in place of the
+    fund's: the fund's key never signs fake inputs, and a record is checked against the
+    published key only (S13)."""
+    shutil.copytree(config.CONFIG_DIR, tmp_path / "config", dirs_exist_ok=True)
+    public = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(SEED)).public_key().public_bytes(
+        Encoding.Raw, PublicFormat.Raw).hex()
+    (tmp_path / "config" / "keys.json").write_text(json.dumps(
+        {"decision_signing": {"algorithm": "ed25519", "public_key": public}}))
+    return tmp_path / "config"
 
 
 def quotes_file(tmp_path, the_book=None, **changes) -> Path:
@@ -84,7 +98,7 @@ def run(tmp_path, *, quotes, g=None, reply=None, holdings=None, cash="200", key=
         risk_credential=None if reply else runner.SharedGatewayKey(environ).for_seat("risk"),
         risk_agent=runner.SharedGatewayKey(environ).for_seat("risk").agent,
         environ=environ, recorded_reply=reply, store=reports.ReportStore(tmp_path / "store"),
-        env_file=env_file, config_dir=config_dir)
+        env_file=env_file, config_dir=config_dir if config_dir is not None else published(tmp_path))
 
 
 def test_four_approved_reports_become_a_signed_decision(gateway, tmp_path, monkeypatch):
@@ -185,6 +199,18 @@ def test_a_decision_reads_its_config_from_one_directory_and_carries_a_copy(tmp_p
         other / "thresholds.json").read_bytes()
 
 
+def test_s13_a_record_signed_by_another_key_does_not_authorize_against_the_published_one(
+        tmp_path):
+    """The fund's own config publishes the fund's key. A record this test signs with its
+    scratch key names that scratch key in its envelope, and still does not authorize."""
+    expected = written()
+    done = run(tmp_path, quotes=quotes_file(tmp_path), reply=scripted(expected),
+               config_dir=config.CONFIG_DIR)
+    assert done["envelope"]["signed"] is True
+    assert done["authorizes"] == {"authorizes": False,
+                                  "reason": "signed by a key that is not the trusted one"}
+
+
 def test_the_command_runs_from_its_arguments(tmp_path, capsys):
     expected = written()
     reply_path = tmp_path / "reply.txt"
@@ -193,7 +219,8 @@ def test_the_command_runs_from_its_arguments(tmp_path, capsys):
     env_file.write_text(f"SIGNING_KEY={SEED}\n")
     code = decide.main(["--snapshot", str(CAPTURE), "--approved-reports",
                         "--quotes", str(quotes_file(tmp_path)), "--risk-reply", str(reply_path),
-                        "--out", str(tmp_path / "out"), "--env-file", str(env_file)])
+                        "--out", str(tmp_path / "out"), "--env-file", str(env_file),
+                        "--config-dir", str(published(tmp_path))])
     shown = capsys.readouterr().out
     assert code == 0 and "authorizes True" in shown and shown.count("APPROVED") == 4
     assert {p.name for p in (tmp_path / "out").iterdir()} >= {

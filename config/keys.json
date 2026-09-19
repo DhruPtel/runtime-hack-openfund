@@ -1,0 +1,9 @@
+{
+  "_about": "The fund's published keys: the public half only (operator, 2026-09-19). A decision record authorizes only when its envelope verifies against decision_signing.public_key here, never against the key the envelope names (S13). The private half is SIGNING_KEY, which only the treasurer's signing process loads (treasurer/sign.py).",
+  "version": 1,
+  "decision_signing": {
+    "algorithm": "ed25519",
+    "public_key": "1c23243531ff47be0caaf1ce2d73b0b1b705a54fa063f2d50f0bde9b42928c21",
+    "_provenance": "The key both 3.8 decisions were signed with: 2c9c1a79… (17:13Z) and 732161de… (20:22Z) name it in their envelopes, fixtures/cycles/*/decision/envelope.json."
+  }
+}

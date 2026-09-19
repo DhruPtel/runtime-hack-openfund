@@ -20,6 +20,10 @@ only when all of these hold:
 - the envelope names the trusted public key;
 - the signature verifies against those bytes.
 Anything else is refused, and the reason is named.
+
+**The trusted key is the published one** (S13, 4.2): `config/keys.json`, the public
+half only, read by `published_key`. Never the key an envelope names: an envelope
+signed by any key names that key, so checking against it proves nothing.
 """
 
 from __future__ import annotations
@@ -90,6 +94,19 @@ def authorizes(envelope: Mapping[str, Any], record: bytes, trusted_public_key: s
                        f"{envelope['decision_id'][:16]}…")
 
 
+def published_key(config_dir: Path | None = None) -> str | None:
+    """The fund's published decision-signing key, from `keys.json` in `config_dir`
+    (`config/` without one). None if none is published: then nothing authorizes."""
+    try:
+        keys = config.load_json("keys.json", config_dir)
+    except FileNotFoundError:
+        return None
+    signing = keys.get("decision_signing") or {}
+    if signing.get("algorithm") != ALGORITHM or not isinstance(signing.get("public_key"), str):
+        return None
+    return signing["public_key"]
+
+
 def treasurer_key(env_file: Path | None = None) -> Ed25519PrivateKey:
     """The signing key, loaded under the treasurer role and no other."""
     held = config.load(Role.TREASURER, require=False, env_file=env_file)
@@ -102,10 +119,12 @@ def main(argv: list[str] | None = None) -> int:
     """The treasurer's signing process:
 
         python -m fund.treasurer.sign --sign RECORD --out ENVELOPE [--env-file PATH]
-        python -m fund.treasurer.sign --verify RECORD ENVELOPE --public-key HEX
+        python -m fund.treasurer.sign --verify RECORD ENVELOPE [--config-dir DIR]
 
     `--sign` writes an unsigned envelope, with the reason, when there is no usable
-    key, so a record is never mistaken for a signed one."""
+    key, so a record is never mistaken for a signed one. `--verify` checks against
+    the key `keys.json` publishes (S13), and `--public-key` only replaces it for a
+    key checked by hand."""
     import argparse
 
     parser = argparse.ArgumentParser(prog="fund.treasurer.sign")
@@ -114,10 +133,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--env-file", type=Path, default=None)
     parser.add_argument("--verify", nargs=2, type=Path, metavar=("RECORD", "ENVELOPE"))
     parser.add_argument("--public-key")
+    parser.add_argument("--config-dir", type=Path, default=None)
     args = parser.parse_args(argv)
     if args.verify:
         record, envelope = args.verify[0].read_bytes(), json.loads(args.verify[1].read_text())
-        check = authorizes(envelope, record, args.public_key or "")
+        trusted = args.public_key or published_key(args.config_dir)
+        if trusted is None:
+            print(json.dumps({"authorizes": None, "reason": "no key is published in keys.json, "
+                                                           "so nothing authorizes"}))
+            return 1
+        check = authorizes(envelope, record, trusted)
         print(json.dumps({"authorizes": check.value, "reason": check.reason}))
         return 0 if check.value else 1
     record = args.sign.read_bytes()

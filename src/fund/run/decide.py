@@ -4,7 +4,7 @@
         (--approved-reports | --cycle DIR)
         (--quotes FILE | --live-quotes)
         (--risk-reply FILE | --confirm)
-        [--holdings FILE] [--cash USD] [--out DIR] [--env-file PATH]
+        [--holdings FILE] [--cash USD] [--out DIR] [--env-file PATH] [--config-dir DIR]
 
 In order:
 1. **The reports.** Either the four written by hand and approved at 2.1, or the
@@ -195,11 +195,13 @@ def signed(record_path: Path, envelope_path: Path, env_file: Path | None,
     return json.loads(envelope_path.read_text())
 
 
-def verified(record_path: Path, envelope_path: Path, public_key: str | None,
+def verified(record_path: Path, envelope_path: Path, config_dir: Path,
              python: str = sys.executable) -> dict[str, Any]:
+    """Whether the record authorizes, checked by the treasurer's process against the
+    key `keys.json` publishes in `config_dir` (S13), never the key the envelope names."""
     empty = {"PATH": os.environ.get("PATH", os.defpath), "PYTHONPATH": str(SRC)}
     done = subprocess.run([python, "-m", "fund.treasurer.sign", "--verify", str(record_path),
-                           str(envelope_path), "--public-key", public_key or ""],
+                           str(envelope_path), "--config-dir", str(config_dir)],
                           env=empty, capture_output=True, text=True, timeout=120)
     return json.loads(done.stdout)
 
@@ -291,7 +293,8 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
     record_path = out_dir / "record.json"
     record_path.write_bytes(record.encode(the_record))
     envelope = signed(record_path, out_dir / "envelope.json", env_file)
-    check_ = verified(record_path, out_dir / "envelope.json", envelope.get("public_key"))
+    check_ = verified(record_path, out_dir / "envelope.json",
+                      config.CONFIG_DIR if config_dir is None else config_dir)
 
     (out_dir / "table.txt").write_text(table + "\n")
     _write(out_dir / "reports.json", {
@@ -422,6 +425,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="paper cash in USD; default thresholds.json capital_usd")
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--env-file", type=Path, default=None, help="for the signer only")
+    parser.add_argument("--config-dir", type=Path, default=config.CONFIG_DIR,
+                        help="the config the decision reads, and the key it is checked against")
     args = parser.parse_args(argv)
 
     snapshot_path = args.snapshot / "snapshot.json" if args.snapshot.is_dir() else args.snapshot
@@ -429,7 +434,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     environ = {**config.parse_env_file(config.ENV_FILE), **os.environ}
     offered = approved_reports() if args.approved_reports else cycle_reports(args.cycle)
     cash = args.cash if args.cash is not None else Decimal(
-        config.load_json("thresholds.json")["capital_usd"])
+        config.load_json("thresholds.json", args.config_dir)["capital_usd"])
     if args.quotes:
         quotes, label = (lambda intents: recorded_quotes(args.quotes)), f"replayed: {args.quotes}"
     else:
@@ -447,9 +452,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     done = decide(snapshot_path=snapshot_path, offered=offered,
                   holdings=load_holdings(args.holdings, snapshot), cash_usd=cash,
                   out_dir=out_dir, quotes=quotes, quote_label=label,
-                  risk_settings=risk.Settings.from_config(), risk_credential=credential,
+                  risk_settings=risk.Settings.from_config(args.config_dir),
+                  risk_credential=credential,
                   risk_agent=runner.SharedGatewayKey(environ).for_seat(risk.SEAT).agent,
-                  environ=environ, recorded_reply=reply, store=store, env_file=args.env_file)
+                  environ=environ, recorded_reply=reply, store=store, env_file=args.env_file,
+                  config_dir=args.config_dir)
     print(summary(done))
     return 0
 
