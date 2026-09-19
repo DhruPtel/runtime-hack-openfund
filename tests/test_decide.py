@@ -80,6 +80,7 @@ def run(tmp_path, *, quotes, g=None, reply=None, holdings=None, cash="200", key=
         quotes=lambda intents: decide.recorded_quotes(quotes), quote_label="test",
         risk_settings=settings,
         risk_credential=None if reply else runner.SharedGatewayKey(environ).for_seat("risk"),
+        risk_agent=runner.SharedGatewayKey(environ).for_seat("risk").agent,
         environ=environ, recorded_reply=reply, store=reports.ReportStore(tmp_path / "store"),
         env_file=env_file)
 
@@ -190,7 +191,8 @@ def test_the_record_names_each_loose_citation_of_the_reports_it_accepted(tmp_pat
     done = decide.decide(snapshot_path=CAPTURE / "snapshot.json", offered=offered, holdings={},
                          cash_usd=Decimal(200), out_dir=tmp_path / "out",
                          quotes=lambda intents: decide.recorded_quotes(quotes), quote_label="t",
-                         risk_settings=settings, risk_credential=None, environ=SHARED,
+                         risk_settings=settings, risk_credential=None,
+                         risk_agent=runner.UNASSIGNED_AGENT, environ=SHARED,
                          recorded_reply=scripted(expected),
                          store=reports.ReportStore(tmp_path / "store"), env_file=env_file)
     assert len(done["accepted"]) == 4 and done["envelope"]["signed"] is True
@@ -200,3 +202,19 @@ def test_the_record_names_each_loose_citation_of_the_reports_it_accepted(tmp_pat
     assert [(c["cited"], c["found"], c["written"]) for c in carried["price-trend"]] == [
         ("price_usd", None, None), ("no field", "AMD mark.price_usd", "559.42")]
     assert carried["cross-asset-macro"] == []
+
+
+def test_a_live_vote_and_its_replay_give_the_same_record_bytes(gateway, tmp_path):
+    """R4: the risk seat's identity no longer depends on whether the vote is asked
+    live or read from the recording. At the sweep a replay recorded no agent where
+    the live run recorded `unassigned`, and the decision ids differed."""
+    expected = written()
+    reply = scripted(expected, veto=("META",))
+    g = gateway({"risk": [("report", reply)]})
+    live = run(tmp_path / "live", quotes=quotes_file(tmp_path), g=g)
+    again = run(tmp_path / "replay", quotes=quotes_file(tmp_path), reply=reply)
+    assert g.count("risk") == 1
+    assert live["record"]["risk"]["agent"] == again["record"]["risk"]["agent"] == "unassigned"
+    assert (tmp_path / "live" / "out" / "record.json").read_bytes() == (
+        tmp_path / "replay" / "out" / "record.json").read_bytes()
+    assert live["decision_id"] == again["decision_id"]

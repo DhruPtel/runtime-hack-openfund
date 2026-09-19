@@ -211,10 +211,16 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
            cash_usd: Decimal, out_dir: Path,
            quotes: Callable[[Sequence[plan.Intent]], tuple[dict[int, Observation], Instant]],
            quote_label: str, risk_settings: risk.Settings,
-           risk_credential: runner.SeatCredential | None, environ: Mapping[str, str],
+           risk_credential: runner.SeatCredential | None, risk_agent: str,
+           environ: Mapping[str, str],
            recorded_reply: str | None, store: report_store.ReportStore,
            env_file: Path | None) -> dict[str, Any]:
-    """The whole path from calls to a signed record. Returns what it wrote."""
+    """The whole path from calls to a signed record. Returns what it wrote.
+
+    `risk_agent` is the risk seat's identity from its key source, the same whether
+    the vote is asked live or read from a recording. Until the 3.8 sweep it was
+    taken from the live credential, so a replay recorded none where the live run
+    recorded `unassigned`, and the same inputs gave two records (R4)."""
     snapshot_bytes = snapshot_path.read_bytes()
     snapshot = json.loads(snapshot_bytes)
     snapshot_sha256 = hashlib.sha256(snapshot_bytes).hexdigest()
@@ -257,7 +263,7 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
                   "imprecise_citations": [i.as_dict() for i in v.imprecisions]}
                  for o, v in accepted],
         config_sha256=config_sha256, proposal=proposal.as_dict(), plan=written, review=outcome,
-        risk_agent=None if risk_credential is None else risk_credential.agent,
+        risk_agent=risk_agent,
         risk_reply=outcome["reply_text"])
     record_path = out_dir / "record.json"
     record_path.write_bytes(record.encode(the_record))
@@ -367,6 +373,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                   holdings=load_holdings(args.holdings, snapshot), cash_usd=cash,
                   out_dir=out_dir, quotes=quotes, quote_label=label,
                   risk_settings=risk.Settings.from_config(), risk_credential=credential,
+                  risk_agent=runner.SharedGatewayKey(environ).for_seat(risk.SEAT).agent,
                   environ=environ, recorded_reply=reply, store=store, env_file=args.env_file)
     print(summary(done))
     return 0
