@@ -2433,3 +2433,40 @@ PLAN §8.
 
 **Affects:** 3.4, 3.8, 3.9, 4.4, 4.12; PLAN §2 invariant 4; the confidence
 mapping.
+
+## 2026-09-19 — 3.8: the exit run refused all four seats, so the first real cycle decided nothing
+**What we believed.** A real cycle would produce at least three accepted
+reports, and the question would be whether risk vetoes. The fixed gates were
+expected to pass, and the veto would be risk's judgement on a stale mark.
+
+**What one run measured** (`research/findings.md` §3.8;
+`fixtures/cycles/20260919T171351Z/`):
+- **Four live calls, one per seat, all replied,** for $1.087706.
+  Cross-asset-macro answered in 89 s, with no 504 this time.
+- **All four were refused.** No figure was invented. Every refused figure is a
+  real value of the capture, but cited under the wrong path:
+  - another asset's figure without its symbol, six times in cross-asset-macro;
+  - `swap_impact_bps` without `quote.`, five times in execution-quality;
+  - a mark dated as a close.
+- **Two of the defects are ours:** thousands separators, and brackets read as
+  citations. Fixed, they rescue price-integrity alone: one of four.
+- **So no quorum,** and the fund's real decision, signed, is no rebalance.
+  - No order, so no risk call. No real model has read `risk.v1.md`.
+  - No veto.
+- **The signed record omits the refused replies.** It says why nothing
+  happened, but not which reports were refused or why.
+
+**What it changes.** Nothing was changed, by instruction: no brief was iterated
+and no seat re-run. The validator stays as it was at the call. The shared
+example was relabelled before the run, as the operator asked, and price-trend
+made no NVDA call.
+
+**Owed, each the operator's call:**
+- the two validator defects;
+- whether a figure cited under the wrong path should be refused, or checked by
+  value;
+- a citation line in the brief for other assets and full paths. That would be
+  a brief change;
+- the refused replies in the record;
+- another exit run once those are settled.
+**Affects:** 2.2, 2.3, 3.7, 3.8, 3.9; the quorum; the exit run.
