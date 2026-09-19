@@ -2271,3 +2271,32 @@ at the call.
 - tests for the runner's `main()`;
 - the settled usage cross-check.
 **Affects:** 2.2, 2.3, 2.5, 2.0's choice, the runner's `UNASSIGNED_AGENT`.
+
+## 2026-09-19 — After 2.6: the bps rule loosened, the placeholder made a word, and no rule added
+*The operator's instruction: fewer refusals, not more, while the shape is still
+being found.* Two of the 2.6 reply's six refusals were ours to fix.
+- **The bps rule.** A bps figure is now treated like a percentage: computed and
+  cited, not checked. The exception is a line that cites a field itself stored
+  in bps (`quote.swap_impact_bps`, `corroboration.divergence_bps`); then the
+  figure names that field and is checked against it.
+  - The recorded reply's five computed divergences now pass. Its cited
+    `-450.32bps` is still checked, and altered to −440.32 it is refused.
+- **The placeholder.** A seat with no wallet is now written `unassigned`, which
+  nothing can read as an elided address. The approved examples' `0x…` is
+  untouched, because the format is approved; only the value the runner assigns
+  changed.
+- **The result, on the same recorded reply with no new call.** Its one remaining
+  refusal is the header, where it filled the old placeholder with the fund's
+  wallet. Put back only that token and it is accepted.
+
+**One strictness kept, and stated.** A plain decimal on a line that cites single
+fields is still read as naming one of them. A computed difference written in
+dollars on such a line, such as a gap of 7.51 between a mark and a venue, would
+still be refused. Loosening that too would also let a fabricated field value
+through. None has been seen, and it is the operator's call if one is.
+
+**Also:**
+- `python -m fund.agents.show` prints a stored report exactly as written;
+- every attempt now keeps its reply whole;
+- the runner's live entry point has its tests.
+**Affects:** 2.2, 2.3 (the value its first line carries), 2.4, 2.6.
