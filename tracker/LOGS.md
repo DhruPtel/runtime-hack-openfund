@@ -1081,9 +1081,54 @@ did not say so. The decision is signed as `732161de…`, and its cycle, committe
 in `fixtures/cycles/20260919T202259Z/`, rebuilds byte for byte offline for 3.9
 (`research/findings.md` §3.8, finished). **Shown, and waiting for the operator.**
 
+## 3.3 amended — Each part of a split move shows its part
+**Date:** 2026-09-19 · **Commit:** 45f1e2d
+
+A move the per-trade limit splits now shows each order as its part: "part 1 of
+2", the weight before and after that order, and the whole move in words. On the
+3.8 cycle, GME's two halves now read 0 → 0.09375 → 0.1875, not two orders each
+reaching 0.1875. As plan layout 2 and record schema `/2`, it is written from now
+on. Layout 1 is kept for replay, and both presentation rules broken in a copy
+were caught.
+
+## 2.3 amended — The shared example replaced
+**Date:** 2026-09-19 · **Commit:** bf19606
+
+The NVDA hold is gone. The example is a caution on ORCL, outside the buy
+universe in both captures, so no seat can make it as its own answer. Its figures
+are the 06:01Z capture's, and the validator refuses it only for the asset.
+
+## 3.9 ▶ — Byte-stable replay, shown
+**Date:** 2026-09-19 · **Commit:** be6be2e
+
+`tests/test_replay_cycle.py` rebuilds the exit run's signed record byte for
+byte from its recorded inputs alone, with every network connection refused. The
+plan is written in the layout the record's schema names. Its signature verifies
+over those bytes and fails on one changed; a changed recorded input changes the
+rebuild; and today's layout gives different bytes. Three ways of breaking the
+guarantee, each caught in a copy. Phase 3 is closed.
+
+## Phase 4 plan — The treasurer and the ledger, primitives first
+**Date:** 2026-09-19 · **Commits:** 717492a, c0e8fe6
+
+`planning/PHASE-4.md` names, before any unit, the seven values Phase 4 would
+otherwise compute in several places:
+- order state;
+- order identity;
+- a fill;
+- holdings;
+- cash;
+- cost basis;
+- realised and unrealised value.
+
+Each is one function in `core/`, built as the new unit 4.0. It then plans 4.1 to
+4.12 at minimal scope in four sequential batches, with the stop at 4.11, and
+carries S10 to S13, the mandate's approval and the `.env` split to their units.
+Six decisions wait on the operator before 4.0.
+
 ---
 
-## State at close — 2026-09-19, after 3.8 finished: a real cycle decided, one veto, 3.9 next
+## State at close — 2026-09-19, Phase 3 closed: 3.9 replays the exit run; Phase 4 planned
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -1095,17 +1140,17 @@ it. Where this note and git disagree, git is right.
   `planning/SIMPLIFICATION.md`. PLAN §8 states the pivot, and `CLAUDE.md`
   carries the rule.
 - Keys, signing and spend authority keep their full guard.
-- The operator is stopped at 2.1, 3.8, 5.4, 6.6, 7.5 and 8.5. 2.1 was approved.
-  **3.8 has run and is shown, waiting for the operator.**
+- The operator is stopped at 2.1, 3.8, 4.11, 5.4, 6.6, 7.5 and 8.5. 2.1 was
+  approved, and past 3.8 the operator asked for Phase 3's close.
 
 **The deadline** was given at about 11:00Z on 2026-09-19 as "about 16 hours":
 about Sun 2026-09-20 03:00Z. That is this note's arithmetic, not a time the
-operator wrote down. This note was written at about 17:40Z.
+operator wrote down. This note was written at about 20:50Z.
 
 **Check it in a minute.** Nothing here spends unless marked. The `python3 -m`
 commands need `PYTHONPATH=src`.
 - `git log --oneline -25` and `git status -sb`.
-- `make test`: 606 passed when this was written, in about 28 s. The runner and
+- `make test`: 614 passed when this was written, in about 27 s. The runner and
   risk tests start real subprocesses against a fake gateway on 127.0.0.1.
 - `python3 -m fund.run.decide --snapshot fixtures/snapshots/66852293-253315c0e691
   --approved-reports --quotes Q --risk-reply R [--env-file E]` takes reports to
@@ -1141,7 +1186,12 @@ commands need `PYTHONPATH=src`.
   - the fund's real decision, `2c9c1a79…`, signed with its key: no rebalance,
     no order, no risk call and no veto.
 
-  Recorded in `fixtures/cycles/20260919T171351Z/`.
+  Recorded in `fixtures/cycles/20260919T171351Z/`, now history: it predates
+  the sweep, and nothing rebuilds it.
+- **3.8's exit run and Phase 3's close** (entries above):
+  - the exit run's decision, `732161de…`, in `fixtures/cycles/20260919T202259Z/`;
+  - 3.9's test rebuilds it byte for byte, network refused;
+  - plans are written in layout 2, and records as `openfund.decision/2`.
 - **Decisions of 2026-09-19** (LESSONS): the pivot, and the Phase 2 decisions.
   Then the Phase 3 batch's:
   - a target starts at the weight held;
@@ -1161,18 +1211,28 @@ commands need `PYTHONPATH=src`.
   Every other module is a stub: `grep -l "Not yet built" -r src/` lists 17.
 
 ### Next
-- **3.8 is finished and shown** (entry above). Its cycle is
-  `fixtures/cycles/20260919T202259Z/`, signed as `732161de…`.
-- **3.9, next:** one test rebuilding that cycle's record byte for byte, with no
-  network. It already rebuilds offline, so the test is mostly to write. Move
-  the record's `schema` to `openfund.decision/2`.
-- **Owed before the next live risk call:** 3.3's written plan must show each
-  order's part of a split move and the weight after that order. The risk
-  agent's one veto rested on reading two legs of one move as duplicates.
-- **Owed to 2.3:** replace the NVDA example. Relabelling did not stop
-  price-trend copying its shape.
-- **From the sweep, still owned by later units:** S3, S4, S7 and S10 to S13
-  (LESSONS). S8 is decided and built. S2, S5 and S6 are fixed.
+- **Phase 3 is closed.** 3.8 was shown, and 3.9's test rebuilds the exit run's
+  record byte for byte. The split-order presentation and the NVDA example are
+  fixed (entries above).
+- **Phase 4 is planned,** in `planning/PHASE-4.md`, and waits on six operator
+  decisions:
+  - the cost-basis method;
+  - what paper cash is held as;
+  - the mandate's approval values and allowed assets;
+  - the published signing key's place in config;
+  - S11's snapshot-age limit;
+  - 4.12's refused-swap authorization.
+
+  Then batch A is unit 4.0, the shared primitives.
+- **Stops:** 2.1, 3.8, **4.11**, 5.4, 6.6, 7.5 and 8.5. 4.11 was added by the
+  operator on 2026-09-19. `CLAUDE.md`'s list is owed the same; it was outside
+  this pass's paths.
+- **From the sweep, owned by Phase 4:**
+  - S10 and S11, at 4.4;
+  - S12, at 4.8;
+  - S13, at 4.2 and 4.4.
+
+  S3, S4 and S7 stay with 2.2 and 2.3.
 - **Owed from Phase 2, unchanged:**
   - the settled `/v1/usage` cross-check for the 15:39Z and 15:58Z calls, and
     whether the 504 was billed;
@@ -1185,9 +1245,8 @@ commands need `PYTHONPATH=src`.
   - the mandate is provisional: 4.1 replaces the allowed assets and the
     placeholder approvals;
   - the confidence mapping is provisional, to be tuned after a real cycle;
-  - no real model has seen `risk.v1.md`;
-  - `run/decide.py`'s `--live-quotes` and `--confirm` ran at 3.8, but with no
-    order, so no quote and no risk call was made;
+  - one real risk call so far, the exit run's, on `risk.v1.md`: one veto, which
+    rested on the split-order misreading now fixed;
   - the aggregator is blind to co-movement (LESSONS 2026-09-19).
 - **The keys, measured on 2026-09-19 after the operator's fix:**
   - `BANKR_LLM_KEY`: the gateway on, refused by the Wallet API and the Agent
@@ -1250,8 +1309,8 @@ commands need `PYTHONPATH=src`.
 
 ### The numbers that stand
 - **Snapshot:** schema `openfund.snapshot/4`, about 195 KB with 763 daily
-  closes. The committed one is `253315c0…` at block 66852293, in
-  `fixtures/snapshots/`.
+  closes. Two are committed in `fixtures/snapshots/`: `253315c0…` at block
+  66852293, and the exit run's `c06abd9e…` at block 67364057.
 - **Analyst call:** $0.264 at Sonnet 5, uncached. A cycle is about $1.11.
 - **Real analyst calls:**
 
@@ -1291,9 +1350,10 @@ commands need `PYTHONPATH=src`.
   `cumulative_budget_usd`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `3f1d17f`, pushed by the
-operator: everything through the sweep's fixes. Every commit from `52b05a4` (S8)
-to the one that last changed this note is committed and **not pushed**.
+Checked locally, with no fetch. `origin/main` is `d2638dd`, pushed by the
+operator: everything through 3.8 finished. Every commit from `45f1e2d` (the
+split-order fix) to the one that last changed this note is committed and **not
+pushed**.
 
 ### What this note does not cover
 - **Decisions.** LESSONS holds them in full.
