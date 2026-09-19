@@ -583,6 +583,11 @@ class Series:
     Construction refuses a coverage claim the points cannot back. Every point
     must also come from one block, or from none (offchain); a mixed-block series
     is an error, not a warning.
+
+    **A sampled series** carries `samples`, one instant per point: the instant
+    it was sampled at, such as a daily close's cut (DECISION 2026-09-18). Each
+    point is the round in effect then, so it is dated at or before its sample.
+    An empty `samples` means every round, as 1.3 read it.
     """
 
     asset: AssetId
@@ -593,6 +598,7 @@ class Series:
     detail: str | None = None
     window_start: Instant | None = None
     coverage: Check | None = None
+    samples: tuple[Instant, ...] = ()
 
     def __post_init__(self):
         _is("asset", self.asset, AssetId)
@@ -601,7 +607,7 @@ class Series:
         _is("status", self.status, FetchStatus)
         _tuple_of(self, "points", Observation)
         if self.status is not FetchStatus.OK:
-            if self.points:
+            if self.points or self.samples:
                 raise ValueError("a series that was not fetched has no points")
             _text("detail (say why there is no series)", self.detail)
             return
@@ -625,6 +631,15 @@ class Series:
             previous = point.source_time
         if len({point.block for point in self.points}) > 1:
             raise ValueError("block-pin: a series' points come from one block")
+        _tuple_of(self, "samples", Instant)
+        if self.samples:
+            if len(self.samples) != len(self.points):
+                raise ValueError("a sampled series has one sample per point")
+            if any(b <= a for a, b in zip(self.samples, self.samples[1:])):
+                raise ValueError("samples run oldest first, each once")
+            if any(p.source_time > at for p, at in zip(self.points, self.samples)):
+                raise ValueError("a sampled point is the round in effect at its sample, "
+                                 "so it is dated at or before it")
         _is("window_start", self.window_start, Instant, optional=True)
         _is("coverage", self.coverage, Check, optional=True)
         if self.window_start is not None and self.coverage is None:

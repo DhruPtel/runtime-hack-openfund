@@ -8,6 +8,7 @@ recorded values wherever the record has them.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 
 import pytest
@@ -702,3 +703,20 @@ def test_a_series_from_two_blocks_is_refused():
     with pytest.raises(ValueError, match="block-pin"):
         Series(asset=AAPL, source=FEED, fetch_time=Instant.from_seconds(T0),
                status=FetchStatus.OK, points=(a, b))
+
+
+# --- a sampled series: daily closes (DECISION 2026-09-18) --------------------------------
+
+def test_a_sampled_series_carries_one_sample_per_point_at_or_after_each_point():
+    points = tuple(feed_point(T0 - (3 - d) * DAY, 33_000_000_000 + d, 18446744073709552254 + d)
+                   for d in range(4))
+    cuts = tuple(Instant.from_seconds(T0 - (3 - d) * DAY + 3600) for d in range(4))
+    closes = Series(asset=AAPL, source=FEED, fetch_time=Instant.from_seconds(T0 + 12),
+                    status=FetchStatus.OK, points=points, samples=cuts)
+    roundtrip(closes)
+    with pytest.raises(ValueError, match="one sample per point"):
+        dataclasses.replace(closes, samples=cuts[:3])
+    with pytest.raises(ValueError, match="at or before"):
+        dataclasses.replace(closes, samples=tuple(Instant(c.epoch_ms - 7_200_000) for c in cuts))
+    with pytest.raises(ValueError, match="oldest first"):
+        dataclasses.replace(closes, samples=(cuts[1], cuts[0], cuts[2], cuts[3]))
