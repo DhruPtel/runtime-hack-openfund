@@ -60,4 +60,5 @@ OVERALL approve
 - Each vote is the single word `approve` or `veto`.
 - End with `OVERALL approve` or `OVERALL veto` and one sentence.
 
-A reply in any other shape is read as a veto of every order.
+An order you do not vote on clearly is vetoed. A reply with no ORDER line at all is read
+as a veto of every order.
