@@ -2602,3 +2602,57 @@ On the stored 3.8 replies, **all four now pass**, with no new call.
   such figures on a line of their own.
 
 **Affects:** 2.2, 2.3, 3.4, 3.5, 3.7, 3.9, 4.1, 4.4, 4.8, 7.1, 8.3.
+
+## 2026-09-19 — DECISION on S8, the parser fixes, and 3.8 finished: the risk agent's first real veto rests on a misreading we invited
+**S8, the operator's decision:** buying into an asset and exiting one are
+different risks.
+- **A sell needs** a price to value what it sells and a fresh quote at its size:
+  the quote exists, is for the order's amount, and is within the age limit.
+- **A buy keeps every check.**
+- **An analyst's sell call** may name an asset out of the buy universe.
+- **What the build kept on the sell path, and why:** the mandate being in
+  force (not revoked, the right chain) and the per-trade limit. They are spend
+  authority, not market checks. Dropping them would let a revoked mandate still
+  sell.
+- **What it dropped from the sell path:** tradeability, the mandate's buy list,
+  impact and the position limit.
+- **Proven:** a held DELL, below the corroborator line and 64 bps to trade, is
+  sold, and a buy into DELL is still refused. Seven rules broken in a copy were
+  each caught.
+
+**The parser fixes:**
+- **S6:** the risk reply is read tolerantly, and a missing vote vetoes only its
+  order.
+- **S5:** `NO CALLS` is read however dressed, and beside calls it means none
+  beyond them.
+- **S2:** a bps figure is its field in either sign, or computed from cited
+  prices, and the brief states `divergence_bps`'s sign.
+
+Each old failure is reproduced against the fixed parser in `tests/`. The real
+risk reply used the brief's exact shape, so S6's tolerance was not needed this
+time.
+
+**3.8, finished (`research/findings.md` §3.8, finished):**
+- **The reports and the decision.** All four reports were accepted. Six buys
+  were approved, and the risk agent vetoed two: the second leg of GME and of
+  INTC, each one $37.50 move split in two by the $25 limit.
+- **Why it vetoed.** It read the legs as duplicates that would take each
+  position to 0.375, past a cap "the gate only checked in isolation". Both
+  claims are false: together the legs reach 0.1875, and the gate sums them.
+- **Why it misread.** Each leg carries the whole move's weight block and the
+  same gate reason, and nothing marks it as a part.
+- **What that shows.** The veto is the risk agent's own judgement, not a
+  restated gate. Its other reasoning checks out against the snapshot. But this
+  one rests on how the plan presents a split move, which is ours.
+- **The expected stale-mark veto** had no order to act on. Both condition seats
+  cautioned MSTR at a 362 bps gap, but no direction seat bought it.
+
+**Owed:**
+- **3.3:** each order shows its part and the weight after that order. Do it
+  before the next live risk call.
+- **2.3:** the NVDA example still shapes price-trend's NVDA call, so replace it.
+  Relabelling did not cure the copying.
+- **3.9 replays this cycle,** `fixtures/cycles/20260919T202259Z/`. Its record
+  already rebuilds byte for byte offline.
+**Affects:** 2.2, 2.3, 3.3, 3.4, 3.5, 3.9; `agents/risk.py`, `core/gates.py`,
+`agents/schema.py`.

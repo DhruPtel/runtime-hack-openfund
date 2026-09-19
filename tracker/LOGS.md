@@ -1053,9 +1053,37 @@ copy. Also closed:
 All four stored 3.8 replies now pass, with no new call, and 572 tests pass.
 S2 to S13 are recorded in LESSONS with their owners.
 
+## S8 and the parser fixes — selling what the fund holds; a risk reply read tolerantly
+**Date:** 2026-09-19 · **Commits:** 52b05a4, afe950e, 143c6fe, 264eb56, 70f3ae5, 9e538c0, 2db8289
+
+A sell now needs:
+- a price to value it;
+- a fresh quote at its size;
+- the mandate in force, and the order within the per-trade limit.
+
+A buy keeps every check. A held DELL outside the buy universe is sold, and a buy
+into it is still refused (seven breaks in a copy, each caught). The parser fixes:
+- **S6:** the risk reply parser reads variations and vetoes only an order it
+  has no clear vote for (four breaks, each caught);
+- **S5:** `NO CALLS` is read however dressed;
+- **S2:** bps figures are read in either sign or as computed from cited
+  prices, and the brief states `divergence_bps`'s sign.
+
+## 3.8 ▶ finished — The exit run that ends Phase 3, shown at the stop
+**Date:** 2026-09-19 · **Commits:** cbd871d, a1dd8db, fbe160e
+
+The fresh snapshot `c06abd9e…` was taken at 20:20Z Saturday. Four live analyst
+calls were all accepted, then live quotes and one live risk call, $1.142846 in
+all. Of eight buys, six were approved, and the risk agent vetoed two, the second
+legs of GME and INTC. It judged them duplicates that would breach the 0.25 cap.
+That is false: each pair is one $37.50 move split by the $25 limit, and the plan
+did not say so. The decision is signed as `732161de…`, and its cycle, committed
+in `fixtures/cycles/20260919T202259Z/`, rebuilds byte for byte offline for 3.9
+(`research/findings.md` §3.8, finished). **Shown, and waiting for the operator.**
+
 ---
 
-## State at close — 2026-09-19, after the sweep's fixes: cash as one definition, all four 3.8 replies passing
+## State at close — 2026-09-19, after 3.8 finished: a real cycle decided, one veto, 3.9 next
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -1077,7 +1105,7 @@ operator wrote down. This note was written at about 17:40Z.
 **Check it in a minute.** Nothing here spends unless marked. The `python3 -m`
 commands need `PYTHONPATH=src`.
 - `git log --oneline -25` and `git status -sb`.
-- `make test`: 572 passed when this was written, in about 26 s. The runner and
+- `make test`: 606 passed when this was written, in about 28 s. The runner and
   risk tests start real subprocesses against a fake gateway on 127.0.0.1.
 - `python3 -m fund.run.decide --snapshot fixtures/snapshots/66852293-253315c0e691
   --approved-reports --quotes Q --risk-reply R [--env-file E]` takes reports to
@@ -1133,20 +1161,18 @@ commands need `PYTHONPATH=src`.
   Every other module is a stub: `grep -l "Not yet built" -r src/` lists 17.
 
 ### Next
-- **3.8 waits on the operator.** The sweep's R1 to R7 and S1 are fixed, and
-  all four stored 3.8 replies pass (entry above).
-  - **Before the next exit run and its live risk call, by LESSONS' owners:**
-    - S2, bps checks and the sign of `divergence_bps`;
-    - S5, `NO CALLS`;
-    - S6, the risk reply parser's strictness;
-    - S8, sells held to the buy rules. A money-path bug, and the operator's
-      call.
-  - Then another exit run (about $1.10), and the decision with a live risk
-    call (about $0.05).
-- **3.9 after that.** Today's code cannot rebuild the 3.8 fixture's record.
-  This batch changed what a record holds, and every remaining difference is one
-  of those changes. So 3.9 replays a cycle recorded under the current code, and
-  moves the record's schema to `openfund.decision/2`.
+- **3.8 is finished and shown** (entry above). Its cycle is
+  `fixtures/cycles/20260919T202259Z/`, signed as `732161de…`.
+- **3.9, next:** one test rebuilding that cycle's record byte for byte, with no
+  network. It already rebuilds offline, so the test is mostly to write. Move
+  the record's `schema` to `openfund.decision/2`.
+- **Owed before the next live risk call:** 3.3's written plan must show each
+  order's part of a split move and the weight after that order. The risk
+  agent's one veto rested on reading two legs of one move as duplicates.
+- **Owed to 2.3:** replace the NVDA example. Relabelling did not stop
+  price-trend copying its shape.
+- **From the sweep, still owned by later units:** S3, S4, S7 and S10 to S13
+  (LESSONS). S8 is decided and built. S2, S5 and S6 are fixed.
 - **Owed from Phase 2, unchanged:**
   - the settled `/v1/usage` cross-check for the 15:39Z and 15:58Z calls, and
     whether the 504 was billed;
@@ -1239,8 +1265,11 @@ commands need `PYTHONPATH=src`.
   At 3.8, one each: price-integrity $0.265618, 71.9 s; price-trend $0.260564,
   76.5 s; execution-quality $0.288326, 103.6 s; cross-asset-macro $0.273198,
   89.4 s. All four were refused.
-- **LLM credits:** $14.678389 before 3.8's four calls, which cost $1.087706.
-  It was not re-read after them.
+- **LLM credits:** $14.678389 before 3.8's first four calls ($1.087706). The
+  exit run then spent $1.142846: four analysts at $1.043392 and one risk call at
+  $0.099454, 45.9 s, 29,202 tokens in. The balance was not re-read.
+- **The exit run's decision:** eight buys of $164.06 planned, six approved,
+  and two vetoed by the risk agent. It leaves $73.44 of paper cash.
 - **Phase 3, offline, on the four approved reports:**
   - META 12.5%, AMD, INTC and USO 6.25% each, 68.75% cash;
   - four buys totalling $62.50 of the $200 paper book;
@@ -1262,10 +1291,9 @@ commands need `PYTHONPATH=src`.
   `cumulative_budget_usd`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `f2f8b41`, pushed by the
-operator: everything through the sweep's list and its note.
-Every commit from `8a1a2a1` (the design lesson) to the one that last changed this
-note is committed and **not pushed**.
+Checked locally, with no fetch. `origin/main` is `3f1d17f`, pushed by the
+operator: everything through the sweep's fixes. Every commit from `52b05a4` (S8)
+to the one that last changed this note is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** LESSONS holds them in full.
