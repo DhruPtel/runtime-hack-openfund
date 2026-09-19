@@ -3854,8 +3854,8 @@ this unit's paths. Nothing in `src/` changed after the call.
 
 | Change | Where |
 |---|---|
-| The bps rule refuses correct computed figures. Check a bps figure only when its line cites a `_bps` field, with a test | 2.2, `agents/schema.py` |
-| The unassigned agent `0x…` reads to a model as an address to fill in. It needs a token that cannot be mistaken for one, or a real agent address | 2.3's brief, the runner's `UNASSIGNED_AGENT`, 2.0's choice |
+| The bps rule refuses correct computed figures. Check a bps figure only when its line cites a `_bps` field, with a test. **Done after 2.6** (`ea39fd6`) | 2.2, `agents/schema.py` |
+| The unassigned agent `0x…` reads to a model as an address to fill in. It needs a token that cannot be mistaken for one, or a real agent address. **Done after 2.6: the token is now `unassigned`** (`5d6a3dd`) | 2.3's brief, the runner's `UNASSIGNED_AGENT`, 2.0's choice |
 | The reply states its own cost per request | 2.5: `bankr_llm.cost` could use it, and the estimate label could narrow |
 | Reasoning tokens are counted in the usage block | F1.7.5, the output cap |
 | The settled `/v1/usage` cross-check for this call | owed, after 16:40Z |
@@ -3867,3 +3867,178 @@ this unit's paths. Nothing in `src/` changed after the call.
 - **The re-validation was run in a scratch copy** and is not the committed
   validator's verdict.
 - **Spent:** $0.273156 by the reply's own statement and by our estimate.
+
+
+---
+
+## 2.6, continued — The other three seats, on the same snapshot
+
+**Date:** 2026-09-19, sent 15:58:33Z. **Method:** `python -m fund.agents.runner
+--seats price-trend,cross-asset-macro,execution-quality --retries 0 --confirm`
+on the same capture as §2.6, snapshot `253315c0…`, one call per seat. It ran
+after the validator and placeholder fixes (`ea39fd6`, `5d6a3dd`). **Keys:**
+`probes/keymap.py` measured `BANKR_LLM_KEY` exactly as in §2.6, refused by the
+Wallet API and the Agent API. The balance read $15.517951, which is the §2.6
+figure less that call's own stated cost.
+
+**Captures:**
+- `fixtures/live/cycles/20260919T155833Z/`, gitignored;
+- the report store `fixtures/live/reports/`, gitignored. Price-trend is report
+  `9398838…`, execution-quality `1b9f7a7…`, and §2.6's price-integrity
+  `569d406…`. Each reads back byte-identical to its recorded reply.
+
+| Seat | Validated | Cost | Latency | Tokens in / out (reasoning) | What it said |
+|---|---|---|---|---|---|
+| price-integrity (§2.6) | refused as run; since the fixes, the header only | $0.273156 | 78.6 s | 98,438 / 7,628 (5,858) | Of the five weekend divergences, AMD's and MSTR's marks are stale, and GeckoTerminal is the outlier for AMZN, GOOGL and SGOV |
+| price-trend | **refused:** call shape, asset, figure | $0.273142 | 83.3 s | 98,356 / 7,643 (5,799) | Buy AMD (a breakout), META (high: a clean uptrend) and GME; hold NVDA (a range) and USO (stalled); sell AMZN (lower highs) |
+| cross-asset-macro | **no report:** the gateway answered HTTP 504 "Gateway Time-out" | unknown: no usage block | 113.3 s | — | — |
+| execution-quality | **accepted** | $0.249594 | 58.2 s | 98,412 / 5,277 (4,434) | Trading is cheap everywhere (no fee, impact at most about 21 bps, a uniform 5% slippage bound). Caution on MSTR: a buyer pays 132 bps over the price it would be booked at |
+
+### The price-trend report, unedited
+
+```
+REPORT price-trend unassigned 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c
+
+The market is shut (`block.closed_sessions` lists `us_equities_24/5`), so every mark below is each feed's last round before the weekend close while GeckoTerminal and the venue keep pricing through it — that shows up as the closed-session divergence findings on AMD, AMZN, GOOGL, MSTR and SGOV. None of that changes what the 30 closes say about direction; it just means today's mark is a Friday print, not a live one. Most of the tradeable book is either range-bound (NVDA, SPY, QQQ, PLTR) or too choppy this month to call (COIN, CRCL, MSTR, TSLA), so I'm limiting calls to the names with a clean signal.
+
+CALL AMD 0x86923f96303d656e4aa86d9d42d1e57ad2023fdc buy medium
+AMD has broken out of its August range in the last week, up double digits in four sessions on top of an already-positive month.
+- 468.2354 close on 2026-08-20 [timeline 2026-08-20]
+- 494.73 close on 2026-09-14, then 559.42445 on 2026-09-18, +13.1% in four sessions [timeline 2026-09-14, mark.price_usd]
+- +19.5% over the 30-day window [timeline 2026-08-20, mark.price_usd]
+Wrong if: it closes back below 494.73, the pre-breakout level, erasing the acceleration.
+
+CALL META 0xc0d6457c15e6ba2ebb19ea114ea508d14c1af2e buy high
+Meta has climbed almost every day this month, a textbook uptrend with only a shallow pullback at the very end.
+- 544.70535 close on 2026-08-20 vs 666.7615 now, +22.4% [timeline 2026-08-20, mark.price_usd]
+- peaked at 682.42815 on 2026-09-17 before the latest -2.3% pullback [timeline 2026-09-17, mark.price_usd]
+- higher low at 646.9696 on 2026-09-11 [timeline 2026-09-11]
+Wrong if: it closes below 646.9696, the most recent swing low, breaking the sequence of higher lows.
+
+CALL GME 0x27c71df6a64fb476468edf256cf72c038bab5b67 buy medium
+GameStop has risen in an almost unbroken line for a month, +25% with no material give-back.
+- 18.015 close on 2026-08-20 vs 22.55175 now, +25.2% [timeline 2026-08-20, mark.price_usd]
+- low of 17.925 on 2026-08-28, high of 22.713 on 2026-09-17 [timeline 2026-08-28, timeline 2026-09-17]
+- steady day-over-day gains since 2026-09-08 (18.925 to 22.68305 by 2026-09-17) [timeline 2026-09-08, timeline 2026-09-17]
+Wrong if: it closes below 19.235, the early-September level, giving back most of the move.
+
+CALL NVDA 0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec hold low
+Nvidia is still range-bound for the month, sitting about two-thirds up a 208-230 band after bouncing off a mid-September low.
+- 207.91 low on 2026-08-24, 230.23665 high on 2026-09-04 [timeline 2026-08-24, timeline 2026-09-04]
+- 222.44729849 now, roughly 65% up the range [mark.price_usd]
+- bounced from 211.92474816 on 2026-09-15 [timeline 2026-09-15]
+Wrong if: it closes above 230.23665, a breakout and a buy, or below 207.91, where the range breaks and it becomes a sell.
+
+CALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 sell low
+Amazon has made a run of lower highs since late August and has not reclaimed its prior levels despite a small bounce.
+- 266.085 high on 2026-08-28 vs 253.863 now, -4.6% [timeline 2026-08-28, mark.price_usd]
+- low of 245.74465 on 2026-09-16 before the bounce [timeline 2026-09-16]
+- 259.03 on 2026-09-03 is the most recent swing high, still unreclaimed [timeline 2026-09-03]
+Wrong if: it closes above 259.03, the recent swing high, reversing the pattern of lower highs.
+
+CALL USO 0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344 hold medium
+USO's month-long climb has stalled into a plateau over the last week and a half rather than continuing to make new highs.
+- 126.33345 low on 2026-08-25 vs 161.405 high on 2026-09-15, +27.8% [timeline 2026-08-25, timeline 2026-09-15]
+- 154.54265 now, -4.3% off that high and roughly flat since 2026-09-10 (158.4) [mark.price_usd, timeline 2026-09-10]
+- last six closes have ranged only 153.38-161.405 [timeline 2026-09-15, timeline 2026-09-18]
+Wrong if: it closes above 161.405, a continuation buy, or below 141.995 (2026-09-03 level), breaking the uptrend into a sell.
+```
+
+### The execution-quality report, unedited
+
+```
+REPORT execution-quality unassigned 253315c0e691c42a39a851092bb1b866dc6f605861a07fc21bb0da8027e8721c
+
+The block's closed_sessions list is non-empty: every stock mark here is the feed's last round before the US equities close, while the venue itself keeps quoting live. That means the "gap between price paid and mark booked" figure I track is inflated by session drift for many names, not by an execution problem per se. Setting that aside, the mechanics of a trade at the quoted $25 size are cheap and clean across the board: fee_bps is 0 for every tradeable asset, price/swap impact sits in single digits to the low twenties of bps (a couple even show negative impact, i.e. price improvement), the venue's slippage allowance is a uniform 500 bps on every quote, and every quote used here is under 20 seconds old at built_at. Given that, the one place actual cost stands out is not fee or impact but the paid-vs-booked gap: buying MSTR at the quoted venue price and booking it at the mark would cost roughly 132 bps immediately, an order of magnitude past the ~0-25 bps gap seen on the rest of the tradeable list (AAPL -20bps, GOOGL -12bps, SPY +13bps, META +23bps, TSLA +7bps). Everything else tradeable looks unremarkable for cost purposes and I leave it uncalled.
+
+CALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution medium
+A buy fills at the venue's price of 154.65896270001573 but would book at the mark of 152.643, a gap of about 132 bps against the buyer before any impact or fee is counted — the largest such gap among tradeable names this snapshot, even though the trade mechanics themselves (fee, impact, quote freshness) look fine.
+- venue_price_usd 154.65896270001573 vs mark.price_usd 152.643, a ~132 bps gap [quote.venue_price_usd, mark.price_usd]
+- fee_bps 0, swap_impact_bps 16, both unremarkable on their own [quote.fee_bps, quote.swap_impact_bps]
+- quote age 0.725s, well within the 60s tradeability window [quote.age_s]
+- slippage_bps 500 (5%) is the venue's standard allowance, not unusual to this asset [quote.slippage_bps]
+Wrong if: the venue_price_usd and mark.price_usd converge to within a few tens of bps on a later quote/mark pull.
+```
+
+### F2.6.5 — Price-trend was refused for errors that are the model's
+
+**Confidence: measured.** Unlike §2.6's refusals, all three are real errors:
+- **`call-shape`, META.** It wrote `0xc0d6457c15e6ba2ebb19ea114ea508d14c1af2e`: 39
+  hex digits, right for its first 8, then invented. The real address is
+  `0xc0d6457c16cc70d6790dd43521c899c87ce02f35`.
+- **`asset`, GME.** It wrote `0x27c71df6…5b67`, which is GME's
+  `mark.feed_proxy`: the Chainlink feed's address, not the token's
+  (`0x1b0e319c…153e`). **Two addresses in one entry, and the model took the
+  wrong one.** Identity rests on the address (PLAN §2 invariant 8), and the
+  validator refused it.
+- **`figure`, GME.** It wrote "18.925 to 22.68305 by 2026-09-17". 22.68305 is
+  GME's close on 2026-09-18, not the 17th (22.713). With both addresses put
+  right, as a diagnostic only, this is still refused. It is a mis-dated figure,
+  caught.
+
+**Its other figures check out,** including computed ones. AMD is +13.1% in
+four sessions, USO +27.8% from low to high, AMZN −4.6% off its high, and the
+USO six-close range is 153.38 to 161.405.
+
+### F2.6.6 — Price-trend's NVDA call is the brief's own example, so it cannot be judged
+
+**Confidence: measured.** The shared brief, `analyst.v1.md`, carries the
+approved NVDA call as its example and labels it "From an earlier snapshot". It
+was written against *this* snapshot. The model's NVDA call repeats it: the
+208–230 range, "about two-thirds up", the bounce off 211.92, and the same
+"Wrong if" nearly word for word.
+
+**The label is false for this capture,** and the test you set for price-trend
+("can you tell what it thinks about NVDA") is contaminated here. Its other five
+calls are its own:
+- AMD, META and AMZN converge with the hand-written report, which it never saw;
+- GME and USO are new.
+
+The brief is 2.3's, and it is not changed here.
+
+### F2.6.7 — Cross-asset-macro timed out at the gateway, not at our transport
+
+**Confidence: measured, once.** The gateway returned HTTP 504 "Gateway
+Time-out", an HTML page, after 113.3 s. Our transport allows 600 s, and the
+other calls took 58 to 83 s.
+- **What is inferred,** from one observation: the gateway has an upstream
+  limit near 110 to 120 s. The seat whose question asks for correlations
+  across every series likely reasoned longest.
+- **Why it was not retried.** A refusal from the gateway is never retried
+  (2.4), and the rule here was one call per seat.
+- **Whether it was billed is unknown.** No usage block came back. The settled
+  `/v1/usage` window will show it, by comparing its request count with our
+  recorded calls.
+- **If the limit is real, 600 s is moot:** a reply longer than about 113 s never
+  arrives.
+
+### F2.6.8 — Are the seats different views? Three of four, yes; the fourth did not answer
+
+**Confidence: a judgement, on three reports and one missing.**
+- **Price-trend** gives direction, from the closes. **Price-integrity** says
+  which of three prices is wrong. **Execution-quality** gives the cost of a
+  trade now. **Different questions, different content.** No two reports are the
+  same report.
+- **One overlap, on one fact.** Both condition seats caution MSTR on its 132 bps
+  gap between venue and mark. Price-integrity reads it as a stale mark;
+  execution-quality as a cost to a buyer. The aggregator takes the largest
+  caution, so it is not counted twice, but a reader meets it twice. Each seat
+  also adds what the other lacks: GeckoTerminal's triangulation, and fee,
+  impact and slippage.
+- **The seat most likely to overlap with price-trend is the one with no
+  report.** Cross-asset-macro is the other direction seat. Price-trend
+  called USO "hold" on a stalled trend; the hand-written cross-asset example
+  called it "buy" as a diversifier. That disagreement would have been the test,
+  and it is untested.
+- **So:** not four seats asking one question, as far as three reports can show.
+  The claim is not proven for four.
+
+### F2.6.9 — Cost, and what the reply says about itself
+
+**Confidence: measured.**
+- **Every reply that arrived states its cost in `usage.cost`,** and it equals
+  our listed-price estimate to the digit ($0.273142, $0.249594).
+- **Hidden reasoning** is 76% (price-trend) and 84% (execution-quality) of
+  billed output.
+- **Spent here:** $0.522736 on the two replies, and an unknown amount, possibly
+  none, on the 504.
