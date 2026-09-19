@@ -16,7 +16,7 @@ from fund import config
 from fund.agents import risk, runner
 from fund.core.types import document_id
 from fund.store import reports
-from phase3 import LIMITS, SEATS, SNAPSHOT, example_text, written
+from phase3 import FETCHED_MS, LIMITS, SEATS, SNAPSHOT, example_text, written
 from test_runner import ALLOWED_NAMES, PRICE, FakeGateway
 
 MANDATE = config.load_json("mandate.json")
@@ -98,7 +98,7 @@ def test_the_model_may_veto_what_the_gates_passed(gateway, tmp_path):
 def test_the_model_cannot_approve_what_a_gate_refused(gateway, tmp_path):
     """META's quote is two minutes old. The model approves every order; the gate
     decides."""
-    plan = written(META={"fetched_ms": 1_790_000_000_000 - 120_000})
+    plan = written(META={"fetched_ms": FETCHED_MS - 120_000})
     g = gateway({"risk": [("report", scripted(plan))]})
     outcome = review(plan, g, tmp_path)
     meta = next(o for o in outcome["decision"]["orders"] if o["symbol"] == "META")

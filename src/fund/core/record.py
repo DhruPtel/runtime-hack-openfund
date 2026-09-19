@@ -49,12 +49,14 @@ class Schema:
 #: A record's schema names its plan's layout and its gate set, so a replay rebuilds
 #: it by the same layout and judges it by the same gates, whatever changed since.
 #: `/1` is the 3.8 exit run's record, the first 3.9 replays; `/2` shows each part of
-#: a split move (after F3.8.12). Both were judged by gate set 1. The 3.8 no-op
-#: record of 17:13Z also says `/1` but predates the sweep's changes: it is history,
-#: and nothing rebuilds it.
+#: a split move (after F3.8.12). Both were judged by gate set 1. `/3`, from 4.4, is
+#: judged by gate set 2: S10, S11 and the mandate's term. The 3.8 no-op record of
+#: 17:13Z also says `/1` but predates the sweep's changes: it is history, and nothing
+#: rebuilds it.
 SCHEMAS = {"openfund.decision/1": Schema(layout=1, gate_set=1),
-           "openfund.decision/2": Schema(layout=2, gate_set=1)}
-SCHEMA = "openfund.decision/2"
+           "openfund.decision/2": Schema(layout=2, gate_set=1),
+           "openfund.decision/3": Schema(layout=2, gate_set=2)}
+SCHEMA = "openfund.decision/3"
 
 #: The config files a decision reads.
 CONFIG_FILES = ("analysts.json", "mandate.json", "models.json", "thresholds.json")

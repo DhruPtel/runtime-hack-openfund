@@ -14,14 +14,18 @@ from decimal import Decimal
 
 from fund import config
 from fund.core import gates
-from phase3 import LIMITS, SNAPSHOT, SYMBOLS, book, worth, written
-
+from phase3 import FETCHED_MS, LIMITS, SNAPSHOT, SYMBOLS, book, worth, written
 MANDATE = config.load_json("mandate.json")
 
 
 def evaluate(plan, *, snapshot=SNAPSHOT, mandate=MANDATE, limits=LIMITS, reported=4, extra=()):
     return gates.evaluate(plan, snapshot=snapshot, mandate=mandate, limits=limits,
                           reported=reported, extra=extra)
+
+
+def gate(order_result, rule: str) -> dict:
+    """An order's verdict under one rule, found by name, never by position."""
+    return next(g for g in order_result["gates"] if g["rule"] == rule)
 
 
 def blocked(result) -> dict[str, list[str]]:
@@ -31,14 +35,15 @@ def blocked(result) -> dict[str, list[str]]:
 def test_the_approved_reports_plan_clears_every_gate():
     result = evaluate(written())
     assert result["plan_clear"] and blocked(result) == {}
-    assert [g["rule"] for g in result["plan"]] == ["quorum", "turnover"]  # the floor: settle
+    assert [g["rule"] for g in result["plan"]] == [  # the floor: settle
+        "quorum", "turnover", "snapshot-age", "mandate-term"]
     assert [g["rule"] for g in result["orders"][0]["gates"]] == [
-        "tradeable", "mandate", "order-size", "quote", "position-weight"]
+        "tradeable", "mandate", "mandate-legs", "order-size", "quote", "position-weight"]
     assert Decimal(result["turnover_usd"]).quantize(Decimal("0.01")) == Decimal("62.50")
 
 
 def test_a_stale_quote_and_a_costly_one_are_refused_by_the_rule_that_judged_them():
-    result = evaluate(written(META={"fetched_ms": 1_790_000_000_000 - 120_000},
+    result = evaluate(written(META={"fetched_ms": FETCHED_MS - 120_000},
                               INTC={"impact_bps": 60}))
     assert blocked(result) == {"META": ["quote-age"], "INTC": ["impact"]}
     assert {o["symbol"] for o in result["orders"] if o["cleared"]} == {"AMD", "USO"}
@@ -50,14 +55,13 @@ def test_a_quote_for_another_order_is_refused():
                                                              plan["orders"][0]["quote"])
     result = evaluate(plan)
     assert blocked(result) == {"AMD": ["quote"], "USO": ["quote"]}
-    assert "for another order" in result["orders"][0]["gates"][3]["reason"]
+    assert "for another order" in gate(result["orders"][0], "quote")["reason"]
 
 
 def test_no_quote_blocks_as_undetermined():
     plan = written()
     plan["orders"][2]["quote"] = None
-    gate = evaluate(plan)["orders"][2]["gates"][3]
-    assert gate["value"] is None and gate["rule"] == "quote"
+    assert gate(evaluate(plan)["orders"][2], "quote")["value"] is None
     assert blocked(evaluate(plan)) == {"META": ["quote"]}
 
 
@@ -72,7 +76,7 @@ def test_an_asset_the_snapshot_does_not_call_tradeable_is_refused():
 def test_the_mandate_refuses_an_asset_it_does_not_name_a_revoked_mandate_and_an_empty_one():
     narrow = {**MANDATE, "allowed_assets": [a for a in MANDATE["allowed_assets"]
                                             if a["symbol"] != "USO"]}
-    assert blocked(evaluate(written(), mandate=narrow)) == {"USO": ["mandate"]}
+    assert blocked(evaluate(written(), mandate=narrow)) == {"USO": ["mandate", "mandate-legs"]}
     revoked = evaluate(written(), mandate={**MANDATE, "revoked": True})
     assert set(blocked(revoked)) == {"AMD", "USO", "META", "INTC"}
     empty = evaluate(written(), mandate={**MANDATE, "allowed_assets": []})
@@ -88,8 +92,8 @@ def test_an_order_past_the_per_trade_limit_is_refused_on_what_it_sells_not_its_l
         Decimal("0.000001")), "f")  # $25.25 of USDG
     assert "order-size" in blocked(evaluate(plan))["META"]
     sold["amount"] = "25.1234567"  # more places than USDG has: unknown, and it blocks
-    gate = next(o for o in evaluate(plan)["orders"] if o["symbol"] == "META")["gates"][2]
-    assert gate["rule"] == "order-size" and gate["value"] is None
+    size = gate(next(o for o in evaluate(plan)["orders"] if o["symbol"] == "META"), "order-size")
+    assert size["value"] is None
 
 
 def test_a_buy_past_the_position_limit_is_refused_whatever_the_plan_says_it_leaves():
@@ -126,7 +130,8 @@ def test_a_sell_passes_the_position_gate_and_frees_cash_for_the_floor():
     result = evaluate(plan)
     amzn = next(o for o in result["orders"] if o["symbol"] == "AMZN")
     assert amzn["cleared"]
-    assert [g["rule"] for g in amzn["gates"]] == ["priced", "mandate", "order-size", "quote"]
+    assert [g["rule"] for g in amzn["gates"]] == [
+        "priced", "mandate", "mandate-legs", "order-size", "quote"]
 
 
 def test_extra_plan_gates_are_counted():
@@ -147,3 +152,51 @@ def test_a_gate_set_this_code_does_not_define_refuses_rather_than_judging_by_ano
             assert "gate set" in str(refused)
         else:
             raise AssertionError("an unknown gate set was judged")
+
+
+# --- gate set 2 (4.4): S11, the mandate's term, S10; and what a book holds ------------------------
+
+def test_s11_the_exit_run_was_judged_4_minutes_after_its_snapshot_and_the_1713_no_op_11_hours():
+    from pathlib import Path
+    import json
+    cycles = Path(__file__).resolve().parents[1] / "fixtures" / "cycles"
+    ages = {}
+    for name in ("20260919T202259Z", "20260919T171351Z"):
+        record = json.loads((cycles / name / "decision" / "record.json").read_text())
+        ages[name] = gates.snapshot_age(record["snapshot"]["block"]["time"],
+                                        record["decided_at_ms"], LIMITS)
+    assert ages["20260919T202259Z"].passes
+    assert ages["20260919T171351Z"].value is False and "past 900s" in ages["20260919T171351Z"].reason
+
+
+def test_s11_fifteen_minutes_to_the_millisecond_and_never_before_the_block():
+    block = "2026-09-19T06:01:49Z"
+    at_block = 1_789_797_709_000
+    assert gates.snapshot_age(block, at_block + 900_000, LIMITS).passes
+    assert gates.snapshot_age(block, at_block + 900_001, LIMITS).value is False
+    assert gates.snapshot_age(block, at_block - 1, LIMITS).value is False
+    unset = dataclasses.replace(LIMITS, snapshot_max_age_s=None)
+    assert gates.snapshot_age(block, at_block, unset).value is None
+
+
+def test_a_plan_judged_too_long_after_its_snapshot_or_outside_the_mandates_term_refuses_all():
+    stale = written()
+    stale["judged_at_ms"] = 1_789_797_709_000 + 16 * 60_000
+    result = evaluate(stale)
+    assert not result["plan_clear"]
+    assert all(o["blocked_by"] == ["snapshot-age"] for o in result["orders"])
+    lapsed = {**MANDATE, "expires_at": "2026-09-19T06:00:00Z", "approved_at": "2026-09-12T06:00:00Z"}
+    assert all(o["blocked_by"] == ["mandate-term"] for o in evaluate(written(), mandate=lapsed)["orders"])
+
+
+def test_gate_set_1_still_judges_as_phase_3_did():
+    one = evaluate(written(), limits=dataclasses.replace(LIMITS, gate_set=1))
+    assert [g["rule"] for g in one["plan"]] == ["quorum", "turnover"]
+    assert [g["rule"] for g in one["orders"][0]["gates"]] == [
+        "tradeable", "mandate", "order-size", "quote", "position-weight"]
+
+
+def test_an_order_gives_no_more_than_the_book_holds():
+    gives = {"address": "0x" + "ab" * 20, "raw": "1000"}
+    assert gates.held(gives, 1000).passes
+    assert gates.held(gives, 999).value is False and gates.held(gives, None).value is False

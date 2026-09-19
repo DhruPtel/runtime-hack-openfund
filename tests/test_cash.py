@@ -17,7 +17,7 @@ from fund.agents import risk
 from fund.core import gates
 from fund.core.types import document_id
 from phase3 import (
-    ADDRESS, ENTRIES, LIMITS, SEATS, SNAPSHOT, book, example_text, worth, written,
+    ADDRESS, ENTRIES, FETCHED_MS, LIMITS, SEATS, SNAPSHOT, book, example_text, worth, written,
 )
 
 MANDATE = config.load_json("mandate.json")
@@ -77,7 +77,7 @@ def test_r1_a_blocked_sell_does_not_leave_the_buys_it_funded_approved(tmp_path):
     sweep the sells were blocked by impact, which since S8 no longer binds a sell.)"""
     plan = written(calls(META=("sell", "high"), MSFT=("buy", "high")),
                    the_book=book({"META": worth("META", "180")}, cash="20"),
-                   META={"fetched_ms": 1_790_000_000_000 - 120_000})
+                   META={"fetched_ms": FETCHED_MS - 120_000})
     outcome = decided(plan, tmp_path)
     approved = set(outcome["decision"]["approved"])
     sides = {o["index"]: (o["side"], o["asset"]["symbol"]) for o in plan["orders"]}

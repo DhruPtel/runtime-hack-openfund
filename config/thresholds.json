@@ -35,5 +35,9 @@
 
   "quorum_min_analysts": 3,
   "_quorum_note": "Defined against a roster of 4: one failed seat still decides, two do not. Below it the cycle keeps every holding (core/aggregate.py).",
-  "_quorum_resolved_by": "Set at 3.1 (operator, 2026-09-19, the Phase 3 batch brief, as planning/SIMPLIFICATION.md proposed). Provisional."
+  "_quorum_resolved_by": "Set at 3.1 (operator, 2026-09-19, the Phase 3 batch brief, as planning/SIMPLIFICATION.md proposed). Provisional.",
+
+  "snapshot_max_age_seconds": 900,
+  "_snapshot_age_note": "S11: a decision's quotes are judged at most 15 minutes after its snapshot's pinned block, or every order is refused (core/gates.py snapshot_age, gate set 2). The exit run judged about 4 minutes after its block; the 17:13Z decision, 11 hours after its snapshot. The chokepoint checks it again from the record (4.4).",
+  "_snapshot_age_resolved_by": "The operator, 2026-09-19, among the six decisions before 4.0."
 }

@@ -19,7 +19,7 @@ from fund import config
 from fund.agents import risk
 from fund.core import gates
 from fund.core.types import document_id
-from phase3 import ADDRESS, ENTRIES, LIMITS, SNAPSHOT, book, worth, written
+from phase3 import ADDRESS, ENTRIES, FETCHED_MS, LIMITS, SNAPSHOT, book, worth, written
 from test_cash import REPORTS, SETTINGS, approve_all, calls
 from test_schema import example, verdict
 
@@ -67,7 +67,7 @@ def test_a_buy_into_the_same_asset_is_still_refused():
 
 
 def test_a_sell_still_needs_a_fresh_quote():
-    stale = held_dell(DELL={"fetched_ms": 1_790_000_000_000 - 120_000})
+    stale = held_dell(DELL={"fetched_ms": FETCHED_MS - 120_000})
     assert all(o["blocked_by"] == ["quote-age"] for o in evaluate(stale)["orders"])
     plan = held_dell()
     plan["orders"][0]["quote"] = None

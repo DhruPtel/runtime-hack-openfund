@@ -9,8 +9,9 @@ from fund import config
 from fund.agents import risk
 from fund.core import record
 from fund.core.types import document_id
-from phase3 import LIMITS, SEATS, SNAPSHOT, SNAPSHOT_SHA256, example_text, propose, written
-
+from phase3 import (
+    FETCHED_MS, LIMITS, SEATS, SNAPSHOT, SNAPSHOT_SHA256, example_text, propose, written,
+)
 MANDATE = config.load_json("mandate.json")
 REPORTS = [{"seat": s, "agent": "unassigned", "text": example_text(s)} for s in SEATS]
 CONFIG = {name: hashlib.sha256((config.CONFIG_DIR / name).read_bytes()).hexdigest()
@@ -41,7 +42,7 @@ def built(tmp_path, veto=(), **changes):
 
 def test_the_record_cites_every_input_by_hash_and_carries_every_finding(tmp_path):
     r = built(tmp_path, veto=("AMD",))
-    assert r["schema"] == "openfund.decision/2" and r["snapshot"]["sha256"] == SNAPSHOT_SHA256
+    assert r["schema"] == "openfund.decision/3" and r["snapshot"]["sha256"] == SNAPSHOT_SHA256
     assert sorted(r["hashes"]["reports"]) == sorted(SEATS)
     assert r["hashes"]["reports"]["price-trend"] == hashlib.sha256(
         example_text("price-trend").encode()).hexdigest()
@@ -68,7 +69,7 @@ def test_the_same_inputs_give_the_same_bytes_and_no_clock_enters(tmp_path):
 
 
 def test_a_vetoed_order_names_every_rule_that_vetoed_it(tmp_path):
-    r = built(tmp_path, veto=("META",), META={"fetched_ms": 1_790_000_000_000 - 120_000})
+    r = built(tmp_path, veto=("META",), META={"fetched_ms": FETCHED_MS - 120_000})
     meta = next(o for o in r["decision"]["vetoed"] if o["symbol"] == "META")
     assert meta["vetoed_by"] == ["quote-age", "risk"]
 

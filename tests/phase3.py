@@ -46,7 +46,9 @@ QUOTE_LIMITS = bankr_quote.Limits.from_thresholds(config.load_json("thresholds.j
 NAV = Decimal(200)
 
 #: When the fake venue answered, and when the plan judged it: both inputs, never a clock.
-FETCHED_MS = 1_790_000_000_000
+#: Two minutes after the capture's pinned block (06:01:49Z), as a live cycle quotes. Until
+#: S11 (4.4) it was two days later, which the snapshot-age gate now refuses.
+FETCHED_MS = 1_789_797_709_000 + 120_000
 JUDGED_MS = FETCHED_MS + 5_000
 
 

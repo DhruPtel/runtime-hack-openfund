@@ -17,7 +17,8 @@ import pytest
 from fund.core import plan
 from fund.core.types import Instant, from_canonical
 from phase3 import (
-    ADDRESS, FOUR, LIMITS, SNAPSHOT, book, fake_quote, judged, propose, quoted, worth, written,
+    ADDRESS, FETCHED_MS, FOUR, JUDGED_MS, LIMITS, SNAPSHOT, book, fake_quote, judged, propose,
+    quoted, worth, written,
 )
 
 
@@ -116,7 +117,7 @@ def test_each_order_carries_its_fresh_quote_its_verdict_and_the_evidence_risk_re
 
 
 def test_a_stale_or_costly_quote_is_recorded_with_the_rule_that_refused_it():
-    stale = written(META={"fetched_ms": 1_790_000_000_000 - 120_000})
+    stale = written(META={"fetched_ms": FETCHED_MS - 120_000})
     meta = next(o for o in stale["orders"] if o["asset"]["symbol"] == "META")
     assert meta["quote"]["tradeable"]["value"] is False
     assert meta["quote"]["tradeable"]["rule"] == "quote-age"
@@ -130,7 +131,7 @@ def test_the_recorded_quote_is_the_observation_exactly_so_it_can_be_judged_again
     seen = quoted(intents)
     written_plan = plan.write(intents, seen, proposal=propose(), the_book=book(),
                               snapshot=SNAPSHOT, snapshot_sha256="0" * 64,
-                              judged_at=Instant(1_790_000_005_000))
+                              judged_at=Instant(JUDGED_MS))
     for order in written_plan["orders"]:
         back = from_canonical(json.dumps(order["quote"]["observation"]).encode())
         assert back == seen[order["index"]].observation

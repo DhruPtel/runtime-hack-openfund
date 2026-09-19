@@ -22,6 +22,7 @@ An H unit: the signed record is what the fund sells.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import shutil
 import socket
@@ -150,26 +151,27 @@ def test_every_schema_names_a_layout_and_a_gate_set_the_code_defines():
 
 
 def test_a_gate_set_added_later_judges_new_decisions_but_not_this_record(tmp_path, monkeypatch):
-    """S10 and S11 will change what the gates check (4.4). Here a later set 2 adds a
-    plan gate that refuses, as S11's would refuse a stale snapshot, and set 2 becomes
-    today's. The exit run's record names set 1, so its rebuild is still byte for
-    byte. Rebuilt under today's schema, the same inputs meet the new gate."""
-    original = gates.evaluate
+    """Gate set 2 (S10, S11, 4.4) changed what the gates check, and a later set will again.
+    Here a set past the real ones adds a plan gate that refuses and becomes today's.
+    The exit run's record names set 1, so its rebuild is still byte for byte. Rebuilt
+    under today's schema, the same inputs meet the new gate."""
+    original, later_set = gates.evaluate, max(gates.GATE_SETS) + 1
 
-    def with_set_2(plan_, *, limits, extra=(), **rest):
-        if limits.gate_set == 2:
-            extra = [*extra, gates.Gate("added-in-set-2", False, "constructed: a later gate")]
+    def with_a_later_set(plan_, *, limits, extra=(), **rest):
+        if limits.gate_set == later_set:
+            extra = [*extra, gates.Gate("added-later", False, "constructed: a later gate")]
+            limits = dataclasses.replace(limits, gate_set=later_set - 1)
         return original(plan_, limits=limits, extra=extra, **rest)
 
     later = "openfund.decision/test-later"
-    monkeypatch.setattr(gates, "evaluate", with_set_2)
-    monkeypatch.setattr(gates, "GATE_SETS", (1, 2))
-    monkeypatch.setattr(gates, "GATE_SET", 2)
-    monkeypatch.setitem(record.SCHEMAS, later, record.Schema(layout=2, gate_set=2))
+    monkeypatch.setattr(gates, "evaluate", with_a_later_set)
+    monkeypatch.setattr(gates, "GATE_SETS", (*gates.GATE_SETS, later_set))
+    monkeypatch.setattr(gates, "GATE_SET", later_set)
+    monkeypatch.setitem(record.SCHEMAS, later, record.Schema(layout=2, gate_set=later_set))
     monkeypatch.setattr(record, "SCHEMA", later)
 
     assert rebuild(tmp_path / "a") == RECORDED
     today = json.loads(rebuild(tmp_path / "b", schema=record.SCHEMA))
     assert today["schema"] == later
-    assert "added-in-set-2" in [g["rule"] for g in today["gates"]["plan"]]
-    assert all("added-in-set-2" in o["blocked_by"] for o in today["gates"]["orders"])
+    assert "added-later" in [g["rule"] for g in today["gates"]["plan"]]
+    assert all("added-later" in o["blocked_by"] for o in today["gates"]["orders"])

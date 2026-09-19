@@ -28,7 +28,8 @@ from fund.core.types import Instant, document_id
 from fund.run import decide
 from fund.store import reports
 from phase3 import (
-    CAPTURE, FOUR, JUDGED_MS, LIMITS, SNAPSHOT, book, fake_quote, propose, worth, written,
+    CAPTURE, FETCHED_MS, FOUR, JUDGED_MS, LIMITS, SNAPSHOT, book, fake_quote, propose, worth,
+    written,
 )
 from test_runner import ALLOWED_NAMES, PRICE, FakeGateway
 
@@ -131,8 +132,8 @@ def test_four_approved_reports_become_a_signed_decision(gateway, tmp_path, monke
 
 
 def test_a_stale_quote_is_vetoed_by_name_even_when_risk_approves(gateway, tmp_path):
-    quotes = quotes_file(tmp_path, META={"fetched_ms": 1_790_000_000_000 - 120_000})
-    expected = written(META={"fetched_ms": 1_790_000_000_000 - 120_000})
+    quotes = quotes_file(tmp_path, META={"fetched_ms": FETCHED_MS - 120_000})
+    expected = written(META={"fetched_ms": FETCHED_MS - 120_000})
     g = gateway({"risk": [("report", scripted(expected))]})
     done = run(tmp_path, quotes=quotes, g=g)
     meta = next(o for o in done["record"]["decision"]["vetoed"] if o["symbol"] == "META")

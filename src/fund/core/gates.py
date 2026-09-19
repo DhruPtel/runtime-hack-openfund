@@ -58,16 +58,20 @@ RULE_CONTEXT_BUDGET = "context-budget"  # risk's whole bundle fits the budget (i
 RULE_MANDATE_TERM = "mandate-term"  # approved, not revoked, not expired (4.1)
 RULE_MANDATE_LEGS = "mandate-legs"  # every leg an order trades is allowed (4.1, S10)
 RULE_LIVE_BUDGET = "live-budget"    # a live order stays within the cumulative live budget (4.1)
+RULE_SNAPSHOT_AGE = "snapshot-age"  # judged at most snapshot_max_age_seconds after the block (S11)
+RULE_HELD = "held"                  # an order gives no more than the book holds (4.4, 4.0 P4)
 
 #: The gate sets a decision can be judged by. A record's schema names the set it was
 #: judged by (`core/record.py`), as it names its plan's layout, and a replay judges by
 #: that set. So a gate added or changed later never changes an earlier record's
 #: rebuild (3.9). A set changes when what a gate checks changes. A limit's number is
 #: config, which each recorded cycle carries, so a new number is not a new set.
-#: - 1: the Phase 3 gates, as the exit run was judged. S10 (both legs, at 4.4) and
-#:   S11 (the snapshot's age) will make set 2, and the record schema that names it.
-GATE_SETS = (1,)
-GATE_SET = 1
+#: - 1: the Phase 3 gates, as the exit run was judged.
+#: - 2: since 4.4. Two plan gates, the snapshot's age when the quotes were judged (S11)
+#:   and the mandate's term then (4.1), and for every order S10's check of the legs it
+#:   trades, not only its label (4.1).
+GATE_SETS = (1, 2)
+GATE_SET = 2
 
 
 def _number(config: Mapping[str, Any], name: str) -> Decimal | None:
@@ -103,6 +107,7 @@ class Limits:
     max_trade_usd: Decimal | None
     turnover_max_bps: Decimal | None
     context_budget_tokens: int | None
+    snapshot_max_age_s: int | None = None  # S11, gate set 2
     gate_set: int = GATE_SET  # which gates apply the limits: the set a record names
 
     @classmethod
@@ -119,7 +124,8 @@ class Limits:
                    min_order_usd=_number(thresholds, "min_order_usd"),
                    max_trade_usd=_number(mandate or {}, "max_trade_usd"),
                    turnover_max_bps=_number(thresholds, "turnover_max_bps"),
-                   context_budget_tokens=_whole(models or {}, "context_budget_tokens"))
+                   context_budget_tokens=_whole(models or {}, "context_budget_tokens"),
+                   snapshot_max_age_s=_whole(thresholds, "snapshot_max_age_seconds"))
 
 
 @dataclass(frozen=True)
@@ -338,6 +344,36 @@ def live_budget(mandate: Mapping[str, Any], spent_usd: Decimal, order_usd: Decim
     return Gate(RULE_LIVE_BUDGET, True, f"${spent_usd + order_usd} of ${budget} live")
 
 
+def snapshot_age(block_time: str, at_ms: int, limits: Limits) -> Gate:
+    """S11: the snapshot's evidence was at most `snapshot_max_age_seconds` old when the
+    decision's quotes were judged at `at_ms`. A Saturday snapshot decided after
+    Monday's open would otherwise pass an open-session divergence as a closed-session
+    finding. Measured from the pinned block's time, when the evidence was true."""
+    if limits.snapshot_max_age_s is None:
+        return _unresolved(RULE_SNAPSHOT_AGE, "snapshot_max_age_seconds")
+    block_ms = _epoch_ms(block_time)
+    if block_ms is None:
+        return Gate(RULE_SNAPSHOT_AGE, None, f"the snapshot's block time {block_time!r} is not a "
+                                             "UTC time")
+    age_s = Decimal(at_ms - block_ms) / 1000
+    if at_ms < block_ms:
+        return Gate(RULE_SNAPSHOT_AGE, False, f"judged {-age_s}s before the snapshot's block")
+    if age_s > limits.snapshot_max_age_s:
+        return Gate(RULE_SNAPSHOT_AGE, False, f"the snapshot was {age_s}s old when judged, past "
+                                              f"{limits.snapshot_max_age_s}s")
+    return Gate(RULE_SNAPSHOT_AGE, True, f"the snapshot was {age_s}s old when judged, within "
+                                         f"{limits.snapshot_max_age_s}s")
+
+
+def held(gives: Mapping[str, Any], holding: int | None) -> Gate:
+    """An order gives no more than the book holds of what it gives (4.0 P4): a sell of
+    the stock, a buy of USDG. `holding` is the book's raw units, from the ledger."""
+    if holding is None or holding < int(gives["raw"]):
+        return Gate(RULE_HELD, False, f"it gives {gives['raw']} raw of {gives['address']}, and "
+                                      f"the book holds {holding or 0}")
+    return Gate(RULE_HELD, True, f"the book holds {holding} raw of what it gives")
+
+
 def order_size(usd: Decimal, limits: Limits) -> Gate:
     size = limits.max_trade_usd
     if size is None:
@@ -508,7 +544,12 @@ def evaluate(plan: Mapping[str, Any], *, snapshot: Mapping[str, Any],
             value if order["side"] == "buy" else -value)
         traded += value
 
-    plan_gates = [quorum(reported, limits), turnover(traded, nav, limits), *extra]
+    plan_gates = [quorum(reported, limits), turnover(traded, nav, limits)]
+    if limits.gate_set >= 2:
+        judged = plan["judged_at_ms"]
+        plan_gates += [snapshot_age(snapshot["block"]["time"], judged, limits),
+                       mandate_term(mandate, Instant(judged))]
+    plan_gates += extra
     plan_clear = all(g.passes for g in plan_gates)
     orders = []
     for order in plan["orders"]:
@@ -524,6 +565,8 @@ def evaluate(plan: Mapping[str, Any], *, snapshot: Mapping[str, Any],
             own = [tradeable(entries.get(address)), mandate_allows(order, mandate), size,
                    fresh_quote(order),
                    position_weight(values[address] / nav, order["side"], limits)]
+        if limits.gate_set >= 2:  # S10: the legs it trades, not only its label
+            own.insert(2, mandate_legs(order, mandate))
         cleared = plan_clear and all(g.passes for g in own)
         blocking = [g.rule for g in [*own, *plan_gates] if not g.passes]
         orders.append({"index": order["index"], "symbol": order["asset"]["symbol"],
