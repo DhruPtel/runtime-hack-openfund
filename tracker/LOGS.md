@@ -407,45 +407,64 @@ The network reads — the registry fetch and the beacon slot — are adapter wor
 outside this unit's paths. The core takes their results as arguments. Several
 folds and LESSONS entries are owed, listed in the state note below.
 
+## 1.3 — Chain adapter
+**Date:** 2026-09-18 · **Commit:** 807fbc1
+
+Built `src/fund/adapters/chain_4663.py`, stdlib only: every read of 4663, as
+`Observation`s and `Series` at one pinned block, each read addressed by hash.
+It has:
+- a JSON-RPC client with a whole-request deadline, failover that advances on a
+  hang, pacing, and a doubling backoff on a bare 429;
+- Multicall3 reads of feed rounds, decimals and balances, and paced
+  beacon-slot reads for 1.2's cross-check;
+- `require_one_block`, which refuses a mixed bundle at `block-pin`;
+- a freshness verdict per feed: its heartbeat plus the margin, judged at the
+  block's time, on the newest point only;
+- a seven-day series of the feed's own rounds, whose `coverage` says when it
+  is short.
+
+The artifact is that module with 39 offline tests. They run against a fake
+chain that speaks the real `aggregate3` ABI, and every rule was mutated and
+caught. `--prove` was run live at block 66652203:
+- 37 feeds fresh, and read identically twice;
+- 35 of 35 beacons agreeing with the issuer's;
+- AAPL's week-old oldest point stale on its own, while its series judges fresh;
+- a real two-block read refused;
+- a refused socket read as undetermined;
+- a silent socket passed over in 3.2 s.
+
+Measuring as it went, the unit found every equity feed silent for 48–59 h over
+a weekend, against a 25 h rule. That finding and four others are in LESSONS.
+
 ---
 
-## State at close — 2026-09-18 (1.2 done)
+## State at close — 2026-09-18 (1.3 done)
 
-**Done.** All of Phase 0, the Phase 1 replan, 1.1 (types) and **1.2
-(universe)**. 122 tests, offline. `config/registry/` holds:
-- the pinned registry (`442718b5…`, the version 0.8 recorded, now verified);
-- the pinned Chainlink directory (`2ae1ea5f…`);
-- `pins.json`: our own pins — issuer beacon, USDG cash leg, ETH gas;
-- `feed_map.json`: 37 feeds, 5 of them reviewed by hand.
+**Done.** All of Phase 0, the Phase 1 replan, 1.1 (types), 1.2 (universe) and
+**1.3 (chain adapter)**. 168 tests, offline, plus one live proof command:
+`python -m fund.adapters.chain_4663 --prove`. 1.2's loose ends are closed:
+- `config/universe.json` is retired;
+- `UniverseStatus.LISTED_NOT_ACTIVE` exists, and `Admission.universe_status`
+  maps to it;
+- the six owed LESSONS entries are written.
 
-**Owed, and outside the 1.2 pass's paths** (`src/fund/core/universe.py`,
-`config/registry/`, `tests/`, this file):
-- **Folds.**
-  - PHASE-0-1 1.2 and `config/README.md` still name `config/universe.json` as
-    the allowlist. The pin now lives in `config/registry/pins.json` and
-    `feed_map.json`, and `universe.json` is still the empty placeholder, to
-    retire or re-point.
-  - `config/mandate.json`'s `allowed_assets` note still points at `universe.json`.
-- **LESSONS entries.**
-  - The registry is byte-stable, and 0.8's hash is verified.
-  - The directory carries no token address, so markability's link is a reviewed
-    name match. It is safe because it runs only over registry records.
-  - Unlike the registry, the directory does send `ETag` and `Last-Modified`.
-  - SGOV and USAR carry no `assetClass`, which silently dropped them until the
-    filter was fixed.
-  - Non-ACTIVE means refused for buying at standing, and never dropped as a
-    holding.
-  - The refresh fetch and the beacon read need adapters. That is a layout
-    finding.
-- **A types gap.** `UniverseStatus` has no value for "listed but not ACTIVE". The
-  1.2 test uses `IDENTITY_IN_DOUBT`, following 1.8's wording, although identity
-  itself still passes.
+**Open, for the operator.** None of these is resolved here.
+- **The weekend.** The decided rule judges every equity feed stale for about
+  23–35 h each weekend (one weekend measured). That is 1.11's checkpoint
+  question, which now has data.
+- **Where the staleness comparison lives.** It is in the chain adapter, while
+  CODEBASE says only `gates.py` makes one. That is for 1.8.
+- **Where the HTTP client lives.** `adapters/http.py` is still a stub. 1.4 and
+  1.5 need the chain adapter's deadline and backoff, so it is either lifted
+  into `http.py` or imported.
+- **The registry fetch.** The registry and directory fetch still has no owning
+  unit (from 1.2).
 
 **Still open from before.** The 180 s transport timeout exceeds the 120 s worker
-deadline (for 2.4). The price series and weekend feed behaviour are for 1.3. The
-quote response's mixed formats are for 1.5. Six types wait for 2.1–6.1.
+deadline (for 2.4). The quote response's mixed formats are for 1.5. Six types
+wait for 2.1–6.1.
 
-**Funding.** Unchanged since 0.10.
+**Funding.** Unchanged since 0.10. 1.3's proof read the wallet live: 0.078742
+USDG and 0.000460 ETH on 4663.
 
-**Next.** Unit 1.3 (chain adapter), which also supplies the beacon-slot reads
-1.2 cross-checks, when the operator says go.
+**Next.** Unit 1.4 (price cross-check), when the operator says go.
