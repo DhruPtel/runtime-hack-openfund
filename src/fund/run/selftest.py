@@ -79,8 +79,10 @@ class Row:
         failed = [(name, c) for name, c in self.checks if not c.passes]
         if not failed:
             return f"PASS  {self.address}  {self.role}: " + "; ".join(c.reason or n for n, c in self.checks)
+        passed = [name for name, c in self.checks if c.passes]
         return f"FAIL  {self.address}  {self.role}: " + "; ".join(
-            f"{name} {'undetermined' if c.value is None else 'wrong'}: {c.reason}" for name, c in failed)
+            f"{name} {'undetermined' if c.value is None else 'wrong'}: {c.reason}" for name, c in failed
+        ) + (f" (passed: {', '.join(passed)})" if passed else "")
 
 
 @dataclass(frozen=True)

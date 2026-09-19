@@ -130,7 +130,9 @@ def test_a_genuine_token_at_another_tokens_address_fails_only_at_symbol():
 def test_a_counterfeit_at_a_tokens_address_fails_only_at_the_beacon():
     # The GameStop impersonator answers decimals() and symbol() exactly like GME.
     u = retarget(U, listed("GME"), FAKE_GAMESTOP.address)
-    assert failing(attest(u)) == {"registry token GME": ["beacon"]}
+    result = attest(u)
+    assert failing(result) == {"registry token GME": ["beacon"]}
+    assert result.failed[0].line().endswith("(passed: decimals, symbol)")  # what it got past, named
 
 
 def test_a_feed_pinned_to_another_assets_proxy_fails_at_its_description():
