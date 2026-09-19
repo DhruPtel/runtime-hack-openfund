@@ -1,7 +1,13 @@
 # Phase 2: analyst contract and fan-out
 
-**Status: a plan, awaiting the operator.** Written 2026-09-19, before any Phase 2
-work. Nothing in it is built. It gives each unit at the minimal scope approved
+**Status, 2026-09-19:**
+- 2.0 ran, and SIWE gives no gateway access; the options wait on the operator;
+- 2.1 was approved;
+- **2.2 to 2.5 are built and tested offline** (LOGS);
+- 2.6 onward needs a live key, and `BANKR_LLM_KEY` is still not read-only.
+
+Nothing has run live. This file was written as the plan before any Phase 2 work,
+and each unit below now carries a note on what was built. It gives each unit at the minimal scope approved
 in `SIMPLIFICATION.md`, in the shape `PHASE-0-1.md` uses:
 - the goal;
 - what gets built;
@@ -314,6 +320,17 @@ constructed bad reply at its own rule.
 **Full version:** hard validation of every field, out-of-scope claims refused
 per seat, and values checked as well as paths (§9 analyst contract).
 
+**Built 2026-09-19** (`agents/schema.py`, `5f108aa`):
+- all four approved examples are accepted, parsed straight from
+  `REPORT-FORMAT.md`;
+- a fabricated figure is refused, naming the field and its real value;
+- each rule refuses by its own name.
+
+**One rule changed while building.** A figure is the field it cites when the
+field lies within half a unit of the figure's last digit, the midpoint included.
+The capture holds AMZN's close of 266.085, which the approved report writes as
+266.08. Strict round-half-up refused that correct figure (LESSONS 2026-09-19).
+
 ### 2.3 Brief · L
 
 **Goal:** every seat gets the same snapshot bytes and a question of its own.
@@ -339,6 +356,15 @@ to render.
 
 **Full version:** mandate text, explicit scope boundaries, effort scaling, and
 assets partitioned per seat.
+
+**Built 2026-09-19, one file per seat, as the batch brief asked** (`de1a6af`):
+- `briefs/<seat>.v1.md` holds each seat's mandate, vocabulary, what to read and
+  effort guidance;
+- the seat's question and the questions it leaves to others come from
+  `config/analysts.json`, filled in when the brief is built;
+- `briefs/analyst.v1.md` is the shared output contract, with the approved NVDA
+  call as its example;
+- the snapshot goes in as byte-identical text, named by its sha256.
 
 ### 2.4 Runner · **H**
 
@@ -402,6 +428,20 @@ credential rows, with tests on a fake gateway.
 result slots, retry budgets per failure kind, and deployed isolation across
 hosts with files per role (PLAN §8 2.4, 4.12).
 
+**Built 2026-09-19** (`agents/runner.py`, `agents/analyst.py`,
+`adapters/bankr_llm.py`; `f38596f`, `30cfb4e`):
+- **Where keys come from is a parameter:** `PerAgentKeys` or
+  `SharedGatewayKey`. Neither is hard-coded.
+- **The H proof, each guard broken in a copy and caught by its own test:**
+  - with the runner's environment passed through, every analyst could see
+    `BANKR_KEY_EXEC`, `SIGNING_KEY`, `BANKR_KEY_READ`, the RPC URL, the other
+    agents' keys and an unrelated secret, and the test failed;
+  - so did skipping the check against treasurer keys, retrying a timeout,
+    dropping the partial flag, not enforcing the cycle deadline, not bounding
+    the width, and not retrying a malformed reply.
+- **Not built yet:** no entry point runs it live. That is owed at 2.6, once a
+  safe key exists.
+
 ### 7.6, first slice: the swarm on a page · L · *recommended, not yet approved*
 
 See "The page" below. If approved, it lands here.
@@ -433,7 +473,8 @@ panel.
 **Goal:** every call's cost is recorded where it happens, against the agent
 that paid.
 
-**Build:** per call, in the worker's result and the event log:
+**Build:** *(superseded by the batch brief, see "Built" below)* per call, in
+the worker's result and the event log:
 - the response's `usage` block;
 - the price at the published rate, with where the rate came from;
 - the agent account's `/v1/credits` before and after.
@@ -454,6 +495,20 @@ aggregate to aggregate (F0.6.4).
 A balance delta is that agent's spend only while nothing else uses the
 account, because credits are wallet-scoped (F0.6.6). One account per agent is
 what makes that hold.
+
+**Built 2026-09-19, as the batch brief asked, and not as planned above**
+(`bankr_llm.cost`, `adapters/bankr_usage.py`; `ac543bc`, `4b02ed7`):
+- **Each call's cost** comes from its own usage block at the listed price. It
+  reproduces 1.8a's $0.264272 exactly.
+- **Every figure is labelled an estimate:** per call, per analyst and per
+  cycle. Calls of unknown cost, such as a timeout, are counted, not zeroed.
+- **The cross-check is aggregate against aggregate,** in one settled
+  `/v1/usage` window, with the window's dates read back from the provider.
+- **No before-and-after delta is used,** of credits or of usage.
+- **Tested on real data.** The recorded settled window reconciles exactly
+  against its six recorded calls ($1.105746).
+- **What is given up:** per-agent credit deltas as the check. So "each agent
+  pays" is shown by each call's key, not by a balance.
 
 ### 2.6 ▶ First real report · L · shown, not stopped
 
