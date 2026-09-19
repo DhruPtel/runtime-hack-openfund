@@ -530,135 +530,117 @@ judged yet.**
 
 ---
 
-## State at close — 2026-09-18, after 1.5
+## State at close — 2026-09-18, after 1.6 ▶ (waiting at the checkpoint)
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
 commits, this note is older than the code, so read those commits before trusting
 it. Where this note and git disagree, git is right.
 
+**1.6 is a ▶ checkpoint, and the operator has not judged it.** Do not start 1.7
+until the operator has read the snapshot and answered PHASE-0-1 1.6's question:
+could an analyst say anything intelligent from it?
+
 **Check it in a minute.** Nothing here spends.
 - `git log --oneline -15` and `git status -sb`.
-- `make test`: 285 passed when this was written.
+- `make test`: 311 passed when this was written.
 - `make check-env`: which credentials are present, by name only.
-- Live and read-only, each needing `RPC_4663_MAINNET`:
-  - `PYTHONPATH=src python3 -m fund.adapters.bankr_quote --prove` re-runs 1.5.
-    It makes about 40 quote requests, and waits out one quote's age on
-    purpose.
-  - `python -m fund.adapters.gecko --prove` re-runs 1.4.
-  - `python -m fund.adapters.chain_4663 --prove` re-runs 1.3, and
-    `--sessions` re-derives the closed session.
+- `PYTHONPATH=src python3 -m fund.run.snapshot --prove` builds a live snapshot
+  into `fixtures/live/` (never committed) and rebuilds it at the same block.
+  It takes about 3 minutes, and needs `RPC_4663_MAINNET` and `BANKR_KEY_READ`.
+  `make snapshot` is not wired yet.
+- Each unit's own proof: `python -m fund.adapters.bankr_quote --prove` (1.5),
+  `gecko --prove` (1.4), and `chain_4663 --prove` and `--sessions` (1.3).
 
-### Done, through 1.5
-- **Phase 0, the Phase 1 replan, and units 1.1-1.5.** Findings are in
+### Done, through 1.6 (shown, not yet judged)
+- **Phase 0, the Phase 1 replan, and units 1.1-1.6.** Findings are in
   `research/findings.md`; every decision is in `tracker/LESSONS.md` (search
   "DECISION:").
 - **Decisions taken this far into Phase 1:**
   - staleness in open-session time, with the closed session inferred from
     rounds;
   - the shared `adapters/http.py`;
-  - in a closed session, divergence is a finding, not a veto;
-  - three named threshold exceptions, which 3.4 sweeps into `gates.py`.
+  - in a closed session, divergence is a finding, now in code;
+  - three named threshold exceptions, which 3.4 sweeps into `gates.py`;
+  - the live read lives in `run/snapshot.py`.
 - **The whole of what is built.** Under `src/fund/`: `config.py`,
   `credentials.py`, `redaction.py`, `core/types.py`, `core/universe.py`,
-  `core/valuation.py`, `adapters/http.py`, `adapters/chain_4663.py`,
-  `adapters/gecko.py` and `adapters/bankr_quote.py`. Every other module is a
-  stub whose docstring says "Not yet built" and names its unit; `grep -l "Not
-  yet built" -r src/` lists 30.
+  `core/valuation.py`, `core/snapshot.py`, `adapters/http.py`,
+  `adapters/chain_4663.py`, `adapters/gecko.py`, `adapters/bankr_quote.py` and
+  `run/snapshot.py`. Every other module is a stub whose docstring says "Not yet
+  built" and names its unit; `grep -l "Not yet built" -r src/` lists 29.
 - **Make targets.** `make test` and `make check-env` work. `snapshot`,
   `selftest`, `replay`, `cycle` and `cycle-demo` print "not built yet".
 
-### Next: unit 1.6 ▶, the snapshot builder (PHASE-0-1 1.6). Not started.
-It is a checkpoint: build it, show a real snapshot, and stop. What it has:
-- **The inputs.** Chain reads and freshness (1.3), the closed session
-  (`config/sessions.json`), marks, value and the cross-check (1.4), and quotes
-  and tradeability (1.5).
-- **The types.** `SnapshotEntry` and `Snapshot` (1.1).
+### The last real snapshot
+`fixtures/live/snapshot-4374db7bfe4d5402b1ba19601c9ca2c731c130c8c020baf4aeb1adbe7698a31b.json`,
+at block 66716733. It is gitignored and exists only on this machine. Rebuilding
+it live gives a new block and new offchain answers, so a new hash.
 
-What it meets first:
-1. **The closed-session DECISION is not in code.** `valuation.cross_check()`
-   still vetoes in a closed session. It must take whether the mark's feed is
-   inside its span, and the finding needs a field. `SnapshotEntry` has none.
-   The decision record (3.7) must carry it later.
-2. **Where the live composition lives.** `core/snapshot.py` is pure, but `make
-   snapshot` needs something that reads the chain, GeckoTerminal and Bankr and
-   hands it the results. Today only the proofs do that, inside their `prove()`
-   functions. CODEBASE does not name the place: `run/`, perhaps.
-3. **Snapshot size.** 35 assets with a seven-day series each, against the 1,793
-   tokens 0.9 measured for six single readings. 1.7 prices it.
+### Next, after the checkpoint: unit 1.7, analyst cost against this snapshot
+It prices the real snapshot. What is known of it: 347,648 bytes, 4,753 rounds
+of history, and the timeline dominates. Its token count is unmeasured. Whether
+the history needs thinning is 1.7's question, and the operator's.
 
 ### Open items, none resolved
-1. **`core/valuation.py` owes the closed-session behaviour**, and its
-   docstring still calls the tier's location open (LESSONS preamble).
-2. **`adapters/http.py` owes two changes:** statuses returned as answers
-   without retries, and caller headers. Until then a declined quote costs three
-   requests and 6 s of backoff.
-3. **$25 is sized at USDG's Chainlink mark**, not the venue's price. That is a
+1. **Owed in code:** two `adapters/http.py` changes, and the Makefile's `make
+   snapshot` (LESSONS preamble).
+2. **$25 is sized at USDG's Chainlink mark**, not the venue's price. That is a
    choice made in 1.5, for the operator to overrule.
-4. **Holidays fail closed**, by decision. Daylight saving is unmeasured:
+3. **The quote-age budget.** 35 quotes read one after another left the oldest
+   29.1 s of its 60 s at `built_at`.
+4. **3.7 must carry the closed-session findings** into the decision record.
+   The snapshot carries them today.
+5. **Holidays fail closed**, by decision. Daylight saving is unmeasured:
    re-derive the span with `--sessions` after the first weekend following
    2026-11-01.
-5. **Paused-oracle detection** is not a separate check, and a pause flag was
+6. **Paused-oracle detection** is not a separate check, and a pause flag was
    not probed.
-6. **Nothing owns the registry and directory refresh fetch** (from 1.2).
-7. **The 180 s transport timeout exceeds the 120 s worker deadline**, for 2.4.
-8. **Six types wait for 2.1-6.1.**
-9. **Unexplained:** two beacon-slot reads failed once in 1.3's first proof run.
-10. **Failover has one endpoint.** The Alchemy note is unverified.
-11. **GeckoTerminal's limits are observed, not published.** Its price carries
-    no source time.
-12. **Which impact field gates is documented only.** The two were measured
+7. **Nothing owns the registry and directory refresh fetch** (from 1.2).
+8. **The 180 s transport timeout exceeds the 120 s worker deadline**, for 2.4.
+9. **Six types wait for 2.1-6.1.**
+10. **Unexplained:** two beacon-slot reads failed once in 1.3's first proof run.
+11. **Failover has one endpoint.** The Alchemy note is unverified.
+12. **GeckoTerminal's limits are observed, not published**, and its price has no
+    source time. A pool's divergence swung from −4 to −424 bps on AMZN within
+    45 minutes on a Saturday.
+13. **Which impact field gates is documented only.** The two were measured
     equal up to 7,084 bps.
-13. **`README.md` line 9** still says "Status: building, Phase 0 … unit 0.1 is
+14. **`run/snapshot.py` has no offline test.** Its proof is the live build.
+15. **`README.md` line 9** still says "Status: building, Phase 0 … unit 0.1 is
     done". It was outside this pass's paths.
 
 ### Config values that are set but provisional
-- **`thresholds.json`:**
-  - `quote_max_age_seconds` 60, `impact_max_bps` 50 and
-    `intended_trade_size_usd` 25;
-  - `feed_staleness_rule` `per_feed_heartbeat_plus_margin_in_open_session`,
-    with a margin of 3600;
-  - `divergence_max_bps` 100, with `corroborator_min_volume_usd_24h`
-    1,000,000.
-- **`quote.json` (new):** the read key in `X-API-Key`, timeout 20 s, 3
-  attempts, backoff 2 s, 500 ms between requests.
-- **Unchanged from 1.4:** `sessions.json` (Sat 00:05Z to Sun 23:55Z),
-  `gecko.json` and `chain.json`.
-- **`models.json`:** `analyst_model` `claude-sonnet-5` until 2.4,
-  `worker_deadline_seconds` 120, `transport_timeout_seconds` 180.
-- **`analysts.json`:** the four-analyst roster, until checkpoint 2.1.
-
-**Set and decided, not provisional:**
-- `mandate.json`'s `execution_wallet`
-  (`0x93faecde3c88a713e1edddf417c02c326889a3da`);
-- capital $200 and $25 per trade.
-
-**Still null, which means unresolved and blocks whatever reads it** (unchanged):
-- `cadence.json`: `confirmation_depth` (5.3), `cycle_deadline_seconds` and
-  `retry_budget_per_worker` (2.4);
-- `models.json`: `risk_model` (2.4), `max_output_tokens` and
-  `context_budget_tokens` (2.4, 3.6);
-- `thresholds.json`: `max_position_weight`, `turnover_max_bps` and
-  `cash_floor_usd` (3.4), `quorum_min_analysts` (3.1);
-- `mandate.json`: `cumulative_budget_usd`, `approved_by`, `approved_at`,
-  `expires_at`, and an empty `allowed_assets` (4.1).
+- **Unchanged since 1.5:** `thresholds.json`, `sessions.json`, `gecko.json`,
+  `quote.json`, `chain.json`, `models.json` and `analysts.json`. 1.5's note
+  lists their values, and `git show e6826d2:tracker/LOGS.md` has it.
+- **Set and decided:** `mandate.json`'s `execution_wallet`, capital $200, and
+  $25 per trade.
+- **Still null, which means unresolved and blocks whatever reads it**
+  (unchanged):
+  - `cadence.json`: `confirmation_depth` (5.3), `cycle_deadline_seconds` and
+    `retry_budget_per_worker` (2.4);
+  - `models.json`: `risk_model` (2.4), `max_output_tokens` and
+    `context_budget_tokens` (2.4, 3.6);
+  - `thresholds.json`: `max_position_weight`, `turnover_max_bps` and
+    `cash_floor_usd` (3.4), `quorum_min_analysts` (3.1);
+  - `mandate.json`: `cumulative_budget_usd`, `approved_by`, `approved_at`,
+    `expires_at`, and an empty `allowed_assets` (4.1).
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `678173a`, the commit that
-closed 1.4, pushed at 18:38 −0700. No session pushed it. Every commit after it,
-from `2536bae` to the one that adds this note, is committed and **not pushed**.
+Checked locally, with no fetch. `origin/main` is `e6826d2`, the commit that
+closed 1.5, pushed at 18:58 −0700. No session pushed it. Every commit after it,
+from `12cb449` to the one that adds this note, is committed and **not pushed**.
 To re-check, run `git fetch` and then `git log origin/main..HEAD`.
 
 ### Funding
-Unchanged: 0.078742 USDG and 0.000460 ETH, as 1.4's proof read them. 1.5
-quoted against that wallet without checking it, as quotes do (F0.3.3).
+Unchanged. 1.6's snapshot read 0.078742 USDG, worth $0.0787 at $0.99995, and
+0.000460 ETH, worth $1.2045 at $2,617.53.
 
 ### What this note does not cover
 - **Decisions.** It does not restate any in full; LESSONS holds them.
-- **The plan.** PLAN, ROADMAP and PHASE-0-1 are the plan. ROADMAP was read
-  only for 3.4 and 3.7.
-- **Findings.** 1.4's and 1.5's measurements are in LESSONS and `config/`, not
-  `research/findings.md`.
+- **The plan.** PLAN, ROADMAP and PHASE-0-1 are the plan.
+- **Findings.** Phase 1's measurements are in LESSONS and `config/`.
 - **Credentials.** It checks none beyond `make check-env`'s names.
 - **The remote.** Its check is one local read of the remote-tracking ref.
 - **Unrecorded conversation.** Anything not written into `tracker/`,
