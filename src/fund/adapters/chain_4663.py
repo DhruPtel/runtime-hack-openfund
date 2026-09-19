@@ -31,11 +31,12 @@ What the record requires, and where each requirement is met:
 
 from __future__ import annotations
 
+import bisect
 import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from fund.adapters import http
 from fund.adapters.http import RULE_TRANSPORT, Endpoint, Transport, urllib_transport
@@ -534,10 +535,163 @@ def series_freshness(series: Series, feed: FeedRef, as_of: Instant, margin_s: in
     return freshness(series.newest, feed, as_of, margin_s)
 
 
+# --- market sessions, inferred from the feeds' own rounds ----------------------------
+#
+# The directory labels a feed's schedule (`us_equities_24/5`) and says nothing
+# about when it is open: no hours, timezone, daylight-saving rule or holidays.
+# The decision (LESSONS 2026-09-18) is to infer the closed session from when the
+# feeds actually publish, not to pin a calendar. The inference is a proposal for
+# review, like the feed map: `--sessions` prints it with its evidence, a person
+# writes it into `config/sessions.json`, and nothing derives it at cycle time.
+
+WEEK_S = 7 * 86400
+#: 1970-01-01 was a Thursday, so every Monday 00:00Z is 4 days past a multiple of WEEK_S.
+MONDAY_OFFSET_S = 4 * 86400
+_DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+
+def week_position(epoch_s: int) -> int:
+    """Seconds since the most recent Monday 00:00Z."""
+    return (epoch_s - MONDAY_OFFSET_S) % WEEK_S
+
+
+def _weekday_time(position_s: int) -> str:
+    p = position_s % WEEK_S
+    return f"{_DAYS[p // 86400]} {p % 86400 // 3600:02d}:{p % 3600 // 60:02d}:{p % 60:02d}Z"
+
+
+@dataclass(frozen=True)
+class WeeklyClosure:
+    """A span of every week, in UTC, when a feed schedule is closed.
+
+    `start_s` and `end_s` are seconds after Monday 00:00Z. `end_s` may pass
+    WEEK_S, for a span that runs over Monday 00:00Z; the span never covers the
+    whole week.
+    """
+
+    label: str
+    start_s: int
+    end_s: int
+
+    def __post_init__(self):
+        if not (0 <= self.start_s < WEEK_S and self.start_s < self.end_s < self.start_s + WEEK_S):
+            raise ValueError(f"not a span within one week: {self.start_s}..{self.end_s}")
+
+    def describe(self) -> str:
+        return f"{_weekday_time(self.start_s)} to {_weekday_time(self.end_s)} every week"
+
+    def contains(self, epoch_s: int) -> bool:
+        p = week_position(epoch_s)
+        return self.start_s <= p < self.end_s or self.start_s <= p + WEEK_S < self.end_s
+
+    def closed_ms(self, since_ms: int, until_ms: int) -> int:
+        """How much of [since, until) falls inside the span, over every week between."""
+        if until_ms <= since_ms:
+            return 0
+        week_ms = WEEK_S * 1000
+        # Start a week early, so a span that began before `since` is counted.
+        monday = (since_ms // 1000 - MONDAY_OFFSET_S) // WEEK_S * WEEK_S + MONDAY_OFFSET_S
+        base = (monday - WEEK_S) * 1000
+        total = 0
+        while base + self.start_s * 1000 < until_ms:
+            start, end = base + self.start_s * 1000, base + self.end_s * 1000
+            total += max(0, min(end, until_ms) - max(start, since_ms))
+            base += week_ms
+        return total
+
+
+@dataclass(frozen=True)
+class SessionEvidence:
+    """What `infer_closure` found, and on what. Times are epoch seconds."""
+
+    label: str
+    feeds: int
+    rounds: int
+    first_s: int
+    last_s: int
+    quiet: tuple[int, int]     # week positions: the last round before the quiet span, the first after
+    closure: WeeklyClosure | None
+    weekends: tuple[tuple[int, str, int, str], ...]  # per week: last round before, its feed, first after, its feed
+    open_gaps: tuple[tuple[int, int, int], ...]      # the largest gaps the span does not explain: start, end, open seconds
+    refusal: str | None
+
+
+def infer_closure(label: str, rounds: Mapping[str, Sequence[int]], *, guard_s: int, grid_s: int,
+                  min_weekends: int) -> SessionEvidence:
+    """Propose the span of the week in which no feed under `label` ever published.
+
+    Every round's position in its week is pooled across feeds and weeks. The
+    largest stretch of the week with none in it is the candidate: quiet in every
+    week observed, not in one. It is shrunk by `guard_s` on each side, then to
+    whole `grid_s` marks, so a round seconds past an observed extreme does not
+    contradict it. Shrinking only ever counts less time as closed, which fails
+    closed. The proposal is refused when fewer than `min_weekends` complete weeks
+    show the span, because the decision asked for a pattern, not one weekend.
+    """
+    events = sorted((t, feed) for feed, times in rounds.items() for t in times)
+    if len(events) < 2:
+        return SessionEvidence(label, len(rounds), len(events), 0, 0, (0, 0), None, (), (),
+                               "fewer than two rounds")
+    positions = sorted({week_position(t) for t, _ in events})
+    gaps = [(b - a, a, b) for a, b in zip(positions, positions[1:])]
+    gaps.append((positions[0] + WEEK_S - positions[-1], positions[-1], positions[0] + WEEK_S))
+    _, after, before = max(gaps)
+    start = -(-(after + guard_s) // grid_s) * grid_s
+    end = (before - guard_s) // grid_s * grid_s
+    if start >= WEEK_S:
+        start, end = start - WEEK_S, end - WEEK_S
+    times = [t for t, _ in events]
+    first_s, last_s = times[0], times[-1]
+    base = dict(label=label, feeds=len(rounds), rounds=len(events), first_s=first_s,
+                last_s=last_s, quiet=(after, before))
+    if end <= start:
+        return SessionEvidence(**base, closure=None, weekends=(), open_gaps=(),
+                               refusal=f"no quiet span survives a {guard_s}s guard")
+    closure = WeeklyClosure(label, start, end)
+
+    weekends = []
+    monday = (first_s - MONDAY_OFFSET_S) // WEEK_S * WEEK_S + MONDAY_OFFSET_S
+    while monday + start < last_s:
+        span_start, span_end = monday + start, monday + end
+        i, j = bisect.bisect_left(times, span_start), bisect.bisect_left(times, span_end)
+        if i > 0 and j < len(times):  # rounds on both sides: a complete week
+            weekends.append((times[i - 1], events[i - 1][1], times[j], events[j][1]))
+        monday += WEEK_S
+
+    open_gaps = sorted(((a, b, (b - a) - closure.closed_ms(a * 1000, b * 1000) // 1000)
+                        for a, b in zip(times, times[1:])), key=lambda g: -g[2])[:5]
+    refusal = (None if len(weekends) >= min_weekends else
+               f"{len(weekends)} complete weeks show the span; at least {min_weekends} are needed")
+    return SessionEvidence(**base, closure=None if refusal else closure, weekends=tuple(weekends),
+                           open_gaps=tuple(open_gaps), refusal=refusal)
+
+
+def stale_spans(times: Sequence[int], until_s: int, limit_s: int,
+                closure: WeeklyClosure | None) -> list[tuple[int, int]]:
+    """When the staleness rule would have judged a feed's newest point stale,
+    from its first round to `until_s`, given its rounds' times. The age counts
+    only time outside `closure`, so it only ever grows, and the moment it passes
+    the limit is found by bisection."""
+    def open_age(a: int, t: int) -> int:
+        return (t - a) - (closure.closed_ms(a * 1000, t * 1000) // 1000 if closure else 0)
+
+    spans = []
+    for a, b in zip(times, list(times[1:]) + [until_s]):
+        if b <= a or open_age(a, b) <= limit_s:
+            continue
+        lo, hi = a, b
+        while hi - lo > 1:
+            mid = (lo + hi) // 2
+            lo, hi = (lo, mid) if open_age(a, mid) > limit_s else (mid, hi)
+        spans.append((hi, b))
+    return spans
+
+
 # --- configuration ------------------------------------------------------------------
 
 CHAIN_CONFIG = Path(__file__).resolve().parents[3] / "config" / "chain.json"
 THRESHOLDS = Path(__file__).resolve().parents[3] / "config" / "thresholds.json"
+SESSIONS = Path(__file__).resolve().parents[3] / "config" / "sessions.json"
 
 
 @dataclass(frozen=True)
@@ -763,10 +917,92 @@ def prove(series_asset: str = "AAPL") -> int:
     return 0
 
 
+def derive_sessions() -> int:
+    """`--sessions`: every mapped feed's rounds since launch, read at one block,
+    and the closed span they leave in the week, with the evidence for it. Its
+    output is a proposal for `config/sessions.json`; it writes nothing.
+    Read-only; spends nothing."""
+    from fund import config
+    from fund.credentials import Role
+
+    cfg = config.load(Role.ANALYST, require=False)
+    settings = Settings.load()
+    derivation = json.loads(SESSIONS.read_text())["derivation"]
+    margin = settings.staleness_margin_s
+    u = universe.load()
+    symbol = {a: (u.records[a].symbol if a in u.records else f.name.split(" / ")[0])
+              for a, f in u.feeds.items()}  # display only
+    rpc = settings.client(cfg.secret)
+    block = pin_block(rpc, settings.chain_id, settings.block_tag)
+    read = settings.reader(rpc, block)
+    until = block.timestamp.epoch_ms // 1000
+    print(f"== pinned block {block.number} at {_iso(block.timestamp)}; every round below is read at it")
+    print(f"   each feed's rounds back to its first, stopping at a scale break (the launch regime "
+          f"in other units) or at the phase start\n")
+    by_label: dict[str, dict[str, list[int]]] = {}
+    heartbeat: dict[str, int] = {}
+    for asset, f in sorted(u.feeds.items(), key=lambda item: symbol[item[0]]):
+        s = read.price_series(asset, f, window_s=derivation["history_window_seconds"],
+                              max_rounds=derivation["history_max_rounds"],
+                              scale_break_ratio=settings.scale_break_ratio)
+        if s.newest is None or s.coverage.value is None:
+            print(f"   {symbol[asset]}: history not read ({s.coverage.reason if s.coverage else s.detail});"
+                  " an inference on part of the record is not one")
+            return 1
+        label = f.market_hours or "(no label)"
+        by_label.setdefault(label, {})[symbol[asset]] = [p.source_time.epoch_ms // 1000 for p in s.points]
+        heartbeat[symbol[asset]] = f.heartbeat.raw
+        print(f"   {symbol[asset]:6} {label:17} {len(s.points):>5} rounds from {_iso(s.oldest.source_time)}"
+              f"  ({s.coverage.reason.split(';')[0]})")
+
+    for label, rounds in sorted(by_label.items()):
+        print(f"\n== {label}: {len(rounds)} feeds")
+        if label not in derivation["labels"]:
+            widest = max((b - a, name) for name, ts in rounds.items() for a, b in zip(ts, ts[1:]))
+            print(f"   not a label the derivation covers, so no closed span is proposed. Widest gap "
+                  f"between two rounds of one feed: {_dur(widest[0] * 1000)} ({widest[1]})")
+            continue
+        ev = infer_closure(label, rounds, guard_s=derivation["guard_seconds"],
+                           grid_s=derivation["grid_seconds"], min_weekends=derivation["min_weekends"])
+        print(f"   {ev.rounds} rounds, {_iso(Instant.from_seconds(ev.first_s))} to "
+              f"{_iso(Instant.from_seconds(ev.last_s))}")
+        print(f"   no round ever published between {_weekday_time(ev.quiet[0])} and "
+              f"{_weekday_time(ev.quiet[1])}, pooled over every week")
+        print("   week      last round before the span         first round after it")
+        for before, before_feed, after, after_feed in ev.weekends:
+            print(f"   {time.strftime('%m-%d', time.gmtime(after)):9} {_iso(Instant.from_seconds(before))} "
+                  f"{before_feed:6}  {_iso(Instant.from_seconds(after))} {after_feed:6}  "
+                  f"quiet {_dur((after - before) * 1000)}")
+        if ev.refusal:
+            print(f"   REFUSED: {ev.refusal}")
+            continue
+        c = ev.closure
+        print(f"   proposed closed span, {derivation['guard_seconds']}s guard, "
+              f"{derivation['grid_seconds']}s grid: {c.describe()}")
+        print("   the widest gaps between any two rounds that the span does not explain:")
+        for a, b, open_s in ev.open_gaps:
+            print(f"     {_iso(Instant.from_seconds(a))} to {_iso(Instant.from_seconds(b))}: "
+                  f"{_dur(open_s * 1000)} of open session")
+        print(f"   the rule (heartbeat + {margin}s of open session) replayed over each feed's rounds "
+              f"to {_iso(block.timestamp)}:")
+        stale_without = 0
+        for name, times in sorted(rounds.items()):
+            limit = heartbeat[name] + margin
+            stale_without += bool(stale_spans(times, until, limit, None))
+            spans = stale_spans(times, until, limit, c)
+            listed = "; ".join(f"{_iso(Instant.from_seconds(a))} to {_iso(Instant.from_seconds(b))}"
+                               for a, b in spans)
+            print(f"     {name:6} {'stale ' + listed if spans else 'never stale'}")
+        print(f"   with no closed span, {stale_without} of {len(rounds)} feeds go stale at some point")
+        print(f"   for config/sessions.json: {json.dumps({label: {'start_seconds_after_monday_utc': c.start_s, 'end_seconds_after_monday_utc': c.end_s}})}")
+    return 0
+
+
 if __name__ == "__main__":
     import sys
 
-    if sys.argv[1:] != ["--prove"]:
-        print("usage: python -m fund.adapters.chain_4663 --prove")
+    commands = {"--prove": prove, "--sessions": derive_sessions}
+    if len(sys.argv) != 2 or sys.argv[1] not in commands:
+        print("usage: python -m fund.adapters.chain_4663 --prove | --sessions")
         sys.exit(2)
-    sys.exit(prove())
+    sys.exit(commands[sys.argv[1]]())

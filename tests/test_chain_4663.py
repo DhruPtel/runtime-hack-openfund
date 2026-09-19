@@ -634,3 +634,82 @@ def test_a_proxy_answering_a_different_round_than_asked_is_not_believed():
     s = series(fake)
     assert s.coverage.value is None and "returned round" in s.coverage.reason
     assert len(s.points) == 1
+
+
+# --- market sessions, inferred from rounds ----------------------------------------------------
+
+MONDAY = 1_789_948_800            # Mon 2026-09-21 00:00:00Z
+SAT_0005, SUN_2355 = 5 * DAY + 300, 7 * DAY - 300
+
+
+def weekday_rounds(weeks: int, *, skip=lambda week, day, hour: False, extra=()) -> list[int]:
+    """Hourly rounds Monday 00:00Z to Friday 23:00Z, for `weeks` weeks from MONDAY."""
+    times = [MONDAY + w * 7 * DAY + d * DAY + h * HOUR
+             for w in range(weeks) for d in range(5) for h in range(24) if not skip(w, d, h)]
+    return sorted(times + list(extra))
+
+
+def test_week_positions_count_from_monday_midnight_utc():
+    assert chain.week_position(MONDAY) == 0
+    assert chain.week_position(T) == 14 * HOUR + 13 * 60 + 20  # T is Mon 14:13:20Z
+    assert chain.week_position(MONDAY - 1) == 7 * DAY - 1
+
+
+def test_a_closure_counts_only_the_time_inside_it():
+    c = chain.WeeklyClosure("us_equities_24/5", SAT_0005, SUN_2355)
+    friday_noon, monday_noon = MONDAY + 4 * DAY + 12 * HOUR, MONDAY + 7 * DAY + 12 * HOUR
+    assert c.closed_ms(friday_noon * 1000, monday_noon * 1000) == (2 * DAY - 600) * 1000
+    assert c.closed_ms(friday_noon * 1000, (MONDAY + 5 * DAY) * 1000) == 0  # Sat 00:00Z: not yet
+    three_weeks = c.closed_ms(MONDAY * 1000, (MONDAY + 21 * DAY) * 1000)
+    assert three_weeks == 3 * (2 * DAY - 600) * 1000
+    assert c.contains(MONDAY + 6 * DAY) and not c.contains(MONDAY + 4 * DAY + 23 * HOUR)
+
+
+def test_a_closure_may_run_over_monday_midnight():
+    c = chain.WeeklyClosure("x", 6 * DAY, 7 * DAY + HOUR)  # Sun 00:00Z to Mon 01:00Z
+    assert c.contains(MONDAY + 30 * 60) and c.contains(MONDAY - 1) and not c.contains(MONDAY + HOUR)
+    assert c.closed_ms(MONDAY * 1000, (MONDAY + 2 * HOUR) * 1000) == HOUR * 1000
+
+
+def test_the_quiet_span_is_pooled_over_every_week_and_shrunk_inward():
+    rounds = {"A": weekday_rounds(6), "B": weekday_rounds(6)}
+    ev = chain.infer_closure("us_equities_24/5", rounds, guard_s=60, grid_s=300, min_weekends=4)
+    assert ev.refusal is None and len(ev.weekends) == 5
+    assert ev.quiet == (4 * DAY + 23 * HOUR, 7 * DAY)          # Fri 23:00Z, then Mon 00:00Z
+    assert (ev.closure.start_s, ev.closure.end_s) == (4 * DAY + 23 * HOUR + 300, 7 * DAY - 300)
+
+
+def test_one_weekend_is_not_a_pattern():
+    ev = chain.infer_closure("us_equities_24/5", {"A": weekday_rounds(2)}, guard_s=60, grid_s=300,
+                             min_weekends=4)
+    assert ev.closure is None and "1 complete weeks" in ev.refusal
+
+
+def test_one_round_in_one_week_is_enough_to_move_the_span():
+    stray = MONDAY + 3 * 7 * DAY + 5 * DAY + 10 * HOUR  # Saturday 10:00Z, in week 4 only
+    ev = chain.infer_closure("x", {"A": weekday_rounds(6, extra=[stray])}, guard_s=60, grid_s=300,
+                             min_weekends=4)
+    assert not ev.closure.contains(stray)
+
+
+def test_a_missing_weekday_does_not_move_the_span_and_shows_as_an_unexplained_gap():
+    holiday = weekday_rounds(6, skip=lambda w, d, h: (w, d) == (2, 4))  # week 3's Friday is silent
+    ev = chain.infer_closure("x", {"A": holiday}, guard_s=60, grid_s=300, min_weekends=4)
+    assert (ev.closure.start_s, ev.closure.end_s) == (4 * DAY + 23 * HOUR + 300, 7 * DAY - 300)
+    start, end, open_s = ev.open_gaps[0]
+    assert start == MONDAY + 2 * 7 * DAY + 3 * DAY + 23 * HOUR and open_s >= DAY
+
+
+def test_replaying_the_rule_the_weekend_is_expected_and_the_holiday_is_stale():
+    # Week 3: Thursday goes quiet after 20:00Z, as real feeds do, and Friday is a
+    # holiday. A silent Friday alone is 24h05m of open session, inside the limit.
+    times = weekday_rounds(6, skip=lambda w, d, h: w == 2 and (d == 4 or (d == 3 and h > 20)))
+    closure = chain.WeeklyClosure("x", 4 * DAY + 23 * HOUR + 300, 7 * DAY - 300)
+    limit = DAY + MARGIN
+    with_span = chain.stale_spans(times, times[-1], limit, closure)
+    thursday_2000 = MONDAY + 2 * 7 * DAY + 3 * DAY + 20 * HOUR
+    assert len(with_span) == 1                                  # the holiday, and nothing else
+    assert with_span[0][0] == thursday_2000 + limit + 1          # the first second past the limit
+    assert with_span[0][1] == MONDAY + 3 * 7 * DAY              # until Monday's first round
+    without = chain.stale_spans(times, times[-1], limit, None)
+    assert len(without) == 5  # every one of the five weekends, the holiday merged into its own
