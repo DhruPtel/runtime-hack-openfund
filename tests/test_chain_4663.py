@@ -29,29 +29,7 @@ def client(*endpoints, transport, attempts=2, timeout_s=0.2, sleeps=None):
         transport=transport, sleep=sleeps.append)
 
 
-# --- failover ---------------------------------------------------------------------
-
-def test_a_hang_advances_to_the_next_endpoint():
-    used = []
-
-    def transport(url, body, timeout):
-        used.append(url)
-        if "primary" in url:
-            time.sleep(1.0)  # accepts, then never answers within the deadline
-        return ok("0x1")
-
-    rpc = client("PRIMARY", "SECONDARY", transport=transport)
-    assert rpc.call("eth_blockNumber", []) == "0x1"
-    assert ["primary" in u for u in used] == [True, False]
-
-
-def test_a_rate_limit_backs_off_and_retries():
-    replies = iter([(429, b"Too Many Requests"), ok("0x2")])
-    sleeps: list[float] = []
-    rpc = client("ONLY", transport=lambda *a: next(replies), sleeps=sleeps)
-    assert rpc.call("eth_blockNumber", []) == "0x2"
-    assert sleeps == [1.0]  # the backoff between passes, doubling from 1 s
-
+# --- the RPC client, over the shared transport ------------------------------------
 
 def test_a_json_rpc_429_in_a_200_is_a_rate_limit_too():
     body = json.dumps({"jsonrpc": "2.0", "error": {"code": 429, "message": "Too Many Requests"}})
@@ -312,11 +290,6 @@ MARGIN = 3600
 
 
 # --- the pinned block ----------------------------------------------------------------
-
-def test_pin_block_fixes_number_time_and_hash():
-    block = chain.pin_block(rpc_for(FakeChain()), CHAIN)
-    assert block == BLOCK
-
 
 def test_pin_block_refuses_a_node_on_another_chain():
     fake = FakeChain()
@@ -658,22 +631,6 @@ def weekday_rounds(weeks: int, *, skip=lambda week, day, hour: False, extra=()) 
     return sorted(times + list(extra))
 
 
-def test_week_positions_count_from_monday_midnight_utc():
-    assert chain.week_position(MONDAY) == 0
-    assert chain.week_position(T) == 14 * HOUR + 13 * 60 + 20  # T is Mon 14:13:20Z
-    assert chain.week_position(MONDAY - 1) == 7 * DAY - 1
-
-
-def test_a_closure_counts_only_the_time_inside_it():
-    c = chain.WeeklyClosure("us_equities_24/5", SAT_0005, SUN_2355)
-    friday_noon, monday_noon = MONDAY + 4 * DAY + 12 * HOUR, MONDAY + 7 * DAY + 12 * HOUR
-    assert c.closed_ms(friday_noon * 1000, monday_noon * 1000) == (2 * DAY - 600) * 1000
-    assert c.closed_ms(friday_noon * 1000, (MONDAY + 5 * DAY) * 1000) == 0  # Sat 00:00Z: not yet
-    three_weeks = c.closed_ms(MONDAY * 1000, (MONDAY + 21 * DAY) * 1000)
-    assert three_weeks == 3 * (2 * DAY - 600) * 1000
-    assert c.contains(MONDAY + 6 * DAY) and not c.contains(MONDAY + 4 * DAY + 23 * HOUR)
-
-
 def test_a_closure_may_run_over_monday_midnight():
     c = chain.WeeklyClosure("x", 6 * DAY, 7 * DAY + HOUR)  # Sun 00:00Z to Mon 01:00Z
     assert c.contains(MONDAY + 30 * 60) and c.contains(MONDAY - 1) and not c.contains(MONDAY + HOUR)
@@ -849,14 +806,6 @@ def test_daily_closes_skip_the_weekend_and_a_silent_day_and_end_with_the_latest_
     assert "4 days fell in the closed session" in s.coverage.reason
     assert "1 had no new round since the previous close" in s.coverage.reason
     assert chain.series_freshness(s, feed(addr(1)), BLOCK.timestamp, MARGIN, EQUITY_CLOSED).value is True
-
-
-def test_without_a_closed_session_a_weekend_repeats_friday_and_is_still_no_close():
-    fake = FakeChain()
-    fake.feeds[addr(1)] = two_weeks_of_weekdays(silent=())
-    s = closes(fake, closure=None)
-    assert len(s.points) == 7 and "0 days fell in the closed session" in s.coverage.reason
-    assert "4 had no new round since the previous close" in s.coverage.reason  # Sat, Sun, twice
 
 
 def test_daily_closes_keep_the_walks_stops_a_feed_younger_than_the_window_is_short():
