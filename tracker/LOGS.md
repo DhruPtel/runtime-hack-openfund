@@ -585,7 +585,24 @@ was verified in four ways:
 
 ---
 
-## State at close — 2026-09-18, after 1.8
+## Test audit — 354 cases cut to 313, and the boundary tests CODEBASE §3 promised
+**Date:** 2026-09-18 · **Commit:** a535c17
+
+Each of the 126 tests the audit called incidental was cut only if every
+behaviour it checks, broken in a copy of HEAD, still failed a test that stays:
+34 went, and 92 stayed as the only guard for something, with the audit's 8 kept.
+Of nine tests that could not fail for their rule, five were fixed (the
+multiplier on AMZN's 1.0, the chain settings, role scoping, the absent field,
+the misnamed from_units test) and four dropped where another test carries the
+rule, as were the four per-module purity tests. `tests/test_boundaries.py` adds
+ten tests for recorded rules that had none — spend authority, core purity, one
+signer, one gate and its three named exceptions, threshold literals, the timeout
+order, `/agent/prompt`, the status order, several deployments — each shown to
+fail with its rule broken, and none found a violation in `src/`.
+
+---
+
+## State at close — 2026-09-18, after 1.8 and the test audit
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -594,7 +611,7 @@ it. Where this note and git disagree, git is right.
 
 **Check it in a minute.** Nothing here spends.
 - `git log --oneline -15` and `git status -sb`.
-- `make test`: 354 passed when this was written.
+- `make test`: 313 passed when this was written, 354 before the test audit.
 - `make check-env`: which credentials are present, by name only.
 - `PYTHONPATH=src python3 -m fund.run.snapshot --prove` builds a live snapshot
   in about 2.5 minutes. The 30-day walks made it longer. `make snapshot` is
@@ -603,7 +620,8 @@ it. Where this note and git disagree, git is right.
   `--one` or `--cache` mode.
 
 ### Done, through 1.8
-- **Phase 0, the Phase 1 replan, and units 1.1-1.8.**
+- **Phase 0, the Phase 1 replan, and units 1.1-1.8,** then the test audit
+  and cut above.
 - **Decisions this far into Phase 1:**
   - staleness in open-session time, with sessions inferred from rounds;
   - the shared `adapters/http.py`;
@@ -674,9 +692,9 @@ Not started. It is a checkpoint.
     `expires_at`, and an empty `allowed_assets`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `66a8acb`, the end of 1.7,
-pushed at 19:48 −0700. No session pushed it. Every commit after it, from
-`2ef3ab2` to the one that adds this note, is committed and **not pushed**. To
+Checked locally, with no fetch. `origin/main` is `b555a64`, the end of 1.8;
+this session did not push it. Every commit after it, the test audit's from
+`6ea003d` to the one that adds this note, is committed and **not pushed**. To
 re-check, run `git fetch` and then `git log origin/main..HEAD`.
 
 ### What this note does not cover
