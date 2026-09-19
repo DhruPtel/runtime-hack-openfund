@@ -800,7 +800,16 @@ def prove(series_asset: str = "AAPL") -> int:
               f"price {point.value.raw}; judged alone it would be fresh={alone.value}")
     verdict = series_freshness(s, feeds[target], block.timestamp, margin)
     print(f"   the series' verdict judges the newest point only: fresh={verdict.value} ({verdict.reason})")
-    print("   every point at the pinned block:", all(p.block == block for p in s.points), "\n")
+    print("   every point at the pinned block:", all(p.block == block for p in s.points))
+    same = lambda o: (o.status, o.value, o.source_time, o.source_ref, o.block)  # noqa: E731
+    again = read.latest_rounds(feeds)
+    s2 = read.price_series(target, feeds[target], window_s=settings.window_s,
+                           max_rounds=settings.max_rounds,
+                           scale_break_ratio=settings.scale_break_ratio)
+    print(f"   read again at the same block: {sum(same(rounds[a]) == same(again[a]) for a in feeds)}"
+          f"/{len(feeds)} feeds identical; {series_asset} series identical: "
+          f"{[same(p) for p in s.points] == [same(p) for p in s2.points] and s.coverage == s2.coverage}"
+          "\n")
 
     print(f"== 4. the same walk for every feed, to see which real series come back short")
     short = 0
