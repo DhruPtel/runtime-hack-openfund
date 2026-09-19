@@ -292,3 +292,14 @@ def test_each_named_exception_obeys_the_threshold_it_is_given():
     assert (quote(60, 500), quote(5, 500), quote(60, 5)) \
         == (None, bankr_quote.RULE_QUOTE_AGE, bankr_quote.RULE_IMPACT)
     assert (fresh(7_200), fresh(3_600)) == (True, False)
+
+
+# --- the rest of the record ------------------------------------------------------------------
+
+def test_the_worker_deadline_outlasts_the_transport_timeout():
+    """The worker is left time to record a call the transport ends (DECISION after
+    1.7). 120 s against 180 s was the inversion bug."""
+    models = json.loads((REPO / "config" / "models.json").read_text())
+    transport, worker = models["transport_timeout_seconds"], models["worker_deadline_seconds"]
+    assert type(transport) is int and type(worker) is int
+    assert worker > transport
