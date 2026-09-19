@@ -1172,3 +1172,38 @@ its doubling backoff. The response also carries `Cache-Control: max-age=30,
 s-maxage=60` and no timestamp for the price. So a corroborating price can be
 up to a minute old at the edge, and its source time is unknown.
 **Affects:** 1.4; `adapters/http.py`, `config/gecko.json`.
+
+## 2026-09-18 — 1.4 compares the divergence tier in `core/valuation.py`: a second site outside `gates.py`, open and not decided
+CODEBASE §3 and PLAN §2 invariant 4 make `core/gates.py` the only module that
+defines a threshold comparison. They record one exception, feed staleness in
+the chain adapter. PHASE-0-1 1.4 tells this unit to gate by the tiered rule,
+and its done-condition says "the tier comes from config". But `gates.py` is
+3.4's, and it was outside this pass's paths. So `valuation.cross_check()`
+compares both numbers: 24h volume against the $1M line, and divergence
+against 100 bps. Each reads its threshold from `config/thresholds.json` as an
+argument, and each refusal names its rule.
+
+That is the same shape as the staleness case: the plan put the rule in an early
+unit, and the gate module does not exist yet. It is recorded **open, not
+decided**, and CODEBASE §3 and PLAN invariant 4 now say so. Whether it becomes
+a second named exception or moves into `gates.py` at 3.4 is the operator's call.
+Either way, the "one gate definition" test must name it.
+**Affects:** 3.4; CODEBASE §3 and rules table; PLAN §2 invariant 4.
+
+## 2026-09-18 — 1.4 live: 20 of 35 above the line, and the veto fired on a liquid name inside the closed session
+`python -m fund.adapters.gecko --prove`, block 66689567, Sat 2026-09-19
+01:28Z, which is inside the inferred closed session:
+- **The tier.** 20 of 35 markable stocks were above the $1M line (F0.4.5 had
+  19 of 32). 15 fell below it, so at this block the universe would shrink to
+  20.
+- **The veto fired live.** MSTR diverged −122.87 bps on $4.76M of volume. The
+  other 19 above the line agreed within 77 bps.
+- **Measured at one block only, and read with that in mind.** The feeds are
+  frozen through the closed session while the pools trade on. MSTR tracks
+  bitcoin, which trades all weekend. So a veto here may measure weekend drift
+  rather than a broken mark. It fails closed either way, and whether weekend
+  divergence should be judged differently is not decided.
+- **Cash is not a dollar.** USDG/USD marked $0.99995.
+
+The recorded AMZN case (−499.47 bps on $2.19M) is vetoed by the same function.
+**Affects:** 1.6, 1.11, 3.4; the weekend cycle.
