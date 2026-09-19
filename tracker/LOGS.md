@@ -505,6 +505,31 @@ cap.
 
 ---
 
+## 1.6 ▶ — Snapshot builder
+**Date:** 2026-09-18 · **Commit:** 65b3495
+
+Built `core/snapshot.py`, which turns the typed readings and the adapters'
+verdicts into one readable document, hashed as the bytes on disk. It replaces
+1.1's `Snapshot` type, whose encoding was 831 bytes a series point. Alongside it:
+- `run/snapshot.py`, the live read, decided as the seam where the adapters
+  meet core;
+- the two owed `valuation.py` changes: a closed-session divergence is now a
+  finding carried in the entry, and the docstring names the tier's
+  comparisons a named exception.
+
+The artifact is `fixtures/live/snapshot-4374db7b….json`, at block 66716733,
+Sat 02:13Z: 347,648 bytes; 35 assets, each with its four admission rules,
+mark, corroboration, quote, findings, named status, and a timeline of
+`[updated_at, price_usd]` pairs, 4,753 rounds in all; 20 tradeable, 15 below
+the line, 20 closed-session findings, three of them past 100 bps; CRM among
+the 159 listed outside the universe. It was verified by 25 offline tests, each
+refusal at its rule, with seven mutations each caught. A fresh chain re-read at
+the same block rebuilt to the identical hash, and one nudged price changed it.
+**Shown at the checkpoint and waiting for the operator: nothing has been
+judged yet.**
+
+---
+
 ## State at close — 2026-09-18, after 1.5
 
 **Read this first.** This note describes the repository at the commit that last
