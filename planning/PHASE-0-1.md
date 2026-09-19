@@ -629,10 +629,9 @@ included.
   and reads as stale: both in range, 3 July and 7 September, would have been
   refused. A round dated inside the span contradicts it, and the verdict is
   undetermined. Daylight saving is unmeasured.
-  **Where the comparison lives.** It stays in the adapter, as the named
-  exception to "gates exist once" (DECISION, LESSONS 2026-09-18; CODEBASE §3;
-  PLAN §2 invariant 4). Whether it moves into `gates.py` is open, and the
-  decision's "1.8" is wrong, since `gates.py` is 3.4's.
+  **Where the comparison lives.** It stays in the adapter, as the first of
+  three named exceptions to "gates exist once", and 3.4 sweeps it into
+  `gates.py` (DECISIONs, LESSONS 2026-09-18; CODEBASE §3; PLAN §2 invariant 4).
 - **The price series** (invariant 2). This unit chose the series and its
   window, under the no-archive rule. **Chosen:** the feed's own rounds, read
   at the pinned block via `getRoundData` (DECISION, LESSONS 2026-09-18). They
@@ -759,8 +758,12 @@ tier comes from config.
   `value_holding()`, and `cross_check()` using F0.4.5's own divergence formula.
 - The weekend question 1.4 depended on is settled by the closed-session
   decision (1.3 above).
-- **Open:** the tier's two comparisons sit in `valuation.py`, outside
-  `gates.py`, and are recorded as open (LESSONS 2026-09-18).
+- **A named exception:** the tier's two comparisons sit in `valuation.py`,
+  outside `gates.py`, until 3.4 sweeps them in (DECISION, LESSONS 2026-09-18).
+- **Changed after 1.4, not yet in code:** in a closed session the divergence
+  is a finding, not a veto, and it reaches the decision record (DECISION,
+  LESSONS 2026-09-18). `cross_check()` still vetoes there; the change is owed
+  before or with 1.6.
 
 **Met**, by `python -m fund.adapters.gecko --prove`, live at block 66689567
 (Sat 01:28Z, inside the closed session):
@@ -816,6 +819,9 @@ USDG→stock at the **$25 intended size**, never a token size.
 - **Fields.** All 12 documented fields appeared in all 6 responses (F0.3.2). That
   is not a guarantee: an absent field is null, never zero, and a null impact
   blocks.
+- **Where its two comparisons live:** quote age and impact are compared in
+  this adapter, the third named exception, until 3.4 sweeps them into
+  `gates.py` (DECISION, LESSONS 2026-09-18).
 - **Impact is signed** and gated as `impact > impact_max_bps` (50), never
   `abs(impact)`, because negative impact is price improvement (F0.3.4). The field
   that gates is `swapImpactBps` (documented). The two impact fields have never
@@ -876,7 +882,10 @@ pinned block may enter. Then it applies, in order:
    cycle loudly on disagreement.
 2. **The corroborator line** (1.4, `config/thresholds.json`): below $1M of 24h
    volume, the asset is excluded from the universe.
-3. **The divergence veto** above that line, past 100 bps.
+3. **The divergence veto** above that line, past 100 bps, **in an open session
+   only**. In a closed session the mark stands at the last round, and the
+   divergence is carried in the entry as a finding for the decision record
+   (DECISION, LESSONS 2026-09-18).
 4. **Tradeability**, defined operationally: a quote at the intended size
    succeeded; its age is within 60 s; and its impact is known and at most 50 bps
    signed, **or null — and null blocks**. There is no depth term. Pools exist

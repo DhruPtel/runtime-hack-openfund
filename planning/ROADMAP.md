@@ -153,10 +153,10 @@ Where opinions become a decision, and where the decision can be refused.
 | 3.1 | Aggregator as a total function: equation, quorum, cash, tie-break, residual |
 | 3.2 ▶ | Aggregation made visible |
 | 3.3 | Planner: weights + holdings + quotes → sized orders |
-| 3.4 | Gate module, shared by risk and treasurer |
+| 3.4 | Gate module, shared by risk and treasurer; sweeps in the three named exceptions from 1.3, 1.4 and 1.5 |
 | 3.5 | Risk agent: full reports + sized plan → verdict |
 | 3.6 | Context budget: veto rather than summarize |
-| 3.7 | Signed decision record with content hashes |
+| 3.7 | Signed decision record with content hashes, carrying closed-session divergence findings |
 | 3.8 ▶ | A veto actually happening |
 | 3.9 ▶ | Byte-stable replay |
 

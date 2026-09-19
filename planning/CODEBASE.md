@@ -28,16 +28,17 @@ its own process with its own credentials.
 
 **3. One rule, one location.** A limit is defined once in `core/gates.py` and
 called by both risk and treasurer. Two interpretations of the same limit is how
-a fund trades outside its own policy. **One recorded exception** (DECISION,
-LESSONS 2026-09-18): the feed staleness comparison lives in
-`adapters/chain_4663.py` (`freshness()`), because the plan assigned the rule to
-1.3 and this module does not exist until 3.4. It is still defined once, with its
-margin read from `config/thresholds.json`. Whether a later unit moves it here is
-open. So is the decision's naming of 1.8 for that, since this module is 3.4's.
-**Open, not decided** (LESSONS 2026-09-18): 1.4 compares the divergence tier,
-the 24h volume line and the veto limit, in `core/valuation.py`
-(`cross_check()`). The plan told it to gate by the tier before this module
-exists. Both thresholds are read from config as arguments.
+a fund trades outside its own policy. **Three named exceptions, until 3.4**
+(DECISION, LESSONS 2026-09-18). This module is 3.4's, and three earlier units
+each needed a threshold comparison, so each stays where the plan put it:
+1. feed staleness, in `adapters/chain_4663.py` `freshness()` (1.3);
+2. the divergence tier's volume line and veto limit, in `core/valuation.py`
+   `cross_check()` (1.4);
+3. quote age and signed impact, in `adapters/bankr_quote.py` (1.5).
+
+Each is defined once, reads its thresholds from `config/thresholds.json` as
+arguments, and names its rule when it refuses. **3.4 owns the sweep:** it moves
+all three into this module as one deliberate move.
 
 **4. Nothing important happens in an agent.** Models produce opinions and prose.
 Arithmetic, ranking, thresholding, sizing and accounting are deterministic code.
@@ -108,7 +109,7 @@ fund/
 │   │   ├── aggregate.py        reports → weights or no-rebalance. A total function.
 │   │   ├── plan.py             weights + holdings + quotes → sized orders
 │   │   ├── gates.py            the declarative gate array. THE single definition of every limit.
-│   │   │                       (one recorded exception: feed staleness, in chain_4663.py; §3)
+│   │   │                       (three named exceptions until 3.4 sweeps them in; §3)
 │   │   ├── valuation.py        the ONE valuation function
 │   │   ├── books.py            journal → income statement + portfolio report
 │   │   └── attribution.py      funded contribution (allocated once) and call accuracy (hypothetical)
@@ -176,7 +177,7 @@ thirty seconds to understand the safety model.
 | `core/` is pure | no module under `core/` imports `adapters/`, `agents/`, `store/` |
 | Analysts cannot spend | no module under `agents/` or `core/` imports `bankr_exec` or `sign` |
 | One signer | `sign.py` is imported only by `treasurer/` |
-| One gate definition | `gates.py` is the only module defining a threshold comparison, except the recorded feed-staleness exception in `adapters/chain_4663.py` (§3), which the test must name, and the divergence tier in `core/valuation.py`, open (§3) |
+| One gate definition | `gates.py` is the only module defining a threshold comparison, except the three named exceptions in §3 (staleness in `chain_4663.py`, the divergence tier in `valuation.py`, quote age and impact in `bankr_quote.py`), which the test must name until 3.4 sweeps them in |
 | Deployed isolation | from the analyst process environment, execution credentials are unreadable and a raw HTTP swap fails (unit 4.12) |
 | No credential in logs | every declared credential value is masked in captured log output |
 

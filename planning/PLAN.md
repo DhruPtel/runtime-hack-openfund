@@ -47,12 +47,11 @@ Each is structural where possible, and tested where not.
 3. **Risk sees every full report and the sized plan.** If the bundle exceeds the
    context budget, the cycle vetoes. It never silently summarizes.
 4. **Gates exist once.** One module, called by both risk and treasurer. Never
-   two interpretations of the same limit. *(One recorded exception, 2026-09-18:
-   feed staleness is compared in the chain adapter, where 1.3 built it, and is
-   still defined once. Whether it moves into the gate module (3.4) is open —
-   `planning/CODEBASE.md` §3, `tracker/LESSONS.md`. **Open, not decided:**
-   1.4 compares the divergence tier in `core/valuation.py`, because it was told
-   to gate by the tier and the gate module does not exist yet.)*
+   two interpretations of the same limit. *(Three named exceptions until 3.4,
+   DECISION 2026-09-18. The gate module is 3.4's, so feed staleness (1.3), the
+   divergence tier (1.4), and quote age and impact (1.5) are compared where the
+   plan put them. Each is still defined once, from config. 3.4 sweeps all three
+   into the gate module as one move — `planning/CODEBASE.md` §3.)*
 5. **Unknown blocks execution.** Every check is true / false / null. Null is not
    false. A required check must be explicitly true.
 6. **`NO_CALL` is valid**, and the aggregator is a total function that handles
@@ -378,12 +377,16 @@ are visible and non-fatal; you have approved the report format.
   with live quotes, quote age, fees, minimum proceeds, projected post-trade
   holdings.
 - **3.4** Gate module: declarative array, fail-closed, named failures. Shared by
-  risk and treasurer.
+  risk and treasurer. Sweeps in the three comparisons made earlier as named
+  exceptions — feed staleness (1.3), the divergence tier (1.4), quote age and
+  impact (1.5) — as one move (DECISION 2026-09-18).
 - **3.5** Risk agent: full reports + sized plan → verdict; fixed gates cannot be
   overridden by model text.
 - **3.6** Context budget enforcement: veto if the full bundle does not fit.
 - **3.7** Decision record: content hashes of snapshot, reports, config, proposal,
-  plan, verdict. Ed25519 signature. `signed=false` never authorizes.
+  plan, verdict. Ed25519 signature. `signed=false` never authorizes. Carries
+  each closed-session divergence finding, so a buyer sees what was judged
+  expected (DECISION 2026-09-18).
 - **3.8** ▶ **A veto happening:** *Show: a cycle where divergence, quote age or an
   unknown impact trips a gate, the named reason, and execution refused.*
 - **3.9** ▶ **Byte-stable replay:** *Show: the same decision record reproduced
@@ -601,7 +604,13 @@ mandate.
   tracks (F0.4.5): ~100 bps where the corroborating pool does over $1M a day,
   and below that line the asset is excluded from the universe rather than
   vetoed every cycle. Both numbers are provisional and live in
-  `config/thresholds.json` (0.4 checkpoint).
+  `config/thresholds.json` (0.4 checkpoint). **The veto fires in an open
+  session only** (DECISION 2026-09-18). In an inferred closed session the feed
+  is frozen and the pools trade on, so divergence measures movement since the
+  close. The mark stays at the last published price, and the divergence is
+  recorded as a finding that reaches the decision record, so a buyer sees the
+  pool moved while the feed was frozen. *Not yet in code: 1.4's
+  `cross_check()` still vetoes in a closed session.*
 - **No Chainlink feed, not held.** An asset without a feed has no mark
   independent of the venue we trade on, so feed presence is a membership
   condition. That caps the investable universe at the 35 equity feeds
