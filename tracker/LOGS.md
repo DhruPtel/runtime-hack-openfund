@@ -602,7 +602,26 @@ fail with its rule broken, and none found a violation in `src/`.
 
 ---
 
-## State at close — 2026-09-18, after 1.8 and the test audit
+## 1.9 ▶ — Fixtures and offline replay
+**Date:** 2026-09-18 · **Commit:** a96f021
+
+Built `adapters/cache.py`, which records every exchange and clock reading at the
+transport the adapters already take, and gave `run/snapshot.py` a capture on
+every live build and a `--replay` that rebuilds from a capture alone, from its
+own config, the registry by hash and each source's clock tape, with every socket
+refused; no adapter changed shape. The artifact is
+`fixtures/snapshots/66812461-8afe38a38b03/`, 1.03 MB, committed after a check
+for all six declared credentials: 189 chain, 2 GeckoTerminal and 35 quote
+exchanges, 20,036 clock readings and snapshot `8afe38a3…`. `make replay`
+rebuilds it byte for byte in 0.4 s inside a network namespace with no route and
+no credentials, while a live build there fails at its first RPC call; a changed
+byte in any source's answers changes the hash, and one the snapshot does not
+carry fails the replay by name. **Shown at the checkpoint and waiting for the
+operator.**
+
+---
+
+## State at close — 2026-09-18, after 1.9
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -611,17 +630,19 @@ it. Where this note and git disagree, git is right.
 
 **Check it in a minute.** Nothing here spends.
 - `git log --oneline -15` and `git status -sb`.
-- `make test`: 313 passed when this was written, 354 before the test audit.
+- `make test`: 330 passed when this was written.
+- `make replay`: rebuilds the committed capture offline, byte for byte, in
+  under a second. Needs no credential.
 - `make check-env`: which credentials are present, by name only.
-- `PYTHONPATH=src python3 -m fund.run.snapshot --prove` builds a live snapshot
-  in about 2.5 minutes. The 30-day walks made it longer. `make snapshot` is
-  not wired.
+- `make snapshot` builds a live snapshot in about 2.5 minutes, captures it
+  under `fixtures/live/captures/`, and replays it; `python3 -m
+  fund.run.snapshot --prove` also re-reads the chain at the same block.
 - `probes/analyst_cost.py` **spends** with `--confirm`, in its default,
   `--one` or `--cache` mode.
 
-### Done, through 1.8
-- **Phase 0, the Phase 1 replan, and units 1.1-1.8,** then the test audit
-  and cut above.
+### Done, through 1.9
+- **Phase 0, the Phase 1 replan, units 1.1-1.8 and the test audit, and 1.9,**
+  shown at its checkpoint and not yet judged.
 - **Decisions this far into Phase 1:**
   - staleness in open-session time, with sessions inferred from rounds;
   - the shared `adapters/http.py`;
@@ -630,34 +651,32 @@ it. Where this note and git disagree, git is right.
   - the live read lives in `run/snapshot.py`;
   - the price is $0.25, provisional;
   - the timeouts are 600 s and 630 s, with a 12,000-token output cap;
-  - the series is daily closes over 30 days, adopted on measurement.
+  - the series is daily closes over 30 days, adopted on measurement;
+  - captures are recorded at the transport, and the repository keeps them in
+    `fixtures/snapshots/`.
 - **The whole of what is built.** Under `src/fund/`: `config.py`,
   `credentials.py`, `redaction.py`, `core/types.py`, `core/universe.py`,
   `core/valuation.py`, `core/snapshot.py`, `adapters/http.py`,
-  `adapters/chain_4663.py`, `adapters/gecko.py`, `adapters/bankr_quote.py` and
-  `run/snapshot.py`. Every other module is a stub; `grep -l "Not yet built" -r
-  src/` lists 29.
+  `adapters/chain_4663.py`, `adapters/gecko.py`, `adapters/bankr_quote.py`,
+  `adapters/cache.py` and `run/snapshot.py`. Every other module is a stub;
+  `grep -l "Not yet built" -r src/` lists 28.
 
 ### The numbers that stand
 - **Snapshot:** schema `openfund.snapshot/2`, about 189 KB with 763 daily
-  closes. The last live one is `6a835421…` at block 66750551, only on this
-  machine.
+  closes. The committed one is `8afe38a3…` at block 66812461, with its
+  capture in `fixtures/snapshots/`.
 - **Analyst call:** $0.264 at Sonnet 5, uncached (§1.8a).
 - **Cycle:** about $1.11, $33 over 30 days, covered by 4.4 records at $0.25.
 - **Caching:** not honoured by the gateway, measured.
 - **LLM credits:** $0.937148 left, after 1.7 and 1.8 spent $1.862828.
 
-### Next: unit 1.9 ▶, fixtures and offline replay
-Not started. It is a checkpoint.
-- It records a live run's offchain answers, GeckoTerminal and the quotes, so
-  a rebuild from fixtures is byte-identical.
-- The chain is already byte-identical when re-read at the same block.
-- `tests/test_run_snapshot.py` already runs the live path offline over
-  recorded-shape transports. That is not a replay of a recorded run.
+### Next: the 1.9 checkpoint, then unit 1.10
+- **1.9 waits on the operator:** how much of the demo runs from fixtures and
+  how much live.
+- **1.10, the address selftest,** is not started.
 
 ### Open items, none resolved
-1. **Owed in code:** two `http.py` changes, and `make snapshot` (LESSONS
-   preamble).
+1. **Owed in code:** two `http.py` changes (LESSONS preamble).
 2. **The daily cut's daylight saving.** 20:00Z is 16:00 New York only in
    daylight time. The closed span needs re-deriving after 2026-11-01.
 3. **Holidays fail closed,** by decision. Daily closes skip them honestly.
@@ -671,7 +690,9 @@ Not started. It is a checkpoint.
 8. **AMZN's GeckoTerminal price alternates** between two levels; unresolved.
 9. **$25 is sized at USDG's Chainlink mark,** a 1.5 choice for the operator.
 10. **The quote-age budget.** The oldest quote was 21–25 s old at `built_at`.
-11. **Unchanged:** paused-oracle detection; the unowned registry refresh fetch;
+11. **The snapshot does not name its capture by hash,** so a changed byte it
+    does not carry fails a replay only through the manifest (1.9, open).
+12. **Unchanged:** paused-oracle detection; the unowned registry refresh fetch;
     six types waiting for 2.1-6.1; one RPC endpoint; which impact field gates;
     the stale README line 9.
 
@@ -692,9 +713,9 @@ Not started. It is a checkpoint.
     `expires_at`, and an empty `allowed_assets`.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `b555a64`, the end of 1.8;
-this session did not push it. Every commit after it, the test audit's from
-`6ea003d` to the one that adds this note, is committed and **not pushed**. To
+Checked locally, with no fetch. `origin/main` is `991347d`, the end of the
+test audit; this session did not push it. Every commit after it, 1.9's from
+`2758b4c` to the one that adds this note, is committed and **not pushed**. To
 re-check, run `git fetch` and then `git log origin/main..HEAD`.
 
 ### What this note does not cover
