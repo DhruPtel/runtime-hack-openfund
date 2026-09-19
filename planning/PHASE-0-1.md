@@ -931,6 +931,36 @@ directory sha256s, and the config version. Then canonicalize and hash.
 produces a different one, and an observation dated after the pinned block is
 refused.
 
+**Built:**
+- `core/snapshot.py`: a readable document built from the typed readings. It
+  replaces 1.1's `Snapshot` type, whose encoding was 831 bytes a series point
+  (LESSONS 2026-09-18).
+- `run/snapshot.py`: the live read, the seam where the adapters meet core
+  (DECISION, LESSONS 2026-09-18).
+- The two owed `valuation.py` changes. A closed-session divergence is now a
+  `Finding` carried in the entry, and the docstring names the tier's
+  comparisons a named exception.
+- **The status order.** Each asset's status is the first rule that does not
+  pass: identity, standing, beacon, markability, mark, corroboration,
+  corroborator line, divergence, tradeability. Three statuses were added:
+  `no_mark`, `uncorroborated` and `divergence_veto`.
+- **Hashing.** Chain values carry their block and not their fetch time, so a
+  re-read at the same block hashes the same.
+
+**Shown, and waiting for the operator**, by `python -m fund.run.snapshot --prove`
+at block 66716733, Sat 02:13Z:
+- 347,648 bytes and 4,753 rounds, all 35 series covering their window;
+- 20 tradeable and 15 below the line;
+- 20 closed-session findings, three of them past 100 bps (AMZN, PLTR, MSTR);
+- CRM listed outside the universe, with nothing held there;
+- a fresh chain re-read at the same block rebuilt to the identical hash, and
+  one nudged price changed it.
+
+Offline, 25 tests in `tests/test_snapshot.py` assert each refusal at its rule,
+and seven mutations were each caught. `run/snapshot.py` has no offline test;
+its proof is the live build. `make snapshot` is not wired: the Makefile was
+outside this pass's paths.
+
 **Checkpoint:** you read a real snapshot and judge whether an analyst could say
 anything intelligent from it. The prior evidence is F0.9.6: given a single
 reading per asset, a trend analyst correctly returned `NO_CALL` on all six. The

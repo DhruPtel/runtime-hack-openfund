@@ -310,7 +310,9 @@ what each finding changed, is in `PHASE-0-1.md`.*
   2026-09-18).
 - **1.6** ▶ **Snapshot builder:** merge, filter, hash. *Show: a real snapshot
   JSON with history up to its pinned block, a per-asset status with a named
-  reason, and every timestamp visible.*
+  reason, and every timestamp visible.* *Built:* `core/snapshot.py`, a readable
+  document hashed as the bytes on disk, and `run/snapshot.py`, the live read.
+  Shown at block 66716733, awaiting the checkpoint (LESSONS 2026-09-18).
 - **1.7** Analyst cost probe (relocated from 0.9, which also ran early as a
   floor): a realistic analyst prompt against the real snapshot from 1.6. Record
   input and output tokens, latency and cost over at least two calls. Multiply

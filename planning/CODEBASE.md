@@ -103,8 +103,8 @@ fund/
 │   │   └── cache.py            raw source responses to disk, timestamped by code
 │   │
 │   ├── core/                   PURE. No network, no keys, no clock reads outside inputs.
-│   │   ├── types.py            Observation, Series, Asset, Quote, Holding, Snapshot,
-│   │   │                       Order (1.1); report/plan/decision/journal types later
+│   │   ├── types.py            Observation, Series, Asset, Quote, Holding, Order (1.1);
+│   │   │                       report/plan/decision/journal types later; no snapshot type (1.6)
 │   │   ├── universe.py         allowlist loading, address verification, status assignment
 │   │   ├── snapshot.py         merge → filter → canonicalize → hash
 │   │   ├── aggregate.py        reports → weights or no-rebalance. A total function.
@@ -145,6 +145,7 @@ fund/
 │   │   └── skill/SKILL.md      so other Bankr agents can call it
 │   │
 │   └── run/
+│       ├── snapshot.py         the live read: every adapter at one pinned block → core/snapshot (1.6)
 │       ├── cycle.py            the pipeline: snapshot → analysts → aggregate → plan → risk → decide
 │       ├── schedule.py         cheap tick, overlap fencing, kill switch
 │       └── startup.py          reconcile unresolved intents before accepting a cycle
@@ -203,7 +204,11 @@ undetermined. A required check must be explicitly `true`; null blocks execution.
 never resolve an asset.
 
 **Hashing.** Canonical JSON: sorted keys, stable numeric encoding, saved times,
-no floats. Same input, same bytes, same hash, always.
+no floats. Same input, same bytes, same hash, always. The snapshot's canonical
+form is its own, and is written to be read (`core/snapshot.py`, 1.6):
+- one space of indent, and arrays of scalars on one line;
+- every quantity as exact decimal text;
+- the file on disk is exactly the hashed bytes.
 
 **Ids.** `snapshot_id`, `report_id`, `decision_id`, `order_id`, `cycle_id`. Every
 artifact references the ids of its inputs, so any published number can be traced
