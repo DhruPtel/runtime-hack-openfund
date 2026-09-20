@@ -1367,6 +1367,48 @@ state in one write.
 
 ---
 
+## Stocktake before the demo — what works, what the front end can read, what is missing
+**Date:** 2026-09-20 · Read-only inventory at `8bec05f`, about two and a half hours
+before submission. No code changed.
+
+**Works on a fresh clone with no credentials** (checked by exporting `HEAD` to a clean
+directory and running each): `make test` 793 passed in 41 s; `make replay` 1.0 s, both
+committed captures rebuilt byte-identical with every connection refused; `make
+cycle-demo` 1.3 s, two whole paper cycles ending in a book that reconciles exactly
+(NAV $200.17). **Works live, with credentials:** `make selftest` 103 s, 235 addresses
+attested at block 67,510,242, 235 pass 0 fail (run today); `make snapshot` ~150 s;
+`run/isolation --live`; `run/liveleg` dry ~3 s and ~15 s to settle with `--confirm`
+($0.82 of the $1 budget left); the analysts and the risk call, which spend. **Recorded
+only:** the x402 sale. Its endpoint is still live and answers 402 for 0.001 USDC, but
+the resource it sells is *"Phase 0 probe: static response, no work"*, and `payTo` is
+`0x8AEE62…`, not the fund's wallet.
+
+**What a front end can read.** Committed, static, no server needed: two snapshots
+(`fixtures/snapshots/<block>-<sha12>/snapshot.json`), two whole cycles with their
+signed records (`fixtures/cycles/<ts>/decision/{record,envelope,plan,proposal,reports,
+quotes,risk}.json`), the live leg's authority and result
+(`fixtures/liveleg/leg{1,2}-*/{instruction,envelope,outcome}.json`, the outcome
+carrying the chain evidence and the real book as text lines), and the known-answer
+fixture. **Not readable:** every book. `positions.statement` returns a string,
+`BookValue` has no dict form, the paper cycle writes `book.txt` under the gitignored
+`fixtures/live/`, and the live book is SQLite, also gitignored. There is also no index
+across cycles — `latest.json` is 7.1's. `probes/out/` is gitignored too, so the probe
+evidence exists only as prose in `research/findings.md`.
+
+**Correction to the note below.** It said everything from `4992d62` was committed and
+**not pushed**. That is wrong: `git ls-remote` puts `origin/main` at `8bec05f`, the
+same commit as local `HEAD`, and the reflog records it as a push. The repository is
+public at `github.com/DhruPtel/runtime-hack-openfund`, all of Phase 5 included, with
+GitHub Pages off. The claim closing the previous batch — "nothing pushed" — was wrong
+in the same way, and this corrects it.
+
+**Ranked for what a judge sees:** the README still says *"Status: building, Phase 0"*
+and lists four working commands as "the intended surface when finished"; there is no
+page; there is no book in JSON for a page to read; nothing serves a record over HTTP,
+so *sells its research* is the one claim of the three not demonstrable end to end.
+
+---
+
 ## State at close — 2026-09-20, Phase 5 built to 5.3; the live leg has run, and 5.4 is the stop
 
 **Read this first.** This note describes the repository at the commit that last
@@ -1673,10 +1715,10 @@ commands need `PYTHONPATH=src`.
 - **Still null:** nothing that blocks. Every figure a live order needs is set.
 
 ### Committed versus pushed
-Checked locally, with no fetch. `origin/main` is `385285f`, pushed by the operator:
-everything through Batch B. Every commit from `4992d62` (the audit's first cut) to the
-one that last changed this note — the cuts, the pace rules, 4.9, 4.10, 4.12, 4.11 and
-all of Phase 5 — is committed and **not pushed**.
+`git ls-remote origin main` is `8bec05f`, the same commit as local `HEAD`: **everything
+is pushed**, Phase 5 included, and the repository is public at
+`github.com/DhruPtel/runtime-hack-openfund` with Pages off. An earlier version of this
+section said the opposite, from a stale reading; the stocktake above corrects it.
 
 ### What this note does not cover
 - **Decisions.** LESSONS holds them in full.
