@@ -31,7 +31,8 @@ const BASE = 'http://127.0.0.1:8111/';
    ok('confirmation names the wallet', /0x93faecde/.test(body));
    ok('confirmation says nothing is submitted on chain', /stock fills are paper/.test(body));
    ok('NOTHING was spent by opening it', posts.length === 0);
-   ok('data came from the server', (w.document.getElementById('main').textContent||'').includes('c55400f87d'));
+   ok('data came from the server', (w.document.getElementById('main').textContent||'')
+      .includes(w.OPENFUND_EXPORT.app.decisionId.slice(0, 10)));
    out.forEach(([r,n])=>console.log(r+'  '+n));
    console.log(out.filter(c=>c[0]==='FAIL').length+' failed of '+out.length);
    w.close(); process.exit(0);

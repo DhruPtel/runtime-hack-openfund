@@ -492,8 +492,21 @@ def chain(swaps: Sequence[Mapping[str, Any]], mandate) -> dict[str, Any]:
 
 # --- the whole document ---------------------------------------------------------------------------
 
-def build(live: Path = LIVE, liveleg: Path = LIVELEG) -> dict[str, Any]:
+def build(live: Path = LIVE, liveleg: Path = LIVELEG,
+          decision_dir: Path | None = None) -> dict[str, Any]:
     found = latest_cycle(live)
+    if decision_dir is not None:  # the operator naming which cycle the page shows
+        decision_dir = decision_dir.resolve()
+        found = {**found, "decision": decision_dir}
+        record = json.loads((decision_dir / "record.json").read_text())
+        snapshot_path = live / f"snapshot-{record['snapshot']['sha256']}.json"
+        found["snapshot"] = snapshot_path if snapshot_path.exists() else None
+        for candidate in sorted((live / "cycles").glob("*"), reverse=True):
+            if (candidate / "cycle.json").exists() and json.loads(
+                    (candidate / "cycle.json").read_text()).get(
+                        "snapshot_sha256") == record["snapshot"]["sha256"]:
+                found["cycle"] = candidate
+                break
     if found["decision"] is None:
         raise SystemExit("no decision with a book beside it: run a cycle first "
                          "(python3 -m fund.run.cycle --demo writes one under fixtures/live)")
@@ -551,13 +564,16 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(prog="fund.run.dashboard")
     parser.add_argument("--export", action="store_true", help="write front-end/data/")
+    parser.add_argument("--decision", type=Path, default=None,
+                        help="a decision directory to export instead of the newest, which is "
+                             "how the page is pointed at one cycle rather than another")
     parser.add_argument("--serve", action="store_true", help="serve the page and the API")
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args(argv)
     if args.serve:
         from fund.run import serve
         return serve.main(["--port", str(args.port)])
-    document = build()
+    document = build(decision_dir=args.decision)
     for path in write(document):
         print(f"wrote {path.relative_to(ROOT)}")
     print(f"   decision {document['source']['decision']}")
