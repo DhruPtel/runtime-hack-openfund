@@ -1,0 +1,190 @@
+{
+ "book": {
+  "block": {
+   "chain_id": 4663,
+   "number": 67529959,
+   "time": "2026-09-20T00:59:10Z"
+  },
+  "book": "real",
+  "books_rule": "paper and real are two figures, and the fund has no third: they are never added",
+  "cash": {
+   "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+   "basis_usd": "0.036213203762640000000000000000",
+   "decimals": 6,
+   "raw": "36216",
+   "symbol": "USDG",
+   "units": "0.036216",
+   "unrealised_usd": "0.000000000000000000000000000000",
+   "value_usd": "0.03621320376264"
+  },
+  "expenses_rule": "inference is paid from LLM credits, which neither book holds: an expense beside the NAV and never in it",
+  "expenses_usd": "0",
+  "identity": {
+   "costs_usd": "0",
+   "nav_usd": "1.28576989711094837085",
+   "opened_usd": "1.28604122805670792085",
+   "realised_usd": "0.000028460790928390256695612203",
+   "rule": "opened + realised + unrealised - costs = NAV, exactly",
+   "unrealised_usd": "-0.000299791736687940256695612203"
+  },
+  "nav_usd": "1.28576989711094837085",
+  "positions": [
+   {
+    "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "basis_usd": "1.249856485084996311106695612203",
+    "decimals": 18,
+    "raw": "476266534540929",
+    "symbol": "ETH",
+    "units": "0.000476266534540929",
+    "unrealised_usd": "-0.000299791736687940256695612203",
+    "value_usd": "1.24955669334830837085"
+   }
+  ]
+ },
+ "buys": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+ "execution": {
+  "_type": "Execution",
+  "transaction": {
+   "_type": "TransactionRef",
+   "block": {
+    "_type": "BlockRef",
+    "chain_id": 4663,
+    "hash": "0xeb3e46d58917af072af833747453fe76ae6e4294dfe8d2555df3ffb2e9a580d6",
+    "number": 67532956,
+    "timestamp": {
+     "_type": "Instant",
+     "epoch_ms": 1789866252000
+    }
+   },
+   "outer_status": 1,
+   "submitted_by": {
+    "_type": "ChainAddress",
+    "address": "0x8e3435ad7c1183bc0e34f9ec34ea3423182e1c67",
+    "chain_id": 4663
+   },
+   "tx_hash": "0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0",
+   "tx_type": 2
+  },
+  "transfers": [
+   {
+    "_type": "TokenTransfer",
+    "amount": {
+     "_type": "Amount",
+     "asset": {
+      "_type": "AssetId",
+      "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "chain_id": 4663
+     },
+     "decimals": 6,
+     "raw": "100000"
+    },
+    "log_index": 19,
+    "recipient": {
+     "_type": "ChainAddress",
+     "address": "0xb92fe925dc43a0ecde6c8b1a2709c170ec4fff4f",
+     "chain_id": 4663
+    },
+    "sender": {
+     "_type": "ChainAddress",
+     "address": "0x93faecde3c88a713e1edddf417c02c326889a3da",
+     "chain_id": 4663
+    },
+    "token": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    }
+   }
+  ],
+  "user_operation": {
+   "_type": "UserOperationRef",
+   "actual_gas_cost": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "chain_id": 4663
+    },
+    "decimals": 18,
+    "raw": "0"
+   },
+   "entry_point": {
+    "_type": "ChainAddress",
+    "address": "0x0000000071727de22e5e9d8baf0edac6f37da032",
+    "chain_id": 4663
+   },
+   "nonce_key": "0xc6f43f3583f8817055737cfcd50e7ca37406b1d9cd86",
+   "nonce_seq": "0",
+   "paymaster": null,
+   "sender": {
+    "_type": "ChainAddress",
+    "address": "0x93faecde3c88a713e1edddf417c02c326889a3da",
+    "chain_id": 4663
+   },
+   "success": {
+    "_type": "Check",
+    "reason": "the EntryPoint says the operation succeeded",
+    "value": true
+   },
+   "user_op_hash": "0x6f55faba6c4ad9b3966be7620bee52cfca8d56970af9fef55a3d4f1ba19b10d1"
+  }
+ },
+ "idempotency_key": "f3669e58-48b6-5a06-abb8-236ccbbaf78f",
+ "min_buy": {
+  "_type": "Amount",
+  "asset": {
+   "_type": "AssetId",
+   "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+   "chain_id": 4663
+  },
+  "decimals": 18,
+  "raw": "36174645126660"
+ },
+ "mode": "live",
+ "order_id": "0cc2617b38f88c59ac1befb35814505ad1304c195f925c04c86a51c34295e92f/1",
+ "real_book": [
+  "the real book at block 67529959 (2026-09-20T00:59:10Z)",
+  "  asset                    units         value         basis    unrealised",
+  "  ETH       0.000476266534540929         $1.25         $1.25        $-0.00",
+  "  cash                  0.036216         $0.04         $0.04         $0.00",
+  "  NAV                                    $1.29",
+  "",
+  "  opened $1.29 + realised $0.00 + unrealised $-0.00 − costs $0.00 = NAV $1.29, exactly",
+  "  inference $0.00, an expense beside the NAV, never in it"
+ ],
+ "reason": "0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0: the operation succeeded in block 67532956, 119 confirmations deep; paid 100000 from its Transfer logs, received 38077691442267 from its balance across block 67532956, gas sponsored",
+ "sells": {
+  "_type": "Amount",
+  "asset": {
+   "_type": "AssetId",
+   "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+   "chain_id": 4663
+  },
+  "decimals": 6,
+  "raw": "100000"
+ },
+ "state": "confirmed",
+ "treasurer": {
+  "credentials_held": [
+   "BANKR_KEY_EXEC",
+   "RPC_4663_MAINNET",
+   "RPC_4663_TESTNET",
+   "SIGNING_KEY"
+  ],
+  "environment_given": [
+   "LC_CTYPE",
+   "PATH",
+   "PYTHONPATH"
+  ],
+  "orders": [
+   {
+    "booked": true,
+    "fee_booked": false,
+    "order_id": "0cc2617b38f88c59ac1befb35814505ad1304c195f925c04c86a51c34295e92f/1",
+    "reason": "0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0: the operation succeeded in block 67532956, 119 confirmations deep; paid 100000 from its Transfer logs, received 38077691442267 from its balance across block 67532956, gas sponsored",
+    "state": "confirmed",
+    "tx_hash": "0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0"
+   }
+  ]
+ }
+}
