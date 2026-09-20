@@ -329,7 +329,7 @@ def books(paper: Mapping[str, Any], real: Mapping[str, Any]) -> dict[str, Any]:
     def one(book, name, description, revenue_label, cost_label, expense_label, note):
         identity = book["identity"]
         return {
-            "id": book["book"] if book["book"] == "paper" else "real",
+            "id": book["book"],  # the ledger names its own book (P9); this only passes it on
             "name": name, "description": description,
             "nav": _usd(book["nav_usd"]),
             "revenue": None, "revenueReason": ABSENT["revenue"],
