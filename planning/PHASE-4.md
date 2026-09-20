@@ -311,8 +311,9 @@ has moved since.
   - the per-trade limit;
   - expiry;
   - the revoked flag;
-  - the cumulative live budget, which stays null until Phase 5 and blocks only
-    the live leg.
+  - the cumulative live budget, which blocks only the live leg. It was null
+    through Phase 4, which refused every live order; unit 5.1 set it to $1
+    (`mandate.json` v3, 2026-09-19), and the round trip of 5.2 used $0.18 of it.
 - **Artifact:** the loader and `tests/test_mandate.py`.
 - **Done when:** a placeholder refuses, an expired mandate refuses, and the
   approved one loads.

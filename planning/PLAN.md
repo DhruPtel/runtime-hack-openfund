@@ -856,7 +856,24 @@ Published with the project, not hidden.
   and settlement evidence, and signed for provenance only.
 - Reorg handling is limited to a confirmation depth. A receipt becoming
   noncanonical surfaces as a reconciliation exception, not an automatic
-  correction.
+  correction. **The depth is a choice, not a measurement** (set at 5.3,
+  2026-09-19): 100 blocks, about ten seconds at the 102 ms blocks measured.
+  Nothing in the record measures a reorg on 4663, there is no archive node to
+  study one with, and the chain publishes no finality rule we have read. Under
+  that depth a swap is unknown, never failed.
+- **The live chokepoint re-judges its quote but cannot re-take it** (5.2). The
+  quote adapter refuses any credential that can transact and `BANKR_KEY_READ` is
+  the analyst's, so the treasurer's process — the only one that may spend —
+  cannot fetch a quote at all. On the live leg it judges the quote its signed
+  instruction carries, by the same age, size and impact rule, and refuses one
+  that has aged past the limit; the instruction's own expiry bounds it a second
+  time. On the paper path this does not arise: the fake venue needs no key.
+- **The block explorer is not evidence.** `robinhoodchain.blockscout.com/tx/<hash>`
+  answers HTTP 200 for any hash, including one that is not a transaction, and its
+  API answers 403. Explorer links in this repository are for a human to open. What
+  the fund reads, and what its tests are held to, is the RPC receipt: the
+  EntryPoint's `UserOperationEvent`, the wallet's own `Transfer` logs, and its
+  balance across the block.
 - No archive RPC and no sequencer-uptime attestation. We require demonstrated
   chain progress and halt on uncertainty.
 - **A market holiday stops valuation.** When the equity feeds' schedule is
