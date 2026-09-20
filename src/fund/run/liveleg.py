@@ -1,6 +1,6 @@
 """The live leg, one command (units 5.1, 5.2).
 
-    PYTHONPATH=src python3 -m fund.run.liveleg --snapshot PATH --sell ETH --amount 0.00005
+    PYTHONPATH=src python3 -m fund.run.liveleg --snapshot PATH --sell ETH --amount 0.00003
         --db PATH --out DIR [--config-dir DIR] [--env-file PATH] [--window-seconds 300]
         [--confirm]
 

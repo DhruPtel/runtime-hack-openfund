@@ -26,8 +26,10 @@ From a capture to a book:
 
 **Nothing here touches the chain.** Stock legs are paper (PLAN §13). The venue is the
 fake venue, labelled in every answer, and the risk vote is scripted: this command
-makes no model call and spends nothing. The live path — real quotes, a real risk call
-and the live leg — is Phase 5's, behind the same interfaces.
+makes no model call and spends nothing. The pieces that do are behind the same
+interfaces and are built: real quotes and a real risk call in `run/decide.py`, and the
+live leg in `run/liveleg.py` (5.1, 5.2), which is the only command that spends on
+chain. What joins them into one scheduled cycle is 5.7's and 8.3's.
 
 **The clock is an input,** `--at`: a paper cycle on a committed capture runs at that
 capture's time, so it decides on evidence that was fresh (S11) and rebuilds the same

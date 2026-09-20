@@ -9,8 +9,8 @@ design lesson of the 3.8 sweep, where three components counted cash three ways
 **The events.**
 - `Opening`: a balance a book starts with, and the mark it came in at.
 - `Fill` (P3): what an order gave and got, the marks at fill time, and which leg
-  is cash. `paper_fill` builds one from a quote; a live one comes from receipts
-  at 5.3.
+  is cash. `paper_fill` builds one from a quote; `live_fill` builds one from what
+  `treasurer/reconcile.py` read out of the receipt (5.1, 5.3).
 - `Transfer`: value into or out of a book that is not a trade — a contribution or a
   withdrawal. Capital, never income and never a cost (4.11).
 - `Fee`: what was paid, in what, at what mark.
