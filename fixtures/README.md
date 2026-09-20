@@ -42,6 +42,24 @@ Each is scanned for every declared credential before commit.
 
 It is **history, and nothing rebuilds it.** It predates the 3.8 sweep, which
 changed what a record holds, though its schema also says `openfund.decision/1`.
-`accounting/` the known-answer accounting fixture (unit 4.11).
-`live/` never committed: every live build's snapshot, and its capture under
-`live/captures/`. See .gitignore.
+`accounting/` the known-answer accounting fixture (unit 4.11): thirteen
+constructed events, the answer worked out by hand in `answer.md` without running
+the ledger, and the same figures as data in `expected.json`.
+
+`liveleg/` the live leg (units 5.1 and 5.2), one directory a swap. Each holds
+what authorized it and what became of it:
+- `instruction.json`: one order, in the plan's own layout, with the quote it was
+  written on and the window it was authorized for;
+- `envelope.json`: the ed25519 signature over those exact bytes. The order's id
+  and idempotency key derive from their sha256;
+- `outcome.json`: the order as the store holds it, the chain evidence
+  `treasurer/reconcile.py` read from the receipt — the transaction, the
+  EntryPoint's operation and the wallet's own transfers — and the real book that
+  fill left, as text and as data.
+
+The books themselves are SQLite and are not committed; this is the repository's
+evidence of the live leg. Both swaps are on chain 4663, 2026-09-20.
+
+`live/` never committed: every live build's snapshot and its capture under
+`live/captures/`, the paper cycle's output under `live/cycle-demo/`, and the
+fund's own database. See .gitignore.

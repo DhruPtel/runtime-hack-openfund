@@ -43,7 +43,7 @@ a file you can open.**
 |---|---|---|
 | `make test` | 41 s | 793 tests, offline |
 | `make replay` | 1 s | both committed captures rebuilt **byte-identical** with every connection refused |
-| `make cycle-demo` | 1.5 s | two whole paper cycles from a committed capture and four real analyst reports: reports → weights → plan → gates → risk vote → signed record → fills → a book that reconciles exactly (NAV **$200.17**) |
+| `make cycle-demo` | 1 s | two whole paper cycles from a committed capture and four real analyst reports: reports → weights → plan → gates → risk vote → signed record → fills → a book that reconciles exactly (NAV **$200.17**) |
 | `PYTHONPATH=src python3 -m pytest tests/test_accounting.py -q` | <1 s | the ledger against an answer worked out **by hand** in `fixtures/accounting/answer.md`: paper NAV $183.64629364, real NAV $4.26567681261301, to the last digit |
 
 **Live, with credentials.** Copy `.env.example` to `.env` and fill it in; its header
