@@ -1409,6 +1409,57 @@ so *sells its research* is the one claim of the three not demonstrable end to en
 
 ---
 
+## Presentation pass — the repository says what it is, and the book became data
+**Date:** 2026-09-20 · **Commits:** 23a2c4b, 444f66e, 5e314e6, 605fb06, 14cc01d, aae44ed
+
+No feature was added and no money path was touched. What changed is what a reader is
+told.
+
+**The README** said *"Status: building, Phase 0"* and listed four working commands as
+"the intended surface when finished". It now opens with what the fund is, the pipeline
+in eight lines, and two tables: what runs on a fresh clone with no credentials — `make
+test` 794 in 41 s, `make replay` 1 s, `make cycle-demo` 1 s, the hand-computed
+accounting fixture under a second — and what runs live, with what each needs and
+roughly how long it takes. Then the two transactions with their hashes, and **what the
+fund does not do**: stock fills are paper, revenue is not booked at all, the x402
+endpoint sells a Phase 0 probe response and not a record, there is no page and no
+scheduler. Every claim in it is a command or a file. Verified by exporting `HEAD` to a
+clean directory with no `.env` and running each: 41.3 s, 1.0 s, 1.2 s, 0.2 s.
+
+**The stale documents.** JUDGING-CRITERIA described "Phases 0 and 1 built, Phase 2 not
+started"; it now describes what the record holds at 5.3 and names revenue as the one
+claim of the three that is not demonstrable. PHASE-4 said the live budget stays null
+until Phase 5; 5.1 set it to $1 and 5.2 used $0.18. PLAN §13 gained Phase 5's own
+limits: the confirmation depth is a **choice**, not a measurement; the live chokepoint
+re-judges its quote but cannot re-take one, because the quote adapter refuses any key
+that can transact; and the explorer answers 200 for any hash, so its links are for a
+human and the RPC receipt is the evidence. SIMPLIFICATION's *"proposed mechanics, not
+decided"* — the planner appending a live order to each cycle — is replaced by what was
+built and the operator confirmed, with the reason: a plan is one book's rebalance, so
+appending a real-book order would have counted the wallet's USDG as paper cash.
+`.env.example` now says one file is enough and what the optional `.env.treasurer`
+splits; it had never been mentioned. `fixtures/README.md` describes `liveleg/`.
+
+**The code.** Three docstrings described a world two phases old: the paper cycle said
+the live path *was Phase 5's*, the ledger said a live fill *would come* from receipts
+at 5.3, and the live leg's usage example sold an amount it never sold. `run/schedule.py`
+now says plainly that it is not built, that cycles are started by hand, and which
+module holds each guard a scheduler would need — a placeholder, not a missing import.
+One property elsewhere has no caller (`bankr_exec.SwapReply.claims_a_transaction`); its
+file was outside this batch's paths and it was left alone.
+
+**The book as data** (the one exception to "no new features", because the page needs it
+and nothing else provided it). `ledger.as_document` renders a `BookValue` as JSON — the
+block, NAV, cash and every position with units, value, basis and unrealised, and the
+identity's own terms — exact, not rounded to the cent, and computing nothing: every
+figure is read off the value the one fold already produced. `run/cycle.py` writes
+`book.json` beside `book.txt`, and the live leg's `outcome.json` carries it too, so the
+two committed ones now hold the real book as data. One test holds the JSON to saying
+exactly what the text says, row by row, once rounded the way that file rounds. 794
+tests pass.
+
+---
+
 ## State at close — 2026-09-20, Phase 5 built to 5.3; the live leg has run, and 5.4 is the stop
 
 **Read this first.** This note describes the repository at the commit that last
@@ -1434,7 +1485,7 @@ operator wrote down. This note was rewritten at about 00:40Z on 2026-09-20.
 **Check it in a minute.** Nothing here spends unless marked. The `python3 -m`
 commands need `PYTHONPATH=src`.
 - `git log --oneline -25` and `git status -sb`.
-- `make test`: 793 passed when this was written, in about 40 s. The runner and
+- `make test`: 794 passed when this was written, in about 41 s. The runner and
   risk tests start real subprocesses against a fake gateway on 127.0.0.1.
 - `make cycle-demo`: two whole paper cycles on the committed capture and the exit
   run's four real reports, in about 8 s. A fake venue, a scripted risk vote and a
