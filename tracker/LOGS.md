@@ -1674,6 +1674,71 @@ chain read of its own.
 
 ---
 
+## A cycle nobody asked for: $1.33 spent through an unconfirmed POST
+**Date:** 2026-09-20 · **Commit:** f04ef75
+
+While testing the dashboard's server, **a live cycle ran that no one authorized**, at
+02:26:20Z. It completed: four seats reported, seven orders planned, six approved, MSTR
+vetoed by the risk agent, six filled. The credit balance fell from $7.066641 to
+$5.739645 — **$1.326996**.
+
+**What is known.** The directory name `live-20260920T022620Z` is created in exactly one
+place, `serve.py`'s `do_POST`, so the cycle was started by a POST to `/api/cycle/run`.
+That endpoint had no confirmation requirement: any POST spent. **What is not known** is
+what sent it. The headless check stubs `fetch` before wire.js is evaluated, and that
+stub was tested in isolation afterwards and does intercept a POST; the server log for
+the port the check ran against was discarded to `/dev/null`, so it cannot be read back.
+A browser on the operator's side at that moment would also explain it. It is not
+established, and it is not claimed.
+
+**The fix, either way:** an endpoint that spends now refuses a POST that does not say
+so. `{"confirm": "spend"}` is required, a request without it is a 400 and is logged as
+refused, and the page sends it only after the operator has clicked through a dialog
+naming the cost. The same gate covers the live-leg endpoint added in the same batch.
+The lesson is the ordinary one: an unauthenticated local endpoint that spends money is
+a loaded gun, and "it is only bound to localhost" is not a safety property.
+
+**One unintended benefit, stated as what it is:** that cycle is a real one — live
+quotes, a live risk call, a real veto with the agent's own sentence, and `OVERALL
+approve`, which is the v2 brief holding for the third time. It predates the capital
+change, so its book is $200. The page shows whichever cycle is newest;
+`--decision` names another.
+
+---
+
+## The demo's three: a clean slate, a button that spends, and the evidence
+**Date:** 2026-09-20 · **Commit:** a494b65
+
+**`?empty`** starts the page with nothing decided: the flow idle, the four seats
+waiting with "has not been asked yet", NAV and every figure a dash, Risk saying there
+is nothing to review. **It deletes nothing** — the committed cycle is in the same file
+under its own key, and the four real swaps stay on Chain, because no cycle produced
+them and none needs to. The first completed run replaces the blank state with its own.
+
+**A control that moves real money** sits on Chain, next to the explorer buttons.
+It runs `run/liveleg.py` itself — no second execution path — after a dialog naming the
+asset (ETH → USDG), the size (0.00003 ETH, about $0.08, the smallest that quotes), the
+wallet, the chain, and what it takes: a fresh snapshot, because S11 gives a snapshot
+fifteen minutes, then one send and a hundred confirmations. The stages stream to the
+page and the transaction hash and explorer link appear when it lands. It is labelled
+for what it is: the money path on an ungated asset, because tokenized stocks answer 403
+in this region, and the same treasurer, chokepoint and reconciler handle both.
+
+**The evidence, on click, in the components that already open.** A decision row now
+opens with its contract on 4663, the Chainlink feed's name and address, the round id and
+when it updated, the pinned block and its time, and **three prices from three sources** —
+the feed read on chain, GeckoTerminal with its divergence in bps, and the venue's own
+quote at size — plus the registry and beacon lines that attest the address. An order
+opens with every gate that ran, each with what it measured and its limit; the fresh
+quote it was re-judged on, with its age in milliseconds, its id, and the Bankr endpoint
+that produced it; who flagged it and who decided; and the risk agent's model, brief,
+bundle size, cost and latency.
+
+17 headless checks cover all three (`front-end/checks/demo-states.js`), 12 more the
+filesystem fallback, 9 the served path. 795 tests.
+
+---
+
 ## State at close — 2026-09-20, Phase 5 built to 5.3; the live leg has run, and 5.4 is the stop
 
 **Read this first.** This note describes the repository at the commit that last
