@@ -1367,7 +1367,7 @@ state in one write.
 
 ---
 
-## State at close — 2026-09-19, Phase 4 built; 4.11 shown at its stop
+## State at close — 2026-09-20, Phase 5 built to 5.3; the live leg has run, and 5.4 is the stop
 
 **Read this first.** This note describes the repository at the commit that last
 changed it: run `git log -1 -- tracker/LOGS.md`. If `git log` shows later
@@ -1382,17 +1382,17 @@ it. Where this note and git disagree, git is right.
 - The operator is stopped at 2.1, 3.8, 4.11, 5.4, 6.6, 7.5 and 8.5. 2.1 was
   approved, and past 3.8 the operator asked for Phase 3's close. Then for the
   orientation's fixes and 4.0, then for Batch B, 4.1 to 4.8, then for the audit, its
-  four cuts, 4.9, 4.10 and 4.12, and 4.11. **4.11 is shown, and waits for the
-  operator.**
+  four cuts, 4.9, 4.10 and 4.12, then 4.11 — shown and approved by the operator's next
+  batch — and then Phase 5, 5.1 to 5.4. **5.4 is shown, and waits for the operator.**
 
 **The deadline** was given at about 11:00Z on 2026-09-19 as "about 16 hours":
 about Sun 2026-09-20 03:00Z. That is this note's arithmetic, not a time the
-operator wrote down. This note was written at about 23:40Z.
+operator wrote down. This note was rewritten at about 00:40Z on 2026-09-20.
 
 **Check it in a minute.** Nothing here spends unless marked. The `python3 -m`
 commands need `PYTHONPATH=src`.
 - `git log --oneline -25` and `git status -sb`.
-- `make test`: 770 passed when this was written, in about 37 s. The runner and
+- `make test`: 793 passed when this was written, in about 40 s. The runner and
   risk tests start real subprocesses against a fake gateway on 127.0.0.1.
 - `make cycle-demo`: two whole paper cycles on the committed capture and the exit
   run's four real reports, in about 8 s. A fake venue, a scripted risk vote and a
@@ -1421,6 +1421,12 @@ commands need `PYTHONPATH=src`.
 - `python3 -m fund.run.isolation [--live]`: one swap request per analyst key, to
   measure that neither can transact. `--live` sends them; without it nothing is
   sent. A refusal costs nothing, and a request that goes through is the finding.
+- `python3 -m fund.run.liveleg --snapshot PATH --sell ETH --amount 0.00003 --db PATH
+  --out DIR [--confirm]`: **the only command that spends on chain.** Without
+  `--confirm` it quotes, writes and signs the instruction, prints the asset, size,
+  wallet and chain, and stops. With it, the treasurer's own process sends one swap,
+  once, and books what the chain says. It needs a snapshot minutes old (S11 gives it
+  15) and the mandate's live budget, which is $1 and $0.18 used.
 - `make replay` rebuilds the committed capture offline. `make check-env` names
   the credentials present. `make selftest` needs the RPC URL. `make snapshot`
   builds a live snapshot in about 2.5 minutes.
@@ -1485,15 +1491,21 @@ commands need `PYTHONPATH=src`.
   - `run/cycle.py`, `run/startup.py` and `run/isolation.py`;
   - `adapters/fake_venue.py`, where the fake venue moved at 4.12.
 
-  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 8 —
-  `treasurer/reconcile.py` and `adapters/bankr_exec.py` (Phase 5), `core/books.py`
-  and `core/attribution.py` (Phase 6), `store/publish.py` and the two surfaces
-  (Phase 7), `run/schedule.py` (Phase 8).
+  - `adapters/bankr_exec.py`, `treasurer/reconcile.py`, `treasurer/instruct.py` and
+    `run/liveleg.py` (Phase 5).
+
+  Every other module is a stub: `grep -l "Not yet built" -r src/` lists 6 —
+  `core/books.py` and `core/attribution.py` (Phase 6), `store/publish.py` and the two
+  surfaces (Phase 7), `run/schedule.py` (Phase 8).
 
 ### Next
-- **Phase 4 is built, and 4.11 waits for the operator.** Past it, Phase 5 opens:
-  the live executor (5.1) behind the paper one's interface, the round trip (5.2),
-  and receipts (5.3). Nothing of Phase 5 is started.
+- **Phase 5 is built to 5.3, the round trip has run on chain, and 5.4 waits for the
+  operator.** Past it, 5.5 (access lost), 5.6 (the recorded 403) and 5.7 (a live
+  cycle) remain, and Phase 6 opens: the statement, the reconcile and attribution.
+- **The live leg carries its own signed authority** (`treasurer/instruct.py`), and not
+  the appended plan order `planning/SIMPLIFICATION.md` proposed. LESSONS 2026-09-20
+  says why, and the operator should confirm it: `planning/` was outside this batch's
+  paths, so the plan still says what it said.
 - **What 4.11 found the ledger still cannot say:** settled revenue has no event and
   the identity no line for it (6.1, on 7.2's settlement evidence); unsettled revenue
   is not an event at all and must not become one (invariant 9); LLM credits are
@@ -1630,7 +1642,14 @@ commands need `PYTHONPATH=src`.
   - META 12.5%, AMD, INTC and USO 6.25% each, 68.75% cash;
   - four buys totalling $62.50 of the $200 paper book;
   - a risk bundle of about 32,400 tokens, 12,000 of them reserved.
-- **Wallet:** about $1.29, as 0.078742 USDG and 0.000460 ETH on 4663.
+- **Wallet, after the live leg (2026-09-20 00:17Z):** 0.000468188843098662 ETH and
+  0.057456 USDG on 4663. The real book's NAV is **$1.28581522201804455630**, and
+  opened + realised + unrealised − costs equals it exactly. The paper book in that
+  same journal (`fixtures/live/live.sqlite`, gitignored) is empty: two books, never
+  added. Before the leg it was 0.000460162486507929 ETH and 0.078742 USDG.
+- **The two live swaps:** `0x9c8ea67d…cfbbfa` (block 67,501,588, 0.00003 ETH into
+  0.078714 USDG) and `0x737e32b4…02a27` (block 67,501,988, 0.10 USDG into
+  0.000038026356590733 ETH). Both gas-sponsored. $0.1787 of the $1 live budget used.
 
 ### Config
 - **Set in the 2.2–2.5 batch:**
@@ -1643,14 +1662,21 @@ commands need `PYTHONPATH=src`.
   - `analysts.json`: `confidence_weights`;
   - `models.json`: `context_bytes_per_token` "1.8";
   - `mandate.json`: 20 allowed assets and placeholder approvals.
-- **Still null:** `cadence.json`'s `confirmation_depth`; `mandate.json`'s
-  `cumulative_budget_usd`.
+- **Set in Phase 5 (2026-09-19/20):**
+  - `cadence.json`: `confirmation_depth` 100 blocks (a choice, about ten seconds at
+    the measured 102 ms block), `settlement_poll_seconds` 2,
+    `settlement_deadline_seconds` 180;
+  - `mandate.json` v3: `cumulative_budget_usd` **1**, the ceiling on everything the
+    live leg may ever trade;
+  - `execute.json`: the swap endpoint, its credential and its timeout. No slippage
+    figure — the body carries the order's own authorized floor.
+- **Still null:** nothing that blocks. Every figure a live order needs is set.
 
 ### Committed versus pushed
 Checked locally, with no fetch. `origin/main` is `385285f`, pushed by the operator:
-everything through Batch B. Every commit from `4992d62` (the audit's first cut) to
-the one that last changed this note — the cuts, the pace rules, 4.9, 4.10, 4.12 and
-4.11 — is committed and **not pushed**.
+everything through Batch B. Every commit from `4992d62` (the audit's first cut) to the
+one that last changed this note — the cuts, the pace rules, 4.9, 4.10, 4.12, 4.11 and
+all of Phase 5 — is committed and **not pushed**.
 
 ### What this note does not cover
 - **Decisions.** LESSONS holds them in full.
