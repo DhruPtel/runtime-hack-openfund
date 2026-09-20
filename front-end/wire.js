@@ -15,7 +15,8 @@
  'use strict';
  const SECTIONS = ['app', 'overview', 'swarm', 'decision', 'risk', 'books', 'record', 'chain'];
  const RUN = '[data-action="run-cycle"]';
- let served = false, polling = null, note = '';
+ let served = false, polling = null, note = '', legPolling = null, legSeen = 0;
+ const EMPTY = new URLSearchParams(location.search).has('empty');
 
  function apply(payload) {
   if (!payload) return;
@@ -41,6 +42,9 @@
    if (caption && note && caption.textContent !== note) caption.textContent = note;
    const footer = document.querySelector('[data-action="demo-info"]');
    if (footer && footer.textContent !== 'About this data') footer.textContent = 'About this data';
+   const leg = document.querySelector('[data-action="run-liveleg"]');
+   if (leg && !served && leg.disabled !== true) leg.disabled = true;
+   if (legLines.length) legLog(legLines.slice(-8));
   } finally {
    /* after the observer has queued whatever this wrote, not before */
    setTimeout(() => { adjusting = false; }, 0);
@@ -121,9 +125,73 @@
   }, 1200);
  }
 
+ /* --- the live leg: real money, on an ungated asset ------------------------------ */
+
+ function legDialog() {
+  const wallet = (window.OPENFUND_EXPORT?.app?.fundWallet) || '—';
+  document.getElementById('dialog-title').textContent = 'Execute a real swap';
+  document.getElementById('dialog-body').innerHTML =
+   '<p>This submits a real transaction on chain 4663 and spends real money.</p>' +
+   '<dl class="metadata">' +
+   '<div><dt>Asset</dt><dd>ETH → USDG</dd></div>' +
+   '<div><dt>Size</dt><dd>0.00003 ETH, about $0.08 — the smallest size that quotes</dd></div>' +
+   '<div><dt>Wallet</dt><dd>' + wallet + '</dd></div>' +
+   '<div><dt>Chain</dt><dd>Robinhood Chain 4663</dd></div>' +
+   '<div><dt>Path</dt><dd>the same treasurer, chokepoint and reconciler every order ' +
+   'takes. Only the asset differs: tokenized stocks answer 403 in this region, ETH and ' +
+   'USDG do not</dd></div>' +
+   '<div><dt>Takes</dt><dd>about three minutes: a fresh snapshot, then one send and ' +
+   '100 confirmations</dd></div>' +
+   '</dl><div class="row-divider"></div>' +
+   '<div class="button-row"><button class="btn" id="of-confirm-leg">Submit one real swap' +
+   '</button><button class="btn outline" data-action="close-dialog">Cancel</button></div>';
+  document.getElementById('detail-dialog').showModal();
+  document.getElementById('of-confirm-leg').addEventListener('click', startLeg, {once: true});
+ }
+
+ function legLog(lines) {
+  const box = document.getElementById('of-leg-log');
+  if (box) box.innerHTML = lines.map(l => '<div class="small muted">' + l + '</div>').join('');
+ }
+
+ let legLines = [];
+ async function startLeg() {
+  document.getElementById('detail-dialog').close();
+  legLines = ['submitting…'];
+  try {
+   const reply = await fetch('api/liveleg/run', {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({confirm: 'spend'})});
+   if (!reply.ok) throw new Error((await reply.json()).error || 'refused');
+   pollLeg();
+  } catch (e) { legLines = ['the swap did not start: ' + e.message]; legLog(legLines); }
+ }
+
+ function pollLeg() {
+  clearTimeout(legPolling);
+  legPolling = setTimeout(async () => {
+   try {
+    const state = await (await fetch('api/liveleg/progress?since=' + legSeen)).json();
+    (state.events || []).forEach(e => {
+     legSeen = Math.max(legSeen, e.seq || 0);
+     if (e.text) legLines.push(e.text);
+     if (e.tx) legLines.push('transaction ' + e.tx);
+    });
+    legLog(legLines.slice(-8));
+    if (state.running) return pollLeg();
+    apply(await (await fetch('api/data')).json());   /* the new swap, with its hash */
+   } catch (e) { legLines.push('lost the swap: ' + e.message); legLog(legLines.slice(-8)); }
+  }, 1500);
+ }
+
  /* --- start -------------------------------------------------------------------- */
 
  document.addEventListener('click', e => {
+  const leg = e.target.closest('[data-action="run-liveleg"]');
+  if (leg) {
+   e.stopPropagation(); e.preventDefault();
+   return served ? legDialog() : unavailable();
+  }
   const el = e.target.closest('[data-action="run-cycle"]');
   if (!el) return;
   e.stopPropagation();
@@ -132,15 +200,22 @@
  }, true);
 
  async function boot() {
-  apply(window.OPENFUND_EXPORT);
+  /* ?empty starts the demo with nothing decided: the flow idle, the seats waiting,
+     the run button prominent. It deletes nothing — the committed cycle is still in
+     this file, and the first completed run replaces the blank state with its own. */
+  const shipped = window.OPENFUND_EXPORT;
+  apply(EMPTY && shipped && shipped.empty ? {...shipped.empty} : shipped);
   try {
    const manifest = await fetch('api/manifest', {cache: 'no-store'});
    if (!manifest.ok) throw new Error('no manifest');
    served = true;
    const named = await manifest.json();
-   note = 'Live. Reading ' + (named.decision || 'the latest cycle') +
-          '. Running a cycle spends about $1.20.';
-   apply(await (await fetch('api/data')).json());
+   note = EMPTY
+    ? 'Ready. Nothing decided yet — press “Run a cycle”. It spends about $1.20 and takes '
+      + 'about four minutes.'
+    : 'Live. Reading ' + (named.decision || 'the latest cycle') +
+      '. Running a cycle spends about $1.20.';
+   if (!EMPTY) apply(await (await fetch('api/data')).json());
   } catch (e) {
    served = false;
    note = window.location.protocol === 'file:'

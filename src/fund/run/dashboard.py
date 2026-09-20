@@ -617,7 +617,7 @@ def build(live: Path = LIVE, liveleg: Path = LIVELEG,
     cycle_json = (json.loads((found["cycle"] / "cycle.json").read_text())
                   if found["cycle"] is not None else None)
 
-    return {
+    document: dict[str, Any] = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source": {"decision": str(decision_dir.relative_to(ROOT)),
                    "cycle": str(found["cycle"].relative_to(ROOT)) if found["cycle"] else None,
@@ -633,6 +633,61 @@ def build(live: Path = LIVE, liveleg: Path = LIVELEG,
         "record": record_section(record, envelope),
         "chain": chain(swaps, mandate),
     }
+    document["empty"] = blank(document)
+    return document
+
+
+def blank(document: Mapping[str, Any]) -> dict[str, Any]:
+    """The same page with nothing decided yet: the shape every section needs, and no
+    figures. For a demo that starts empty and fills as the cycle runs (`?empty`).
+
+    **It deletes nothing.** The committed cycles are still in the same document, under
+    their own keys; this is a display state the page can be started in."""
+    empty = json.loads(json.dumps(document))
+    app = {**empty["app"], "cycle": "—", "decisionId": "no cycle yet",
+           "decisionIdFull": None, "timestamp": "—"}
+    overview = {**empty["overview"], "nav": None, "cash": None, "positionCount": 0,
+                "holdings": [], "subtitle": "Nothing decided yet. Run a cycle to watch four "
+                                            "analysts read one frozen snapshot and a risk "
+                                            "agent rule on what they propose.",
+                "latest": {"headline": "No cycle has run in this session.",
+                           "summary": "Press “Run a cycle” to start one. It takes about four "
+                                      "minutes and spends about $1.20 of inference.",
+                           "approved": 0, "vetoed": 0},
+                "provenance": {**empty["overview"]["provenance"], "decisionId": "—",
+                               "signatureStatus": "Nothing signed yet", "snapshotHash": None,
+                               "block": None, "timestamp": "—"}}
+    swarm = {**empty["swarm"], "signedReports": 0, "reportCost": None, "quorum":
+             "no seat has reported in this session",
+             "weights": "nothing proposed yet",
+             "snapshot": {**empty["swarm"]["snapshot"], "hash": None, "block": None},
+             "agents": [{**a, "status": "waiting", "confidence": "—", "cost": None,
+                         "latency": None, "calls": [],
+                         "primaryCall": {"asset": "—", "call": "waiting"},
+                         "perspective": f"{a['seat']}: waiting",
+                         "summary": "has not been asked yet",
+                         "paragraphs": ["This seat has not been asked in this session. Run a "
+                                        "cycle and its report will appear here, in full, "
+                                        "exactly as it was written."]}
+                        for a in empty["swarm"]["agents"]]}
+    decision = {**empty["decision"], "rows": [], "residual": 0,
+                "warning": "nothing proposed yet",
+                "explanation": empty["decision"]["explanation"]}
+    risk = {**empty["risk"], "orders": [], "gates": [], "gateList": [],
+            "title": "Nothing to review yet.",
+            "subtitle": "The risk agent rules on a plan once one exists.",
+            "outcome": "no orders yet"}
+    books = {**empty["books"], "books": [{**b, "nav": None, "opening": None, "realised": None,
+                                          "unrealised": None, "costs": None, "expenses": None,
+                                          "reconcileCosts": None}
+                                         for b in empty["books"]["books"]]}
+    record = {**empty["record"], "id": "—", "idFull": None, "headline": "No record yet.",
+              "signedReports": 0, "approved": 0, "vetoed": 0, "snapshot": None,
+              "signature": None, "payloadHash": None, "quote": "", "preview": []}
+    return {"app": app, "overview": overview, "swarm": swarm, "decision": decision,
+            "risk": risk, "books": books, "record": record,
+            # the four real swaps stay: they happened, and no cycle produced them
+            "chain": empty["chain"]}
 
 
 def write(document: Mapping[str, Any], out: Path = DATA_DIR) -> list[Path]:

@@ -19,4 +19,8 @@ node /path/to/front-end/checks/from-the-filesystem.js
   cost, the duration and the wallet, and that **nothing is posted** until the
   confirmation itself is clicked. 9 checks.
 
-Both were passing when they were committed.
+- **`demo-states.js`** renders the page twice, with and without `?empty`, and asserts
+  the clean slate, the live-leg control and the evidence on Decision and Risk. 17
+  checks, and it needs no server.
+
+All three were passing when they were committed.

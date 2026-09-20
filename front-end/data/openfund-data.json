@@ -982,7 +982,417 @@
   "trendContribution": null,
   "warning": "quorum met: targets from the calls"
  },
- "generated_at": "2026-09-20T02:38:20+00:00",
+ "empty": {
+  "app": {
+   "cycle": "—",
+   "decisionId": "no cycle yet",
+   "decisionIdFull": null,
+   "demoNotice": "This is real data. Every figure comes from an artifact this fund produced: a decision record signed over its exact bytes, a book derived from an append-only journal, or a receipt read off chain 4663. The analyst reports are what the models wrote, the vetoes are what the risk agent decided, and the transactions are real. Stock fills are paper, because tokenized-stock execution is location-gated for this operator; the ETH and USDG swaps are real money. Where the fund does not produce a figure the page asks for, it shows a dash and the reason.",
+   "fundWallet": "0x93faecde3c88a713e1edddf417c02c326889a3da",
+   "mode": "Mainnet",
+   "nav": [
+    "Overview",
+    "Swarm",
+    "Decision",
+    "Risk",
+    "Books",
+    "Record",
+    "Chain"
+   ],
+   "network": "Robinhood Chain",
+   "product": "Openfund",
+   "snapshotBlock": 67581730,
+   "snapshotHash": "9ce2581b88bb4e02c4c7f39df0b621537bd0b8f302ea9568d1cfd5733a950456",
+   "timestamp": "—"
+  },
+  "books": {
+   "books": [
+    {
+     "block": 67581730,
+     "costLabel": "Costs · simulated trading",
+     "costs": null,
+     "description": "Simulated equity holdings · USD",
+     "expenseLabel": "Expenses · model inference",
+     "expenses": null,
+     "id": "paper",
+     "name": "Paper portfolio",
+     "nav": null,
+     "net": null,
+     "netLabel": "Net",
+     "netReason": "not yet booked: the journal has no settled-revenue event (7.4)",
+     "note": "Paper fill. Tokenized-stock execution is location-gated: the venue answered 403 to a real AAPL order — “Tokenized stocks (AAPL) are not available in your region” — before broadcast and with no gas (F0.5.1). So an equity order is sized, quoted and gated for real, and filled on paper.",
+     "opening": null,
+     "realised": null,
+     "reconcileCosts": null,
+     "revenue": null,
+     "revenueLabel": "Revenue · record sales",
+     "revenueReason": "not yet booked: the journal has no settled-revenue event (7.4)",
+     "unrealised": null
+    },
+    {
+     "block": 67529959,
+     "costLabel": "Costs · gas and fees",
+     "costs": null,
+     "description": "Actual money on chain 4663 · USD",
+     "expenseLabel": "Expenses · model inference",
+     "expenses": null,
+     "id": "real",
+     "name": "Real operating book",
+     "nav": null,
+     "net": null,
+     "netLabel": "Net",
+     "netReason": "not yet booked: the journal has no settled-revenue event (7.4)",
+     "note": "Real money. Each of these went through the same treasurer process, the same chokepoint and the same reconciler as every other order — written before it was sent, sent once, and booked from its receipt. Only the asset differed: ETH and USDG are ungated on 4663, so the fund may actually trade them.",
+     "opening": null,
+     "realised": null,
+     "reconcileCosts": null,
+     "revenue": null,
+     "revenueLabel": "Revenue · record sales",
+     "revenueReason": "not yet booked: the journal has no settled-revenue event (7.4)",
+     "unrealised": null
+    }
+   ],
+   "identity": "opened + realised + unrealised - costs = NAV, exactly",
+   "subtitle": "Paper holdings and real money are separate books. They are never added.",
+   "title": "Every dollar has a place."
+  },
+  "chain": {
+   "asset": "USDG",
+   "authority": "Only the treasurer can spend. It runs in its own process with its own credentials, re-checks every gate on a fresh quote, writes the order before it acts, sends once, and books what the chain says.",
+   "block": 67532956,
+   "decisionId": null,
+   "decisionReason": "a swap is authorized by a signed instruction, not by a decision: no analyst chose it (SIMPLIFICATION, 2026-09-19)",
+   "explorerUrl": "https://robinhoodchain.blockscout.com/tx/0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0",
+   "paperNote": "Real money. Each of these went through the same treasurer process, the same chokepoint and the same reconciler as every other order — written before it was sent, sent once, and booked from its receipt. Only the asset differed: ETH and USDG are ungated on 4663, so the fund may actually trade them.",
+   "paperValue": null,
+   "quantity": null,
+   "quantityReason": "each swap's own amounts are in its row",
+   "referencePrice": null,
+   "referenceReason": "a swap has no reference price: what it gave and got is the receipt",
+   "stockNote": "Paper fill. Tokenized-stock execution is location-gated: the venue answered 403 to a real AAPL order — “Tokenized stocks (AAPL) are not available in your region” — before broadcast and with no gas (F0.5.1). So an equity order is sized, quoted and gated for real, and filled on paper.",
+   "subtitle": "Four real swaps on chain 4663, each authorized by a signed instruction and confirmed from its receipt — never from an HTTP 200.",
+   "swaps": [
+    {
+     "asset": "USDG",
+     "authorisedBy": "a demonstration of the money path that no analyst chose (planning/SIMPLIFICATION.md, DECISION 2026-09-19)",
+     "block": 67532956,
+     "explorerUrl": "https://robinhoodchain.blockscout.com/tx/0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0",
+     "gasSponsored": true,
+     "gave": "0.1",
+     "gaveSymbol": "USDG",
+     "id": "run2-leg2-usdg-eth",
+     "instruction": "run2-leg2-usdg-eth",
+     "reason": "0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0: the operation succeeded in block 67532956, 119 confirmations deep; paid 100000 from its Transfer logs, received 38077691442267 from its balance across block 67532956, gas sponsored",
+     "timestamp": "20 Sep 2026, 01:04 UTC",
+     "transaction": "0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0",
+     "transfers": [
+      {
+       "decimals": 6,
+       "raw": "100000",
+       "token": "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+      }
+     ],
+     "wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da"
+    },
+    {
+     "asset": "ETH",
+     "authorisedBy": "a demonstration of the money path that no analyst chose (planning/SIMPLIFICATION.md, DECISION 2026-09-19)",
+     "block": 67532677,
+     "explorerUrl": "https://robinhoodchain.blockscout.com/tx/0x2d5438708b6a14b0b3d18da0b9f0f592f04fad7d8bcac824c63c4328e42123aa",
+     "gasSponsored": true,
+     "gave": "0.00003",
+     "gaveSymbol": "ETH",
+     "id": "run2-leg1-eth-usdg",
+     "instruction": "run2-leg1-eth-usdg",
+     "reason": "0x2d5438708b6a14b0b3d18da0b9f0f592f04fad7d8bcac824c63c4328e42123aa: the operation succeeded in block 67532677, 113 confirmations deep; paid 30000000000000 from its balance across block 67532677, gas sponsored, received 78760 from its Transfer logs; 18000000000 wei the logs do not name (F0.10.4)",
+     "timestamp": "20 Sep 2026, 01:03 UTC",
+     "transaction": "0x2d5438708b6a14b0b3d18da0b9f0f592f04fad7d8bcac824c63c4328e42123aa",
+     "transfers": [
+      {
+       "decimals": 6,
+       "raw": "78760",
+       "token": "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+      }
+     ],
+     "wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da"
+    },
+    {
+     "asset": "USDG",
+     "authorisedBy": "a demonstration of the money path that no analyst chose (planning/SIMPLIFICATION.md, DECISION 2026-09-19)",
+     "block": 67501988,
+     "explorerUrl": "https://robinhoodchain.blockscout.com/tx/0x737e32b4ea091110fa0dc42daf8992c705a5d89edc24c5bdd4fae3553a802a27",
+     "gasSponsored": true,
+     "gave": "0.1",
+     "gaveSymbol": "USDG",
+     "id": "leg2-usdg-eth",
+     "instruction": "leg2-usdg-eth",
+     "reason": "0x737e32b4ea091110fa0dc42daf8992c705a5d89edc24c5bdd4fae3553a802a27: the operation succeeded in block 67501988, 119 confirmations deep; paid 100000 from its Transfer logs, received 38026356590733 from its balance across block 67501988, gas sponsored",
+     "timestamp": "20 Sep 2026, 00:12 UTC",
+     "transaction": "0x737e32b4ea091110fa0dc42daf8992c705a5d89edc24c5bdd4fae3553a802a27",
+     "transfers": [
+      {
+       "decimals": 6,
+       "raw": "100000",
+       "token": "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+      }
+     ],
+     "wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da"
+    },
+    {
+     "asset": "ETH",
+     "authorisedBy": "a demonstration of the money path that no analyst chose (planning/SIMPLIFICATION.md, DECISION 2026-09-19)",
+     "block": 67501588,
+     "explorerUrl": "https://robinhoodchain.blockscout.com/tx/0x9c8ea67dd8c17c9a7315f38ad427f8e0b3852d55b68af463d5f17027d3cfbbfa",
+     "gasSponsored": true,
+     "gave": "0.00003",
+     "gaveSymbol": "ETH",
+     "id": "leg1-eth-usdg",
+     "instruction": "leg1-eth-usdg",
+     "reason": "0x9c8ea67dd8c17c9a7315f38ad427f8e0b3852d55b68af463d5f17027d3cfbbfa: the operation succeeded in block 67501588, 119 confirmations deep; paid 30000000000000 from its balance across block 67501588, gas sponsored, received 78714 from its Transfer logs; 18000000000 wei the logs do not name (F0.10.4)",
+     "timestamp": "20 Sep 2026, 00:11 UTC",
+     "transaction": "0x9c8ea67dd8c17c9a7315f38ad427f8e0b3852d55b68af463d5f17027d3cfbbfa",
+     "transfers": [
+      {
+       "decimals": 6,
+       "raw": "78714",
+       "token": "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+      }
+     ],
+     "wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da"
+    }
+   ],
+   "timestamp": "20 Sep 2026, 01:04 UTC",
+   "title": "The decision became a transaction.",
+   "transaction": "0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0",
+   "wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da",
+   "walletExplorerUrl": "https://robinhoodchain.blockscout.com/address/0x93faecde3c88a713e1edddf417c02c326889a3da"
+  },
+  "decision": {
+   "cash": {
+    "current": 20.3,
+    "move": 0,
+    "target": -48.78
+   },
+   "contributionReason": "weights come from each call's confidence, not a fixed seat split",
+   "explanation": "Each seat's call moves a weight by its confidence times the position limit. Execution and integrity raise cautions; they add no direction.",
+   "macroContribution": null,
+   "residual": 0,
+   "rows": [],
+   "step": null,
+   "subtitle": "A deterministic rule turns signed calls into a proposed portfolio. Risk reviews it next.",
+   "threshold": null,
+   "title": "How opinions became weights.",
+   "trendContribution": null,
+   "warning": "nothing proposed yet"
+  },
+  "overview": {
+   "cash": null,
+   "holdings": [],
+   "latest": {
+    "approved": 0,
+    "headline": "No cycle has run in this session.",
+    "summary": "Press “Run a cycle” to start one. It takes about four minutes and spends about $1.20 of inference.",
+    "vetoed": 0
+   },
+   "nav": null,
+   "paperNote": "Paper fill. Tokenized-stock execution is location-gated: the venue answered 403 to a real AAPL order — “Tokenized stocks (AAPL) are not available in your region” — before broadcast and with no gas (F0.5.1). So an equity order is sized, quoted and gated for real, and filled on paper.",
+   "positionCount": 0,
+   "provenance": {
+    "attested": "35 of 35 assets carry an identity and beacon verdict in this snapshot; `make selftest` attests all 235 configured addresses against the chain",
+    "block": null,
+    "blockHash": "0x77b0b6e397ad51abc81b98be4880f19dffa0686aa5594e9d9aab748da926fbe6",
+    "chain": "Robinhood Chain 4663 · block 67581730 · 2026-09-20T02:26:20Z",
+    "decisionId": "—",
+    "priceSource": "Chainlink feeds read on chain 4663 at block 67581730",
+    "signatureStatus": "Nothing signed yet",
+    "snapshotHash": null,
+    "timestamp": "—"
+   },
+   "subtitle": "Nothing decided yet. Run a cycle to watch four analysts read one frozen snapshot and a risk agent rule on what they propose.",
+   "tableNote": "Every price is a Chainlink feed read on chain 4663 at block 67581730, the block this snapshot is pinned to. The feed behind each price is named beside its ticker.",
+   "title": "A fund that shows its work."
+  },
+  "record": {
+   "approved": 0,
+   "endpoint": null,
+   "endpointReason": "publishing records by immutable id is unbuilt (7.1)",
+   "format": "Canonical JSON · the bytes the signature covers",
+   "headline": "No record yet.",
+   "id": "—",
+   "idFull": null,
+   "included": [
+    "Every accepted analyst report, in full",
+    "The proposal and how each weight was reached",
+    "Every gate with its value and reason",
+    "The risk agent's vote on each order, and overall",
+    "The signature over the record's exact bytes"
+   ],
+   "payloadHash": null,
+   "payloadNote": "the decision id is the sha256 of the record's exact bytes",
+   "preview": [],
+   "price": null,
+   "priceReason": "the live x402 endpoint asks 0.001 USDC and serves a Phase 0 probe response, not this record (7.2)",
+   "quote": "",
+   "signature": null,
+   "signedReports": 0,
+   "signer": "1c23243531ff47be0caaf1ce2d73b0b1b705a54fa063f2d50f0bde9b42928c21",
+   "signerLabel": "ed25519 public key, published in config/keys.json",
+   "snapshot": null,
+   "subtitle": "One signed decision, including the disagreement and the refusal.",
+   "title": "Buy the reasoning. Verify the record.",
+   "vetoed": 0
+  },
+  "risk": {
+   "agent": {
+    "agent": "unassigned",
+    "brief": "risk.v2.md",
+    "bundleTokens": 46795,
+    "costUsd": 0.075556,
+    "endpoint": "Bankr LLM gateway, llm.bankr.bot/v1",
+    "inputTokens": 27678,
+    "latencyMs": 25210,
+    "model": null,
+    "note": "one live call, billed, over the whole bundle: every report in full and the sized plan",
+    "outputTokens": 2020,
+    "seat": "risk"
+   },
+   "gateList": [],
+   "gates": [],
+   "orders": [],
+   "outcome": "no orders yet",
+   "overall": "The plan as a whole is supported by consistent reports and clean pricing except for MSTR, which is vetoed individually; the rest stand on their own evidence.",
+   "subtitle": "The risk agent rules on a plan once one exists.",
+   "title": "Nothing to review yet.",
+   "wallet": null,
+   "walletReason": "no per-agent wallet: the seats share one gateway key"
+  },
+  "swarm": {
+   "agents": [
+    {
+     "calls": [],
+     "confidence": "—",
+     "confidenceReason": "confidence is recorded per call, not per seat",
+     "cost": null,
+     "id": "trend",
+     "latency": null,
+     "paragraphs": [
+      "This seat has not been asked in this session. Run a cycle and its report will appear here, in full, exactly as it was written."
+     ],
+     "perspective": "Price Trend: waiting",
+     "primaryCall": {
+      "asset": "—",
+      "call": "waiting"
+     },
+     "reportSha256": "730ee750d2f39502c4e92fe088732ebc6f24ec94f5d3b132e1175c6675ed9cfe",
+     "seat": "Price Trend",
+     "signature": null,
+     "signatureReason": "reports are validated against the snapshot, not signed; only the record is signed",
+     "status": "waiting",
+     "summary": "has not been asked yet",
+     "wallet": null,
+     "walletReason": "no per-agent wallet: the seats share one gateway key"
+    },
+    {
+     "calls": [],
+     "confidence": "—",
+     "confidenceReason": "confidence is recorded per call, not per seat",
+     "cost": null,
+     "id": "macro",
+     "latency": null,
+     "paragraphs": [
+      "This seat has not been asked in this session. Run a cycle and its report will appear here, in full, exactly as it was written."
+     ],
+     "perspective": "Cross Asset Macro: waiting",
+     "primaryCall": {
+      "asset": "—",
+      "call": "waiting"
+     },
+     "reportSha256": "443f500d75a2e375eefc21c7fa10b4849f4fcf2369cff37e3bdd3939ec9a2dd2",
+     "seat": "Cross Asset Macro",
+     "signature": null,
+     "signatureReason": "reports are validated against the snapshot, not signed; only the record is signed",
+     "status": "waiting",
+     "summary": "has not been asked yet",
+     "wallet": null,
+     "walletReason": "no per-agent wallet: the seats share one gateway key"
+    },
+    {
+     "calls": [],
+     "confidence": "—",
+     "confidenceReason": "confidence is recorded per call, not per seat",
+     "cost": null,
+     "id": "execution",
+     "latency": null,
+     "paragraphs": [
+      "This seat has not been asked in this session. Run a cycle and its report will appear here, in full, exactly as it was written."
+     ],
+     "perspective": "Execution Quality: waiting",
+     "primaryCall": {
+      "asset": "—",
+      "call": "waiting"
+     },
+     "reportSha256": "d95feb722c8cf77e85660602db2c9e8fb7a5949051068f00254a52ce1db1ee49",
+     "seat": "Execution Quality",
+     "signature": null,
+     "signatureReason": "reports are validated against the snapshot, not signed; only the record is signed",
+     "status": "waiting",
+     "summary": "has not been asked yet",
+     "wallet": null,
+     "walletReason": "no per-agent wallet: the seats share one gateway key"
+    },
+    {
+     "calls": [],
+     "confidence": "—",
+     "confidenceReason": "confidence is recorded per call, not per seat",
+     "cost": null,
+     "id": "integrity",
+     "latency": null,
+     "paragraphs": [
+      "This seat has not been asked in this session. Run a cycle and its report will appear here, in full, exactly as it was written."
+     ],
+     "perspective": "Price Integrity: waiting",
+     "primaryCall": {
+      "asset": "—",
+      "call": "waiting"
+     },
+     "reportSha256": "d6a06f5144d5550192d307e1f32cb79fb8c3c0d89d5dbd4b1d87f4c3750030c4",
+     "seat": "Price Integrity",
+     "signature": null,
+     "signatureReason": "reports are validated against the snapshot, not signed; only the record is signed",
+     "status": "waiting",
+     "summary": "has not been asked yet",
+     "wallet": null,
+     "walletReason": "no per-agent wallet: the seats share one gateway key"
+    }
+   ],
+   "costIsEstimate": true,
+   "parallelReason": "build and wall-clock timings are printed, not written to an artifact",
+   "parallelTime": null,
+   "quorum": "no seat has reported in this session",
+   "reportCost": null,
+   "signedReports": 0,
+   "snapshot": {
+    "block": null,
+    "chainId": 4663,
+    "elapsed": null,
+    "elapsedReason": "build and wall-clock timings are printed, not written to an artifact",
+    "hash": null,
+    "source": "every mark in it is a Chainlink feed read on chain 4663 at this block, and every asset carries an identity and beacon verdict from the same read",
+    "time": "2026-09-20T02:26:20Z"
+   },
+   "stages": [
+    "Freeze snapshot",
+    "Analysts",
+    "Aggregate",
+    "Risk",
+    "Execute"
+   ],
+   "subtitle": "Independent reports on the same market snapshot.",
+   "title": "Four analysts. One frozen moment.",
+   "weights": "nothing proposed yet"
+  }
+ },
+ "generated_at": "2026-09-20T02:42:15+00:00",
  "overview": {
   "cash": 4.33456730221658,
   "holdings": [

@@ -148,9 +148,67 @@ def _environment() -> dict[str, str]:
     return {**os.environ, "PYTHONPATH": str(ROOT / "src")}
 
 
+class Leg(Run):
+    """The live leg: a fresh snapshot, then `run/liveleg.py --confirm`. **It spends.**
+
+    S11 gives a snapshot fifteen minutes, so one is built first and the leg runs against
+    it. The direction is ETH into USDG at 0.00003 ETH, about eight cents: the smallest
+    size that has ever quoted, and the size probe 0.10 and unit 5.2 both sent. The other
+    direction needs more USDG than the wallet holds."""
+
+    SELL, AMOUNT = "ETH", "0.00003"
+
+    def start(self, db: Path, out: Path) -> None:  # type: ignore[override]
+        if self.running:
+            raise RuntimeError("a swap is already in flight")
+        with self.lock:
+            self.events = []
+        self.started = time.monotonic()
+        self.process = subprocess.Popen(
+            [sys.executable, "-c", _LEG_SCRIPT, str(db), str(out), self.SELL, self.AMOUNT],
+            cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            env={**_environment(), "PYTHONUNBUFFERED": "1"})
+        threading.Thread(target=self._watch_leg, daemon=True).start()
+
+    def _watch_leg(self) -> None:
+        for line in self.process.stdout:  # type: ignore[union-attr]
+            sys.stdout.write("leg   | " + line)
+            sys.stdout.flush()
+            text = line.strip()
+            if "building a live snapshot" in line:
+                self.emit(type="leg.snapshot", text="building a live snapshot")
+            elif "about to submit" in line:
+                self.emit(type="leg.about", text="printing what is about to happen")
+            elif text.startswith(("asset", "size", "wallet", "chain ", "quote", "budget",
+                                  "order", "key")):
+                self.emit(type="leg.line", text=text[:400])
+            elif text.startswith("chain") and "0x" in text:
+                self.emit(type="leg.chain", tx=text.split()[-1])
+            elif "the real book at block" in line:
+                self.emit(type="leg.booked", text="booked in the real book")
+        code = self.process.wait()  # type: ignore[union-attr]
+        self.emit(type="leg.finished", ok=code == 0, code=code)
+
+
+#: Build a snapshot, then run the live leg against it — each the module that owns it.
+#: Nothing here is a second execution path.
+_LEG_SCRIPT = """import sys
+from fund.run import liveleg, snapshot as snapshot_run
+print("== building a live snapshot", flush=True)
+if snapshot_run.main() != 0:
+    raise SystemExit("the snapshot did not build")
+path = max(snapshot_run.OUT.glob("snapshot-*.json"), key=lambda p: p.stat().st_mtime)
+print(f"   {path}", flush=True)
+raise SystemExit(liveleg.main(["--snapshot", str(path), "--sell", sys.argv[3],
+                               "--amount", sys.argv[4], "--db", sys.argv[1],
+                               "--out", sys.argv[2], "--confirm"]))
+"""
+
 RUN = Run()
+LEG = Leg()
 LIVE_DB = ROOT / "fixtures" / "live" / "live.sqlite"
 LIVE_OUT = ROOT / "fixtures" / "live" / "decisions"
+LIVELEG_OUT = ROOT / "fixtures" / "liveleg"  # committed: each swap is evidence
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -185,9 +243,10 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(dashboard.build())
             except SystemExit as empty:
                 return self._json({"error": str(empty)}, 503)
-        if route.path == "/api/cycle/progress":
+        if route.path in ("/api/cycle/progress", "/api/liveleg/progress"):
             since = int((parse_qs(route.query).get("since") or ["0"])[0])
-            return self._json({"running": RUN.running, "events": RUN.since(since)})
+            which = RUN if route.path == "/api/cycle/progress" else LEG
+            return self._json({"running": which.running, "events": which.since(since)})
         if route.path == "/":
             self.path = "/Openfund.html"
         return super().do_GET()
@@ -204,20 +263,24 @@ class Handler(SimpleHTTPRequestHandler):
         return body.get("confirm") == "spend"
 
     def do_POST(self):  # noqa: N802
-        if urlparse(self.path).path != "/api/cycle/run":
+        route = urlparse(self.path).path
+        if route not in ("/api/cycle/run", "/api/liveleg/run"):
             return self._json({"error": "no such endpoint"}, 404)
         if not self._confirmed():
             sys.stderr.write("  REFUSED a run with no confirmation: nothing was spent\n")
             return self._json({"error": "this endpoint spends; POST {\"confirm\": \"spend\"}"},
                               400)
-        if RUN.running:
-            return self._json({"error": "a cycle is already running"}, 409)
         stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+        runner, where, what = ((RUN, LIVE_OUT / f"live-{stamp}", "a live cycle")
+                               if route == "/api/cycle/run" else
+                               (LEG, LIVELEG_OUT / f"page-{stamp}", "a live swap"))
+        if runner.running:
+            return self._json({"error": f"{what} is already running"}, 409)
         try:
-            RUN.start(LIVE_DB, LIVE_OUT / f"live-{stamp}")
+            runner.start(LIVE_DB, where)
         except RuntimeError as refused:
             return self._json({"error": str(refused)}, 409)
-        sys.stderr.write(f"\n== a live cycle started: {stamp}. It spends.\n")
+        sys.stderr.write(f"\n== {what} started: {stamp}. It spends.\n")
         return self._json({"started": stamp})
 
 
