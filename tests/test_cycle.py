@@ -254,3 +254,40 @@ def test_nothing_is_attempted_before_every_order_is_written_prepared(tmp_path):
     written = OrderStore(conn).all()
     assert written and {o.state for o in written} == {OrderState.PREPARED}
     assert [type(e).__name__ for e in Journal(conn).events()] == ["Opening"]
+
+
+def test_a_veto_stops_the_order_it_names_and_the_rest_still_fill(tmp_path, monkeypatch):
+    """The blast radius of a veto is the order it names (risk brief v2, after F8.R.4).
+
+    The risk agent votes per order and may also vote overall; an overall veto still
+    stops everything, and that is unchanged. What this shows is the ordinary case: one
+    order vetoed on its own evidence, the others reaching the chokepoint and filling.
+    """
+    vetoed: list[int] = []
+
+    def one_veto(written, plan_sha256):
+        vetoed.append(written["orders"][0]["index"])  # the first order, whatever it is
+        lines = [f"RISK {plan_sha256}"]
+        for order in written["orders"]:
+            lines += [f"ORDER {order['index']} {order['asset']['symbol']} "
+                      f"{'veto' if order['index'] in vetoed else 'approve'}",
+                      "Scripted by this test, not a model's words."]
+        return "\n".join(lines + ["OVERALL approve", "Scripted by this test."]) + "\n"
+
+    monkeypatch.setattr(run_cycle, "scripted", lambda vote="approve": one_veto)
+    ran = run(tmp_path)
+
+    decided = ran.decision["record"]["decision"]
+    assert [o["index"] for o in decided["vetoed"]] == vetoed
+    assert decided["vetoed"][0]["vetoed_by"] == ["risk"]  # by its own vote, not the plan's
+    assert len(decided["approved"]) == 7 and vetoed[0] not in [o["index"] for o in
+                                                               decided["approved"]]
+
+    # the seven approved are the seven that reached the venue, and every one filled
+    assert len(ran.orders) == 7 and len(ran.filled) == 7
+    assert all(r.state is OrderState.CONFIRMED for r in ran.orders)
+    assert vetoed[0] not in [int(r.order_id.rpartition("/")[2]) for r in ran.orders]
+    book = ran.book
+    with localcontext(cash.EXACT):
+        assert book.nav_usd == (book.opened_usd + book.realised_usd + book.unrealised_usd
+                                - book.costs_usd)

@@ -5,6 +5,11 @@
 
     make cycle-demo     the same, twice, on the exit run's capture and reports
 
+    PYTHONPATH=src python3 -m fund.run.cycle --live --db PATH --out DIR [--config-dir DIR]
+        [--env-file PATH] [--snapshot PATH] [--seats a,b]
+
+                        the whole thing live, in one act, and it **spends**: see `live`
+
 From a capture to a book:
 0. **the lock and the last run** (4.9, 4.10): one runner holds the lock, and every
    order the last run left is resolved before this one is accepted;
@@ -45,6 +50,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -152,8 +158,17 @@ def treasurer(*, db_path: Path, decision_dir: Path | None, snapshot_path: Path, 
 def cycle(*, snapshot_path: Path, offered: Sequence[decide.Offered], conn: Any, out_dir: Path,
           at: Instant, config_dir: Path, env_file: Path | None,
           venue: execute.Venue | None = None, venue_fetched_at: Instant | None = None,
-          vote: str = "approve", checkpoint: Callable[..., None] | None = None) -> Cycle:
-    """One paper cycle: reports to a signed decision to fills to a book.
+          vote: str = "approve", checkpoint: Callable[..., None] | None = None,
+          risk_credential: Any = None, risk_agent: str | None = None,
+          environ: Mapping[str, str] | None = None, quote_label: str | None = None,
+          live_quotes: bool = False) -> Cycle:
+    """One cycle: reports to a signed decision to fills to a book.
+
+    **Paper or live is four arguments, not a second pipeline.** Offline it quotes at
+    the fake venue and writes the risk vote itself, spending nothing. Given a live
+    `venue` (the quote adapter, same interface) and a `risk_credential`, the same call
+    takes live quotes and makes one real risk call — and everything after it, the
+    chokepoint included, is the same code either way. `run/cycle.py:live` passes them.
 
     The caller holds the lock (`startup.owning`) around this."""
     snapshot = json.loads(snapshot_path.read_bytes())
@@ -172,15 +187,21 @@ def cycle(*, snapshot_path: Path, offered: Sequence[decide.Offered], conn: Any, 
         return Cycle(done, [], None, f"no rebalance: {unvalued}", resolved)
 
     def quotes(intents):
-        return ({i.index: venue.quote(bankr_quote.QuoteRequest(i.sell, i.buy, i.buy_decimals))
-                 for i in intents}, at)
+        seen = {i.index: venue.quote(bankr_quote.QuoteRequest(i.sell, i.buy, i.buy_decimals))
+                for i in intents}
+        # A quote is judged at an instant at or after it was fetched, never before: a
+        # live fetch takes seconds, and judging it at the cycle's start instant would
+        # make every quote's age undetermined, which blocks (`bankr_quote.tradeability`).
+        return seen, (now() if live_quotes else at)
 
+    live_risk = risk_credential is not None
     done = decide.decide(
         snapshot_path=snapshot_path, offered=offered, holdings=the_book.holdings,
         cash_usd=the_book.cash_usd, out_dir=out_dir, quotes=quotes,
-        quote_label=f"{fake_venue.DETAIL}, judged at {at.epoch_ms}",
-        risk_settings=risk.Settings.from_config(config_dir), risk_credential=None,
-        risk_agent="scripted: no model was asked", environ={}, recorded_reply=scripted(vote),
+        quote_label=quote_label or f"{fake_venue.DETAIL}, judged at {at.epoch_ms}",
+        risk_settings=risk.Settings.from_config(config_dir), risk_credential=risk_credential,
+        risk_agent=risk_agent or "scripted: no model was asked", environ=dict(environ or {}),
+        recorded_reply=None if live_risk else scripted(vote),
         store=report_store.ReportStore(out_dir / "store"), env_file=env_file,
         config_dir=config_dir)
 
@@ -233,6 +254,70 @@ def summary(ran: Cycle) -> str:
     return "\n".join([*lines, "", ran.statement])
 
 
+# --- one live cycle, in one act (5.7, 8.3's first half) -------------------------------------------
+
+def live(*, db_path: Path, out_dir: Path, config_dir: Path, env_file: Path | None,
+         snapshot_path: Path | None = None, seats: str | None = None,
+         checkpoint: Callable[..., None] | None = None) -> Cycle:
+    """The whole thing, live, in one call. **It spends.**
+
+    Four stages, each the module that owns it, none of them reimplemented here:
+    1. `run/snapshot.main()` builds a live block-pinned snapshot, captures it and
+       replays it from its own capture (1.6, 1.9). Read-only;
+    2. `agents/runner.main()` runs the four analyst seats live, in their own
+       processes, each with its own key (2.4). **Billed;**
+    3. `cycle()` — the same function a paper cycle uses — decides on live quotes and
+       one live risk call, signs the record, and takes every approved order through
+       the chokepoint to a paper fill and the book (3.x, 4.x). **The risk call is
+       billed;**
+    4. the treasurer runs in its own process throughout, as it always does (4.12).
+
+    What makes it live rather than paper is the venue and the credential handed to
+    `cycle`, not a different path through it. A stock leg still fills on paper,
+    because execution is location-gated (PLAN §13); the live ETH↔USDG leg is
+    `run/liveleg.py`'s, and joining that to this cycle is still 5.7's.
+    """
+    from fund.agents import runner
+    from fund.run import snapshot as snapshot_run
+
+    environ = {**config.parse_env_file(config.ENV_FILE), **os.environ}
+    if snapshot_path is None:
+        print("== 1/3  building a live snapshot", flush=True)
+        if snapshot_run.main() != 0:
+            raise RuntimeError("the snapshot did not build")
+        snapshot_path = max(snapshot_run.OUT.glob("snapshot-*.json"),
+                            key=lambda p: p.stat().st_mtime)
+    print(f"        {snapshot_path}", flush=True)
+
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    cycle_dir = runner.LIVE_CYCLES / stamp
+    print(f"== 2/3  four analyst seats, live, into {cycle_dir}", flush=True)
+    argv = ["--snapshot", str(snapshot_path), "--cycle-dir", str(cycle_dir), "--confirm"]
+    if seats:
+        argv += ["--seats", seats]
+    if runner.main(argv) != 0:
+        raise RuntimeError("the analyst runner did not finish")
+    offered = decide.cycle_reports(cycle_dir)
+    print(f"== 3/3  deciding on {len(offered)} accepted report(s), live quotes, one risk call",
+          flush=True)
+
+    credential = runner.SharedGatewayKey(environ).for_seat(risk.SEAT)
+    runner.refuse_spend_authority(credential, environ)
+    conn = db.connect(db_path)
+    with startup.owning(conn):
+        return cycle(snapshot_path=snapshot_path, offered=offered, conn=conn, out_dir=out_dir,
+                     at=now(), config_dir=config_dir, env_file=env_file,
+                     venue=bankr_quote.Settings.load().adapter(
+                         decide._analyst_secret(environ)),
+                     quote_label="live, read-only", live_quotes=True,
+                     risk_credential=credential,
+                     risk_agent=credential.agent, environ=environ, checkpoint=checkpoint)
+
+
+def now() -> Instant:
+    return Instant(time.time_ns() // 1_000_000)
+
+
 # --- the demo ------------------------------------------------------------------------------------
 
 def demo(out_dir: Path = DEMO, runs: int = 2) -> list[Cycle]:
@@ -282,6 +367,10 @@ def demo(out_dir: Path = DEMO, runs: int = 2) -> list[Cycle]:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="fund.run.cycle")
     parser.add_argument("--demo", action="store_true", help="two cycles on the exit run's capture")
+    parser.add_argument("--live", action="store_true",
+                        help="the whole thing live, in one act: a live snapshot, four live "
+                             "analyst calls and one live risk call. IT SPENDS (about $1.20)")
+    parser.add_argument("--seats", help="with --live: comma-separated, the default is every seat")
     parser.add_argument("--snapshot", type=Path, help="a capture directory or a snapshot.json")
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--approved-reports", action="store_true")
@@ -297,8 +386,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"\n=== paper cycle {number} " + "=" * 60 + "\n")
             print(summary(ran))
         return 0
+    if args.live:
+        if not (args.db and args.out):
+            parser.error("--db and --out are required with --live")
+        ran = live(db_path=args.db, out_dir=args.out, config_dir=args.config_dir,
+                   env_file=args.env_file, snapshot_path=args.snapshot, seats=args.seats)
+        print("\n" + summary(ran))
+        return 0
     if not (args.snapshot and args.db and args.out and args.at):
-        parser.error("--snapshot, --db, --out and --at are required without --demo")
+        parser.error("--snapshot, --db, --out and --at are required without --demo or --live")
     snapshot_path = args.snapshot / "snapshot.json" if args.snapshot.is_dir() else args.snapshot
     offered = (decide.approved_reports() if args.approved_reports
                else decide.cycle_reports(args.cycle))
