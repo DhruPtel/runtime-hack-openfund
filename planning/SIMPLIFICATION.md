@@ -304,8 +304,8 @@ it later.
 
 | Unit | Minimal | Full | Given up |
 |---|---|---|---|
-| **5.1** Live executor · **H** | `adapters/bankr_exec.py`, the only signing path, behind the paper interface: `/wallet/swap` with the idempotency key, ETH and USDG only, by the mandate. | The same. | Other assets. |
-| **5.2** Round trip · **H**, = equal in substance | One ETH→USDG and one USDG→ETH, about $0.50 each, from what the wallet holds (about $1.21 of ETH), authorized once. USDG→ETH has never run, and its sponsorship is inferred. | A small real buy and sell with production-shaped permissions. | Size, and nothing about the path. |
+| **5.1** Live executor · **H** | `adapters/bankr_exec.py`, the only path that can spend, behind the paper interface: `/wallet/swap` with the idempotency key, ETH and USDG only, by the mandate. | The same. | Other assets. |
+| **5.2** Round trip · **H**, = equal in substance | One ETH→USDG and one USDG→ETH from what the wallet holds, authorized once. **Built and run 2026-09-20** at about $0.08 and $0.10 — the smallest sizes that quote — not the $0.50 proposed here; USDG→ETH had never run, and its sponsorship was inferred, and is now measured (F5.2.1). | A small real buy and sell with production-shaped permissions. | Size, and nothing about the path. |
 | **5.3** Receipts · **H** | Confirmed from the `UserOperationEvent` naming the wallet with `success`; amounts from `Transfer` logs to and from the wallet. Never from `tx.from`, the outer status or the nonce (F0.10.3). `success:false` is failed. | Confirmation depth, reorgs, mined reverts, balance-based amounts, the 6 bps. | Reorgs past a fixed depth, and the 6 bps (F0.10.4). A gap shows as an exception in 6.2. |
 | **5.4 ▶** Explorer · **H**, = equal | The page links the transaction on the 4663 explorer beside its order row and journal entry, booked once. **A stop:** this is the claim. | The same. | Nothing. |
 | **5.5** Access lost · **H** | A 401 or 403 from the execution key stops new submissions, keeps holdings and reconciliation, and shows "access lost". One test. | Pause, preserve, expose remediation. | Remediation, and detecting expiry ahead of time. |
@@ -314,12 +314,27 @@ it later.
 
 **The live leg, DECISION 2026-09-19.** It is labelled **a demonstration of the
 money path that no analyst chose**, and no decision is manufactured to justify
-it. It passes the same gates, risk, signature and treasurer as every other
-order.
+it. It passes the same gates, signature and treasurer as every other order.
 
-**Proposed mechanics, not decided:** the planner appends one live order to each
-cycle that trades, at a fixed small size and alternating direction, so the
-wallet round-trips over two cycles.
+**The mechanics, DECIDED 2026-09-20 and built.** The proposal here was that the
+planner append one live order to each cycle that trades. That was **not** built,
+and the operator confirmed the replacement. A plan is one book's rebalance: its
+orders carry weights against that book's NAV, and `cash_after_usd` and the cash
+floor count a buy's proceeds as that book's cash. The live leg trades the *real*
+book, so appending it to a paper plan would have written weights against the
+wrong NAV and counted the wallet's USDG as paper cash — two books added, which
+the ledger refuses everywhere else (4.0 P9).
+
+Instead the live leg carries **its own signed instruction**
+(`treasurer/instruct.py`): one order in the plan's own layout, signed by the same
+key, in the same envelope, verified against the same published key, its id the
+sha256 of its own bytes so the order's id and idempotency key derive from exactly
+what was authorized. `admit_instruction` is the same chokepoint over a different
+authority. It does not ask `quorum`, `turnover`, `position-weight`, `tradeable`
+or the cash floor — nobody voted, there is no plan to turn over, a sale of what
+the wallet holds opens no position, and that floor is the paper book's — and it
+adds the instruction's own expiry. Everything else an order passes, it passes.
+5.7 is where a live order joins a cycle.
 
 ### Phase 6: books and attribution
 

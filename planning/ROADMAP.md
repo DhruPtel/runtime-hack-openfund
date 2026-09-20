@@ -256,10 +256,10 @@ machine and the same journal.
 
 | Unit | Goal (full version) | Minimal: what gets built |
 |---|---|---|
-| 5.1 | Live executor behind the same interface the paper executor satisfies | `bankr_exec.py`, for ETH and USDG only. |
-| 5.2 | Small real buy and sell round trip on the ungated leg | **Equal in substance.** ETH→USDG→ETH, about $0.50 a leg, labelled a demonstration of the money path that no analyst chose. |
-| 5.3 | Receipt reconciliation, confirmation depth, mined-revert handling | Confirmed from `UserOperationEvent` and `Transfer` logs, at a fixed depth. The 6 bps is left as an exception. |
-| 5.4 ▶ | A real transaction on the explorer | **Equal. Stop.** |
+| 5.1 | Live executor behind the same interface the paper executor satisfies | **Built 2026-09-19.** `bankr_exec.py`, for ETH and USDG only, sending once and never retrying; the answer comes from the chain, not the reply. |
+| 5.2 | Small real buy and sell round trip on the ungated leg | **Built and run 2026-09-20.** ETH→USDG→ETH at $0.08 and $0.10, the smallest sizes that quote, each authorized by its own signed instruction (SIMPLIFICATION's mechanics, decided) and labelled a demonstration of the money path that no analyst chose. |
+| 5.3 | Receipt reconciliation, confirmation depth, mined-revert handling | **Built 2026-09-19.** Confirmed from `UserOperationEvent` and `Transfer` logs at a depth of 100 blocks, which is a choice; a mined revert is a cost with no fill; the 6 bps is left as an exception and recurred to the wei (F5.2.3). |
+| 5.4 ▶ | A real transaction on the explorer | **Shown 2026-09-20 and waiting for the operator.** Two transactions, the orders that carry them, and a real book that reconciles. The explorer link is for a human: that page answers 200 for any hash (F5.2.5). |
 | 5.5 | Access expiry and gate behaviour: pause, preserve, expose remediation | A 401 or 403 stops submissions and shows "access lost". |
 | 5.6 ▶ | A real 403 from the gated stock path, decoded | 0.5's recorded body decoded; anything else fails closed. Shown, not stopped. |
 | 5.7 ▶ | A live scheduled cycle | One of 8.3's cycles carries the live leg. Shown, not stopped. |
