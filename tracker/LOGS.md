@@ -1574,6 +1574,62 @@ vetoed by its own vote, seven approved, seven filled, the book reconciling. 795 
 
 ---
 
+## The front end, wired to the fund
+**Date:** 2026-09-20 · **Commits:** 530c0a0, 8b87276, f827819, 11f2736, 00dcced
+
+**The map came first** (`front-end/CONNECTIONS.md`), and it paid for itself: the page
+turned out to document its own seam — eight named objects replaced through
+`Openfund.setData`, and `applyProgressEvent` for the flow — so wiring meant building
+payloads, not rewriting a page. It also found, before any code, the ten things the
+fund does not produce, and two constraints that shaped everything: `setData` refuses
+to run while a cycle is, and the page's `cycle.done` wants a chain receipt a paper
+cycle never has.
+
+**The exporter** is `run/dashboard.py`. It reads and renames; it computes nothing but
+a position's share of NAV and the sum of an asset's own orders, and says so where it
+does. Every figure on the page now comes from a signed record, a reconciled book, a
+runner result or a chain receipt. Where the fund produces nothing — revenue, per-agent
+wallets, per-report signatures, company names — the payload carries `null` and a
+reason, and the page prints a dash beside it, in the idiom `pnl` already used.
+
+**The four decisions, as built.** Overview is the paper book and says so in its own
+subtitle; Books shows both and the page adds them nowhere; Chain lists all four real
+swaps newest first, each labelled with the instruction that authorized it, with
+`referencePrice` and weight `changes` dropped as meaningless for a swap; and a seat
+that failed is shown as failed — the live cycle's `execution-quality` appears with
+"No report" and the validator's own words, beside a quorum line reading "3 seat(s)
+reported, at least the quorum of 3".
+
+**Served by one command:** `python3 -m fund.run.serve`. A manifest names the cycle,
+book and swaps being read, so the page hardcodes no path; `/api/data` rebuilds the
+payloads per request; `/api/cycle/run` starts one live cycle and refuses a second;
+`/api/cycle/progress` turns the stages the cycle prints into the page's own events.
+**The flow ends at `treasurer.done`** — a paper cycle submits nothing, and animating a
+chain step it did not produce would be a lie the page could not take back.
+
+**And with no server at all:** the export is a `window.OPENFUND_EXPORT` assignment
+rather than fetched JSON, because `fetch` cannot read a local file. Opened over
+`file://` from a fresh clone, every section still renders, the run button is disabled,
+and the reason is on the page under the flow.
+
+**Verified headlessly, not by eye** (`front-end/checks/`): 7 checks over `file://`
+with fetch refused, and 9 against the running server — including that clicking "Run a
+cycle" opens a confirmation naming the cost, the duration and the wallet, and that
+**nothing is posted until that confirmation is clicked**. No cycle was run.
+
+Two bugs the checks caught: the chain renderer assumed its new shape and threw on the
+page's shipped one, and the observer that keeps the run button disabled wrote into the
+tree it was watching — an infinite loop that would have spun a real browser. The P9
+boundary test caught a third: the exporter deciding which book it was looking at,
+which is the ledger's to say. 795 tests pass.
+
+**What is still not real on the page:** the record's price and endpoint (the x402
+endpoint sells a Phase 0 probe at 0.001 USDC, not records), revenue and net income in
+both books, per-agent wallets and per-report signatures, and the analyst
+timings — each a dash with its reason rather than a number.
+
+---
+
 ## State at close — 2026-09-20, Phase 5 built to 5.3; the live leg has run, and 5.4 is the stop
 
 **Read this first.** This note describes the repository at the commit that last
@@ -1601,6 +1657,11 @@ commands need `PYTHONPATH=src`.
 - `git log --oneline -25` and `git status -sb`.
 - `make test`: 795 passed when this was written, in about 38 s. The runner and
   risk tests start real subprocesses against a fake gateway on 127.0.0.1.
+- `python3 -m fund.run.serve` serves the dashboard at http://127.0.0.1:8000 and is the
+  one command a demo needs; `front-end/Openfund.html` also opens from the filesystem
+  with everything rendered and the run button disabled.
+- `python3 -m fund.run.dashboard --export` rewrites `front-end/data/` from the latest
+  cycle and the committed swaps.
 - `python3 -m fund.run.cycle --live --db PATH --out DIR` is the whole thing live in
   one act, and it **spends** about $1.20 to $1.60: a live snapshot, four analyst calls,
   one risk call, then the chokepoint, the fills and the book. About four minutes.
