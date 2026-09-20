@@ -280,7 +280,8 @@ def swarm(record, cycle: Mapping[str, Any] | None, results: Mapping[str, Any]) -
 
 
 def decision(record, snapshot) -> dict[str, Any]:
-    feeds = {a["asset"]["address"]: (a.get("mark") or {}) for a in snapshot["assets"]}
+    assets = {a["asset"]["address"]: a for a in snapshot["assets"]}
+    feeds = {address: (a.get("mark") or {}) for address, a in assets.items()}
     by_asset: dict[str, Decimal] = {}
     for order in record["plan"]["orders"]:  # an asset may be split across orders
         symbol = order["asset"]["symbol"]
@@ -300,6 +301,8 @@ def decision(record, snapshot) -> dict[str, Any]:
             "why": row.get("why", ""),
             "feed": feeds.get(row["address"], {}).get("feed"),
             "feedAddress": feeds.get(row["address"], {}).get("feed_proxy"),
+            # three independent prices, and where each came from (part three)
+            "evidence": _evidence(assets.get(row["address"]), record),
         })
     cash = record["proposal"]["cash"]
     return {
@@ -319,9 +322,67 @@ def decision(record, snapshot) -> dict[str, Any]:
     }
 
 
-def risk(record) -> dict[str, Any]:
+def _evidence(asset: Mapping[str, Any] | None, record: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Where one asset's three prices came from: the chain, the corroborator and the
+    venue. Every field is read from the snapshot the record names."""
+    if asset is None:
+        return None
+    mark, gecko, quote = (asset.get("mark") or {}), (asset.get("corroboration") or {}), \
+        (asset.get("quote") or {})
+    block = record["snapshot"]["block"]
+    return {
+        "contract": asset["asset"]["address"],
+        "chainId": block["chain_id"],
+        "block": block["number"],
+        "blockTime": block["time"],
+        "chainlink": {
+            "feed": mark.get("feed"), "address": mark.get("feed_proxy"),
+            "roundId": mark.get("round_id"), "updatedAt": mark.get("updated_at"),
+            "price": mark.get("price_usd"),
+            "verdict": (mark.get("verdict") or {}).get("reason"),
+            "fresh": (mark.get("fresh") or {}).get("reason"),
+            "how": "read on chain at the pinned block, from the feed at this address"},
+        "gecko": {
+            "price": gecko.get("price_usd"), "divergenceBps": gecko.get("divergence_bps"),
+            "volume24h": gecko.get("volume_24h_usd"), "tier": gecko.get("tier"),
+            "session": gecko.get("session"),
+            "verdict": (gecko.get("verdict") or {}).get("reason"),
+            "how": "GeckoTerminal's token-level price, independent of the venue and the feed"},
+        "venue": {
+            "price": quote.get("venue_price_usd"), "impactBps": quote.get("swap_impact_bps"),
+            "fetchedAt": quote.get("fetched_at"),
+            "how": "Bankr /wallet/swap-quote at the intended size, read-only"},
+        "identity": (asset.get("identity") or {}).get("reason"),
+        "beacon": (asset.get("beacon") or {}).get("reason"),
+        "status": (asset.get("status") or {}).get("value") if isinstance(
+            asset.get("status"), dict) else asset.get("status"),
+    }
+
+
+def _quote(quote: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """The fresh quote one order was re-judged against, and which endpoint gave it."""
+    if not quote:
+        return None
+    observation = quote.get("observation") or {}
+    return {"ageMs": quote.get("age_ms"), "venuePrice": quote.get("venue_price_usd"),
+            "minBuy": quote.get("min_buy"), "impactBps": quote.get("swap_impact_bps"),
+            "feeBps": quote.get("fee_bps"), "slippageBps": quote.get("slippage_bps"),
+            "verdict": (quote.get("tradeable") or {}).get("reason"),
+            "endpoint": (observation.get("source") or {}).get("locator"),
+            "system": (observation.get("source") or {}).get("system"),
+            "quoteId": observation.get("source_ref"),
+            "status": observation.get("status"),
+            "detail": observation.get("detail")}
+
+
+def risk(record, reply: Mapping[str, Any] | None, models: Mapping[str, Any]) -> dict[str, Any]:
     planned = {o["index"]: o for o in record["plan"]["orders"]}
     gated = {o["index"]: o for o in record["gates"]["orders"]}
+    cautions: dict[str, list[dict[str, Any]]] = {}
+    for row in record["proposal"]["rows"]:  # which seat raised a caution on this asset
+        for c in row.get("contributions", []):
+            if c.get("kind") == "caution":
+                cautions.setdefault(row["symbol"], []).append(c)
     orders = []
     for voted in record["risk"]["decision"]["orders"]:
         index = voted["index"]
@@ -344,6 +405,15 @@ def risk(record) -> dict[str, Any]:
             "paragraphs": [voted["model_why"]] if voted.get("model_why") else
                           ["The risk agent recorded no sentence for this order."],
             "modelVote": voted.get("model_vote"),
+            # every gate that ran on this order, with what it measured and its limit
+            "gateList": [{"rule": g["rule"], "value": g["value"], "reason": g["reason"]}
+                         for g in gates.get("gates", [])],
+            "quote": _quote(order.get("quote")),
+            "flaggedBy": [c["seat"] for c in cautions.get(order["asset"]["symbol"], [])],
+            "blockedBy": gates.get("blocked_by", []),
+            "decidedBy": ("a gate, whatever the model said" if gates.get("blocked_by")
+                          else "the risk agent" if not voted["approved"] else
+                          "every gate cleared and the risk agent approved"),
         })
     overall = record["risk"]["decision"].get("overall") or {}
     return {
@@ -355,6 +425,24 @@ def risk(record) -> dict[str, Any]:
         "wallet": None, "walletReason": ABSENT["wallet"],
         "orders": orders,
         "gates": [g["reason"] for g in record["gates"]["plan"]],
+        "gateList": [{"rule": g["rule"], "value": g["value"], "reason": g["reason"]}
+                     for g in record["gates"]["plan"]],
+        "agent": {
+            "seat": record["risk"]["seat"],
+            "model": models.get("risk", {}).get("model") or models.get("model"),
+            "agent": record["risk"].get("agent"),
+            "brief": (record["risk"].get("brief") or {}).get("files", [None])[0],
+            "bundleTokens": (record["risk"].get("budget") or {}).get("tokens"),
+            "costUsd": _usd(((reply or {}).get("cost") or {}).get("usd")),
+            "latencyMs": (reply or {}).get("elapsed_ms"),
+            "inputTokens": ((reply or {}).get("cost") or {}).get("input_tokens"),
+            "outputTokens": ((reply or {}).get("cost") or {}).get("output_tokens"),
+            "endpoint": "Bankr LLM gateway, llm.bankr.bot/v1" if reply else None,
+            "note": "this cycle's risk vote was written by the cycle itself and says so in "
+                    "the record; no model was asked" if not reply else
+                    "one live call, billed, over the whole bundle: every report in full and "
+                    "the sized plan",
+        },
         "overall": overall.get("why", ""),
         "outcome": f"{sum(1 for o in orders if o['status'] == 'approved')} approved · "
                    f"{sum(1 for o in orders if o['status'] == 'vetoed')} vetoed · "
@@ -516,6 +604,8 @@ def build(live: Path = LIVE, liveleg: Path = LIVELEG,
     paper = json.loads((decision_dir / "book.json").read_text())
     snapshot = json.loads(found["snapshot"].read_text()) if found["snapshot"] else {"assets": []}
     mandate = json.loads((config.CONFIG_DIR / "mandate.json").read_text())
+    risk_json = decision_dir / "risk.json"
+    reply = (json.loads(risk_json.read_text()).get("reply") if risk_json.exists() else None)
     swaps = live_swaps(liveleg)
     real = swaps[0]["book"] if swaps and swaps[0].get("book") else None
 
@@ -538,7 +628,7 @@ def build(live: Path = LIVE, liveleg: Path = LIVELEG,
         "overview": overview(record, envelope, paper, snapshot),
         "swarm": swarm(record, cycle_json, results),
         "decision": decision(record, snapshot),
-        "risk": risk(record),
+        "risk": risk(record, reply, json.loads((config.CONFIG_DIR / "models.json").read_text())),
         "books": books(paper, real) if real else None,
         "record": record_section(record, envelope),
         "chain": chain(swaps, mandate),

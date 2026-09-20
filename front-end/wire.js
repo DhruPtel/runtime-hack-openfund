@@ -88,7 +88,9 @@
  async function start() {
   document.getElementById('detail-dialog').close();
   try {
-   const reply = await fetch('api/cycle/run', {method: 'POST'});
+   const reply = await fetch('api/cycle/run', {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({confirm: 'spend'})});   /* the server refuses a POST without it */
    if (!reply.ok) throw new Error(await reply.text());
    window.Openfund.beginLiveCycle();
    poll();

@@ -192,9 +192,24 @@ class Handler(SimpleHTTPRequestHandler):
             self.path = "/Openfund.html"
         return super().do_GET()
 
+    def _confirmed(self) -> bool:
+        """A POST spends, so it carries a word saying so. A request that reaches this
+        endpoint by accident — a stray click, a test, a reload — cannot spend by
+        accident: it is refused, and the refusal is logged."""
+        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            body = json.loads(self.rfile.read(length) or b"{}")
+        except ValueError:
+            body = {}
+        return body.get("confirm") == "spend"
+
     def do_POST(self):  # noqa: N802
         if urlparse(self.path).path != "/api/cycle/run":
             return self._json({"error": "no such endpoint"}, 404)
+        if not self._confirmed():
+            sys.stderr.write("  REFUSED a run with no confirmation: nothing was spent\n")
+            return self._json({"error": "this endpoint spends; POST {\"confirm\": \"spend\"}"},
+                              400)
         if RUN.running:
             return self._json({"error": "a cycle is already running"}, 409)
         stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
