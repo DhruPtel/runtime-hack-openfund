@@ -51,7 +51,13 @@ from fund.core import context, gates
 from fund.store import reports as report_store
 
 SEAT = "risk"
-BRIEF = "risk.v1.md"
+#: The system brief this fund's risk seat reads now. A record names the brief it was
+#: decided under (`risk.brief.files`), and a replay rebuilds with *that* one, so
+#: changing this never changes what an older record rebuilds to (`run/decide.replay`).
+#: v2 (2026-09-20) says when an overall veto applies: v1 said only that one vetoes
+#: every order, and the agent read that as a rule to veto the plan whenever a single
+#: order deserved a veto (F8.R.4).
+BRIEF = "risk.v2.md"
 
 RULE_RISK = "risk"  # the model vetoed this order
 RULE_RISK_OVERALL = "risk-overall"  # the model vetoed the whole plan
@@ -118,7 +124,8 @@ class ReportText:
 
 
 def render(plan: Mapping[str, Any], plan_sha256: str, gate_report: Mapping[str, Any],
-           reports: Sequence[ReportText], briefs: Path = analyst.BRIEFS) -> Brief:
+           reports: Sequence[ReportText], briefs: Path = analyst.BRIEFS,
+           brief_name: str | None = None) -> Brief:
     """The whole bundle risk reads: the plan, the gates, and every report in full."""
     parts = [f"PLAN {plan_sha256}", json.dumps(plan, indent=1, sort_keys=True), "END PLAN", "",
              "GATES", json.dumps(gate_report, indent=1, sort_keys=True), "END GATES", ""]
@@ -126,8 +133,8 @@ def render(plan: Mapping[str, Any], plan_sha256: str, gate_report: Mapping[str, 
         parts += [f"REPORT FROM {report.seat} sha256 {report.sha256}", report.text.rstrip("\n"),
                   f"END REPORT FROM {report.seat}", ""]
     parts += [f"Vote now. Your reply's first line must be exactly:\nRISK {plan_sha256}"]
-    return Brief(system=(briefs / BRIEF).read_text(), user="\n".join(parts),
-                 plan_sha256=plan_sha256)
+    return Brief(system=(briefs / (brief_name or BRIEF)).read_text(),
+                 user="\n".join(parts), plan_sha256=plan_sha256)
 
 
 # --- the reply ------------------------------------------------------------------------------------
@@ -360,7 +367,8 @@ def review(plan: Mapping[str, Any], plan_sha256: str, *, reports: Sequence[Repor
            snapshot: Mapping[str, Any], mandate: Mapping[str, Any], limits: gates.Limits,
            settings: Settings, work_dir: Path, credential: runner.SeatCredential | None = None,
            environ: Mapping[str, str] | None = None, recorded_reply: str | None = None,
-           store: report_store.ReportStore | None = None) -> dict[str, Any]:
+           store: report_store.ReportStore | None = None,
+           brief_name: str | None = None) -> dict[str, Any]:
     """Gate the plan, measure the bundle, ask the model unless the budget or an
     empty plan says not to, and decide by the override rule.
 
@@ -369,7 +377,7 @@ def review(plan: Mapping[str, Any], plan_sha256: str, *, reports: Sequence[Repor
     reported = len(reports)
     first = gates.evaluate(plan, snapshot=snapshot, mandate=mandate, limits=limits,
                            reported=reported)
-    brief = render(plan, plan_sha256, first, reports)
+    brief = render(plan, plan_sha256, first, reports, brief_name=brief_name)
     estimate = context.measure(brief.system + brief.user, reserved_tokens=settings.max_tokens,
                                bytes_per_token=settings.bytes_per_token)
     budget = gates.context_budget(estimate.tokens, limits)
@@ -405,7 +413,7 @@ def review(plan: Mapping[str, Any], plan_sha256: str, *, reports: Sequence[Repor
             "brief_sha256": brief.sha256, "request_id": reply.get("request_id"),
             "sent_at": reply.get("at"), "cost": reply.get("cost")})
     return {"gates": gate_report, "budget": {**estimate.as_dict(), "gate": budget.as_dict()},
-            "brief": {"files": [BRIEF], "sha256": brief.sha256},
+            "brief": {"files": [brief_name or BRIEF], "sha256": brief.sha256},
             "reply": None if reply is None else {
                 k: reply.get(k) for k in ("status", "reason", "recorded", "report_id", "agent",
                                           "key_source", "request_id", "elapsed_ms", "cost",

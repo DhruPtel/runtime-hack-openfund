@@ -278,7 +278,7 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
            recorded_reply: str | Callable[[Mapping[str, Any], str], str] | None,
            store: report_store.ReportStore,
            env_file: Path | None, schema: str = record.SCHEMA,
-           config_dir: Path | None = None) -> dict[str, Any]:
+           config_dir: Path | None = None, risk_brief: str | None = None) -> dict[str, Any]:
     """The whole path from calls to a signed record. Returns what it wrote.
 
     The config is read from `config_dir`, `config/` unless a replay names the copy
@@ -327,7 +327,7 @@ def decide(*, snapshot_path: Path, offered: Sequence[Offered], holdings: Mapping
                           limits=limits, settings=risk_settings, work_dir=out_dir / "risk",
                           reports=[risk.ReportText(o.seat, o.text) for o, _ in accepted],
                           credential=risk_credential, environ=environ,
-                          recorded_reply=reply, store=store)
+                          recorded_reply=reply, store=store, brief_name=risk_brief)
 
     done = _finish(out_dir=out_dir, snapshot=snapshot, snapshot_sha256=snapshot_sha256,
                    config_bytes=config_bytes, accepted=accepted, refused=refused,
@@ -386,7 +386,10 @@ def replay(cycle_dir: Path, snapshot_path: Path, out_dir: Path, *,
         recorded_reply=recorded["risk"]["reply_text"],
         store=report_store.ReportStore(out_dir / "store"),
         env_file=out_dir / "absent.env",  # no key file: a replay never signs
-        schema=schema or recorded["schema"], config_dir=carried)
+        schema=schema or recorded["schema"], config_dir=carried,
+        # the brief the record was decided under, not whichever one is current: a
+        # record rebuilds from its own inputs, and the brief is one of them
+        risk_brief=(recorded["risk"].get("brief") or {}).get("files", [None])[0])
     if done["envelope"]["signed"]:
         raise ReplayError("a replay signed its record")
     return (out_dir / "record.json").read_bytes()
