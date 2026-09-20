@@ -1,8 +1,8 @@
 {
  "app": {
   "cycle": "20260920T012716Z",
-  "decisionId": "c55400f87d…",
-  "decisionIdFull": "c55400f87d6b342a454ff51f7b31d3f3ae3248165ae40c580bb0fed06a1f9a27",
+  "decisionId": "662ee61f24…",
+  "decisionIdFull": "662ee61f245fbef376ca78c09b54cf771f84febccde66a64572f95fc4d5ac7f2",
   "demoNotice": "This is real data. Every figure comes from an artifact this fund produced: a decision record signed over its exact bytes, a book derived from an append-only journal, or a receipt read off chain 4663. The analyst reports are what the models wrote, the vetoes are what the risk agent decided, and the transactions are real. Stock fills are paper, because tokenized-stock execution is location-gated for this operator; the ETH and USDG swaps are real money. Where the fund does not produce a figure the page asks for, it shows a dash and the reason.",
   "fundWallet": "0x93faecde3c88a713e1edddf417c02c326889a3da",
   "mode": "Mainnet",
@@ -32,18 +32,18 @@
     "expenses": 0.0,
     "id": "paper",
     "name": "Paper portfolio",
-    "nav": 200.03035800722083,
+    "nav": 7.000587864848607,
     "net": null,
     "netLabel": "Net",
     "netReason": "not yet booked: the journal has no settled-revenue event (7.4)",
-    "note": "Stock fills are paper: tokenized-stock execution is location-gated.",
-    "opening": 199.984558,
+    "note": "Paper fill. Tokenized-stock execution is location-gated: the venue answered 403 to a real AAPL order — “Tokenized stocks (AAPL) are not available in your region” — before broadcast and with no gas (F0.5.1). So an equity order is sized, quoted and gated for real, and filled on paper.",
+    "opening": 6.99945953,
     "realised": 0.0,
     "reconcileCosts": 0.0,
     "revenue": null,
     "revenueLabel": "Revenue · record sales",
     "revenueReason": "not yet booked: the journal has no settled-revenue event (7.4)",
-    "unrealised": 0.04580000722083542
+    "unrealised": 0.001128334848606864
    },
    {
     "block": 67529959,
@@ -58,7 +58,7 @@
     "net": null,
     "netLabel": "Net",
     "netReason": "not yet booked: the journal has no settled-revenue event (7.4)",
-    "note": "Four live swaps. Every figure here is money that moved.",
+    "note": "Real money. Each of these went through the same treasurer process, the same chokepoint and the same reconciler as every other order — written before it was sent, sent once, and booked from its receipt. Only the asset differed: ETH and USDG are ungated on 4663, so the fund may actually trade them.",
     "opening": 1.286041228056708,
     "realised": 2.8460790928390258e-05,
     "reconcileCosts": 0.0,
@@ -79,12 +79,13 @@
   "decisionId": null,
   "decisionReason": "a swap is authorized by a signed instruction, not by a decision: no analyst chose it (SIMPLIFICATION, 2026-09-19)",
   "explorerUrl": "https://robinhoodchain.blockscout.com/tx/0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0",
-  "paperNote": "Stock fills are paper: tokenized-stock execution is location-gated for this operator, so equity orders are sized, quoted and gated for real and filled on paper. These swaps are real money.",
+  "paperNote": "Real money. Each of these went through the same treasurer process, the same chokepoint and the same reconciler as every other order — written before it was sent, sent once, and booked from its receipt. Only the asset differed: ETH and USDG are ungated on 4663, so the fund may actually trade them.",
   "paperValue": null,
   "quantity": null,
   "quantityReason": "each swap's own amounts are in its row",
   "referencePrice": null,
   "referenceReason": "a swap has no reference price: what it gave and got is the receipt",
+  "stockNote": "Paper fill. Tokenized-stock execution is location-gated: the venue answered 403 to a real AAPL order — “Tokenized stocks (AAPL) are not available in your region” — before broadcast and with no gas (F0.5.1). So an equity order is sized, quoted and gated for real, and filled on paper.",
   "subtitle": "Four real swaps on chain 4663, each authorized by a signed instruction and confirmed from its receipt — never from an HTTP 200.",
   "swaps": [
    {
@@ -200,6 +201,8 @@
      "call": "—",
      "score": 0
     },
+    "feed": "Robinhood SPY / USD",
+    "feedAddress": "0x319724394d3a0e3669269846abe664cd621f9f6a",
     "integrity": {
      "call": "—",
      "score": 0
@@ -208,7 +211,7 @@
      "call": "BUY",
      "score": 0.5
     },
-    "move": 20.55999943986773,
+    "move": 0.0,
     "score": 0.5,
     "target": 12.5,
     "trend": {
@@ -224,6 +227,8 @@
      "call": "—",
      "score": 0
     },
+    "feed": "Robinhood AMZN / USD",
+    "feedAddress": "0xd5a1508ced74c084ebf3cbe853e2c968fb2a651c",
     "integrity": {
      "call": "CAUTION",
      "score": 0.5
@@ -232,7 +237,7 @@
      "call": "BUY",
      "score": 0.25
     },
-    "move": 5.13999911002484,
+    "move": 0.0,
     "score": 0.125,
     "target": 3.12,
     "trend": {
@@ -248,6 +253,8 @@
      "call": "—",
      "score": 0
     },
+    "feed": "Robinhood GME / USD",
+    "feedAddress": "0x27c71df6a64fb476468edf256cf72c038bab5b67",
     "integrity": {
      "call": "—",
      "score": 0
@@ -256,7 +263,7 @@
      "call": "—",
      "score": 0
     },
-    "move": 30.84999888766299,
+    "move": 1.06999937896878,
     "score": 0.75,
     "target": 18.75,
     "trend": {
@@ -272,6 +279,8 @@
      "call": "—",
      "score": 0
     },
+    "feed": "Robinhood GOOGL / USD",
+    "feedAddress": "0xf6f373a037c30f0e5010d854385ca89185ae638b",
     "integrity": {
      "call": "CAUTION",
      "score": 0.5
@@ -296,6 +305,8 @@
      "call": "—",
      "score": 0
     },
+    "feed": "Robinhood SPCX / USD",
+    "feedAddress": "0xb265810950ba6c5c0ff821c9963014a56fd8bffb",
     "integrity": {
      "call": "—",
      "score": 0
@@ -304,7 +315,7 @@
      "call": "—",
      "score": 0
     },
-    "move": 20.55999943986773,
+    "move": 0.0,
     "score": 0.5,
     "target": 12.5,
     "trend": {
@@ -320,6 +331,8 @@
      "call": "—",
      "score": 0
     },
+    "feed": "Robinhood USO / USD",
+    "feedAddress": "0x75a9c76ef439e2c7c2e5a34ab105ecfe3766431c",
     "integrity": {
      "call": "—",
      "score": 0
@@ -328,7 +341,7 @@
      "call": "BUY",
      "score": 0.5
     },
-    "move": 20.55999943986773,
+    "move": 0.0,
     "score": 0.5,
     "target": 12.5,
     "trend": {
@@ -344,6 +357,8 @@
      "call": "—",
      "score": 0
     },
+    "feed": "Robinhood AAPL / USD",
+    "feedAddress": "0x6b22a786baa607d76728168703a39ea9c99f2cd0",
     "integrity": {
      "call": "—",
      "score": 0
@@ -352,7 +367,7 @@
      "call": "—",
      "score": 0
     },
-    "move": 30.84999888766299,
+    "move": 1.06999937896878,
     "score": 0.75,
     "target": 18.75,
     "trend": {
@@ -368,6 +383,8 @@
      "call": "—",
      "score": 0
     },
+    "feed": "Robinhood META / USD",
+    "feedAddress": "0x7c38c00c30bee9378381e7b6135d7283356d71b1",
     "integrity": {
      "call": "—",
      "score": 0
@@ -376,7 +393,7 @@
      "call": "HOLD",
      "score": 0.0
     },
-    "move": 10.27999921997247,
+    "move": 0.0,
     "score": 0.25,
     "target": 6.25,
     "trend": {
@@ -392,6 +409,8 @@
      "call": "—",
      "score": 0
     },
+    "feed": "Robinhood INTC / USD",
+    "feedAddress": "0x3f390c5c24628ac7c489515402235fead71d1913",
     "integrity": {
      "call": "—",
      "score": 0
@@ -400,7 +419,7 @@
      "call": "—",
      "score": 0
     },
-    "move": 30.84999888766299,
+    "move": 1.06999937896878,
     "score": 0.75,
     "target": 18.75,
     "trend": {
@@ -416,6 +435,8 @@
      "call": "—",
      "score": 0
     },
+    "feed": "Robinhood NVDA / USD",
+    "feedAddress": "0x379ec4f7c378f34a1b47e4f3cbebcbac3e8e9f15",
     "integrity": {
      "call": "PROCEED",
      "score": 0.0
@@ -440,6 +461,8 @@
      "call": "—",
      "score": 0
     },
+    "feed": "Robinhood MSTR / USD",
+    "feedAddress": "0x396118bdfb181e6240e74d243f266b061c0edc3d",
     "integrity": {
      "call": "CAUTION",
      "score": 0.5
@@ -448,7 +471,7 @@
      "call": "—",
      "score": 0
     },
-    "move": 10.27999921997247,
+    "move": 0.0,
     "score": 0.25,
     "target": 6.25,
     "trend": {
@@ -465,100 +488,73 @@
   "trendContribution": null,
   "warning": "quorum met: targets from the calls"
  },
- "generated_at": "2026-09-20T02:01:13+00:00",
+ "generated_at": "2026-09-20T02:22:13+00:00",
  "overview": {
-  "cash": 40.614563907383,
+  "cash": 3.78946139309366,
   "holdings": [
    {
-    "name": null,
-    "nameReason": "the registry carries symbols, not company names",
-    "pnl": 0.016021786373102323,
+    "feedAddress": "0x6b22a786baa607d76728168703a39ea9c99f2cd0",
+    "feedUpdated": "2026-09-18T15:11:28Z",
+    "name": "Robinhood AAPL / USD",
+    "pnl": 0.0005556986089891128,
     "price": 335.3847472,
     "ticker": "AAPL",
-    "value": 30.866020674036093,
-    "weight": 15.43
+    "value": 1.070555077577769,
+    "weight": 15.29
    },
    {
-    "name": null,
-    "nameReason": "the registry carries symbols, not company names",
-    "pnl": -0.005899190805039852,
-    "price": 253.863,
-    "ticker": "AMZN",
-    "value": 5.1340999192198,
-    "weight": 2.57
-   },
-   {
-    "name": null,
-    "nameReason": "the registry carries symbols, not company names",
-    "pnl": 0.1323644208052107,
+    "feedAddress": "0x27c71df6a64fb476468edf256cf72c038bab5b67",
+    "feedUpdated": "2026-09-18T20:18:46Z",
+    "name": "Robinhood GME / USD",
+    "pnl": 0.004590919065341541,
     "price": 22.55175,
     "ticker": "GME",
-    "value": 30.9823633084682,
-    "weight": 15.49
+    "value": 1.0745902980341215,
+    "weight": 15.35
    },
    {
-    "name": null,
-    "nameReason": "the registry carries symbols, not company names",
-    "pnl": -0.11585429219908797,
+    "feedAddress": "0x3f390c5c24628ac7c489515402235fead71d1913",
+    "feedUpdated": "2026-09-18T20:11:01Z",
+    "name": "Robinhood INTC / USD",
+    "pnl": -0.0040182828257237894,
     "price": 109.05,
     "ticker": "INTC",
-    "value": 30.734144595463903,
-    "weight": 15.36
-   },
-   {
-    "name": null,
-    "nameReason": "the registry carries symbols, not company names",
-    "pnl": 0.03226989189706677,
-    "price": 152.82485,
-    "ticker": "SPCX",
-    "value": 20.592269331764797,
-    "weight": 10.29
-   },
-   {
-    "name": null,
-    "nameReason": "the registry carries symbols, not company names",
-    "pnl": -0.0710362548341352,
-    "price": 761.55079369,
-    "ticker": "SPY",
-    "value": 20.488963185033594,
-    "weight": 10.24
-   },
-   {
-    "name": null,
-    "nameReason": "the registry carries symbols, not company names",
-    "pnl": 0.05793364598371864,
-    "price": 154.54265,
-    "ticker": "USO",
-    "value": 20.617933085851448,
-    "weight": 10.31
+    "value": 1.0659810961430563,
+    "weight": 15.23
    }
   ],
   "latest": {
-   "approved": 10,
-   "headline": "10 orders approved. 2 refused.",
-   "summary": "The plan as a whole follows from the reports and evidence; the two flawed orders are stopped individually and the rest stand on their own merits.",
-   "vetoed": 2
+   "approved": 3,
+   "headline": "3 orders approved. 0 refused.",
+   "summary": "Scripted by the paper cycle.",
+   "vetoed": 0
   },
-  "nav": 200.03035800722083,
-  "positionCount": 7,
+  "nav": 7.000587864848607,
+  "paperNote": "Paper fill. Tokenized-stock execution is location-gated: the venue answered 403 to a real AAPL order — “Tokenized stocks (AAPL) are not available in your region” — before broadcast and with no gas (F0.5.1). So an equity order is sized, quoted and gated for real, and filled on paper.",
+  "positionCount": 3,
   "provenance": {
+   "attested": "35 of 35 assets carry an identity and beacon verdict in this snapshot; `make selftest` attests all 235 configured addresses against the chain",
    "block": 67545399,
-   "decisionId": "c55400f87d…",
+   "blockHash": "0x6bd8bdcd9a436333115a1583018dbbe3a23274054851f794ab0efbabe72e1a77",
+   "chain": "Robinhood Chain 4663 · block 67545399 · 2026-09-20T01:25:12Z",
+   "decisionId": "662ee61f24…",
+   "priceSource": "Chainlink feeds read on chain 4663 at block 67545399",
    "signatureStatus": "Signature verified",
    "snapshotHash": "a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc",
    "timestamp": "20 Sep 2026, 01:28 UTC"
   },
   "subtitle": "The paper portfolio — simulated equity holdings. Real money is in Books and Chain, and the two are never added.",
+  "tableNote": "Every price is a Chainlink feed read on chain 4663 at block 67545399, the block this snapshot is pinned to. The feed behind each price is named beside its ticker.",
   "title": "A fund that shows its work."
  },
  "record": {
-  "approved": 10,
+  "approved": 3,
   "endpoint": null,
   "endpointReason": "publishing records by immutable id is unbuilt (7.1)",
   "format": "Canonical JSON · the bytes the signature covers",
-  "headline": "10 approved, 2 refused.",
-  "id": "c55400f87d…",
-  "idFull": "c55400f87d6b342a454ff51f7b31d3f3ae3248165ae40c580bb0fed06a1f9a27",
+  "headline": "3 approved, 0 refused.",
+  "id": "662ee61f24…",
+  "idFull": "662ee61f245fbef376ca78c09b54cf771f84febccde66a64572f95fc4d5ac7f2",
   "included": [
    "Every accepted analyst report, in full",
    "The proposal and how each weight was reached",
@@ -566,7 +562,7 @@
    "The risk agent's vote on each order, and overall",
    "The signature over the record's exact bytes"
   ],
-  "payloadHash": "c55400f87d6b342a454ff51f7b31d3f3ae3248165ae40c580bb0fed06a1f9a27",
+  "payloadHash": "662ee61f245fbef376ca78c09b54cf771f84febccde66a64572f95fc4d5ac7f2",
   "payloadNote": "the decision id is the sha256 of the record's exact bytes",
   "preview": [
    {
@@ -578,42 +574,42 @@
     "title": "3 analyst report(s), in full"
    },
    {
-    "description": "12 orders, every gate's value and reason, and the agent's sentence on each",
+    "description": "3 orders, every gate's value and reason, and the agent's sentence on each",
     "title": "The plan, the gates and the risk verdict"
    }
   ],
   "price": null,
   "priceReason": "the live x402 endpoint asks 0.001 USDC and serves a Phase 0 probe response, not this record (7.2)",
-  "quote": "The plan as a whole follows from the reports and evidence; the two flawed orders are stopped individually and the rest stand on their own merits.",
-  "signature": "327bd750207909dd880024e384d9de17db3c1afcaee730038e19352fec6de59cfaf7a026641ea9dab1bcd59bdff587af654f51d10bb642213fff34ed634fa603",
+  "quote": "Scripted by the paper cycle.",
+  "signature": "61b7fd23b60f50f2ae451e2b56ad90e51f3cd88808542b41a9a919ca5bede4050a13f07c7ffc0bccd8082de8e98b485de8081b115b70f788e35a3d6f11f1fe0d",
   "signedReports": 3,
-  "signer": "1c23243531ff47be0caaf1ce2d73b0b1b705a54fa063f2d50f0bde9b42928c21",
+  "signer": "408b69f4e25b52ea3cd4586421bf9027ff2fc416391b5eee136a3b4319d8d6ec",
   "signerLabel": "ed25519 public key, published in config/keys.json",
   "snapshot": "a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc",
   "subtitle": "One signed decision, including the disagreement and the refusal.",
   "title": "Buy the reasoning. Verify the record.",
-  "vetoed": 2
+  "vetoed": 0
  },
  "risk": {
   "gates": [
    "3 seat(s) reported, at least the quorum of 3",
-   "$179.92999253256194 traded, within 10000 bps of the NAV ($199.98)",
-   "the snapshot was 221.535s old when judged, within 900s",
+   "$3.20999813690634 traded, within 10000 bps of the NAV ($7.00)",
+   "the snapshot was 168s old when judged, within 900s",
    "in force until 2026-09-26T21:54:28Z",
-   "about 62163 tokens, within the budget of 70000"
+   "about 31690 tokens, within the budget of 70000"
   ],
   "orders": [
    {
     "allowed": null,
-    "amount": 20.55999943986773,
-    "asset": "SPY",
-    "context": "buy $20.56",
-    "heading": "buy $20.56 of SPY.",
+    "amount": 1.06999937896878,
+    "asset": "GME",
+    "context": "buy $1.07",
+    "heading": "buy $1.07 of GME.",
     "id": "order-1",
     "limitReason": "",
     "modelVote": "approve",
     "paragraphs": [
-     "Macro's diversification case for SPY is well-supported by the 20-day dispersion data, mark/venue/GT show no flagged issues, and gates clear cleanly."
+     "Scripted by the paper cycle, not a model's words."
     ],
     "proposed": null,
     "rule": "Gates cleared and risk approved",
@@ -622,15 +618,15 @@
    },
    {
     "allowed": null,
-    "amount": 5.13999911002484,
-    "asset": "AMZN",
-    "context": "buy $5.14",
-    "heading": "buy $5.14 of AMZN.",
+    "amount": 1.06999937896878,
+    "asset": "AAPL",
+    "context": "buy $1.07",
+    "heading": "buy $1.07 of AAPL.",
     "id": "order-2",
     "limitReason": "",
     "modelVote": "approve",
     "paragraphs": [
-     "Price-integrity flags AMZN's GeckoTerminal divergence as caution, but the mark and venue agree tightly (0.08% apart), so the book would be entered at a price the two independent live readings corroborate; the trade is also small."
+     "Scripted by the paper cycle, not a model's words."
     ],
     "proposed": null,
     "rule": "Gates cleared and risk approved",
@@ -639,185 +635,32 @@
    },
    {
     "allowed": null,
-    "amount": 15.42999955774289,
-    "asset": "GME",
-    "context": "buy $15.43",
-    "heading": "buy $15.43 of GME.",
+    "amount": 1.06999937896878,
+    "asset": "INTC",
+    "context": "buy $1.07",
+    "heading": "buy $1.07 of INTC.",
     "id": "order-3",
     "limitReason": "",
     "modelVote": "approve",
     "paragraphs": [
-     "Price-trend's high-confidence uptrend call is supported by a clean 30-day series and no integrity concerns are raised on GME; mark/venue/GT are within an unremarkable range."
+     "Scripted by the paper cycle, not a model's words."
     ],
     "proposed": null,
     "rule": "Gates cleared and risk approved",
     "side": "Buy",
     "status": "approved"
-   },
-   {
-    "allowed": null,
-    "amount": 15.4199993299201,
-    "asset": "GME",
-    "context": "buy $15.42",
-    "heading": "buy $15.42 of GME.",
-    "id": "order-4",
-    "limitReason": "",
-    "modelVote": "approve",
-    "paragraphs": [
-     "Second tranche of the same well-supported GME buy, same evidence and quote quality as order 3."
-    ],
-    "proposed": null,
-    "rule": "Gates cleared and risk approved",
-    "side": "Buy",
-    "status": "approved"
-   },
-   {
-    "allowed": null,
-    "amount": 20.55999943986773,
-    "asset": "SPCX",
-    "context": "buy $20.56",
-    "heading": "buy $20.56 of SPCX.",
-    "id": "order-5",
-    "limitReason": "",
-    "modelVote": "approve",
-    "paragraphs": [
-     "Price-trend's steady-climb call is corroborated, no divergence findings, and mark/venue/GT are closely aligned."
-    ],
-    "proposed": null,
-    "rule": "Gates cleared and risk approved",
-    "side": "Buy",
-    "status": "approved"
-   },
-   {
-    "allowed": null,
-    "amount": 20.55999943986773,
-    "asset": "USO",
-    "context": "buy $20.56",
-    "heading": "buy $20.56 of USO.",
-    "id": "order-6",
-    "limitReason": "",
-    "modelVote": "approve",
-    "paragraphs": [
-     "Macro's diversifier thesis is backed by a distinct 20-day commodity path uncorrelated to the equity cluster, and price-integrity raises no concern on USO's pricing."
-    ],
-    "proposed": null,
-    "rule": "Gates cleared and risk approved",
-    "side": "Buy",
-    "status": "approved"
-   },
-   {
-    "allowed": null,
-    "amount": 15.42999955774289,
-    "asset": "AAPL",
-    "context": "buy $15.43",
-    "heading": "buy $15.43 of AAPL.",
-    "id": "order-7",
-    "limitReason": "",
-    "modelVote": "approve",
-    "paragraphs": [
-     "Price-trend's high-confidence steady uptrend is well documented and price-integrity's cross-check lists AAPL among the tightly-agreeing names."
-    ],
-    "proposed": null,
-    "rule": "Gates cleared and risk approved",
-    "side": "Buy",
-    "status": "approved"
-   },
-   {
-    "allowed": null,
-    "amount": 15.4199993299201,
-    "asset": "AAPL",
-    "context": "buy $15.42",
-    "heading": "buy $15.42 of AAPL.",
-    "id": "order-8",
-    "limitReason": "",
-    "modelVote": "approve",
-    "paragraphs": [
-     "Second tranche of the same well-supported AAPL buy; the negative swap-impact here is price improvement, not a concern."
-    ],
-    "proposed": null,
-    "rule": "Gates cleared and risk approved",
-    "side": "Buy",
-    "status": "approved"
-   },
-   {
-    "allowed": null,
-    "amount": 10.27999921997247,
-    "asset": "META",
-    "context": "buy $10.28 · [impact] swapImpactBps 238 exceeds 50, compared signed",
-    "heading": "Do not buy $10.28 of META.",
-    "id": "order-9",
-    "limitReason": "[impact] swapImpactBps 238 exceeds 50, compared signed",
-    "modelVote": "veto",
-    "paragraphs": [
-     "Gate blocked this order on price impact (238bps > 50bps limit); code vetoes it regardless of the report support for a hold."
-    ],
-    "proposed": null,
-    "rule": "impact, risk",
-    "side": "Buy",
-    "status": "vetoed"
-   },
-   {
-    "allowed": null,
-    "amount": 15.42999955774289,
-    "asset": "INTC",
-    "context": "buy $15.43",
-    "heading": "buy $15.43 of INTC.",
-    "id": "order-10",
-    "limitReason": "",
-    "modelVote": "approve",
-    "paragraphs": [
-     "Price-trend's high-confidence accelerating uptrend is well documented and no integrity caution is raised on INTC."
-    ],
-    "proposed": null,
-    "rule": "Gates cleared and risk approved",
-    "side": "Buy",
-    "status": "approved"
-   },
-   {
-    "allowed": null,
-    "amount": 15.4199993299201,
-    "asset": "INTC",
-    "context": "buy $15.42",
-    "heading": "buy $15.42 of INTC.",
-    "id": "order-11",
-    "limitReason": "",
-    "modelVote": "approve",
-    "paragraphs": [
-     "Second tranche of the same well-supported INTC buy, same clean evidence as order 10."
-    ],
-    "proposed": null,
-    "rule": "Gates cleared and risk approved",
-    "side": "Buy",
-    "status": "approved"
-   },
-   {
-    "allowed": null,
-    "amount": 10.27999921997247,
-    "asset": "MSTR",
-    "context": "buy $10.28",
-    "heading": "Do not buy $10.28 of MSTR.",
-    "id": "order-12",
-    "limitReason": "",
-    "modelVote": "veto",
-    "paragraphs": [
-     "Price-integrity flags MSTR as the widest divergence in the batch, and unlike AMZN/GOOGL here it is the mark that is the outlier (152.64) while venue (158.5) and GeckoTerminal (159.4) agree with each other, so booking this buy at the mark would understate the entry price against two corroborating live prices; price-trend's own call also admits the move is too fresh to confirm as trend."
-    ],
-    "proposed": null,
-    "rule": "risk",
-    "side": "Buy",
-    "status": "vetoed"
    }
   ],
-  "outcome": "10 approved · 2 vetoed · only approved orders reach the treasurer",
-  "overall": "The plan as a whole follows from the reports and evidence; the two flawed orders are stopped individually and the rest stand on their own merits.",
-  "subtitle": "Risk reviewed every report. 10 of 12 orders survived.",
-  "title": "The fund said no.",
+  "outcome": "3 approved · 0 vetoed · only approved orders reach the treasurer",
+  "overall": "Scripted by the paper cycle.",
+  "subtitle": "Risk reviewed every report. 3 of 3 orders survived.",
+  "title": "Risk reviewed the plan.",
   "wallet": null,
   "walletReason": "no per-agent wallet: the seats share one gateway key"
  },
  "source": {
   "cycle": "fixtures/live/cycles/20260920T012716Z",
-  "decision": "fixtures/live/decisions/livecycle1",
+  "decision": "fixtures/live/decisions/paper-7usd",
   "snapshot": "fixtures/live/snapshot-a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc.json",
   "swaps": [
    "run2-leg2-usdg-eth",
@@ -1030,9 +873,12 @@
   "signedReports": 3,
   "snapshot": {
    "block": 67545399,
+   "chainId": 4663,
    "elapsed": null,
    "elapsedReason": "build and wall-clock timings are printed, not written to an artifact",
-   "hash": "a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc"
+   "hash": "a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc",
+   "source": "every mark in it is a Chainlink feed read on chain 4663 at this block, and every asset carries an identity and beacon verdict from the same read",
+   "time": "2026-09-20T01:25:12Z"
   },
   "stages": [
    "Freeze snapshot",

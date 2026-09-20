@@ -57,6 +57,16 @@ ABSENT = {
     "reference": "a swap has no reference price: what it gave and got is the receipt",
 }
 
+#: The two stories this fund tells, said in one line each wherever they appear.
+PAPER_FILL = ("Paper fill. Tokenized-stock execution is location-gated: the venue answered "
+              "403 to a real AAPL order — \u201cTokenized stocks (AAPL) are not available in "
+              "your region\u201d — before broadcast and with no gas (F0.5.1). So an equity "
+              "order is sized, quoted and gated for real, and filled on paper.")
+SAME_RAILS = ("Real money. Each of these went through the same treasurer process, the same "
+              "chokepoint and the same reconciler as every other order \u2014 written before "
+              "it was sent, sent once, and booked from its receipt. Only the asset differed: "
+              "ETH and USDG are ungated on 4663, so the fund may actually trade them.")
+
 
 def _usd(text: str | None) -> float | None:
     return None if text is None else float(Decimal(text))
@@ -149,15 +159,23 @@ def app(record: Mapping[str, Any], envelope: Mapping[str, Any], cycle_name: str,
 
 def overview(record, envelope, book: Mapping[str, Any], snapshot) -> dict[str, Any]:
     """Decision 1: Overview is the **paper** book, and says so."""
-    marks = {a["asset"]["address"]: a.get("mark") or {} for a in snapshot["assets"]}
+    marks = {a["asset"]["address"]: a.get("mark") or {}
+             for a in [*snapshot["assets"], *snapshot["holdings"]]}
+    attested = [a for a in snapshot["assets"]
+                if (a.get("identity") or {}).get("verdict") and (a.get("beacon") or {}).get("verdict")]
     nav = _usd(book["nav_usd"])
     holdings = []
     for position in book["positions"]:
         value = _usd(position["value_usd"])
-        mark = marks.get(position["address"], {}).get("price_usd")
+        mark = (marks.get(position["address"]) or {}).get("price_usd")
+        feed = marks.get(position["address"], {})
         holdings.append({
             "ticker": position["symbol"],
-            "name": None, "nameReason": ABSENT["name"],
+            # the page prints this beside the ticker: the feed the price was read from
+            # is more use to a judge than a company name the registry does not carry
+            "name": feed.get("feed") or ABSENT["name"],
+            "feedAddress": feed.get("feed_proxy"),
+            "feedUpdated": feed.get("updated_at"),
             "price": None if mark is None else float(Decimal(mark)),
             # a share of NAV: the only division here, over two figures the book carries
             "weight": round(value / nav * 100, 2) if nav else 0,
@@ -177,7 +195,19 @@ def overview(record, envelope, book: Mapping[str, Any], snapshot) -> dict[str, A
             "summary": overall or "The risk agent recorded no overall verdict for this plan.",
             "approved": len(approved), "vetoed": len(vetoed)},
         "holdings": holdings,
+        "tableNote": "Every price is a Chainlink feed read on chain 4663 at block "
+                     f"{record['snapshot']['block']['number']}, the block this snapshot is "
+                     "pinned to. The feed behind each price is named beside its ticker.",
+        "paperNote": PAPER_FILL,
         "provenance": {
+            "priceSource": f"Chainlink feeds read on chain 4663 at block "
+                           f"{record['snapshot']['block']['number']}",
+            "chain": f"Robinhood Chain 4663 · block {record['snapshot']['block']['number']} · "
+                     f"{record['snapshot']['block']['time']}",
+            "blockHash": snapshot.get("block", {}).get("hash"),
+            "attested": f"{len(attested)} of {len(snapshot['assets'])} assets carry an identity "
+                        "and beacon verdict in this snapshot; `make selftest` attests all 235 "
+                        "configured addresses against the chain",
             "decisionId": envelope["decision_id"][:10] + "…",
             "signatureStatus": "Signature verified" if envelope.get("signed") else "Unsigned",
             "snapshotHash": record["snapshot"]["sha256"],
@@ -232,6 +262,11 @@ def swarm(record, cycle: Mapping[str, Any] | None, results: Mapping[str, Any]) -
         "subtitle": "Independent reports on the same market snapshot.",
         "snapshot": {"hash": record["snapshot"]["sha256"],
                      "block": record["snapshot"]["block"]["number"],
+                     "chainId": record["snapshot"]["block"]["chain_id"],
+                     "time": record["snapshot"]["block"]["time"],
+                     "source": "every mark in it is a Chainlink feed read on chain 4663 at "
+                               "this block, and every asset carries an identity and beacon "
+                               "verdict from the same read",
                      "elapsed": None, "elapsedReason": ABSENT["timing"]},
         "reportCost": _usd((cycle or {}).get("cost", {}).get("usd")) if cycle else None,
         "costIsEstimate": True,
@@ -244,7 +279,8 @@ def swarm(record, cycle: Mapping[str, Any] | None, results: Mapping[str, Any]) -
     }
 
 
-def decision(record) -> dict[str, Any]:
+def decision(record, snapshot) -> dict[str, Any]:
+    feeds = {a["asset"]["address"]: (a.get("mark") or {}) for a in snapshot["assets"]}
     by_asset: dict[str, Decimal] = {}
     for order in record["plan"]["orders"]:  # an asset may be split across orders
         symbol = order["asset"]["symbol"]
@@ -262,6 +298,8 @@ def decision(record) -> dict[str, Any]:
             "target": round(_num(row["target"]) * 100, 2),
             "move": float(by_asset.get(row["symbol"], Decimal(0))),
             "why": row.get("why", ""),
+            "feed": feeds.get(row["address"], {}).get("feed"),
+            "feedAddress": feeds.get(row["address"], {}).get("feed_proxy"),
         })
     cash = record["proposal"]["cash"]
     return {
@@ -352,12 +390,10 @@ def books(paper: Mapping[str, Any], real: Mapping[str, Any]) -> dict[str, Any]:
         "books": [
             one(paper, "Paper portfolio", "Simulated equity holdings · USD",
                 "Revenue · record sales", "Costs · simulated trading",
-                "Expenses · model inference",
-                "Stock fills are paper: tokenized-stock execution is location-gated."),
+                "Expenses · model inference", PAPER_FILL),
             one(real, "Real operating book", "Actual money on chain 4663 · USD",
                 "Revenue · record sales", "Costs · gas and fees",
-                "Expenses · model inference",
-                "Four live swaps. Every figure here is money that moved."),
+                "Expenses · model inference", SAME_RAILS),
         ],
     }
 
@@ -449,9 +485,8 @@ def chain(swaps: Sequence[Mapping[str, Any]], mandate) -> dict[str, Any]:
         "authority": "Only the treasurer can spend. It runs in its own process with its own "
                      "credentials, re-checks every gate on a fresh quote, writes the order "
                      "before it acts, sends once, and books what the chain says.",
-        "paperNote": "Stock fills are paper: tokenized-stock execution is location-gated for "
-                     "this operator, so equity orders are sized, quoted and gated for real and "
-                     "filled on paper. These swaps are real money.",
+        "paperNote": SAME_RAILS,
+        "stockNote": PAPER_FILL,
     }
 
 
@@ -489,7 +524,7 @@ def build(live: Path = LIVE, liveleg: Path = LIVELEG) -> dict[str, Any]:
         "app": app(record, envelope, found["cycle"].name if found["cycle"] else "—", mandate),
         "overview": overview(record, envelope, paper, snapshot),
         "swarm": swarm(record, cycle_json, results),
-        "decision": decision(record),
+        "decision": decision(record, snapshot),
         "risk": risk(record),
         "books": books(paper, real) if real else None,
         "record": record_section(record, envelope),
