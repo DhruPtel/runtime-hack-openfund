@@ -122,9 +122,6 @@ def read(rpc: RpcClient, tx_hash: str, *, wallet: ChainAddress, chain_id: int,
     block_number = int(receipt["blockNumber"], 16)
     head = int(rpc.call("eth_blockNumber", []), 16)
     depth = head - block_number
-    if depth < confirmations:
-        return Reconciled(OrderState.UNKNOWN, f"mined in {block_number}, {depth} of "
-                                              f"{confirmations} confirmations behind head {head}")
 
     transaction = rpc.call("eth_getTransactionByHash", [tx_hash])
     block = rpc.call("eth_getBlockByNumber", [hex(block_number), False])
@@ -144,6 +141,13 @@ def read(rpc: RpcClient, tx_hash: str, *, wallet: ChainAddress, chain_id: int,
     execution = Execution(transaction=reference, user_operation=operation,
                           transfers=tuple(transfers))
     gas = operation.actual_gas_cost if operation.actual_gas_cost.raw else None
+    if depth < confirmations:
+        # Unknown, and it says which transaction it is unknown about: the order keeps
+        # this evidence, so a later start reads the same one rather than guessing
+        # (`run/startup.py`). Nothing is booked from a receipt this shallow.
+        return Reconciled(OrderState.UNKNOWN, f"mined in {block_number}, {depth} of "
+                          f"{confirmations} confirmations behind head {head}",
+                          execution=execution)
     if not succeeded:  # 200 or not, a reverted operation is not a fill (F0.10.3)
         return Reconciled(OrderState.FAILED, "the operation reverted: no fill, and gas was "
                           f"charged at {operation.actual_gas_cost.raw} wei", execution=execution,

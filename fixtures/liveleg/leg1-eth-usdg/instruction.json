@@ -1,0 +1,163 @@
+{
+ "book": "real",
+ "expires_at_ms": 1789863395613,
+ "issued_at_ms": 1789863095613,
+ "mandate": {
+  "approved_by": "the operator",
+  "chain_id": 4663,
+  "execution_wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da"
+ },
+ "not_a_decision": "no analyst proposed this order and no risk agent voted on it, so it carries no reports and no vote, and the quorum gate does not apply. Its authority is this signature and the mandate.",
+ "order": {
+  "asset": {
+   "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+   "chain_id": 4663,
+   "symbol": "ETH"
+  },
+  "buy": {
+   "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+   "decimals": 6
+  },
+  "index": 1,
+  "quote": {
+   "age_ms": 0,
+   "buy": "0.078714",
+   "fee_bps": "0",
+   "min_buy": "0.074778",
+   "observation": {
+    "_type": "Observation",
+    "block": null,
+    "detail": "a price at size, not a fill (F0.3.3, F0.5.1); to.formattedAmount is lossy and not read",
+    "fetch_time": {
+     "_type": "Instant",
+     "epoch_ms": 1789863095613
+    },
+    "source": {
+     "_type": "Source",
+     "locator": "/wallet/swap-quote",
+     "system": "bankr-quote"
+    },
+    "source_ref": "67294405-6a03-4609-8140-c173dd83afc5",
+    "source_time": null,
+    "status": "ok",
+    "value": {
+     "_type": "Quote",
+     "buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 6,
+      "raw": "78714"
+     },
+     "buy_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 16,
+      "quote_unit": "USD",
+      "raw": "9998856620169219"
+     },
+     "fee": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "0",
+      "unit": "bps"
+     },
+     "fee_waived": false,
+     "max_price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "1500",
+      "unit": "bps"
+     },
+     "min_buy": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+       "chain_id": 4663
+      },
+      "decimals": 6,
+      "raw": "74778"
+     },
+     "price_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "14",
+      "unit": "bps"
+     },
+     "quote_id": "67294405-6a03-4609-8140-c173dd83afc5",
+     "sell": {
+      "_type": "Amount",
+      "asset": {
+       "_type": "AssetId",
+       "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "chain_id": 4663
+      },
+      "decimals": 18,
+      "raw": "30000000000000"
+     },
+     "sell_price": {
+      "_type": "Price",
+      "base": {
+       "_type": "AssetId",
+       "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+       "chain_id": 4663
+      },
+      "decimals": 12,
+      "quote_unit": "USD",
+      "raw": "2628633333333333"
+     },
+     "slippage": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "500",
+      "unit": "bps"
+     },
+     "swap_impact": {
+      "_type": "Fixed",
+      "decimals": 0,
+      "raw": "14",
+      "unit": "bps"
+     }
+    }
+   },
+   "sell": "0.00003",
+   "slippage_bps": "500",
+   "swap_impact_bps": "14",
+   "tradeable": {
+    "reason": "quoted at the size asked; age 0.0s within 60s; swapImpactBps 14 within 50, compared signed",
+    "rule": null,
+    "value": true
+   },
+   "venue_price_usd": "2628.633333333333"
+  },
+  "sell": {
+   "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+   "amount": "0.000030000000000000",
+   "decimals": 18
+  },
+  "side": "sell",
+  "usd": "0.07870950000000000000"
+ },
+ "reason": "a demonstration of the money path that no analyst chose (planning/SIMPLIFICATION.md, DECISION 2026-09-19)",
+ "schema": "openfund.instruction/1",
+ "snapshot": {
+  "block": {
+   "chain_id": 4663,
+   "closed_sessions": [
+    "us_equities_24/5"
+   ],
+   "hash": "0x594bd66880fafdbef9a4ee1419baed528d1ce1705f5ea841718100863e013708",
+   "number": 67499670,
+   "time": "2026-09-20T00:08:24Z"
+  },
+  "sha256": "8d504c434969c7555b3925b81f7e27558ac2abfdd69ade688afc66b40c2c2520"
+ }
+}

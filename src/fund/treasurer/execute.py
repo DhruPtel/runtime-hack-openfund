@@ -424,27 +424,32 @@ class LiveExecutor:
             if seen.state is not OrderState.UNKNOWN or self._monotonic() >= until:
                 break
             self._sleep(self.poll_s)
-        return self._booked(order, reply, seen)
+        return booked(order, reply.tx_hash, seen, self.snapshot)
 
-    def _booked(self, order: Order, reply: bankr_exec.SwapReply,
-                seen: reconcile.Reconciled) -> Outcome:
-        where = f"{reply.tx_hash}: {seen.why}"
-        try:
-            fee = (ledger.gas_fee(order, seen.gas, self.snapshot, f"gas on {reply.tx_hash}")
-                   if seen.gas is not None else None)
-            if seen.state is OrderState.CONFIRMED:
-                fill = ledger.live_fill(order, seen.paid, seen.received, self.snapshot)
-            elif seen.state is OrderState.FAILED:
-                return Outcome(OrderState.FAILED, where, execution=seen.execution, fee=fee)
-            else:
-                return Outcome(OrderState.UNKNOWN, where, execution=seen.execution)
-        except (ledger.LedgerError, cash.NoMark) as refused:
-            return Outcome(OrderState.UNKNOWN, f"{where}; the ledger will not book it: "
-                           f"{refused}", execution=seen.execution)
-        short = ("" if seen.received.raw >= order.min_buy.raw else
-                 f"; under the order's minimum of {order.min_buy.raw}")
-        return Outcome(OrderState.CONFIRMED, where + short, fill=fill,
-                       execution=seen.execution, fee=fee)
+
+def booked(order: Order, tx_hash: str | None, seen: reconcile.Reconciled,
+           snapshot: Mapping[str, Any]) -> Outcome:
+    """What one reconciled swap books: the fill its logs evidence, the gas the
+    EntryPoint charged, or neither. The executor calls it when it sends, and
+    `run/startup.py` calls it when it finds an order in flight at a restart, so an
+    order settles the same way whichever found it."""
+    where = f"{tx_hash}: {seen.why}"
+    try:
+        fee = (ledger.gas_fee(order, seen.gas, snapshot, f"gas on {tx_hash}")
+               if seen.gas is not None else None)
+        if seen.state is OrderState.CONFIRMED:
+            fill = ledger.live_fill(order, seen.paid, seen.received, snapshot)
+        elif seen.state is OrderState.FAILED:
+            return Outcome(OrderState.FAILED, where, execution=seen.execution, fee=fee)
+        else:
+            return Outcome(OrderState.UNKNOWN, where, execution=seen.execution)
+    except (ledger.LedgerError, cash.NoMark) as refused:
+        return Outcome(OrderState.UNKNOWN, f"{where}; the ledger will not book it: {refused}",
+                       execution=seen.execution)
+    short = ("" if seen.received.raw >= order.min_buy.raw else
+             f"; under the order's minimum of {order.min_buy.raw}")
+    return Outcome(OrderState.CONFIRMED, where + short, fill=fill, execution=seen.execution,
+                   fee=fee)
 
 
 # --- one order, from prepared to its end ----------------------------------------------------------

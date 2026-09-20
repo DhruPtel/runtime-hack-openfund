@@ -1,0 +1,128 @@
+{
+ "buys": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+ "execution": {
+  "_type": "Execution",
+  "transaction": {
+   "_type": "TransactionRef",
+   "block": {
+    "_type": "BlockRef",
+    "chain_id": 4663,
+    "hash": "0xf4ae7e97a914d511e0f43ebb98a03d74c8f62b1e536a086fee7c12488f75f9ba",
+    "number": 67501988,
+    "timestamp": {
+     "_type": "Instant",
+     "epoch_ms": 1789863137000
+    }
+   },
+   "outer_status": 1,
+   "submitted_by": {
+    "_type": "ChainAddress",
+    "address": "0x5512144047c2d55297c8470b93e8da87864617cd",
+    "chain_id": 4663
+   },
+   "tx_hash": "0x737e32b4ea091110fa0dc42daf8992c705a5d89edc24c5bdd4fae3553a802a27",
+   "tx_type": 2
+  },
+  "transfers": [
+   {
+    "_type": "TokenTransfer",
+    "amount": {
+     "_type": "Amount",
+     "asset": {
+      "_type": "AssetId",
+      "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "chain_id": 4663
+     },
+     "decimals": 6,
+     "raw": "100000"
+    },
+    "log_index": 12,
+    "recipient": {
+     "_type": "ChainAddress",
+     "address": "0xb92fe925dc43a0ecde6c8b1a2709c170ec4fff4f",
+     "chain_id": 4663
+    },
+    "sender": {
+     "_type": "ChainAddress",
+     "address": "0x93faecde3c88a713e1edddf417c02c326889a3da",
+     "chain_id": 4663
+    },
+    "token": {
+     "_type": "AssetId",
+     "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+     "chain_id": 4663
+    }
+   }
+  ],
+  "user_operation": {
+   "_type": "UserOperationRef",
+   "actual_gas_cost": {
+    "_type": "Amount",
+    "asset": {
+     "_type": "AssetId",
+     "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "chain_id": 4663
+    },
+    "decimals": 18,
+    "raw": "0"
+   },
+   "entry_point": {
+    "_type": "ChainAddress",
+    "address": "0x0000000071727de22e5e9d8baf0edac6f37da032",
+    "chain_id": 4663
+   },
+   "nonce_key": "0xc40e0d2dc90a6aecaa76f7a8594b774afda2cd76a900",
+   "nonce_seq": "0",
+   "paymaster": null,
+   "sender": {
+    "_type": "ChainAddress",
+    "address": "0x93faecde3c88a713e1edddf417c02c326889a3da",
+    "chain_id": 4663
+   },
+   "success": {
+    "_type": "Check",
+    "reason": "the EntryPoint says the operation succeeded",
+    "value": true
+   },
+   "user_op_hash": "0x4e74103974a420252f99de66e129db5989aac0f08ec06241f8d383802bda9c5f"
+  }
+ },
+ "idempotency_key": "cc8eec82-2809-5589-942c-4d7eaedb2636",
+ "min_buy": {
+  "_type": "Amount",
+  "asset": {
+   "_type": "AssetId",
+   "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+   "chain_id": 4663
+  },
+  "decimals": 18,
+  "raw": "36125480842603"
+ },
+ "mode": "live",
+ "order_id": "e335f9679555989661dcaafb17b715f80955e31b9030408a2562b526d212970d/1",
+ "real_book": [
+  "the real book at block 67499670 (2026-09-20T00:08:24Z)",
+  "  asset                    units         value         basis    unrealised",
+  "  ETH       0.000468188843098662         $1.23         $1.23        $-0.00",
+  "  cash                  0.057456         $0.06         $0.06         $0.00",
+  "  NAV                                    $1.29",
+  "",
+  "  opened $1.29 + realised $-0.00 + unrealised $-0.00 − costs $0.00 = NAV $1.29, exactly",
+  "  inference $0.00, an expense beside the NAV, never in it"
+ ],
+ "reason": "0x737e32b4ea091110fa0dc42daf8992c705a5d89edc24c5bdd4fae3553a802a27: the operation succeeded in block 67501988, 119 confirmations deep; paid 100000 from its Transfer logs, received 38026356590733 from its balance across block 67501988, gas sponsored",
+ "sells": {
+  "_type": "Amount",
+  "asset": {
+   "_type": "AssetId",
+   "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+   "chain_id": 4663
+  },
+  "decimals": 6,
+  "raw": "100000"
+ },
+ "state": "confirmed",
+ "treasurer": {
+  "_written": "after the run, by run/liveleg.py's own `record`, against the database the run wrote. The command writes this itself from now on; these two legs were sent before it did."
+ }
+}

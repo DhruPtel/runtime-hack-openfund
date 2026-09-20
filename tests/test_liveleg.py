@@ -361,6 +361,8 @@ def test_the_ledger_refuses_evidence_that_is_not_this_orders_and_nothing_is_book
     with pytest.raises(ledger.LedgerError, match="sells"):
         ledger.live_fill(dataclasses.replace(order, state=OrderState.SUBMITTED),
                          Amount(SOLD, 6, USDG), Amount(1, 18, ETH), SNAPSHOT)
+    with pytest.raises(ledger.LedgerError, match="written before it was sent"):
+        ledger.live_fill(order, Amount(SOLD, 18, ETH), Amount(78_742, 6, USDG), SNAPSHOT)
     with pytest.raises(ledger.LedgerError, match="paper"):
         ledger.live_fill(dataclasses.replace(order, mode=ExecutionMode.PAPER,
                                              state=OrderState.SUBMITTED),
@@ -391,3 +393,48 @@ def test_a_swap_with_no_floor_is_refused_before_the_wire():
                                            min_buy=Amount(0, USDG_DECIMALS, USDG)),
             "SECRET", settings=execute.bankr_exec.Settings.load(),
             transport=lambda *a: (_ for _ in ()).throw(AssertionError("nothing is sent")))
+
+
+# --- what a restart finds in flight (4.9 owns it, 5.3 reads it) ------------------------------------
+
+def test_an_order_left_in_flight_is_read_from_the_chain_and_booked_once(tmp_path):
+    """4.9 left this to 5.3. An order the run could not settle carries its transaction;
+    a later start reads that transaction and books exactly what the executor would
+    have, through the same `execute.booked`, in one write."""
+    from fund.run import startup
+
+    written, envelope, order = instructed(tmp_path)
+    conn, store, journal = real_book(tmp_path)
+    shallow = FakeRpc(head=int(RECORDED["receipt"]["blockNumber"], 16) + 3)
+    done = ran(order, live(rpc=shallow), store, journal, written, envelope)
+    assert done.order.state is OrderState.UNKNOWN and done.order.execution is not None
+    before = len(journal.events())
+
+    settled = FakeRpc()  # the same transaction, now a hundred blocks deep
+    resolved = startup.resolve(conn, lambda o: execute.booked(
+        o, o.execution.transaction.tx_hash,
+        __import__("fund.treasurer.reconcile", fromlist=["read"]).read(
+            settled, o.execution.transaction.tx_hash, wallet=WALLET, chain_id=CHAIN,
+            confirmations=100, sell=o.sell.asset, sell_decimals=o.sell.decimals,
+            buy=o.buy_asset, buy_decimals=o.min_buy.decimals), SNAPSHOT))
+    assert [r.state for r in resolved] == [OrderState.CONFIRMED]
+    assert store.get(order.order_id).state is OrderState.CONFIRMED
+    assert len(journal.events()) == before + 1
+    assert journal.events()[-1].got.raw == 78_742
+    assert startup.resolve(conn) == []  # settled once, and nothing is booked twice
+
+
+def test_the_outcome_is_written_beside_the_instruction(tmp_path):
+    """The books are SQLite, which is not committed. What the repository keeps of a
+    live leg is the instruction and this."""
+    from fund.run import liveleg
+
+    written, envelope, order = instructed(tmp_path)
+    conn, store, journal = real_book(tmp_path)
+    done = ran(order, live(), store, journal, written, envelope)
+    path = liveleg.record(tmp_path / "instruction", store.get(order.order_id), {"orders": []},
+                          "the book")
+    kept = json.loads(path.read_text())
+    assert kept["state"] == "confirmed" and kept["order_id"] == order.order_id
+    assert kept["execution"]["transaction"]["tx_hash"] == RECORDED["tx_hash"]
+    assert kept["idempotency_key"] == order.idempotency_key

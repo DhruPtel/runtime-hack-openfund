@@ -114,10 +114,16 @@ def test_a_prepared_order_found_at_startup_is_refused_as_stale(tmp_path):
 
 
 def test_a_live_order_left_in_flight_refuses_the_cycle(tmp_path):
+    """With nothing that can read the chain, and while the chain has not settled it,
+    a live order in flight refuses the cycle. It is never failed on a guess, and never
+    re-sent under a new key. `tests/test_liveleg.py` holds the reading half."""
     store, journal = fund(tmp_path)
     live = dataclasses.replace(SIX[0], order_id="live/1", idempotency_key="live-key",
                                mode=ExecutionMode.LIVE)
     store.add(live)
     store.move(live.order_id, S)
-    with pytest.raises(startup.NotReady, match="on the chain"):
+    with pytest.raises(startup.NotReady, match="no reader"):
         startup.resolve(store.conn)
+    with pytest.raises(startup.NotReady, match="not settled yet"):
+        startup.resolve(store.conn, lambda order: execute.Outcome(
+            OrderState.UNKNOWN, "not settled yet"))

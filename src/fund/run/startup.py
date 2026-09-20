@@ -14,9 +14,12 @@ another host is never taken over: the fund would rather stop than guess.
   and its order's state are written in one transaction (4.5), so a paper order the
   journal has no fill for never filled: it is `failed`, and one with a fill is
   `confirmed`. The journal is the receipt;
-- a **live** order left in flight is not resolvable here. Its outcome is on the
-  chain, and reading it is 5.3's. The cycle is refused until then, which is the
-  honest answer rather than a guess about money;
+- a **live** order left in flight is read from the chain (5.3), when the caller
+  passes a `read` that can: its receipt says whether it filled, what it moved and
+  what gas it paid, and the fill, the gas and the order's new state are written in
+  one transaction here, exactly as the executor's caller writes them. Without a
+  reader, or while the chain has not settled it, the cycle is refused — the honest
+  answer rather than a guess about money. It is never re-sent under a new key;
 - a `prepared` order was never sent, and the evidence it was decided on is a cycle
   old. It is `refused` as stale, and the next cycle decides again on fresh evidence.
   S11 bounds how old a snapshot may be when it is decided on; this is that rule at a
@@ -30,7 +33,7 @@ import socket
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Iterator
+from typing import Any, Callable, Iterator
 
 from fund.core import ledger
 from fund.core.types import ExecutionMode, OrderState
@@ -91,8 +94,13 @@ def owning(conn: sqlite3.Connection) -> Iterator[str]:
             conn.execute("DELETE FROM runner_lock WHERE id = 1 AND owner = ?", (me,))
 
 
-def resolve(conn: sqlite3.Connection) -> list[Resolved]:
-    """Settle every order the last run left, or refuse the cycle."""
+def resolve(conn: sqlite3.Connection,
+            read: Callable[[Any], Any] | None = None) -> list[Resolved]:
+    """Settle every order the last run left, or refuse the cycle.
+
+    `read` is how a live order in flight is settled: given the order, it returns the
+    executor's own `Outcome` from the chain, or None when there is nothing to read.
+    `run/liveleg.py` passes one built on `treasurer/reconcile.py`."""
     store, journal = OrderStore(conn), Journal(conn)
     filled = ledger.booked(journal.events())
     settled = []
@@ -105,9 +113,20 @@ def resolve(conn: sqlite3.Connection) -> list[Resolved]:
                 store.move(order.order_id, OrderState.CONFIRMED, reason=ITS_FILL)
                 settled.append(Resolved(order.order_id, OrderState.CONFIRMED, ITS_FILL))
             elif order.mode is not ExecutionMode.PAPER:
-                raise NotReady(f"order {order.order_id} is a live order left "
-                               f"{order.state.value} with no fill: its outcome is on the chain, "
-                               "and reading it is 5.3's")
+                outcome = read(order) if read is not None else None
+                if outcome is None or outcome.state is OrderState.UNKNOWN:
+                    raise NotReady(f"order {order.order_id} is a live order left "
+                                   f"{order.state.value} with no fill, and the chain has not "
+                                   f"settled it: "
+                                   f"{'no reader' if outcome is None else outcome.reason}")
+                with transaction(conn):  # the fill, its gas and the state, one write
+                    if outcome.fill is not None:
+                        journal.append(outcome.fill)
+                    if outcome.fee is not None:
+                        journal.append(outcome.fee)
+                    store.move(order.order_id, outcome.state, reason=outcome.reason,
+                               execution=outcome.execution)
+                settled.append(Resolved(order.order_id, outcome.state, outcome.reason or ""))
             else:
                 store.move(order.order_id, OrderState.FAILED, reason=NO_FILL)
                 settled.append(Resolved(order.order_id, OrderState.FAILED, NO_FILL))

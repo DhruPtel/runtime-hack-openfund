@@ -49,13 +49,13 @@ from typing import Any, Mapping, Sequence
 from fund import config
 from fund.adapters import bankr_quote
 from fund.core import cash, ledger, plan
-from fund.core.types import Amount, AssetId, ChainAddress, Instant
+from fund.core.types import Amount, AssetId, ChainAddress, Instant, to_canonical
 from fund.credentials import Role
 from fund.run import cycle, decide, startup
 from fund.store import db, positions
 from fund.store.journal import Journal
 from fund.store.orders import OrderStore
-from fund.treasurer import execute, instruct, keys
+from fund.treasurer import execute, instruct, keys, reconcile
 from fund.treasurer import mandate as mandates
 
 #: The two assets the live leg may trade, by the mandate. A stock leg is paper, and
@@ -94,20 +94,52 @@ def open_real_book(journal: Journal, snapshot: Mapping[str, Any]) -> list[ledger
     return opened
 
 
+def reader(snapshot: Mapping[str, Any], mandate: Mapping[str, Any], config_dir: Path | None):
+    """How an order found in flight is settled: by reading its own transaction (5.3).
+
+    4.9 left this here deliberately. The receipt says whether the swap filled, what it
+    moved and what gas it paid, and `treasurer/execute.booked` turns that into the same
+    outcome the executor would have returned, so an order settles identically whether
+    the run that sent it saw the answer or a later one did. An order with no
+    transaction to read is not settled here: there is nothing to read, and a human
+    looks. Reading needs no spend authority — only the chain — so this process does it.
+    """
+    from fund.adapters import chain_4663
+
+    chain = chain_4663.Settings.load()
+    cadence = config.load_json("cadence.json", config_dir)
+    held = config.load(Role.ANALYST, require=False)
+    rpc = chain.client(held.secret)
+    wallet = ChainAddress(chain.chain_id, mandate["execution_wallet"])
+
+    def read(order):
+        if order.execution is None:
+            return None  # nothing was ever read for it: no hash, nothing to settle
+        seen = reconcile.read(rpc, order.execution.transaction.tx_hash, wallet=wallet,
+                              chain_id=chain.chain_id,
+                              confirmations=cadence["confirmation_depth"],
+                              sell=order.sell.asset, sell_decimals=order.sell.decimals,
+                              buy=order.buy_asset, buy_decimals=order.min_buy.decimals)
+        return execute.booked(order, order.execution.transaction.tx_hash, seen, snapshot)
+    return read
+
+
 def about(order, instruction: Mapping[str, Any], seen: plan.QuoteSeen, mandate: Mapping[str, Any],
           spent: Decimal, buying: str) -> str:
     """What is about to happen, before anything is sent."""
     quote = seen.observation.value
-    sold = Decimal(order.sell.raw).scaleb(-order.sell.decimals)
+    sold = Decimal(order.sell.raw).scaleb(-order.sell.decimals).normalize()
     lines = [
         "--- about to submit one live swap -------------------------------------------",
         f"  asset    {instruction['order']['asset']['symbol']} -> {buying}",
-        f"  size     {sold} ({instruction['order']['usd']} USD at the snapshot's mark)",
+        f"  size     {sold} (${Decimal(instruction['order']['usd']):.6f} at the "
+        "snapshot's mark)",
         f"  wallet   {order.wallet.address}",
         f"  chain    {order.sell.asset.chain_id}",
         f"  quote    {quote.quote_id}: buys {Decimal(quote.buy.raw).scaleb(-quote.buy.decimals)}, "
         f"at least {Decimal(order.min_buy.raw).scaleb(-order.min_buy.decimals)}; "
-        f"verdict {seen.tradeable} ({seen.rule}), {seen.age_ms} ms old",
+        f"verdict {seen.verdict.value} ({seen.rule}): {seen.verdict.reason}",
+        f"           quoted {seen.age_ms} ms before this judgement",
         f"  budget   ${spent} of ${mandate['cumulative_budget_usd']} live already traded",
         f"  order    {order.order_id}",
         f"  key      {order.idempotency_key}",
@@ -115,6 +147,23 @@ def about(order, instruction: Mapping[str, Any], seen: plan.QuoteSeen, mandate: 
         "-----------------------------------------------------------------------------",
     ]
     return "\n".join(lines)
+
+
+def record(out_dir: Path, order, reported: Mapping[str, Any], statement: str) -> Path:
+    """What happened, written beside what was authorized. The books live in SQLite,
+    which is not source and is not committed, so this is the repository's own evidence
+    of the live leg: the order as the store holds it, the chain evidence the
+    reconciler read, and the book the fill left behind."""
+    path = out_dir / "outcome.json"
+    execution = None if order.execution is None else json.loads(to_canonical(order.execution))
+    path.write_text(json.dumps({
+        "order_id": order.order_id, "idempotency_key": order.idempotency_key,
+        "state": order.state.value, "reason": order.state_reason, "mode": order.mode.value,
+        "sells": json.loads(to_canonical(order.sell)),
+        "buys": order.buy_asset.address, "min_buy": json.loads(to_canonical(order.min_buy)),
+        "execution": execution, "treasurer": reported, "real_book": statement.splitlines(),
+    }, indent=1, sort_keys=True, ensure_ascii=False) + "\n")
+    return path
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -146,7 +195,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     conn = db.connect(args.db)
     with startup.owning(conn):  # one runner spends (4.10)
-        for was in startup.resolve(conn):  # and what the last run left is read first (4.9)
+        settle = reader(snapshot, mandate, args.config_dir)
+        for was in startup.resolve(conn, settle):  # what the last run left, read first (4.9)
             print(f"startup  {was.order_id}: {was.state.value}, {was.why}"[:160])
         journal, store = Journal(conn), OrderStore(conn)
         for opening in open_real_book(journal, snapshot):
@@ -155,10 +205,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         analyst = config.load(Role.ANALYST, require=False)  # the read key, no more
         quotes = bankr_quote.Settings.load()
-        at = now()
         observation = quotes.adapter(analyst.secret).quote(
             bankr_quote.QuoteRequest(sell=sell, buy=buy,
                                      buy_decimals=buy_held["asset"]["decimals"]))
+        at = now()  # judged after the evidence was fetched, never before it (S11, quote age)
         seen = execute.judge(observation, sell, at, thresholds)
 
         doc = instruct.document(sell=sell, symbol=sell_held["asset"]["symbol"], buy=buy,
@@ -190,7 +240,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"treasurer  its own process, given {reported['environment_given']}, holding "
               f"{reported['credentials_held'] or 'no credential'}")
         book = positions.read(journal, book=ledger.REAL, snapshot=snapshot)
-        print("\n" + positions.statement(book, snapshot))
+        statement = positions.statement(book, snapshot)
+        print("\n" + statement)
+        print(f"written  {record(args.out, store.get(order.order_id), reported, statement)}")
     return 0
 
 

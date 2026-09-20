@@ -329,9 +329,13 @@ def live_fill(order: Order, gave: Amount, got: Amount, snapshot: Mapping[str, An
     if order.mode is not ExecutionMode.LIVE:
         raise LedgerError(f"order {order.order_id} is paper: a paper fill is its quote, "
                           "and nothing paper is ever read from a chain")
-    if order.state is not OrderState.SUBMITTED:
-        raise LedgerError(f"order {order.order_id} is {order.state.value}: only a submitted "
-                          "order fills, so its state is written before the fill")
+    if order.state not in (OrderState.SUBMITTED, OrderState.UNKNOWN):
+        # An unknown order was written `submitted` before it was sent — that is how it
+        # became unknown — and the chain has answered since. A restart books its fill
+        # from the same evidence (`run/startup.py`), and `prepared` still cannot fill:
+        # nothing was ever attempted for it.
+        raise LedgerError(f"order {order.order_id} is {order.state.value}: only an order that "
+                          "was written before it was sent fills")
     if gave.asset != order.sell.asset or got.asset != order.buy_asset:
         raise LedgerError(f"the receipt moved {gave.asset.address} for {got.asset.address}, and "
                           f"order {order.order_id} sells {order.sell.asset.address} for "
