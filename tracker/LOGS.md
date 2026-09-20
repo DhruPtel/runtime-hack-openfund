@@ -1739,6 +1739,45 @@ filesystem fallback, 9 the served path. 795 tests.
 
 ---
 
+## Documentation for a reader who has never seen this
+**Date:** 2026-09-20 · No code changed.
+
+**The root README** gained a table of contents, a pipeline diagram, clone-and-run
+instructions, and how to open the dashboard. The diagram is ASCII in a fenced block —
+it renders on GitHub and in a terminal both — and shows what each stage *produces*, not
+just its name, with the fork drawn where it actually happens: the treasurer sends an
+ETH↔USDG swap to the chain and fills a stock order on paper, and the two books meet
+only in one journal that never adds them. Four words that cannot be avoided — snapshot,
+mandate, quorum, chokepoint — are defined once, in a sentence each, before the diagram.
+
+**Clone and run** is written for a fresh machine: Python 3.11 or newer and two pinned
+packages, `cryptography` and `pytest`, and nothing else. Three commands run with no
+credentials, no network and no account anywhere. The dashboard section names all three
+ways in: served, `?empty` for a demo, and opened straight from the filesystem.
+
+**Every command in it was run on a clone of `HEAD`** — `make test` 795 in 43 s, `make
+replay` PASS, `make cycle-demo` to a reconciling book, `cp .env.example .env` then `make
+check-env` listing every name absent as it should on a clean machine, the clone URL
+answering 200, and the two pinned versions checked against `pyproject.toml`. The server
+was started in a clone earlier in the day: the page and `?empty` answer 200, and
+`/api/data` answers **503** until a cycle has been run locally, because `fixtures/live/`
+is deliberately not committed — the page falls back to the export that is, so it renders
+either way. That is stated in the README rather than left to be discovered.
+
+**Fourteen directory READMEs**, one page each: `src/fund/` and its six layers,
+`research/`, `planning/`, `tracker/`, `fixtures/`, `probes/`, `front-end/`, `tests/`.
+Each has a diagram or a table, says what the directory is responsible for and what it
+must never do, and names what is not built rather than leaving a reader to find out.
+`src/fund/` explains the two arrows that are deliberately missing from the layer
+diagram — core cannot reach the network, an analyst cannot reach a signing path — and
+why each matters. `tests/` explains the difference between a test that guards money,
+which is proven by breaking the rule in a copy, and one that guards plumbing, where
+passing is enough. `tracker/` explains why a written record of what went wrong is part
+of what this project is selling. Every relative link in all fifteen was checked to
+resolve.
+
+---
+
 ## State at close — 2026-09-20, Phase 5 built to 5.3; the live leg has run, and 5.4 is the stop
 
 **Read this first.** This note describes the repository at the commit that last
