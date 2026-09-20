@@ -1530,6 +1530,50 @@ hands. The books, the evidence discipline and the refusals are the fund's own.
 
 ---
 
+## A live cycle in one command, and a veto that stops one order
+**Date:** 2026-09-20 · **Commits:** b86bff4, 9eab5b7, 314a25d · Findings F8.L.1, F8.L.2
+
+**One command, end to end.** `python3 -m fund.run.cycle --live --db PATH --out DIR`
+ran a live snapshot, four live analyst seats, aggregation, live quotes, one live risk
+call, a signed record, the chokepoint, ten paper fills and the book — **252 seconds,
+$1.606257**, on the first attempt. Record `c55400f8…`, signed, authorizing, and it
+replays byte for byte. The paper book closed at NAV **$200.03**, exact, beside the real
+book's **$1.2858** in the same database: 14 confirmed orders, ten paper and four live,
+two books never added.
+
+The change is four arguments, not a pipeline. `cycle()` already took a venue; it now
+also takes a risk credential, and with both it decides live. Everything after the
+decision — the chokepoint, the treasurer in its own process, the one write that keeps a
+fill with its order — is the code a paper cycle runs. `--live` composes the three
+modules that already existed and reimplements none of them.
+
+One bug caught before it cost anything: the cycle judged quotes at the instant it
+*started*, so a live fetch — which takes seconds — would have been judged before it
+happened, leaving every quote's age undetermined, which blocks. A live cycle now judges
+after the fetch; the paper path is unchanged, because the fake venue answers at the
+cycle's clock.
+
+**The veto was the brief.** F8.R.4 recorded two whole plans vetoed over one flagged
+mark each. `briefs/risk.v1.md` said "An overall veto vetoes every order" and never said
+when one is warranted, so the agent treated a single bad order as grounds to veto the
+plan — run 3 wrote that out in full. The parser was faithful: the model really did emit
+`OVERALL veto`.
+
+`risk.v2.md` says what was missing: an overall veto is for a plan unsafe as a whole, and
+vetoing one order is not a reason to veto the plan, because the per-order veto has
+already stopped it. **No code changed** — a vetoed order is still blocked, an overall
+veto still carries. On the first live run under v2, META was blocked by the impact gate
+at 238 bps against a 50 bps limit *and* vetoed, MSTR was vetoed on price-integrity's
+flag, and the other ten filled. The overall line read: "the two flawed orders are
+stopped individually and the rest stand on their own merits."
+
+A record names the brief it was decided under, and a replay rebuilds with **that** one,
+so every record written under v1 still replays; the pinning was broken in a copy and
+three replay tests caught it. One test covers the blast radius offline: one order
+vetoed by its own vote, seven approved, seven filled, the book reconciling. 795 tests.
+
+---
+
 ## State at close — 2026-09-20, Phase 5 built to 5.3; the live leg has run, and 5.4 is the stop
 
 **Read this first.** This note describes the repository at the commit that last
@@ -1555,8 +1599,11 @@ operator wrote down. This note was rewritten at about 00:40Z on 2026-09-20.
 **Check it in a minute.** Nothing here spends unless marked. The `python3 -m`
 commands need `PYTHONPATH=src`.
 - `git log --oneline -25` and `git status -sb`.
-- `make test`: 794 passed when this was written, in about 41 s. The runner and
+- `make test`: 795 passed when this was written, in about 38 s. The runner and
   risk tests start real subprocesses against a fake gateway on 127.0.0.1.
+- `python3 -m fund.run.cycle --live --db PATH --out DIR` is the whole thing live in
+  one act, and it **spends** about $1.20 to $1.60: a live snapshot, four analyst calls,
+  one risk call, then the chokepoint, the fills and the book. About four minutes.
 - `make cycle-demo`: two whole paper cycles on the committed capture and the exit
   run's four real reports, in about 8 s. A fake venue, a scripted risk vote and a
   scratch signing key of its own: no model call, no chain, nothing spent. It writes
