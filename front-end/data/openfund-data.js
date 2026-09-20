@@ -467,7 +467,7 @@ window.OPENFUND_EXPORT = {
   "trendContribution": null,
   "warning": "quorum met: targets from the calls"
  },
- "generated_at": "2026-09-20T01:45:50+00:00",
+ "generated_at": "2026-09-20T01:57:22+00:00",
  "overview": {
   "cash": 40.614563907383,
   "holdings": [
