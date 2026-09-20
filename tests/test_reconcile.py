@@ -61,10 +61,10 @@ def read(rpc=None, **rest):
 def test_a_real_swap_reconciles_to_what_moved_and_names_what_it_cannot_explain():
     done = read()
     assert done.state is OrderState.CONFIRMED and done.settled
-    assert done.gave.raw == SOLD and done.gave.asset == ETH          # from the balance
-    assert done.got.raw == 78_742 and done.got.asset == USDG          # from the Transfer log
-    assert done.gas is None                                           # sponsored: 0 wei
-    assert done.unaccounted == 18_000_000_000                         # F0.10.4, 18 gwei
+    assert done.paid.raw == SOLD and done.paid.asset == ETH       # from the balance
+    assert done.received.raw == 78_742 and done.received.asset == USDG   # from the Transfer log
+    assert done.gas is None                                       # sponsored: 0 wei
+    assert done.unaccounted == 18_000_000_000                     # F0.10.4, 18 gwei
     assert "18000000000 wei the logs do not name (F0.10.4)" in done.why
     operation = done.execution.user_operation
     assert operation.sender == WALLET and operation.success.passes
@@ -76,7 +76,7 @@ def test_a_real_swap_reconciles_to_what_moved_and_names_what_it_cannot_explain()
 def test_a_mined_revert_is_not_a_fill_however_the_venue_answered():
     done = read(FakeRpc(receipt=charged(RECORDED["receipt"], 21_000_000_000_000, success=False)))
     assert done.state is OrderState.FAILED and not done.settled
-    assert done.gave is None and done.got is None                        # nothing was bought
+    assert done.paid is None and done.received is None                        # nothing was bought
     assert done.gas.raw == 21_000_000_000_000                            # and gas was charged
     assert "reverted" in done.why
 
@@ -99,7 +99,7 @@ def test_gas_the_operation_paid_comes_off_what_the_wallet_gave():
     done = read(FakeRpc(receipt=charged(RECORDED["receipt"], 5_000_000_000_000)))
     assert done.state is OrderState.CONFIRMED
     assert done.gas.raw == 5_000_000_000_000
-    assert done.gave.raw == SOLD - 5_000_000_000_000
+    assert done.paid.raw == SOLD - 5_000_000_000_000
     assert "less 5000000000000 wei of gas" in done.why
 
 
@@ -109,7 +109,8 @@ def test_an_outcome_that_is_not_settled_yet_is_unknown_not_failed():
     assert shallow.state is OrderState.UNKNOWN and "99 of 100 confirmations" in shallow.why
     assert read(confirmations=None).state is OrderState.UNKNOWN          # null blocks
     unevidenced = read(FakeRpc(balances=False))
-    assert unevidenced.state is OrderState.UNKNOWN and "no longer holds the balance" in unevidenced.why
+    assert unevidenced.state is OrderState.UNKNOWN
+    assert "no longer holds the balance" in unevidenced.why
     assert unevidenced.execution is not None                             # what it did read
 
 

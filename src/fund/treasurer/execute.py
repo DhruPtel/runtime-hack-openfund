@@ -29,17 +29,26 @@ why. It never books and never moves a state; the caller does both, in one write.
 - `PaperExecutor` fills a stock leg at its quote's amounts exactly, marked paper
   (4.0, P3). A repeat under the same key returns the first outcome, as Bankr's
   `idempotencyKey` does (F0.10.1). A paper submission is never `unknown`.
-- The live executor (5.1) takes the same order and quote, sends `/wallet/swap` with
-  the key, and answers the same way: `confirmed` with the chain evidence and the fill
-  its `Transfer` logs show (5.3), `failed` on `success: false`, `unknown` on a timeout
-  or a 409. Nothing that calls an executor knows which it has.
+- `LiveExecutor` (5.1) takes the same order and quote, sends `/wallet/swap` once with
+  the treasurer's key, and answers the same way — except that what it answers with is
+  read from the chain (5.3), never from the reply: `confirmed` with the fill the logs
+  show and the gas the EntryPoint charged, `failed` for a mined revert, which costs
+  gas and buys nothing, and `unknown` for everything not yet settled. Nothing that
+  calls an executor knows which it has.
 
-**`run_order`** is the caller both share: it takes one `prepared` order, admits it or
-refuses it by name, writes `submitted` before the act, sends it, and writes the fill
-and the order's new state in one transaction, so a crash can never leave a fill
-without its order or an order confirmed without its fill. An order already finished
-is not sent again and books nothing; one left `submitted` or `unknown` is 4.9's to
-resolve, and `run_order` leaves it alone.
+**Two authorities, one chokepoint.** An analyst-driven order is authorized by the
+signed decision record (`admit`). The live leg is authorized by a signed instruction
+(`admit_instruction`, `treasurer/instruct.py`): the same gates on the same fresh
+quote, less the four that ask about a vote, a plan and the paper book's floor, and
+plus the instruction's own expiry. `run_order` takes whichever as an argument, so
+there is one path from `prepared` to the books and not two.
+
+**`run_order`** is the caller they share: it takes one `prepared` order, admits it or
+refuses it by name, writes `submitted` before the act, sends it, and writes the fill,
+any gas it paid and the order's new state in one transaction, so a crash can never
+leave a fill without its order or an order confirmed without its fill. An order
+already finished is not sent again and books nothing; one left `submitted` or
+`unknown` is 4.9's to resolve, and `run_order` leaves it alone.
 
 **The treasurer is its own process** (4.12). `python -m fund.treasurer.execute` reads
 the decision's approved orders from SQLite and runs them. It is started from an empty
@@ -56,18 +65,20 @@ import copy
 import hashlib
 import json
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from decimal import Decimal
 from typing import Any, Collection, Mapping, Protocol, Sequence
 
-from fund.adapters import bankr_quote
+from fund.adapters import bankr_exec, bankr_quote
 from fund.core import cash, gates, ledger, orders, plan
 from fund.core.types import (
-    Amount, AssetId, Execution, ExecutionMode, Instant, Observation, Order, OrderState, Quote,
+    Amount, AssetId, ChainAddress, Execution, ExecutionMode, Instant, Observation, Order,
+    OrderState, Quote,
 )
 from fund.store.db import transaction
-from fund.treasurer import sign
+from fund.treasurer import reconcile, sign
 
 RULE_SIGNATURE = "signature"
 RULE_SNAPSHOT = "snapshot"
@@ -120,14 +131,23 @@ class Admission:
         return "; ".join(f"{g.rule}: {g.reason}" for g in self.refusals) or "admitted"
 
 
+def judge(observation: Observation, sell: Amount, at: Instant,
+          thresholds: Mapping[str, Any]) -> plan.QuoteSeen:
+    """One quote and its verdict at `at`, by the one definition of quote age, size and
+    impact (`adapters/bankr_quote.tradeability`). The chokepoint judges its fresh
+    quote with this, and the live leg's command judges the quote it writes into an
+    instruction with the same one, so both are held to the same age."""
+    verdict = bankr_quote.tradeability(observation, sell, at,
+                                       bankr_quote.Limits.from_thresholds(thresholds))
+    return plan.QuoteSeen(observation, verdict.verdict, verdict.rule, verdict.age_ms)
+
+
 def requote(order: Order, venue: Venue, at: Instant,
             thresholds: Mapping[str, Any]) -> plan.QuoteSeen:
     """A fresh quote for exactly this order, judged at `at`."""
     observation = venue.quote(bankr_quote.QuoteRequest(sell=order.sell, buy=order.buy_asset,
                                                        buy_decimals=order.min_buy.decimals))
-    verdict = bankr_quote.tradeability(observation, order.sell, at,
-                                       bankr_quote.Limits.from_thresholds(thresholds))
-    return plan.QuoteSeen(observation, verdict.verdict, verdict.rule, verdict.age_ms)
+    return judge(observation, order.sell, at, thresholds)
 
 
 def _gate(result: Mapping[str, Any]) -> gates.Gate:
@@ -189,6 +209,81 @@ def admit(order: Order, decision: Decision, *, public_key: str | None,
     return Admission(order, tuple(checks), fresh)
 
 
+RULE_IN_INSTRUCTION = "in-instruction"
+RULE_INSTRUCTION_TERM = "instruction-term"
+
+
+def admit_instruction(order: Order, instruction_bytes: bytes, envelope: Mapping[str, Any], *,
+                      public_key: str | None, mandate: Mapping[str, Any], limits: gates.Limits,
+                      fresh: plan.QuoteSeen, at: Instant, events: Sequence[ledger.Event],
+                      snapshot_bytes: bytes) -> Admission:
+    """The chokepoint for the live leg (5.2): the order one signed instruction
+    authorizes, checked again, now, on a fresh quote.
+
+    It is the same chokepoint as `admit` — the same `core/gates.py` comparisons, the
+    same fresh quote, the same ledger — over a different authority. What differs, and
+    why:
+    - `quorum`, `turnover`, `position-weight` and `tradeable` are **not asked**. No
+      analyst proposed this and no risk agent voted, there is no plan to turn over,
+      and a sale of what the wallet already holds is not a position to open. A gate
+      claiming a vote that never happened would be a false record;
+    - the `cash-floor` is not asked either: it is the *paper* book's floor
+      (`gates.cash_floor` says so), and this order trades the real one. Paper and
+      real never add;
+    - `live-budget` is asked, against what the real book has already traded, and it
+      is the ceiling the operator set on this whole path.
+    Everything else an order must pass, it passes."""
+    gates.known(limits)
+    doc = json.loads(instruction_bytes)
+    checks: list[gates.Gate] = []
+    signed = sign.authorizes(envelope, instruction_bytes, public_key or "")
+    checks.append(gates.Gate(RULE_SIGNATURE, signed.value if public_key else None,
+                             signed.reason if public_key else "no key is published"))
+    same = hashlib.sha256(snapshot_bytes).hexdigest() == doc["snapshot"]["sha256"]
+    checks.append(gates.Gate(RULE_SNAPSHOT, same, "the snapshot the instruction was written on"
+                             if same else "not the snapshot the instruction names"))
+    mine = _instructed(order, doc, envelope.get("decision_id") or "")
+    checks.append(gates.Gate(RULE_IN_INSTRUCTION, mine is not None,
+                             "the order the instruction authorizes, as it authorizes it"
+                             if mine is not None else f"order {order.order_id} is not the order "
+                             "the instruction authorizes, as it authorizes it"))
+    live = doc["issued_at_ms"] <= at.epoch_ms <= doc["expires_at_ms"]
+    checks.append(gates.Gate(RULE_INSTRUCTION_TERM, live,
+                             f"issued {doc['issued_at_ms']}, expires {doc['expires_at_ms']}, "
+                             f"now {at.epoch_ms}"))
+    if mine is None or not same:
+        return Admission(order, tuple(checks), None)
+
+    snapshot = json.loads(snapshot_bytes)
+    judged = dict(mine, quote=plan.quote_record(fresh, mine["side"]))  # judged on the fresh quote
+    worth = cash.order_worth(judged, snapshot)
+    checks += [gates.snapshot_age(snapshot["block"]["time"], at.epoch_ms, limits),
+               gates.mandate_term(mandate, at),
+               gates.priced(judged, snapshot), gates.mandate_in_force(judged, mandate),
+               gates.mandate_legs(judged, mandate), gates.order_size(worth, limits),
+               gates.sell_quote(judged)]
+    book = ledger.book_for(order.mode)
+    holding = ledger.holdings(events, book=book).get(order.sell.asset)
+    checks.append(gates.held({"address": order.sell.asset.address, "raw": str(order.sell.raw)},
+                             None if holding is None else holding.raw))
+    checks.append(gates.live_budget(mandate, ledger.traded_usd(events, book=book), worth))
+    return Admission(order, tuple(checks), fresh)
+
+
+def _instructed(order: Order, doc: Mapping[str, Any], instruction_id: str) -> Mapping | None:
+    """The instruction's order this one is, with its id, key and amounts: or None."""
+    mine = doc["order"]
+    chain = order.sell.asset.chain_id
+    sold = mine["sell"]
+    same = (order.order_id == orders.order_id(instruction_id, mine["index"])
+            and order.idempotency_key == orders.idempotency_key(instruction_id, mine["index"])
+            and order.mode is ExecutionMode.LIVE
+            and order.sell == Amount.from_units(sold["amount"], sold["decimals"],
+                                                AssetId(chain, sold["address"]))
+            and order.buy_asset == AssetId(chain, mine["buy"]["address"]))
+    return mine if same else None
+
+
 def _planned(order: Order, record: Mapping[str, Any], decision_id: str) -> Mapping | None:
     """The record's approved order this one is, with its id, key and amounts: or None."""
     index_text = order.order_id.rpartition("/")[2]
@@ -219,12 +314,15 @@ class Outcome:
     reason: str | None
     fill: ledger.Fill | None = None
     execution: Execution | None = None
+    fee: ledger.Fee | None = None
 
     def __post_init__(self):
         if self.state not in (OrderState.CONFIRMED, OrderState.FAILED, OrderState.UNKNOWN):
             raise ValueError("a submission ends confirmed, failed or unknown")
         if (self.state is OrderState.CONFIRMED) != (self.fill is not None):
             raise ValueError("a fill, and only a confirmed submission's")
+        if self.fee is not None and self.state is OrderState.UNKNOWN:
+            raise ValueError("an unknown submission books nothing, its gas included")
 
 
 class Executor(Protocol):
@@ -259,6 +357,95 @@ class PaperExecutor:
         return outcome
 
 
+class LiveExecutor:
+    """The live leg (5.1): one swap, sent once, and then read from the chain (5.3).
+
+    The venue's reply is used for one thing only — the transaction hash to read. What
+    was given, what was received and whether it happened at all come from the receipt:
+    - **no hash, whatever the status:** `unknown`. Nothing is booked and the order
+      stays in flight. This is the honest answer even for a 4xx, because nothing in
+      the record measures a status that proves no submission, and the cost of being
+      wrong is a broadcast nobody reconciled. Resolving it is the operator's and
+      4.9's, under the same key, never under a new one (PLAN §4).
+    - **a hash:** reconciled to `cadence.confirmation_depth`, polled until the
+      settlement deadline. Confirmed books the fill the logs show, and the gas the
+      EntryPoint charged; a reverted operation books that gas with no fill; anything
+      still unsettled at the deadline is `unknown`, not failed.
+    - **evidence the ledger refuses** — amounts in other assets, or more given than
+      the order authorised — is `unknown` too: the money has moved, and this process
+      will not guess what it was."""
+
+    mode = ExecutionMode.LIVE
+
+    def __init__(self, secret: str, *, settings: bankr_exec.Settings, rpc: Any,
+                 wallet: ChainAddress, chain_id: int, confirmations: int | None,
+                 snapshot: Mapping[str, Any], deadline_s: float, poll_s: float,
+                 sleep=time.sleep, monotonic=time.monotonic, watch: Any = None,
+                 transport: Any = None):
+        self._secret = secret
+        self.settings, self.rpc, self.wallet, self.chain_id = settings, rpc, wallet, chain_id
+        self.confirmations, self.snapshot = confirmations, snapshot
+        self.deadline_s, self.poll_s = deadline_s, poll_s
+        self._sleep, self._monotonic, self._transport = sleep, monotonic, transport
+        self._watch = watch or (lambda *_: None)
+        self.sent: dict[str, Outcome] = {}
+        self.replies: dict[str, bankr_exec.SwapReply] = {}
+
+    def submit(self, order: Order, quote: Quote) -> Outcome:
+        if order.mode is not self.mode:
+            raise ValueError(f"order {order.order_id} is {order.mode.value}: the live "
+                             "executor sends live orders only")
+        if order.idempotency_key in self.sent:  # sent once in this process, as on the venue
+            return self.sent[order.idempotency_key]
+        request = bankr_exec.SwapRequest(sell=order.sell, buy=order.buy_asset,
+                                         idempotency_key=order.idempotency_key)
+        self._watch("sending", request.body(self.settings))
+        reply = bankr_exec.submit(request, self._secret, settings=self.settings,
+                                  transport=self._transport)
+        self.replies[order.idempotency_key] = reply
+        self._watch("replied", {"status": reply.status, "success": reply.success,
+                                "hash": reply.tx_hash, "detail": reply.detail})
+        outcome = self._read(order, reply)
+        self.sent[order.idempotency_key] = outcome
+        return outcome
+
+    def _read(self, order: Order, reply: bankr_exec.SwapReply) -> Outcome:
+        if not reply.tx_hash:
+            return Outcome(OrderState.UNKNOWN, f"HTTP {reply.status}, no transaction to read: "
+                           f"{reply.detail}. The order stays in flight under its own key")
+        until = self._monotonic() + self.deadline_s
+        while True:
+            seen = reconcile.read(self.rpc, reply.tx_hash, wallet=self.wallet,
+                                  chain_id=self.chain_id, confirmations=self.confirmations,
+                                  sell=order.sell.asset, sell_decimals=order.sell.decimals,
+                                  buy=order.buy_asset, buy_decimals=order.min_buy.decimals)
+            self._watch("reconciling", {"state": seen.state.value, "why": seen.why})
+            if seen.state is not OrderState.UNKNOWN or self._monotonic() >= until:
+                break
+            self._sleep(self.poll_s)
+        return self._booked(order, reply, seen)
+
+    def _booked(self, order: Order, reply: bankr_exec.SwapReply,
+                seen: reconcile.Reconciled) -> Outcome:
+        where = f"{reply.tx_hash}: {seen.why}"
+        try:
+            fee = (ledger.gas_fee(order, seen.gas, self.snapshot, f"gas on {reply.tx_hash}")
+                   if seen.gas is not None else None)
+            if seen.state is OrderState.CONFIRMED:
+                fill = ledger.live_fill(order, seen.paid, seen.received, self.snapshot)
+            elif seen.state is OrderState.FAILED:
+                return Outcome(OrderState.FAILED, where, execution=seen.execution, fee=fee)
+            else:
+                return Outcome(OrderState.UNKNOWN, where, execution=seen.execution)
+        except (ledger.LedgerError, cash.NoMark) as refused:
+            return Outcome(OrderState.UNKNOWN, f"{where}; the ledger will not book it: "
+                           f"{refused}", execution=seen.execution)
+        short = ("" if seen.received.raw >= order.min_buy.raw else
+                 f"; under the order's minimum of {order.min_buy.raw}")
+        return Outcome(OrderState.CONFIRMED, where + short, fill=fill,
+                       execution=seen.execution, fee=fee)
+
+
 # --- one order, from prepared to its end ----------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -279,8 +466,37 @@ def _index(order_id: str) -> int:
     return int(order_id.rpartition("/")[2])
 
 
-def run_order(order_id: str, *, decision: Decision, public_key: str | None,
-              mandate: Mapping[str, Any], limits: gates.Limits, thresholds: Mapping[str, Any],
+#: One order, its fresh quote, and the other orders of the same authority, admitted or
+#: refused. Which authority it is — a signed decision or a signed instruction — is the
+#: one thing that differs between the paper path and the live leg, so it is the one
+#: thing `run_order` takes as an argument.
+Admitting = Any  # Callable[[Order, plan.QuoteSeen, Sequence[Order]], Admission]
+
+
+def by_record(decision: Decision, *, public_key: str | None, mandate: Mapping[str, Any],
+              limits: gates.Limits, at: Instant, journal: Any) -> Admitting:
+    """Admission for an order a signed decision approved (4.4)."""
+    def admitting(order: Order, fresh: plan.QuoteSeen, siblings: Sequence[Order]) -> Admission:
+        filled = [_index(o.order_id) for o in siblings if o.state is OrderState.CONFIRMED]
+        gone = [_index(o.order_id) for o in siblings
+                if o.state in (OrderState.REFUSED, OrderState.FAILED)]
+        return admit(order, decision, public_key=public_key, mandate=mandate, limits=limits,
+                     fresh=fresh, at=at, events=journal.events(), filled=filled, refused=gone)
+    return admitting
+
+
+def by_instruction(instruction_bytes: bytes, envelope: Mapping[str, Any], snapshot_bytes: bytes,
+                   *, public_key: str | None, mandate: Mapping[str, Any], limits: gates.Limits,
+                   at: Instant, journal: Any) -> Admitting:
+    """Admission for the live leg, authorized by a signed instruction (5.2)."""
+    def admitting(order: Order, fresh: plan.QuoteSeen, siblings: Sequence[Order]) -> Admission:
+        return admit_instruction(order, instruction_bytes, envelope, public_key=public_key,
+                                 mandate=mandate, limits=limits, fresh=fresh, at=at,
+                                 events=journal.events(), snapshot_bytes=snapshot_bytes)
+    return admitting
+
+
+def run_order(order_id: str, *, admission: Admitting, thresholds: Mapping[str, Any],
               venue: Venue, executor: Executor, store: Any, journal: Any, at: Instant,
               checkpoint: Any = None) -> Done:
     """One order through the chokepoint and, if it passes, to the venue and the books."""
@@ -291,15 +507,11 @@ def run_order(order_id: str, *, decision: Decision, public_key: str | None,
         return Done(order, None, None)  # finished, or in flight and 4.9's to resolve
 
     mine = [o for o in store.all() if o.order_id.rpartition("/")[0] == order_id.rpartition("/")[0]]
-    filled = [_index(o.order_id) for o in mine if o.state is OrderState.CONFIRMED]
-    gone = [_index(o.order_id) for o in mine
-            if o.state in (OrderState.REFUSED, OrderState.FAILED)]
     fresh = requote(order, venue, at, thresholds)
-    admission = admit(order, decision, public_key=public_key, mandate=mandate, limits=limits,
-                      fresh=fresh, at=at, events=journal.events(), filled=filled, refused=gone)
-    if not admission.admitted:
-        return Done(store.move(order_id, OrderState.REFUSED, reason=admission.reason),
-                    admission, None)
+    admitted = admission(order, fresh, mine)
+    if not admitted.admitted:
+        return Done(store.move(order_id, OrderState.REFUSED, reason=admitted.reason),
+                    admitted, None)
 
     order = store.move(order_id, OrderState.SUBMITTED)  # durable, before the act
     if checkpoint is not None:
@@ -308,9 +520,31 @@ def run_order(order_id: str, *, decision: Decision, public_key: str | None,
     with transaction(store.conn):  # the fill and the state it belongs to, one write
         if outcome.fill is not None:
             journal.append(outcome.fill)
+        if outcome.fee is not None:  # gas, whether it filled or reverted (5.1)
+            journal.append(outcome.fee)
         order = store.move(order_id, outcome.state, reason=outcome.reason,
                            execution=outcome.execution)
-    return Done(order, admission, outcome)
+    return Done(order, admitted, outcome)
+
+
+def live_executor(held: Any, snapshot: Mapping[str, Any], mandate: Mapping[str, Any],
+                  config_dir: Path | None) -> LiveExecutor:
+    """The live executor from the treasurer's own credentials and the config: the
+    chain's RPC endpoints, which the treasurer role may hold; the wallet the mandate
+    names; and the confirmation depth and settlement bound `config/cadence.json`
+    states. `BANKR_KEY_EXEC` is read here and passed to nothing but the adapter."""
+    from fund import config
+    from fund.adapters import chain_4663
+
+    chain = chain_4663.Settings.load()
+    cadence = config.load_json("cadence.json", config_dir)
+    return LiveExecutor(
+        held.secret("BANKR_KEY_EXEC"), settings=bankr_exec.Settings.load(),
+        rpc=chain.client(held.secret), chain_id=chain.chain_id,
+        wallet=ChainAddress(chain.chain_id, mandate["execution_wallet"]),
+        confirmations=cadence["confirmation_depth"], snapshot=snapshot,
+        deadline_s=cadence["settlement_deadline_seconds"],
+        poll_s=cadence["settlement_poll_seconds"])
 
 
 # --- the treasurer's own process (4.12) ------------------------------------------------------------
@@ -318,12 +552,21 @@ def run_order(order_id: str, *, decision: Decision, public_key: str | None,
 def main(argv: Sequence[str] | None = None) -> int:
     """The treasurer, alone:
 
-        python -m fund.treasurer.execute --db FUND.sqlite --decision DIR --snapshot PATH
-            --at EPOCH_MS --config-dir DIR [--env-file PATH] [--venue-fetched-at EPOCH_MS]
+        python -m fund.treasurer.execute --db FUND.sqlite --snapshot PATH --at EPOCH_MS
+            (--decision DIR | --instruction DIR) --config-dir DIR [--env-file PATH]
+            [--venue-fetched-at EPOCH_MS]
 
-    It reads the decision's approved orders from the database, admits or refuses each,
-    fills the paper ones and books them, and prints what it did as JSON. The live
-    executor is 5.1's; until then every order is a stock leg, which is paper."""
+    With `--decision`, it reads that decision's approved orders from the database,
+    admits or refuses each, fills the paper ones at the fake venue and books them.
+
+    With `--instruction`, it runs the live leg (5.2): the one order that instruction
+    authorizes, admitted by `admit_instruction` against the quote the instruction
+    carries, sent once by `LiveExecutor`, and booked from the chain. **This is the
+    only mode in which this repository spends.** It is the same process, the same
+    chokepoint and the same one write.
+
+    Either way it prints what it did as JSON, with the environment it was given and
+    the names — never the values — of the credentials it loaded itself."""
     import argparse
 
     from fund import config
@@ -332,14 +575,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     from fund.store import db
     from fund.store.journal import Journal
     from fund.store.orders import OrderStore
+    from fund.treasurer import instruct
     from fund.treasurer import keys as published
     from fund.treasurer import mandate as mandates
 
     inherited = sorted(os.environ)  # what the caller handed us, before we load anything
     parser = argparse.ArgumentParser(prog="fund.treasurer.execute")
     parser.add_argument("--db", required=True, type=Path)
-    parser.add_argument("--decision", required=True, type=Path,
-                        help="the decision's directory: record.json and envelope.json")
+    authority = parser.add_mutually_exclusive_group(required=True)
+    authority.add_argument("--decision", type=Path,
+                           help="the decision's directory: record.json and envelope.json")
+    authority.add_argument("--instruction", type=Path,
+                           help="the live leg's: instruction.json and envelope.json (5.2)")
     parser.add_argument("--snapshot", required=True, type=Path)
     parser.add_argument("--at", required=True, type=int, help="the cycle's clock, epoch ms")
     parser.add_argument("--config-dir", type=Path, default=None)
@@ -352,28 +599,45 @@ def main(argv: Sequence[str] | None = None) -> int:
     at = Instant(args.at)
     fetched = Instant(args.venue_fetched_at if args.venue_fetched_at else at.epoch_ms - 5_000)
     snapshot_bytes = args.snapshot.read_bytes()
-    decision = Decision((args.decision / "record.json").read_bytes(),
-                        json.loads((args.decision / "envelope.json").read_text()), snapshot_bytes)
-    snapshot = decision.snapshot
+    snapshot = json.loads(snapshot_bytes)
     conn = db.connect(args.db)
     store, journal = OrderStore(conn), Journal(conn)
     mandate = mandates.load(args.config_dir)
-    limits = gates.Limits.from_config(config.load_json("thresholds.json", args.config_dir),
-                                      mandate, config.load_json("models.json", args.config_dir))
-    venue = fake_venue.FakeVenue(snapshot, lambda: fetched)
-    executor = PaperExecutor(snapshot)
-    decision_id = decision.envelope["decision_id"]
+    thresholds = config.load_json("thresholds.json", args.config_dir)
+    limits = gates.Limits.from_config(thresholds, mandate,
+                                      config.load_json("models.json", args.config_dir))
+    public_key = published.published_key(args.config_dir)
+
+    if args.instruction is not None:  # the live leg: the only mode that spends
+        instruction_bytes, envelope = instruct.read(args.instruction)
+        admission = by_instruction(instruction_bytes, envelope, snapshot_bytes,
+                                   public_key=public_key, mandate=mandate, limits=limits,
+                                   at=at, journal=journal)
+        venue = instruct.Carried(instruct.carried_quote(json.loads(instruction_bytes)))
+        executor = live_executor(held, snapshot, mandate, args.config_dir)
+        authorized = [orders.order_id(envelope["decision_id"],
+                                      json.loads(instruction_bytes)["order"]["index"])]
+    else:
+        decision = Decision((args.decision / "record.json").read_bytes(),
+                            json.loads((args.decision / "envelope.json").read_text()),
+                            snapshot_bytes)
+        admission = by_record(decision, public_key=public_key, mandate=mandate, limits=limits,
+                              at=at, journal=journal)
+        venue = fake_venue.FakeVenue(snapshot, lambda: fetched)
+        executor = PaperExecutor(snapshot)
+        decision_id = decision.envelope["decision_id"]
+        authorized = [o.order_id for o in store.all()
+                      if o.order_id.rpartition("/")[0] == decision_id]
 
     ran = []
-    for order in store.all():
-        if order.order_id.rpartition("/")[0] != decision_id:
-            continue
-        done = run_order(order.order_id, decision=decision, public_key=published.published_key(
-            args.config_dir), mandate=mandate, limits=limits,
-            thresholds=config.load_json("thresholds.json", args.config_dir), venue=venue,
-            executor=executor, store=store, journal=journal, at=at)
+    for order_id in authorized:
+        done = run_order(order_id, admission=admission, thresholds=thresholds, venue=venue,
+                         executor=executor, store=store, journal=journal, at=at)
         ran.append({"order_id": done.order.order_id, "state": done.order.state.value,
-                    "reason": done.order.state_reason, "booked": done.booked})
+                    "reason": done.order.state_reason, "booked": done.booked,
+                    "fee_booked": done.outcome is not None and done.outcome.fee is not None,
+                    "tx_hash": None if done.order.execution is None else
+                    done.order.execution.transaction.tx_hash})
     print(json.dumps({"orders": ran, "environment_given": inherited,
                       "credentials_held": sorted(held.credentials)}))
     return 0

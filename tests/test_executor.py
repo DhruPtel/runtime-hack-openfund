@@ -11,8 +11,10 @@ import inspect
 
 import pytest
 
-from fund.core import orders
-from fund.core.types import Amount, ExecutionMode, Instant, OrderState
+from fund.core import ledger, orders
+from fund.core.types import (
+    Amount, AssetId, ExecutionMode, Instant, OrderState, Price,
+)
 from fund.adapters.fake_venue import FakeVenue
 from fund.treasurer import execute
 from test_chokepoint import AT, SIX, SNAPSHOT, THRESHOLDS, USDG
@@ -67,9 +69,19 @@ def test_the_interface_is_the_one_the_live_executor_will_satisfy():
         "self", "order", "quote"]
     assert list(inspect.signature(execute.Executor.submit).parameters) == ["self", "order", "quote"]
     assert {f.name for f in dataclasses.fields(execute.Outcome)} == {
-        "state", "reason", "fill", "execution"}
+        "state", "reason", "fill", "execution", "fee"}
     execute.Outcome(OrderState.UNKNOWN, "timeout: the live leg's case")
     with pytest.raises(ValueError):
         execute.Outcome(OrderState.CONFIRMED, "no fill")
     with pytest.raises(ValueError):
         execute.Outcome(OrderState.SUBMITTED, "not an ending")
+
+
+def test_an_unknown_submission_books_nothing_not_even_its_gas():
+    """A fee is the live leg's (5.1): a mined revert charges gas and buys nothing, so
+    `failed` may carry one. `unknown` may not: nothing is booked from a guess."""
+    gas = ledger.Fee(ledger.REAL, Amount(7, 18, AssetId.native(4663)),
+                     Price(263720423511, 8, AssetId.native(4663), "USD"), "gas on 0xabc")
+    assert execute.Outcome(OrderState.FAILED, "the operation reverted", fee=gas).fee is gas
+    with pytest.raises(ValueError, match="books nothing"):
+        execute.Outcome(OrderState.UNKNOWN, "not settled", fee=gas)

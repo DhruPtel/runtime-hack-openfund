@@ -49,8 +49,8 @@ class Reconciled:
     state: OrderState               # confirmed, failed, or unknown
     why: str
     execution: Execution | None = None
-    gave: Amount | None = None      # what left the wallet, from the logs or its balance
-    got: Amount | None = None       # what reached it
+    paid: Amount | None = None      # what left the wallet, from the logs or its balance
+    received: Amount | None = None  # what reached it
     gas: Amount | None = None       # what the operation was charged, if anything
     unaccounted: int = 0            # native units the logs and the balance do not explain
 
@@ -150,7 +150,7 @@ def read(rpc: RpcClient, tx_hash: str, *, wallet: ChainAddress, chain_id: int,
                           gas=gas)
 
     def moved(asset: AssetId, decimals: int, incoming: bool) -> tuple[Amount | None, str]:
-        """What the wallet gained or gave of one asset: its `Transfer` logs, or — for
+        """What the wallet received or paid of one asset: its `Transfer` logs, or — for
         the native asset, which emits none — its own balance across the block."""
         if not asset.is_native:
             total = sum(t.amount.raw for t in transfers if t.token == asset
@@ -168,21 +168,22 @@ def read(rpc: RpcClient, tx_hash: str, *, wallet: ChainAddress, chain_id: int,
                 f"from its balance across block {block_number}"
                 + (f", less {charged} wei of gas" if charged else ", gas sponsored"))
 
-    got, got_how = moved(buy, buy_decimals, incoming=True)
-    gave, gave_how = moved(sell, sell_decimals, incoming=False)
-    if got is None or gave is None:
-        return Reconciled(OrderState.UNKNOWN, f"the operation succeeded, and the amounts are not "
-                          f"evidenced: gave {gave_how}, got {got_how}", execution=execution,
-                          gas=gas)
+    received, received_how = moved(buy, buy_decimals, incoming=True)
+    paid, paid_how = moved(sell, sell_decimals, incoming=False)
+    if received is None or paid is None:
+        return Reconciled(OrderState.UNKNOWN, "the operation succeeded, and the amounts are not "
+                          f"evidenced: paid {paid_how}, received {received_how}",
+                          execution=execution, gas=gas)
     unaccounted = 0
-    if sell.is_native:  # what the receipt's logs name against what the wallet actually gave
+    if sell.is_native:  # what the receipt's logs name against what the wallet actually paid
         wrapped = sum(int(log["data"], 16) for log in receipt.get("logs") or []
                       if (log.get("topics") or [None])[0] == TRANSFER
                       and len(log["topics"]) == 3 and int(log["topics"][1], 16) == 0)
-        unaccounted = gave.raw - wrapped if wrapped and gave.raw > wrapped else 0
+        unaccounted = paid.raw - wrapped if wrapped and paid.raw > wrapped else 0
     return Reconciled(OrderState.CONFIRMED,
                       f"the operation succeeded in block {block_number}, {depth} confirmations "
-                      f"deep; gave {gave.raw} {gave_how}, got {got.raw} {got_how}"
+                      f"deep; paid {paid.raw} {paid_how}, received {received.raw} {received_how}"
                       + (f"; {unaccounted} wei the logs do not name (F0.10.4)"
                          if unaccounted else ""),
-                      execution=execution, gave=gave, got=got, gas=gas, unaccounted=unaccounted)
+                      execution=execution, paid=paid, received=received, gas=gas,
+                      unaccounted=unaccounted)

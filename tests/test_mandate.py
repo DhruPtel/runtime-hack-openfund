@@ -51,7 +51,7 @@ def test_the_approved_mandate_loads_with_the_35_stocks_eth_and_usdg_for_seven_da
     approved, expires = (datetime.fromisoformat(loaded[k].replace("Z", "+00:00"))
                          for k in ("approved_at", "expires_at"))
     assert loaded["approved_by"] == "the operator" and expires - approved == timedelta(days=7)
-    assert loaded["revoked"] is False and loaded["cumulative_budget_usd"] is None
+    assert loaded["revoked"] is False and loaded["cumulative_budget_usd"] == 1  # 5.1
 
 
 def test_the_provisional_mandate_of_3_4_refuses_to_load():
@@ -120,7 +120,12 @@ def test_s10_a_sell_needs_what_it_gets_allowed_and_may_give_a_held_stock_outside
 # --- the live budget ------------------------------------------------------------------------------
 
 def test_the_null_live_budget_blocks_a_live_order_and_a_set_one_bounds_it():
-    assert gates.live_budget(APPROVED, Decimal(0), Decimal("0.5")).value is None
+    """Null blocked every live order until 5.1 set the budget to a dollar. It is still
+    the rule: a mandate with no figure authorizes no live spend."""
+    unset = {**APPROVED, "cumulative_budget_usd": None}
+    assert gates.live_budget(unset, Decimal(0), Decimal("0.5")).value is None
+    assert gates.live_budget(APPROVED, Decimal(0), Decimal("0.5")).passes  # $1, set at 5.1
+    assert gates.live_budget(APPROVED, Decimal("0.9"), Decimal("0.2")).value is False
     five = {**APPROVED, "cumulative_budget_usd": "5"}
     assert gates.live_budget(five, Decimal("4.5"), Decimal("0.5")).passes
     assert gates.live_budget(five, Decimal("4.6"), Decimal("0.5")).value is False

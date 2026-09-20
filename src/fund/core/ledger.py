@@ -311,6 +311,51 @@ def paper_fill(order: Order, quote: Quote, snapshot: Mapping[str, Any]) -> Fill:
                 cash_asset=cash_asset)
 
 
+def live_fill(order: Order, gave: Amount, got: Amount, snapshot: Mapping[str, Any]) -> Fill:
+    """A live order filled as the chain says (5.1, 5.3): the amounts
+    `treasurer/reconcile.py` read from the receipt — the wallet's own `Transfer` logs,
+    and for the native leg its balance across the block, less gas — valued at the
+    snapshot's marks. Never the quote, and never the venue's reply, which is a claim
+    about a transaction and not evidence that anything moved (PLAN §2 invariant 9).
+
+    It refuses a paper order, an order not yet submitted, evidence in assets that are
+    not this order's legs, and a wallet that gave more than the order authorised: each
+    means the receipt read does not belong to this order, and the caller leaves it
+    unknown rather than booking it.
+
+    **It does not refuse a fill under the order's minimum.** By the time this is
+    called the money has moved, and a book that will not record what happened is worse
+    than one that records a bad trade. The shortfall is said in the order's reason."""
+    if order.mode is not ExecutionMode.LIVE:
+        raise LedgerError(f"order {order.order_id} is paper: a paper fill is its quote, "
+                          "and nothing paper is ever read from a chain")
+    if order.state is not OrderState.SUBMITTED:
+        raise LedgerError(f"order {order.order_id} is {order.state.value}: only a submitted "
+                          "order fills, so its state is written before the fill")
+    if gave.asset != order.sell.asset or got.asset != order.buy_asset:
+        raise LedgerError(f"the receipt moved {gave.asset.address} for {got.asset.address}, and "
+                          f"order {order.order_id} sells {order.sell.asset.address} for "
+                          f"{order.buy_asset.address}")
+    if gave.raw > order.sell.raw:
+        raise LedgerError(f"the receipt says the wallet gave {gave.raw}, and order "
+                          f"{order.order_id} authorised {order.sell.raw}")
+    cash_asset, _ = cash.cash_leg(snapshot)
+    return Fill(order_id=order.order_id, mode=ExecutionMode.LIVE, gave=gave, got=got,
+                gave_mark=cash.mark_of(snapshot, gave.asset.address),
+                got_mark=cash.mark_of(snapshot, got.asset.address), cash_asset=cash_asset)
+
+
+def gas_fee(order: Order, gas: Amount, snapshot: Mapping[str, Any], what: str) -> Fee:
+    """What an operation was charged, as a cost of the real book. It is a fee, so it
+    is never part of what the fill bought (P8), and it is booked whether the operation
+    filled or reverted: a mined revert costs gas and buys nothing (4.11's event 9)."""
+    if not gas.asset.is_native:
+        raise LedgerError("gas is paid in the chain's native token")
+    return Fee(book=book_for(ExecutionMode.LIVE), amount=gas,
+               mark=cash.mark_of(snapshot, gas.asset.address), what=what,
+               order_id=order.order_id)
+
+
 # --- P8: the one fold ----------------------------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -425,6 +470,20 @@ def cash_held(events: Iterable[Event], *, book: str,
     asset, decimals = cash.cash_leg(snapshot)
     held = _walk(events, book).held.get(asset, (Amount(0, decimals, asset), Decimal(0)))
     return held[0], _position(*held, snapshot).value_usd
+
+
+def traded_usd(events: Iterable[Event], *, book: str) -> Decimal:
+    """What this book has put through the venue: every fill at its cash leg, plus what
+    it paid in fees. It is what the mandate's cumulative live budget is spent against
+    (4.1), so a reverted swap's gas counts: it used the authority even though it
+    bought nothing. One definition, asked by the chokepoint and by the command that
+    writes an instruction."""
+    book = _book(book)
+    mine = [event for event in events if book_of(event) == book]
+    with localcontext(cash.EXACT):
+        return (sum((e.value_usd for e in mine if isinstance(e, Fill)), Decimal(0))
+                + sum((cash.worth(e.amount, e.mark) for e in mine if isinstance(e, Fee)),
+                      Decimal(0)))
 
 
 # --- P10: a book's NAV, and the planner's view of the paper book ---------------------------------

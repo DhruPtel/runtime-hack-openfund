@@ -121,13 +121,19 @@ def open_paper_book(journal: Journal, snapshot: Mapping[str, Any], units: Decima
                                   cash.mark_of(snapshot, asset.address)))
 
 
-def treasurer(*, db_path: Path, decision_dir: Path, snapshot_path: Path, at: Instant,
+def treasurer(*, db_path: Path, decision_dir: Path | None, snapshot_path: Path, at: Instant,
               config_dir: Path, env_file: Path | None, venue_fetched_at: Instant | None,
+              instruction_dir: Path | None = None,
               python: str = sys.executable) -> Mapping[str, Any]:
     """Start the treasurer in its own process, from an empty environment, and read back
-    what it did. This process hands it no credential: it loads its own (4.12)."""
-    command = [python, "-m", "fund.treasurer.execute", "--db", str(db_path),
-               "--decision", str(decision_dir), "--snapshot", str(snapshot_path),
+    what it did. This process hands it no credential: it loads its own (4.12).
+
+    Its authority is one or the other: a decision's directory, or — on the live leg —
+    a signed instruction's (5.2)."""
+    authority = (["--decision", str(decision_dir)] if instruction_dir is None
+                 else ["--instruction", str(instruction_dir)])
+    command = [python, "-m", "fund.treasurer.execute", "--db", str(db_path), *authority,
+               "--snapshot", str(snapshot_path),
                "--at", str(at.epoch_ms), "--config-dir", str(config_dir)]
     if env_file is not None:
         command += ["--env-file", str(env_file)]

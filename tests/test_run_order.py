@@ -42,10 +42,11 @@ def fund(tmp_path, usdg="200"):
 
 def run(store, journal, order, executor=None, **rest):
     venue = FakeVenue(SNAPSHOT, lambda: Instant_at())
-    return execute.run_order(order.order_id, decision=DECISION, public_key=PUBLISHED,
-                             mandate=MANDATE, limits=LIMITS, thresholds=THRESHOLDS, venue=venue,
-                             executor=executor or execute.PaperExecutor(SNAPSHOT), store=store,
-                             journal=journal, at=AT, **rest)
+    admission = execute.by_record(DECISION, public_key=PUBLISHED, mandate=MANDATE,
+                                  limits=LIMITS, at=AT, journal=journal)
+    return execute.run_order(order.order_id, admission=admission, thresholds=THRESHOLDS,
+                             venue=venue, executor=executor or execute.PaperExecutor(SNAPSHOT),
+                             store=store, journal=journal, at=AT, **rest)
 
 
 class Watching:

@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "_status": "APPROVED by the operator on 2026-09-19 (tracker/LESSONS.md, DECISIONS for Phase 4), written at unit 4.1. Replaces the provisional mandate of 3.4. treasurer/mandate.py refuses to load a mandate with a null or placeholder required field, and the gates refuse every order once it expires or is revoked. cumulative_budget_usd is the live leg's, and stays null until Phase 5: null blocks a live order and no paper one.",
+  "version": 3,
+  "_status": "APPROVED by the operator on 2026-09-19 (tracker/LESSONS.md, DECISIONS for Phase 4), written at unit 4.1. Replaces the provisional mandate of 3.4. treasurer/mandate.py refuses to load a mandate with a null or placeholder required field, and the gates refuse every order once it expires or is revoked. cumulative_budget_usd is the live leg's. It was null until Phase 5, which blocked every live order; version 3 sets it to one dollar (the note below).",
   "chain_id": 4663,
   "execution_wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da",
   "_execution_wallet_note": "Named explicitly here, per planning/PLAN.md section 6 (decision before unit 1.1). Balances are read for this address over RPC, never from /wallet/portfolio, which omits every token (findings F0.7b.8). It is the one wallet all three Bankr keys resolve to (F0.2.3). On 4663 it carries an EIP-7702 delegation to a Bankr contract since its first swap (F0.10.3), so nothing may assume it is an EOA there. On Base it is an EOA.",
@@ -8,7 +8,8 @@
   "_execution_wallet_delegate_note": "The contract the wallet's EIP-7702 designator names on 4663: its code there reads 0xef0100 followed by this address, measured at 0.10 (findings F0.10.3). The address selftest (1.10) attests it, so a changed delegation turns it red rather than going unnoticed. What the delegate permits is not measured.",
   "capital_usd": 200,
   "max_trade_usd": 25,
-  "cumulative_budget_usd": null,
+  "cumulative_budget_usd": 1,
+  "_cumulative_budget_note": "The ceiling on everything the live leg may ever trade: each live fill at its cash leg plus the gas the real book paid (core/ledger.py traded_usd), checked by gates.live_budget before each live order. Set to one dollar at unit 5.1 (2026-09-19), the operator having authorized the minimum that proves the path; 5.2's round trip is about $0.21 of it. Null blocked every live order until now, which is what it was for.",
   "allowed_assets": [
     {"address": "0x117cc2133c37b721f49de2a7a74833232b3b4c0c", "symbol": "SPY"},
     {"address": "0x12f190a9f9d7d37a250758b26824b97ce941bf54", "symbol": "AMZN"},
