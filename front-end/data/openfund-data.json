@@ -1,0 +1,1048 @@
+{
+ "app": {
+  "cycle": "20260920T012716Z",
+  "decisionId": "c55400f87d…",
+  "decisionIdFull": "c55400f87d6b342a454ff51f7b31d3f3ae3248165ae40c580bb0fed06a1f9a27",
+  "demoNotice": "This is real data. Every figure comes from an artifact this fund produced: a decision record signed over its exact bytes, a book derived from an append-only journal, or a receipt read off chain 4663. The analyst reports are what the models wrote, the vetoes are what the risk agent decided, and the transactions are real. Stock fills are paper, because tokenized-stock execution is location-gated for this operator; the ETH and USDG swaps are real money. Where the fund does not produce a figure the page asks for, it shows a dash and the reason.",
+  "fundWallet": "0x93faecde3c88a713e1edddf417c02c326889a3da",
+  "mode": "Mainnet",
+  "nav": [
+   "Overview",
+   "Swarm",
+   "Decision",
+   "Risk",
+   "Books",
+   "Record",
+   "Chain"
+  ],
+  "network": "Robinhood Chain",
+  "product": "Openfund",
+  "snapshotBlock": 67545399,
+  "snapshotHash": "a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc",
+  "timestamp": "20 Sep 2026, 01:28 UTC"
+ },
+ "books": {
+  "books": [
+   {
+    "block": 67545399,
+    "costLabel": "Costs · simulated trading",
+    "costs": 0.0,
+    "description": "Simulated equity holdings · USD",
+    "expenseLabel": "Expenses · model inference",
+    "expenses": 0.0,
+    "id": "paper",
+    "name": "Paper portfolio",
+    "nav": 200.03035800722083,
+    "net": null,
+    "netLabel": "Net",
+    "netReason": "not yet booked: the journal has no settled-revenue event (7.4)",
+    "note": "Stock fills are paper: tokenized-stock execution is location-gated.",
+    "opening": 199.984558,
+    "realised": 0.0,
+    "reconcileCosts": 0.0,
+    "revenue": null,
+    "revenueLabel": "Revenue · record sales",
+    "revenueReason": "not yet booked: the journal has no settled-revenue event (7.4)",
+    "unrealised": 0.04580000722083542
+   },
+   {
+    "block": 67529959,
+    "costLabel": "Costs · gas and fees",
+    "costs": 0.0,
+    "description": "Actual money on chain 4663 · USD",
+    "expenseLabel": "Expenses · model inference",
+    "expenses": 0.0,
+    "id": "real",
+    "name": "Real operating book",
+    "nav": 1.2857698971109484,
+    "net": null,
+    "netLabel": "Net",
+    "netReason": "not yet booked: the journal has no settled-revenue event (7.4)",
+    "note": "Four live swaps. Every figure here is money that moved.",
+    "opening": 1.286041228056708,
+    "realised": 2.8460790928390258e-05,
+    "reconcileCosts": 0.0,
+    "revenue": null,
+    "revenueLabel": "Revenue · record sales",
+    "revenueReason": "not yet booked: the journal has no settled-revenue event (7.4)",
+    "unrealised": -0.00029979173668794024
+   }
+  ],
+  "identity": "opened + realised + unrealised - costs = NAV, exactly",
+  "subtitle": "Paper holdings and real money are separate books. They are never added.",
+  "title": "Every dollar has a place."
+ },
+ "chain": {
+  "asset": "USDG",
+  "authority": "Only the treasurer can spend. It runs in its own process with its own credentials, re-checks every gate on a fresh quote, writes the order before it acts, sends once, and books what the chain says.",
+  "block": 67532956,
+  "decisionId": null,
+  "decisionReason": "a swap is authorized by a signed instruction, not by a decision: no analyst chose it (SIMPLIFICATION, 2026-09-19)",
+  "explorerUrl": "https://robinhoodchain.blockscout.com/tx/0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0",
+  "paperNote": "Stock fills are paper: tokenized-stock execution is location-gated for this operator, so equity orders are sized, quoted and gated for real and filled on paper. These swaps are real money.",
+  "paperValue": null,
+  "quantity": null,
+  "quantityReason": "each swap's own amounts are in its row",
+  "referencePrice": null,
+  "referenceReason": "a swap has no reference price: what it gave and got is the receipt",
+  "subtitle": "Four real swaps on chain 4663, each authorized by a signed instruction and confirmed from its receipt — never from an HTTP 200.",
+  "swaps": [
+   {
+    "asset": "USDG",
+    "authorisedBy": "a demonstration of the money path that no analyst chose (planning/SIMPLIFICATION.md, DECISION 2026-09-19)",
+    "block": 67532956,
+    "explorerUrl": "https://robinhoodchain.blockscout.com/tx/0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0",
+    "gasSponsored": true,
+    "gave": "0.1",
+    "gaveSymbol": "USDG",
+    "id": "run2-leg2-usdg-eth",
+    "instruction": "run2-leg2-usdg-eth",
+    "reason": "0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0: the operation succeeded in block 67532956, 119 confirmations deep; paid 100000 from its Transfer logs, received 38077691442267 from its balance across block 67532956, gas sponsored",
+    "timestamp": "20 Sep 2026, 01:04 UTC",
+    "transaction": "0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0",
+    "transfers": [
+     {
+      "decimals": 6,
+      "raw": "100000",
+      "token": "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+     }
+    ],
+    "wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da"
+   },
+   {
+    "asset": "ETH",
+    "authorisedBy": "a demonstration of the money path that no analyst chose (planning/SIMPLIFICATION.md, DECISION 2026-09-19)",
+    "block": 67532677,
+    "explorerUrl": "https://robinhoodchain.blockscout.com/tx/0x2d5438708b6a14b0b3d18da0b9f0f592f04fad7d8bcac824c63c4328e42123aa",
+    "gasSponsored": true,
+    "gave": "0.00003",
+    "gaveSymbol": "ETH",
+    "id": "run2-leg1-eth-usdg",
+    "instruction": "run2-leg1-eth-usdg",
+    "reason": "0x2d5438708b6a14b0b3d18da0b9f0f592f04fad7d8bcac824c63c4328e42123aa: the operation succeeded in block 67532677, 113 confirmations deep; paid 30000000000000 from its balance across block 67532677, gas sponsored, received 78760 from its Transfer logs; 18000000000 wei the logs do not name (F0.10.4)",
+    "timestamp": "20 Sep 2026, 01:03 UTC",
+    "transaction": "0x2d5438708b6a14b0b3d18da0b9f0f592f04fad7d8bcac824c63c4328e42123aa",
+    "transfers": [
+     {
+      "decimals": 6,
+      "raw": "78760",
+      "token": "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+     }
+    ],
+    "wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da"
+   },
+   {
+    "asset": "USDG",
+    "authorisedBy": "a demonstration of the money path that no analyst chose (planning/SIMPLIFICATION.md, DECISION 2026-09-19)",
+    "block": 67501988,
+    "explorerUrl": "https://robinhoodchain.blockscout.com/tx/0x737e32b4ea091110fa0dc42daf8992c705a5d89edc24c5bdd4fae3553a802a27",
+    "gasSponsored": true,
+    "gave": "0.1",
+    "gaveSymbol": "USDG",
+    "id": "leg2-usdg-eth",
+    "instruction": "leg2-usdg-eth",
+    "reason": "0x737e32b4ea091110fa0dc42daf8992c705a5d89edc24c5bdd4fae3553a802a27: the operation succeeded in block 67501988, 119 confirmations deep; paid 100000 from its Transfer logs, received 38026356590733 from its balance across block 67501988, gas sponsored",
+    "timestamp": "20 Sep 2026, 00:12 UTC",
+    "transaction": "0x737e32b4ea091110fa0dc42daf8992c705a5d89edc24c5bdd4fae3553a802a27",
+    "transfers": [
+     {
+      "decimals": 6,
+      "raw": "100000",
+      "token": "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+     }
+    ],
+    "wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da"
+   },
+   {
+    "asset": "ETH",
+    "authorisedBy": "a demonstration of the money path that no analyst chose (planning/SIMPLIFICATION.md, DECISION 2026-09-19)",
+    "block": 67501588,
+    "explorerUrl": "https://robinhoodchain.blockscout.com/tx/0x9c8ea67dd8c17c9a7315f38ad427f8e0b3852d55b68af463d5f17027d3cfbbfa",
+    "gasSponsored": true,
+    "gave": "0.00003",
+    "gaveSymbol": "ETH",
+    "id": "leg1-eth-usdg",
+    "instruction": "leg1-eth-usdg",
+    "reason": "0x9c8ea67dd8c17c9a7315f38ad427f8e0b3852d55b68af463d5f17027d3cfbbfa: the operation succeeded in block 67501588, 119 confirmations deep; paid 30000000000000 from its balance across block 67501588, gas sponsored, received 78714 from its Transfer logs; 18000000000 wei the logs do not name (F0.10.4)",
+    "timestamp": "20 Sep 2026, 00:11 UTC",
+    "transaction": "0x9c8ea67dd8c17c9a7315f38ad427f8e0b3852d55b68af463d5f17027d3cfbbfa",
+    "transfers": [
+     {
+      "decimals": 6,
+      "raw": "78714",
+      "token": "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+     }
+    ],
+    "wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da"
+   }
+  ],
+  "timestamp": "20 Sep 2026, 01:04 UTC",
+  "title": "The decision became a transaction.",
+  "transaction": "0x871944093e1fbb2bca6ee46aa81aaa522211ae6a086138d990b7c6c7af1f21a0",
+  "wallet": "0x93faecde3c88a713e1edddf417c02c326889a3da",
+  "walletExplorerUrl": "https://robinhoodchain.blockscout.com/address/0x93faecde3c88a713e1edddf417c02c326889a3da"
+ },
+ "decision": {
+  "cash": {
+   "current": 100.0,
+   "move": 0,
+   "target": -9.38
+  },
+  "contributionReason": "weights come from each call's confidence, not a fixed seat split",
+  "explanation": "Each seat's call moves a weight by its confidence times the position limit. Execution and integrity raise cautions; they add no direction.",
+  "macroContribution": null,
+  "residual": 0.0,
+  "rows": [
+   {
+    "asset": "SPY",
+    "current": 0.0,
+    "execution": {
+     "call": "—",
+     "score": 0
+    },
+    "integrity": {
+     "call": "—",
+     "score": 0
+    },
+    "macro": {
+     "call": "BUY",
+     "score": 0.5
+    },
+    "move": 20.55999943986773,
+    "score": 0.5,
+    "target": 12.5,
+    "trend": {
+     "call": "—",
+     "score": 0
+    },
+    "why": "buy: raised by 0.125"
+   },
+   {
+    "asset": "AMZN",
+    "current": 0.0,
+    "execution": {
+     "call": "—",
+     "score": 0
+    },
+    "integrity": {
+     "call": "CAUTION",
+     "score": 0.5
+    },
+    "macro": {
+     "call": "BUY",
+     "score": 0.25
+    },
+    "move": 5.13999911002484,
+    "score": 0.125,
+    "target": 3.12,
+    "trend": {
+     "call": "—",
+     "score": 0
+    },
+    "why": "buy: raised by 0.03125"
+   },
+   {
+    "asset": "GME",
+    "current": 0.0,
+    "execution": {
+     "call": "—",
+     "score": 0
+    },
+    "integrity": {
+     "call": "—",
+     "score": 0
+    },
+    "macro": {
+     "call": "—",
+     "score": 0
+    },
+    "move": 30.84999888766299,
+    "score": 0.75,
+    "target": 18.75,
+    "trend": {
+     "call": "BUY",
+     "score": 0.75
+    },
+    "why": "buy: raised by 0.1875"
+   },
+   {
+    "asset": "GOOGL",
+    "current": 0.0,
+    "execution": {
+     "call": "—",
+     "score": 0
+    },
+    "integrity": {
+     "call": "CAUTION",
+     "score": 0.5
+    },
+    "macro": {
+     "call": "—",
+     "score": 0
+    },
+    "move": 0.0,
+    "score": 0.0,
+    "target": 0.0,
+    "trend": {
+     "call": "—",
+     "score": 0
+    },
+    "why": "caution with no direction call: kept"
+   },
+   {
+    "asset": "SPCX",
+    "current": 0.0,
+    "execution": {
+     "call": "—",
+     "score": 0
+    },
+    "integrity": {
+     "call": "—",
+     "score": 0
+    },
+    "macro": {
+     "call": "—",
+     "score": 0
+    },
+    "move": 20.55999943986773,
+    "score": 0.5,
+    "target": 12.5,
+    "trend": {
+     "call": "BUY",
+     "score": 0.5
+    },
+    "why": "buy: raised by 0.125"
+   },
+   {
+    "asset": "USO",
+    "current": 0.0,
+    "execution": {
+     "call": "—",
+     "score": 0
+    },
+    "integrity": {
+     "call": "—",
+     "score": 0
+    },
+    "macro": {
+     "call": "BUY",
+     "score": 0.5
+    },
+    "move": 20.55999943986773,
+    "score": 0.5,
+    "target": 12.5,
+    "trend": {
+     "call": "—",
+     "score": 0
+    },
+    "why": "buy: raised by 0.125"
+   },
+   {
+    "asset": "AAPL",
+    "current": 0.0,
+    "execution": {
+     "call": "—",
+     "score": 0
+    },
+    "integrity": {
+     "call": "—",
+     "score": 0
+    },
+    "macro": {
+     "call": "—",
+     "score": 0
+    },
+    "move": 30.84999888766299,
+    "score": 0.75,
+    "target": 18.75,
+    "trend": {
+     "call": "BUY",
+     "score": 0.75
+    },
+    "why": "buy: raised by 0.1875"
+   },
+   {
+    "asset": "META",
+    "current": 0.0,
+    "execution": {
+     "call": "—",
+     "score": 0
+    },
+    "integrity": {
+     "call": "—",
+     "score": 0
+    },
+    "macro": {
+     "call": "HOLD",
+     "score": 0.0
+    },
+    "move": 10.27999921997247,
+    "score": 0.25,
+    "target": 6.25,
+    "trend": {
+     "call": "BUY",
+     "score": 0.5
+    },
+    "why": "buy: raised by 0.0625"
+   },
+   {
+    "asset": "INTC",
+    "current": 0.0,
+    "execution": {
+     "call": "—",
+     "score": 0
+    },
+    "integrity": {
+     "call": "—",
+     "score": 0
+    },
+    "macro": {
+     "call": "—",
+     "score": 0
+    },
+    "move": 30.84999888766299,
+    "score": 0.75,
+    "target": 18.75,
+    "trend": {
+     "call": "BUY",
+     "score": 0.75
+    },
+    "why": "buy: raised by 0.1875"
+   },
+   {
+    "asset": "NVDA",
+    "current": 0.0,
+    "execution": {
+     "call": "—",
+     "score": 0
+    },
+    "integrity": {
+     "call": "PROCEED",
+     "score": 0.0
+    },
+    "macro": {
+     "call": "—",
+     "score": 0
+    },
+    "move": 0.0,
+    "score": 0.0,
+    "target": 0.0,
+    "trend": {
+     "call": "—",
+     "score": 0
+    },
+    "why": "caution with no direction call: kept"
+   },
+   {
+    "asset": "MSTR",
+    "current": 0.0,
+    "execution": {
+     "call": "—",
+     "score": 0
+    },
+    "integrity": {
+     "call": "CAUTION",
+     "score": 0.5
+    },
+    "macro": {
+     "call": "—",
+     "score": 0
+    },
+    "move": 10.27999921997247,
+    "score": 0.25,
+    "target": 6.25,
+    "trend": {
+     "call": "BUY",
+     "score": 0.5
+    },
+    "why": "buy: raised by 0.0625"
+   }
+  ],
+  "step": null,
+  "subtitle": "A deterministic rule turns signed calls into a proposed portfolio. Risk reviews it next.",
+  "threshold": null,
+  "title": "How opinions became weights.",
+  "trendContribution": null,
+  "warning": "quorum met: targets from the calls"
+ },
+ "generated_at": "2026-09-20T01:45:50+00:00",
+ "overview": {
+  "cash": 40.614563907383,
+  "holdings": [
+   {
+    "name": null,
+    "nameReason": "the registry carries symbols, not company names",
+    "pnl": 0.016021786373102323,
+    "price": 335.3847472,
+    "ticker": "AAPL",
+    "value": 30.866020674036093,
+    "weight": 15.43
+   },
+   {
+    "name": null,
+    "nameReason": "the registry carries symbols, not company names",
+    "pnl": -0.005899190805039852,
+    "price": 253.863,
+    "ticker": "AMZN",
+    "value": 5.1340999192198,
+    "weight": 2.57
+   },
+   {
+    "name": null,
+    "nameReason": "the registry carries symbols, not company names",
+    "pnl": 0.1323644208052107,
+    "price": 22.55175,
+    "ticker": "GME",
+    "value": 30.9823633084682,
+    "weight": 15.49
+   },
+   {
+    "name": null,
+    "nameReason": "the registry carries symbols, not company names",
+    "pnl": -0.11585429219908797,
+    "price": 109.05,
+    "ticker": "INTC",
+    "value": 30.734144595463903,
+    "weight": 15.36
+   },
+   {
+    "name": null,
+    "nameReason": "the registry carries symbols, not company names",
+    "pnl": 0.03226989189706677,
+    "price": 152.82485,
+    "ticker": "SPCX",
+    "value": 20.592269331764797,
+    "weight": 10.29
+   },
+   {
+    "name": null,
+    "nameReason": "the registry carries symbols, not company names",
+    "pnl": -0.0710362548341352,
+    "price": 761.55079369,
+    "ticker": "SPY",
+    "value": 20.488963185033594,
+    "weight": 10.24
+   },
+   {
+    "name": null,
+    "nameReason": "the registry carries symbols, not company names",
+    "pnl": 0.05793364598371864,
+    "price": 154.54265,
+    "ticker": "USO",
+    "value": 20.617933085851448,
+    "weight": 10.31
+   }
+  ],
+  "latest": {
+   "approved": 10,
+   "headline": "10 orders approved. 2 refused.",
+   "summary": "The plan as a whole follows from the reports and evidence; the two flawed orders are stopped individually and the rest stand on their own merits.",
+   "vetoed": 2
+  },
+  "nav": 200.03035800722083,
+  "positionCount": 7,
+  "provenance": {
+   "block": 67545399,
+   "decisionId": "c55400f87d…",
+   "signatureStatus": "Signature verified",
+   "snapshotHash": "a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc",
+   "timestamp": "20 Sep 2026, 01:28 UTC"
+  },
+  "subtitle": "The paper portfolio — simulated equity holdings. Real money is in Books and Chain, and the two are never added.",
+  "title": "A fund that shows its work."
+ },
+ "record": {
+  "approved": 10,
+  "endpoint": null,
+  "endpointReason": "publishing records by immutable id is unbuilt (7.1)",
+  "format": "Canonical JSON · the bytes the signature covers",
+  "headline": "10 approved, 2 refused.",
+  "id": "c55400f87d…",
+  "idFull": "c55400f87d6b342a454ff51f7b31d3f3ae3248165ae40c580bb0fed06a1f9a27",
+  "included": [
+   "Every accepted analyst report, in full",
+   "The proposal and how each weight was reached",
+   "Every gate with its value and reason",
+   "The risk agent's vote on each order, and overall",
+   "The signature over the record's exact bytes"
+  ],
+  "payloadHash": "c55400f87d6b342a454ff51f7b31d3f3ae3248165ae40c580bb0fed06a1f9a27",
+  "payloadNote": "the decision id is the sha256 of the record's exact bytes",
+  "preview": [
+   {
+    "description": "sha256 a635d85bc16f5e9e… at block 67545399",
+    "title": "The snapshot it was decided on"
+   },
+   {
+    "description": "every accepted report's exact text, with its sha256",
+    "title": "3 analyst report(s), in full"
+   },
+   {
+    "description": "12 orders, every gate's value and reason, and the agent's sentence on each",
+    "title": "The plan, the gates and the risk verdict"
+   }
+  ],
+  "price": null,
+  "priceReason": "the live x402 endpoint asks 0.001 USDC and serves a Phase 0 probe response, not this record (7.2)",
+  "quote": "The plan as a whole follows from the reports and evidence; the two flawed orders are stopped individually and the rest stand on their own merits.",
+  "signature": "327bd750207909dd880024e384d9de17db3c1afcaee730038e19352fec6de59cfaf7a026641ea9dab1bcd59bdff587af654f51d10bb642213fff34ed634fa603",
+  "signedReports": 3,
+  "signer": "1c23243531ff47be0caaf1ce2d73b0b1b705a54fa063f2d50f0bde9b42928c21",
+  "signerLabel": "ed25519 public key, published in config/keys.json",
+  "snapshot": "a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc",
+  "subtitle": "One signed decision, including the disagreement and the refusal.",
+  "title": "Buy the reasoning. Verify the record.",
+  "vetoed": 2
+ },
+ "risk": {
+  "gates": [
+   "3 seat(s) reported, at least the quorum of 3",
+   "$179.92999253256194 traded, within 10000 bps of the NAV ($199.98)",
+   "the snapshot was 221.535s old when judged, within 900s",
+   "in force until 2026-09-26T21:54:28Z",
+   "about 62163 tokens, within the budget of 70000"
+  ],
+  "orders": [
+   {
+    "allowed": null,
+    "amount": 20.55999943986773,
+    "asset": "SPY",
+    "context": "buy $20.56",
+    "heading": "buy $20.56 of SPY.",
+    "id": "order-1",
+    "limitReason": "",
+    "modelVote": "approve",
+    "paragraphs": [
+     "Macro's diversification case for SPY is well-supported by the 20-day dispersion data, mark/venue/GT show no flagged issues, and gates clear cleanly."
+    ],
+    "proposed": null,
+    "rule": "Gates cleared and risk approved",
+    "side": "Buy",
+    "status": "approved"
+   },
+   {
+    "allowed": null,
+    "amount": 5.13999911002484,
+    "asset": "AMZN",
+    "context": "buy $5.14",
+    "heading": "buy $5.14 of AMZN.",
+    "id": "order-2",
+    "limitReason": "",
+    "modelVote": "approve",
+    "paragraphs": [
+     "Price-integrity flags AMZN's GeckoTerminal divergence as caution, but the mark and venue agree tightly (0.08% apart), so the book would be entered at a price the two independent live readings corroborate; the trade is also small."
+    ],
+    "proposed": null,
+    "rule": "Gates cleared and risk approved",
+    "side": "Buy",
+    "status": "approved"
+   },
+   {
+    "allowed": null,
+    "amount": 15.42999955774289,
+    "asset": "GME",
+    "context": "buy $15.43",
+    "heading": "buy $15.43 of GME.",
+    "id": "order-3",
+    "limitReason": "",
+    "modelVote": "approve",
+    "paragraphs": [
+     "Price-trend's high-confidence uptrend call is supported by a clean 30-day series and no integrity concerns are raised on GME; mark/venue/GT are within an unremarkable range."
+    ],
+    "proposed": null,
+    "rule": "Gates cleared and risk approved",
+    "side": "Buy",
+    "status": "approved"
+   },
+   {
+    "allowed": null,
+    "amount": 15.4199993299201,
+    "asset": "GME",
+    "context": "buy $15.42",
+    "heading": "buy $15.42 of GME.",
+    "id": "order-4",
+    "limitReason": "",
+    "modelVote": "approve",
+    "paragraphs": [
+     "Second tranche of the same well-supported GME buy, same evidence and quote quality as order 3."
+    ],
+    "proposed": null,
+    "rule": "Gates cleared and risk approved",
+    "side": "Buy",
+    "status": "approved"
+   },
+   {
+    "allowed": null,
+    "amount": 20.55999943986773,
+    "asset": "SPCX",
+    "context": "buy $20.56",
+    "heading": "buy $20.56 of SPCX.",
+    "id": "order-5",
+    "limitReason": "",
+    "modelVote": "approve",
+    "paragraphs": [
+     "Price-trend's steady-climb call is corroborated, no divergence findings, and mark/venue/GT are closely aligned."
+    ],
+    "proposed": null,
+    "rule": "Gates cleared and risk approved",
+    "side": "Buy",
+    "status": "approved"
+   },
+   {
+    "allowed": null,
+    "amount": 20.55999943986773,
+    "asset": "USO",
+    "context": "buy $20.56",
+    "heading": "buy $20.56 of USO.",
+    "id": "order-6",
+    "limitReason": "",
+    "modelVote": "approve",
+    "paragraphs": [
+     "Macro's diversifier thesis is backed by a distinct 20-day commodity path uncorrelated to the equity cluster, and price-integrity raises no concern on USO's pricing."
+    ],
+    "proposed": null,
+    "rule": "Gates cleared and risk approved",
+    "side": "Buy",
+    "status": "approved"
+   },
+   {
+    "allowed": null,
+    "amount": 15.42999955774289,
+    "asset": "AAPL",
+    "context": "buy $15.43",
+    "heading": "buy $15.43 of AAPL.",
+    "id": "order-7",
+    "limitReason": "",
+    "modelVote": "approve",
+    "paragraphs": [
+     "Price-trend's high-confidence steady uptrend is well documented and price-integrity's cross-check lists AAPL among the tightly-agreeing names."
+    ],
+    "proposed": null,
+    "rule": "Gates cleared and risk approved",
+    "side": "Buy",
+    "status": "approved"
+   },
+   {
+    "allowed": null,
+    "amount": 15.4199993299201,
+    "asset": "AAPL",
+    "context": "buy $15.42",
+    "heading": "buy $15.42 of AAPL.",
+    "id": "order-8",
+    "limitReason": "",
+    "modelVote": "approve",
+    "paragraphs": [
+     "Second tranche of the same well-supported AAPL buy; the negative swap-impact here is price improvement, not a concern."
+    ],
+    "proposed": null,
+    "rule": "Gates cleared and risk approved",
+    "side": "Buy",
+    "status": "approved"
+   },
+   {
+    "allowed": null,
+    "amount": 10.27999921997247,
+    "asset": "META",
+    "context": "buy $10.28 · [impact] swapImpactBps 238 exceeds 50, compared signed",
+    "heading": "Do not buy $10.28 of META.",
+    "id": "order-9",
+    "limitReason": "[impact] swapImpactBps 238 exceeds 50, compared signed",
+    "modelVote": "veto",
+    "paragraphs": [
+     "Gate blocked this order on price impact (238bps > 50bps limit); code vetoes it regardless of the report support for a hold."
+    ],
+    "proposed": null,
+    "rule": "impact, risk",
+    "side": "Buy",
+    "status": "vetoed"
+   },
+   {
+    "allowed": null,
+    "amount": 15.42999955774289,
+    "asset": "INTC",
+    "context": "buy $15.43",
+    "heading": "buy $15.43 of INTC.",
+    "id": "order-10",
+    "limitReason": "",
+    "modelVote": "approve",
+    "paragraphs": [
+     "Price-trend's high-confidence accelerating uptrend is well documented and no integrity caution is raised on INTC."
+    ],
+    "proposed": null,
+    "rule": "Gates cleared and risk approved",
+    "side": "Buy",
+    "status": "approved"
+   },
+   {
+    "allowed": null,
+    "amount": 15.4199993299201,
+    "asset": "INTC",
+    "context": "buy $15.42",
+    "heading": "buy $15.42 of INTC.",
+    "id": "order-11",
+    "limitReason": "",
+    "modelVote": "approve",
+    "paragraphs": [
+     "Second tranche of the same well-supported INTC buy, same clean evidence as order 10."
+    ],
+    "proposed": null,
+    "rule": "Gates cleared and risk approved",
+    "side": "Buy",
+    "status": "approved"
+   },
+   {
+    "allowed": null,
+    "amount": 10.27999921997247,
+    "asset": "MSTR",
+    "context": "buy $10.28",
+    "heading": "Do not buy $10.28 of MSTR.",
+    "id": "order-12",
+    "limitReason": "",
+    "modelVote": "veto",
+    "paragraphs": [
+     "Price-integrity flags MSTR as the widest divergence in the batch, and unlike AMZN/GOOGL here it is the mark that is the outlier (152.64) while venue (158.5) and GeckoTerminal (159.4) agree with each other, so booking this buy at the mark would understate the entry price against two corroborating live prices; price-trend's own call also admits the move is too fresh to confirm as trend."
+    ],
+    "proposed": null,
+    "rule": "risk",
+    "side": "Buy",
+    "status": "vetoed"
+   }
+  ],
+  "outcome": "10 approved · 2 vetoed · only approved orders reach the treasurer",
+  "overall": "The plan as a whole follows from the reports and evidence; the two flawed orders are stopped individually and the rest stand on their own merits.",
+  "subtitle": "Risk reviewed every report. 10 of 12 orders survived.",
+  "title": "The fund said no.",
+  "wallet": null,
+  "walletReason": "no per-agent wallet: the seats share one gateway key"
+ },
+ "source": {
+  "cycle": "fixtures/live/cycles/20260920T012716Z",
+  "decision": "fixtures/live/decisions/livecycle1",
+  "snapshot": "fixtures/live/snapshot-a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc.json",
+  "swaps": [
+   "run2-leg2-usdg-eth",
+   "run2-leg1-eth-usdg",
+   "leg2-usdg-eth",
+   "leg1-eth-usdg"
+  ]
+ },
+ "swarm": {
+  "agents": [
+   {
+    "calls": [
+     {
+      "asset": "AAPL",
+      "call": "Buy",
+      "confidence": "high"
+     },
+     {
+      "asset": "GME",
+      "call": "Buy",
+      "confidence": "high"
+     },
+     {
+      "asset": "INTC",
+      "call": "Buy",
+      "confidence": "high"
+     },
+     {
+      "asset": "META",
+      "call": "Buy",
+      "confidence": "medium"
+     },
+     {
+      "asset": "SPCX",
+      "call": "Buy",
+      "confidence": "medium"
+     },
+     {
+      "asset": "MSTR",
+      "call": "Buy",
+      "confidence": "medium"
+     }
+    ],
+    "confidence": "High",
+    "confidenceReason": "confidence is recorded per call, not per seat",
+    "cost": 0.46097,
+    "id": "trend",
+    "latency": 47.617,
+    "paragraphs": [
+     "REPORT price-trend unassigned a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc",
+     "The market is shut (`block.closed_sessions` includes `us_equities_24/5`), so each mark below is the feed's last round before the weekend close while GeckoTerminal and the venue keep trading; the 30-day and 20-day closes I read are themselves built on daily marks taken during the open session, so the trend read is unaffected by the freeze, only the very last print is frozen. Several names show real month-long trends; most of the rest are ranges or single-week spikes, which I leave alone.",
+     "CALL AAPL 0xaf3d76f1834a1d425780943c99ea8a608f8a93f9 buy high\nA steady, low-noise climb all month: from the low-$300s to mid-$330s with only shallow pullbacks (e.g. the 9/8-9/9 dip to ~$316 was quickly recovered).\n- $308.94 close on 2026-08-21 [timeline 2026-08-21]\n- $315.69 close on 2026-09-09, the month's dip [timeline 2026-09-09]\n- $335.38 latest mark, +8.6% over the window [mark.price_usd]\nWrong if: closes break back below $315 and stay there for several sessions.",
+     "CALL GME 0x1b0e319c6a659f002271b69db8a7df2f911c153e buy high\nA clean, near-monotonic uptrend for the full 30 days, roughly $18 to $22.5, with no material give-back.\n- $18.225 close on 2026-08-21 [timeline 2026-08-21]\n- $19.235 close on 2026-09-03 [timeline 2026-09-03]\n- $22.55175 latest mark, +23.7% over the window [mark.price_usd]\nWrong if: closes fall back under $20 for more than a day or two.",
+     "CALL INTC 0xc72b96e0e48ecd4dc75e1e45396e26300bc39681 buy high\nSustained uptrend, roughly $90 to $109 over the month, accelerating in the final week from ~$97 to ~$109.\n- $89.95465 close on 2026-08-21 [timeline 2026-08-21]\n- $97.225 close on 2026-09-15 [timeline 2026-09-15]\n- $109.05 latest mark [mark.price_usd]\nWrong if: closes give back the last week's gain and fall under $100.",
+     "CALL META 0xc0d6457c16cc70d6790dd43521c899c87ce02f35 buy medium\nStrong month-long climb from ~$549 to a peak of ~$682 on 9/17, but the latest close pulled back about 2.3% off that peak, so the trend is intact but has just cooled.\n- $549.15 close on 2026-08-21 [timeline 2026-08-21]\n- $682.42815 close on 2026-09-17, the month's peak [timeline 2026-09-17]\n- $666.7615 latest mark, -2.3% off the peak [mark.price_usd]\nWrong if: the pullback continues and closes fall under $645, erasing the September breakout.",
+     "CALL SPCX 0x4a0e65a3eccec6dbe60ae065f2e7bb85fae35eea buy medium\nA steady climb from the mid-$130s to a peak near $155, with only a shallow pullback in the last two sessions.\n- $136.935 close on 2026-08-21 [timeline 2026-08-21]\n- $155.13 close on 2026-09-17, the month's peak [timeline 2026-09-17]\n- $152.82485 latest mark [mark.price_usd]\nWrong if: closes drop back under $145, giving back most of September's gain.",
+     "CALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 buy medium\nChoppy in a $119-$144 band for most of the month, then a sharp break higher in the final two sessions to the low $150s; too fresh to call a settled trend, but the direction is clearly up.\n- $119.4185 close on 2026-08-21 [timeline 2026-08-21]\n- $132.185 close on 2026-09-17, still inside the old range [timeline 2026-09-17]\n- $152.643 latest mark, a ~15% jump in two sessions [mark.price_usd]\nWrong if: the next few closes fall back under $135, showing the spike was a one-week move, not a trend.",
+     "No call on AMZN, GOOGL, NVDA, PLTR, QQQ, SPY, TSLA, USO or CRCL: their 30-day closes are range-bound or too mixed (a late-month bounce after a decline, or a decline after a late-month peak) to support a directional call on trend alone."
+    ],
+    "perspective": "Price Trend: Buy",
+    "primaryCall": {
+     "asset": "AAPL",
+     "call": "Buy",
+     "confidence": "high"
+    },
+    "reportSha256": "e6ae1486e68fe1618b5625208339bbaad55c5c9f168b89d246ff5c2de3cba882",
+    "seat": "Price Trend",
+    "signature": null,
+    "signatureReason": "reports are validated against the snapshot, not signed; only the record is signed",
+    "status": "reported",
+    "summary": "6 call(s) on this snapshot",
+    "wallet": null,
+    "walletReason": "no per-agent wallet: the seats share one gateway key"
+   },
+   {
+    "calls": [
+     {
+      "asset": "SPY",
+      "call": "Buy",
+      "confidence": "medium"
+     },
+     {
+      "asset": "USO",
+      "call": "Buy",
+      "confidence": "medium"
+     },
+     {
+      "asset": "META",
+      "call": "Hold",
+      "confidence": "medium"
+     },
+     {
+      "asset": "AMZN",
+      "call": "Buy",
+      "confidence": "low"
+     }
+    ],
+    "confidence": "Medium",
+    "confidenceReason": "confidence is recorded per call, not per seat",
+    "cost": 0.216486,
+    "id": "macro",
+    "latency": 27.57,
+    "paragraphs": [
+     "REPORT cross-asset-macro unassigned a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc",
+     "Market is closed (block.closed_sessions includes us_equities_24/5): every stock mark is frozen at its last round while GeckoTerminal pools kept trading, so several divergence findings (AMZN -393.56bps, GOOGL +129.43bps, MSTR -424.05bps) reflect stale marks, not real moves. I'm reading co-movement off the 20-day daily-close timelines of the tradeable set, since that's the only apples-to-apples series across names.",
+     "The broad market (SPY, QQQ) has been flat to mildly soft over the window: SPY 766.13 -> 761.55 (-0.6%) [timeline 2026-08-21, timeline 2026-09-18], QQQ 713.79 -> 720.37 (+0.9%) [timeline 2026-08-21, timeline 2026-09-18]. Against that quiet macro tape, several single names in this book moved 2-5x the index magnitude in the same 20 days: AAPL +8.5% (308.94->335.38) [timeline 2026-08-21, timeline 2026-09-18], MU +4.8% (967.92->1014.43) [timeline], META +21.4% (549.15->666.76) [timeline], TSLA +0.4% (362.26->363.80) [timeline], NVDA +3.6% (214.71->222.45) [timeline], GME +23.8% (18.23->22.55) [timeline]. That spread — big single-stock dispersion against a nearly flat SPY/QQQ — says the book's risk is concentrated in idiosyncratic tech/AI names, not broad beta, and SPY/QQQ are the cleanest low-correlation ballast the book holds. USO moved with a distinct commodity path (+14.3%, 135.26->154.54) [timeline 2026-08-21, timeline 2026-09-18] uncorrelated to the equity moves, a genuine diversifier; SLV, the other commodity, is not tradeable this snapshot (below corroborator line) so I have no call there.",
+     "Within the tradeable names, META and GME/NVDA/MU all trended up together through the second half of the window (roughly 09-08 through 09-17), while AMZN drifted down over the same stretch (259->246 by 09-16) [timeline 2026-09-08, timeline 2026-09-16], the one clear divergence from the AI/tech cluster. That makes AMZN a partial hedge against the book's concentrated tech exposure rather than a repeat of it.",
+     "CALL SPY 0x117cc2133c37b721f49de2a7a74833232b3b4c0c buy medium\nSPY was essentially flat over 30 days (766.13 -> 761.55, -0.6%) [timeline 2026-08-21, timeline 2026-09-18] while single names in the book (META +21%, GME +24%) swung far more; adding SPY diversifies a book whose realized moves are dominated by idiosyncratic tech bets.\n- SPY 20-day change -0.6% [timeline 2026-08-21, timeline 2026-09-18]\n- META 20-day change +21.4% [META timeline 2026-08-21, META timeline 2026-09-18]\n- GME 20-day change +23.8% [GME timeline 2026-08-21, GME timeline 2026-09-18]\nWrong if: SPY's daily moves start tracking the tech cluster's swings one-for-one rather than sitting far below them.",
+     "CALL USO 0xa30fa36db767ad9ed3f7a60fc79526fb4d56d344 buy medium\nUSO rose steadily and by more than the index (135.26 -> 154.54, +14.3%) [timeline 2026-08-21, timeline 2026-09-18] on a path that does not track the AI/tech cluster's late-window rally, making it a genuine cross-asset diversifier against the book's concentrated equity risk.\n- USO 20-day change +14.3% [timeline 2026-08-21, timeline 2026-09-18]\n- SPY 20-day change -0.6% over the same window [SPY timeline 2026-08-21, SPY timeline 2026-09-18]\nWrong if: USO's daily path starts moving in lockstep with the tech names it currently diverges from.",
+     "CALL META 0xc0d6457c16cc70d6790dd43521c899c87ce02f35 hold medium\nMETA rose 21.4% over 20 days (549.15->666.76) [timeline 2026-08-21, timeline 2026-09-18] tracking the same up-leg as NVDA (+3.6%) and MU (+4.8%) [NVDA timeline 2026-08-21, NVDA timeline 2026-09-18, MU timeline 2026-08-21, MU timeline 2026-09-18] from roughly 09-08 onward; adding more here doubles a bet the book's tech cluster already makes rather than diversifying it.\n- META 20-day change +21.4% [timeline 2026-08-21, timeline 2026-09-18]\n- NVDA 20-day change +3.6% over same window, same up-leg timing [NVDA timeline 2026-08-21, NVDA timeline 2026-09-18]\nWrong if: META decouples from the NVDA/MU up-leg and starts moving on its own drivers.",
+     "CALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 buy low\nAMZN drifted down through the window the tech cluster rallied (259.45 -> 245.74 by 09-16, before a closed-session-frozen mark shows 253.86) [timeline 2026-08-21, timeline 2026-09-16, timeline 2026-09-18], the one clear counter-move against META/NVDA/MU; note its mark is frozen through the closed session and diverges -393.56bps from GeckoTerminal, a finding not a veto, so this is a low-confidence read.\n- AMZN 2026-09-16 close 245.74 vs 2026-08-21 close 259.45 [timeline 2026-08-21, timeline 2026-09-16]\n- META over same span rising, +21.4% total [META timeline 2026-08-21, META timeline 2026-09-18]\n- closed-session divergence -393.56 bps [corroboration.divergence_bps]\nWrong if: AMZN's next open-session prints resume tracking the tech cluster's direction rather than diverging from it."
+    ],
+    "perspective": "Cross Asset Macro: Buy",
+    "primaryCall": {
+     "asset": "SPY",
+     "call": "Buy",
+     "confidence": "medium"
+    },
+    "reportSha256": "0f7c9baeb9d8559e166c35fada7b20b98607bf425b5e65ef9863df268d5b2b0a",
+    "seat": "Cross Asset Macro",
+    "signature": null,
+    "signatureReason": "reports are validated against the snapshot, not signed; only the record is signed",
+    "status": "reported",
+    "summary": "4 call(s) on this snapshot",
+    "wallet": null,
+    "walletReason": "no per-agent wallet: the seats share one gateway key"
+   },
+   {
+    "calls": [],
+    "confidence": "No report",
+    "confidenceReason": "confidence is recorded per call, not per seat",
+    "cost": 0.43656,
+    "id": "execution",
+    "latency": 39.095,
+    "paragraphs": [
+     "This seat produced no accepted report. The runner recorded failed: invalid. Its reply was read and refused rather than used, and the cycle went on with the seats that did report — the quorum gate decides whether that is enough."
+    ],
+    "perspective": "Execution Quality: no report",
+    "primaryCall": {
+     "asset": "—",
+     "call": "No report"
+    },
+    "reportSha256": null,
+    "seat": "Execution Quality",
+    "signature": null,
+    "signatureReason": "reports are validated against the snapshot, not signed; only the record is signed",
+    "status": "failed",
+    "summary": "figure: 50 bps matches none of the fields it cites: MSTR quote.swap_impact_bps = 11; nor any value of MSTR (line 8)",
+    "wallet": null,
+    "walletReason": "no per-agent wallet: the seats share one gateway key"
+   },
+   {
+    "calls": [
+     {
+      "asset": "AMZN",
+      "call": "Caution",
+      "confidence": "medium"
+     },
+     {
+      "asset": "GOOGL",
+      "call": "Caution",
+      "confidence": "medium"
+     },
+     {
+      "asset": "MSTR",
+      "call": "Caution",
+      "confidence": "medium"
+     },
+     {
+      "asset": "NVDA",
+      "call": "Proceed",
+      "confidence": "high"
+     }
+    ],
+    "confidence": "Medium",
+    "confidenceReason": "confidence is recorded per call, not per seat",
+    "cost": 0.211956,
+    "id": "integrity",
+    "latency": 25.176,
+    "paragraphs": [
+     "REPORT price-integrity unassigned a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc",
+     "The market is shut (`block.closed_sessions` includes us_equities_24/5): every mark is frozen at its last Chainlink round from before the close, while GeckoTerminal and the venue keep trading. That means divergence between mark and corroborator is expected background noise here, not automatically a mark failure — but it is still worth flagging where the gap is large and where mark and venue agree tightly against a stale-looking corroborator, or vice versa. I limit calls to `tradeable` assets, since the other nineteen are already priced off-book by the corroborator-line rule and not my call to relitigate.",
+     "Of the sixteen tradeable names, most show mark and venue within single-digit-to-low-double-digit bps of each other (AAPL, CRCL, NVDA, TSLA, GOOGL, SPCX, USO, MSFT-excluded etc.), which is the expected shape in a closed session: two independent readings (mark, venue) agree and the corroborator is the outlier or is itself thin/lagging. Three assets carry explicit closed-session divergence findings against GeckoTerminal beyond the 100bps open-session veto line: AMZN, GOOGL, MSTR. I look at these plus one more, AMD's neighbor set, for where the mark itself, not just staleness, looks suspect.",
+     "CALL AMZN 0x12f190a9f9d7d37a250758b26824b97ce941bf54 caution medium\nMark and venue agree closely, but GeckoTerminal sits far above both, well past what closed-session staleness alone should explain given AMZN's better-than-$1M corroborator volume.\n- mark 253.863 vs venue 254.07317742977355, 0.08% apart [mark.price_usd, quote.venue_price_usd]\n- GeckoTerminal 264.2631498551 on $1043579.83868448 24h volume [corroboration.price_usd, corroboration.volume_24h_usd]\n- divergence -393.56 bps, flagged as beyond the open-session limit [corroboration.divergence_bps, findings]\nWrong if: GeckoTerminal's price converges back within 100bps of the mark once the market reopens, confirming it was just weekend pool drift on decent volume.",
+     "CALL GOOGL 0x2e0847e8910a9732eb3fb1bb4b70a580adad4fe3 caution medium\nSame pattern as AMZN: mark and venue are close, corroborator has real volume ($4.77M) yet diverges 129bps, past the open-session veto threshold.\n- mark 350.47135177 vs venue 352.2002869471623, 0.49% apart [mark.price_usd, quote.venue_price_usd]\n- GeckoTerminal 345.9933348603 on $4769689.8474691 24h volume [corroboration.price_usd, corroboration.volume_24h_usd]\n- divergence 129.43 bps, flagged beyond the open-session limit [corroboration.divergence_bps, findings]\nWrong if: the gap closes to within 100bps of the mark once trading resumes and the feed catches up.",
+     "CALL MSTR 0xec262a75e413fafd0df80480274532c79d42da09 caution medium\nMark and venue again tightly aligned (0.6% apart), but GeckoTerminal is 424bps below, the widest of the three flagged findings, on ample $3.4M volume — MSTR is volatile enough that a weekend pool move of this size is plausible but not confirmable from this snapshot alone.\n- mark 152.643 vs venue 158.504043531346, 3.7% apart in the other direction from GeckoTerminal [mark.price_usd, quote.venue_price_usd]\n- GeckoTerminal 159.4023510332 on $3426185.78320205 24h volume [corroboration.price_usd, corroboration.volume_24h_usd]\n- divergence -424.05 bps, flagged beyond the open-session limit [corroboration.divergence_bps, findings]\nWrong if: GeckoTerminal and venue converge toward each other and the mark once the feed updates at open, showing this was weekend drift, not a stale/bad mark.",
+     "CALL NVDA 0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec proceed high\nAll three prices agree tightly despite the closed session and high corroborator volume, so NVDA's mark holds up cleanly; noting this since NVDA carries the largest 24h volume of any asset here and is a useful sanity anchor for the batch.\n- mark 222.44729849, venue 222.1093559805842, GeckoTerminal 222.3436059206 [mark.price_usd, quote.venue_price_usd, corroboration.price_usd]\n- divergence 4.67 bps on $56212678.2164567 volume [corroboration.divergence_bps, corroboration.volume_24h_usd]\nWrong if: a later snapshot shows this agreement was coincidental and the feed round was in fact stale relative to a real intraday move."
+    ],
+    "perspective": "Price Integrity: Caution",
+    "primaryCall": {
+     "asset": "AMZN",
+     "call": "Caution",
+     "confidence": "medium"
+    },
+    "reportSha256": "b7920b5f142ed9cf29fb282dc44ac378f1663df36ea7e247c312cba7dabeb279",
+    "seat": "Price Integrity",
+    "signature": null,
+    "signatureReason": "reports are validated against the snapshot, not signed; only the record is signed",
+    "status": "reported",
+    "summary": "4 call(s) on this snapshot",
+    "wallet": null,
+    "walletReason": "no per-agent wallet: the seats share one gateway key"
+   }
+  ],
+  "costIsEstimate": true,
+  "parallelReason": "build and wall-clock timings are printed, not written to an artifact",
+  "parallelTime": null,
+  "quorum": "3 seat(s) reported, at least the quorum of 3",
+  "reportCost": 1.325972,
+  "signedReports": 3,
+  "snapshot": {
+   "block": 67545399,
+   "elapsed": null,
+   "elapsedReason": "build and wall-clock timings are printed, not written to an artifact",
+   "hash": "a635d85bc16f5e9e722b083dc0e576b48412de9dcb15b4fc829dce8cf91eeacc"
+  },
+  "stages": [
+   "Freeze snapshot",
+   "Analysts",
+   "Aggregate",
+   "Risk",
+   "Execute"
+  ],
+  "subtitle": "Independent reports on the same market snapshot.",
+  "title": "Four analysts. One frozen moment.",
+  "weights": "SPY 12.5% · AMZN 3.12% · GME 18.75% · SPCX 12.5% · USO 12.5% · AAPL 18.75% · META 6.25% · INTC 18.75% · MSTR 6.25%"
+ }
+}
