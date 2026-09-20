@@ -15,7 +15,7 @@ import subprocess
 import sys
 import textwrap
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal, localcontext
+from decimal import ROUND_HALF_EVEN, Decimal, localcontext
 from pathlib import Path
 
 import pytest
@@ -90,6 +90,36 @@ def test_a_whole_paper_cycle_runs_from_the_capture_to_a_book(tmp_path):
         assert book.nav_usd == (book.opened_usd + book.realised_usd + book.unrealised_usd
                                 - book.costs_usd)
     assert (tmp_path / "out" / "book.txt").read_text().startswith("the paper book at block")
+
+
+def test_the_book_as_json_says_exactly_what_the_book_as_text_says(tmp_path):
+    """`book.json` is the same book for a reader without a terminal (6.1, 7.6). It is
+    built from the same `BookValue` and computes nothing of its own, so every figure
+    in it must appear in `book.txt` once rounded the way that file rounds."""
+    run(tmp_path)
+    text = (tmp_path / "out" / "book.txt").read_text()
+    doc = json.loads((tmp_path / "out" / "book.json").read_text())
+
+    def cents(figure: str) -> str:
+        return f"${Decimal(figure).quantize(Decimal('0.01'), rounding=ROUND_HALF_EVEN):,.2f}"
+
+    assert f"the {doc['book']} book at block {doc['block']['number']} " \
+           f"({doc['block']['time']})" in text
+    assert doc["book"] == "paper" and len(doc["positions"]) == 6
+    for label, row in [*((p["symbol"], p) for p in doc["positions"]), ("cash", doc["cash"])]:
+        line = next(l for l in text.splitlines() if l.strip().startswith(label))
+        assert row["units"] in line
+        for figure in ("value_usd", "basis_usd", "unrealised_usd"):
+            assert cents(row[figure]) in line, (label, figure, line)
+    assert f"  NAV" in text and cents(doc["nav_usd"]) in text
+    i = doc["identity"]
+    assert (f"opened {cents(i['opened_usd'])} + realised {cents(i['realised_usd'])} "
+            f"+ unrealised {cents(i['unrealised_usd'])} − costs {cents(i['costs_usd'])} "
+            f"= NAV {cents(i['nav_usd'])}, exactly") in text
+    assert f"inference {cents(doc['expenses_usd'])}, an expense beside the NAV" in text
+    with localcontext(cash.EXACT):  # and the identity holds on the exact figures
+        assert Decimal(i["nav_usd"]) == (Decimal(i["opened_usd"]) + Decimal(i["realised_usd"])
+                                         + Decimal(i["unrealised_usd"]) - Decimal(i["costs_usd"]))
 
 
 def test_the_paper_book_opens_once_with_usdg_at_its_own_mark(tmp_path):

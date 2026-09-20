@@ -528,6 +528,54 @@ def value(events: Iterable[Event], *, book: str, snapshot: Mapping[str, Any]) ->
                      costs_usd=walked.costs, expenses_usd=walked.expenses)
 
 
+def as_document(value: BookValue, snapshot: Mapping[str, Any]) -> dict[str, Any]:
+    """One book as data: the same figures `store/positions.py` prints, exact instead of
+    rounded to the cent, for everything that reads a book without a terminal.
+
+    **It computes nothing.** Every number here is read off the `BookValue` the one fold
+    already produced (P8), and the identity's terms are that value's own, so a reader
+    can check `opened + realised + unrealised − costs = NAV` for itself. The rows are
+    in the order the text form prints them, by symbol, so the two can be compared line
+    by line. Amounts are text, never floats: these are exact decimals and JSON numbers
+    are not.
+
+    It names its book, and there is no combined form: paper and real are two documents,
+    as they are two figures (P9)."""
+    block = snapshot["block"]
+    symbols = {a["asset"]["address"]: a["asset"]["symbol"]
+               for a in [*snapshot["assets"], *snapshot["holdings"]]}
+
+    def held(asset: AssetId, position: Position) -> dict[str, Any]:
+        return {"address": asset.address, "symbol": symbols.get(asset.address),
+                "units": format(Decimal(position.amount.raw).scaleb(
+                    -position.amount.decimals).normalize(), "f"),
+                "raw": str(position.amount.raw), "decimals": position.amount.decimals,
+                "value_usd": format(position.value_usd, "f"),
+                "basis_usd": format(position.basis_usd, "f"),
+                "unrealised_usd": format(position.unrealised_usd, "f")}
+
+    return {
+        "book": value.book_name,
+        "block": {"chain_id": block["chain_id"], "number": block["number"],
+                  "time": block["time"]},
+        "nav_usd": format(value.nav_usd, "f"),
+        "cash": held(value.cash.amount.asset, value.cash),
+        "positions": [held(asset, position) for asset, position in sorted(
+            value.positions.items(), key=lambda p: symbols.get(p[0].address, p[0].address))],
+        "identity": {"opened_usd": format(value.opened_usd, "f"),
+                     "realised_usd": format(value.realised_usd, "f"),
+                     "unrealised_usd": format(value.unrealised_usd, "f"),
+                     "costs_usd": format(value.costs_usd, "f"),
+                     "nav_usd": format(value.nav_usd, "f"),
+                     "rule": "opened + realised + unrealised - costs = NAV, exactly"},
+        "expenses_usd": format(value.expenses_usd, "f"),
+        "expenses_rule": "inference is paid from LLM credits, which neither book holds: "
+                         "an expense beside the NAV and never in it",
+        "books_rule": "paper and real are two figures, and the fund has no third: "
+                      "they are never added",
+    }
+
+
 def planner_book(events: Iterable[Event], snapshot: Mapping[str, Any]) -> plan.Book:
     """P10: the paper book as the planner takes it: its stocks, and its cash as a USD
     figure at the cash leg's own mark. What 4.8's next cycle plans from. `plan.book`

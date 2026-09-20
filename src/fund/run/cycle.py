@@ -22,7 +22,8 @@ From a capture to a book:
    those orders from the database and takes each through the chokepoint, the fill
    and the books in one act (4.4, 4.5, 4.6). This process starts it from an empty
    environment and holds no key itself;
-6. **the book** is read back from the journal and reconciled exactly (4.7).
+6. **the book** is read back from the journal and reconciled exactly (4.7), and
+   written twice: `book.txt` for a reader and `book.json` for anything else.
 
 **Nothing here touches the chain.** Stock legs are paper (PLAN §13). The venue is the
 fake venue, labelled in every answer, and the risk vote is scripted: this command
@@ -210,6 +211,8 @@ def cycle(*, snapshot_path: Path, offered: Sequence[decide.Offered], conn: Any, 
     book = positions.read(journal, book=ledger.PAPER, snapshot=snapshot)
     statement = positions.statement(book, snapshot)
     (out_dir / "book.txt").write_text(statement + "\n")
+    # the same book as data, for anything without a terminal to read (6.1, 7.6)
+    decide._write(out_dir / "book.json", ledger.as_document(book, snapshot))
     decide._write(out_dir / "orders.json", reported["orders"])
     return Cycle(done, ran, book, statement, resolved, reported)
 

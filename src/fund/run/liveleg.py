@@ -149,7 +149,9 @@ def about(order, instruction: Mapping[str, Any], seen: plan.QuoteSeen, mandate: 
     return "\n".join(lines)
 
 
-def record(out_dir: Path, order, reported: Mapping[str, Any], statement: str) -> Path:
+def record(out_dir: Path, order, reported: Mapping[str, Any], statement: str,
+           book: ledger.BookValue | None = None,
+           snapshot: Mapping[str, Any] | None = None) -> Path:
     """What happened, written beside what was authorized. The books live in SQLite,
     which is not source and is not committed, so this is the repository's own evidence
     of the live leg: the order as the store holds it, the chain evidence the
@@ -162,6 +164,7 @@ def record(out_dir: Path, order, reported: Mapping[str, Any], statement: str) ->
         "sells": json.loads(to_canonical(order.sell)),
         "buys": order.buy_asset.address, "min_buy": json.loads(to_canonical(order.min_buy)),
         "execution": execution, "treasurer": reported, "real_book": statement.splitlines(),
+        "book": None if book is None else ledger.as_document(book, snapshot),
     }, indent=1, sort_keys=True, ensure_ascii=False) + "\n")
     return path
 
@@ -242,7 +245,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         book = positions.read(journal, book=ledger.REAL, snapshot=snapshot)
         statement = positions.statement(book, snapshot)
         print("\n" + statement)
-        print(f"written  {record(args.out, store.get(order.order_id), reported, statement)}")
+        print(f"written  {record(args.out, store.get(order.order_id), reported, statement, book, snapshot)}")
     return 0
 
 

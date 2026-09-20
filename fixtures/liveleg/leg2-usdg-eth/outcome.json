@@ -1,4 +1,46 @@
 {
+ "book": {
+  "block": {
+   "chain_id": 4663,
+   "number": 67499670,
+   "time": "2026-09-20T00:08:24Z"
+  },
+  "book": "real",
+  "books_rule": "paper and real are two figures, and the fund has no third: they are never added",
+  "cash": {
+   "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+   "basis_usd": "0.057451563822240000000000000000",
+   "decimals": 6,
+   "raw": "57456",
+   "symbol": "USDG",
+   "units": "0.057456",
+   "unrealised_usd": "0.000000000000000000000000000000",
+   "value_usd": "0.05745156382224"
+  },
+  "expenses_rule": "inference is paid from LLM credits, which neither book holds: an expense beside the NAV and never in it",
+  "expenses_usd": "0",
+  "identity": {
+   "costs_usd": "0",
+   "nav_usd": "1.28581522201804455630",
+   "opened_usd": "1.28604122805670792085",
+   "realised_usd": "-0.000001577507940000000000000000",
+   "rule": "opened + realised + unrealised - costs = NAV, exactly",
+   "unrealised_usd": "-0.000224428530723364550000000000"
+  },
+  "nav_usd": "1.28581522201804455630",
+  "positions": [
+   {
+    "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "basis_usd": "1.228588086726527920850000000000",
+    "decimals": 18,
+    "raw": "468188843098662",
+    "symbol": "ETH",
+    "units": "0.000468188843098662",
+    "unrealised_usd": "-0.000224428530723364550000000000",
+    "value_usd": "1.22836365819580455630"
+   }
+  ]
+ },
  "buys": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
  "execution": {
   "_type": "Execution",
