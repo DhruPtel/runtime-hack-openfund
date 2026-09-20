@@ -1460,6 +1460,76 @@ tests pass.
 
 ---
 
+## The rehearsal — three live runs, and what Bankr actually carries
+**Date:** 2026-09-20 · **Commits:** e54e61b, 2678b52 · Findings F8.R.1 to F8.R.6
+
+Three runs of the live pipeline back to back, changing nothing between them, plus one
+real round trip. State before spending: credits **$12.447837**; the wallet holding
+0.000468188843098662 ETH and 0.057456 USDG on 4663 and 5.079910 USDC on Base; the read
+key read-only, the LLM key gateway-only, the exec key able to transact, a never-issued
+control key answering 401 to everything; and a fresh clone passing 794 tests.
+
+| Run | Analysts | Decision | Record | Replays | Cost |
+|---|---|---|---|---|---|
+| 1 | 2 of 4 — two HTTP 504 | **no rebalance**, below the quorum of 3 | `b6f0f50d…` | byte-identical | $1.212898 |
+| 2 | 4 of 4 | 5 orders, every gate cleared, **all vetoed by risk** (INTC's mark) | `5264a64e…` | byte-identical | $1.412568 |
+| 3 | 4 of 4 | 8 orders, every gate cleared, **all vetoed by risk** (MSTR's mark) | `4103752c…` | byte-identical | $1.149473 |
+
+**Three for three on the thing that matters:** every run produced a signed decision
+record that rebuilds byte for byte from its own carried inputs. Two of three reached
+quorum. None executed a stock order — twice because the risk agent vetoed the plan on a
+price-integrity mark flag, once because two analyst calls were lost. Each is a valid
+outcome, and each is recorded as what it was. A whole run is about four minutes.
+
+**The round trip,** between runs 2 and 3, on run 2's snapshot: `0x2d543870…23aa` (block
+67,532,677, 0.00003 ETH into 0.078760 USDG, 17.1 s) and `0x871944…21a0` (block
+67,532,956, 0.10 USDG into 0.000038077691442267 ETH, 19.9 s). Both gas-sponsored, both
+confirmed from the EntryPoint event and the wallet's own logs. The real book now holds
+four live fills, reconciles exactly at NAV $1.29, and has used $0.357 of the $1 budget.
+The paper book in the same database is empty: two books, never added.
+
+### Bankr, named surface by surface
+
+| Surface | What the three runs did | Evidence |
+|---|---|---|
+| **LLM gateway** `llm.bankr.bot/v1` | 12 analyst calls and 2 risk calls, `claude-sonnet-5` | each run's `results/*.json` with status, tokens and cost; the record's risk section; the balance falling $3.774939 |
+| **Credits** `/v1/credits` | read before and after each run | $12.447837 → $8.672898 |
+| **Quotes** `api.bankr.bot/wallet/swap-quote` | 13 live quotes for plan sizing (0, 5, 8) and 3 for the live leg | each decision's `quotes.json`, labelled "live, read-only"; each instruction's carried `quoteId` |
+| **Swap** `api.bankr.bot/wallet/swap` | 2 submissions, one each way | the two transaction hashes |
+| **The wallet** `0x93faecde…a3da` | Bankr-custodied and EIP-7702-delegated to a Bankr contract; both swaps ran as 4337 UserOperations with this wallet as `sender`, submitted by a Bankr bundler | `make selftest`'s delegation check; each `outcome.json`'s `user_operation` |
+
+**Not Bankr:** the chain itself is `rpc.mainnet.chain.robinhood.com`, the corroborating
+prices are GeckoTerminal's, and the marks are Chainlink feeds read on chain.
+
+**What would still work if Bankr vanished:** the snapshot, the 235-address attestation,
+the registry and beacon checks, every gate, the ledger and both books, the signing, the
+byte-identical replay, the order state machine, and the receipt reconciler — which reads
+the chain directly. The fund could still publish a signed record saying it did not
+trade, and still value what it holds.
+
+**What would not:** every analyst report and the risk vote, because inference is the
+gateway's; every quote, so the planner could not size or gate a single order; every
+execution, because `/wallet/swap` is the only path that spends; and custody itself, since
+the wallet is Bankr's. Bankr is the fund's brain, its price feed for execution, and its
+hands. The books, the evidence discipline and the refusals are the fund's own.
+
+### What the rehearsal exposed, and was not fixed
+- **The gateway loses calls.** Two of twelve, both in run 1. Nothing in this repository
+  can fix that; the retry budget deliberately does not cover a timeout, which is billed
+  anyway. Below quorum the fund refuses to rebalance, which is the right failure.
+- **The cost estimate is 12% low** over the three runs, and low *because* a lost call
+  counts as zero. 6.3 must reconcile against `/v1/credits`, not trust the estimate.
+- **No command runs a live cycle end to end** (F8.R.5): `decide` decides live and
+  executes nothing, `cycle` executes but always decides offline with a scripted vote.
+  The fills-and-book half has never run against a live record. That is 5.7 and 8.3, and
+  nothing was built here to close it.
+- **The risk agent vetoes a whole plan for one bad order.** Twice in two chances. In a
+  closed session the equity marks are frozen and divergence grows, so price-integrity
+  reliably has something to flag. Whether one veto should carry the plan is the
+  operator's call; the brief was not touched.
+
+---
+
 ## State at close — 2026-09-20, Phase 5 built to 5.3; the live leg has run, and 5.4 is the stop
 
 **Read this first.** This note describes the repository at the commit that last
