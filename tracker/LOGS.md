@@ -1805,14 +1805,17 @@ commands need `PYTHONPATH=src`.
   - META 12.5%, AMD, INTC and USO 6.25% each, 68.75% cash;
   - four buys totalling $62.50 of the $200 paper book;
   - a risk bundle of about 32,400 tokens, 12,000 of them reserved.
-- **Wallet, after the live leg (2026-09-20 00:17Z):** 0.000468188843098662 ETH and
-  0.057456 USDG on 4663. The real book's NAV is **$1.28581522201804455630**, and
+- **Wallet, after the rehearsal (2026-09-20 01:04Z):** 0.000476266534540929 ETH and
+  0.036216 USDG on 4663, plus 5.079910 USDC on Base. The real book's NAV is **$1.28581522201804455630**, and
   opened + realised + unrealised − costs equals it exactly. The paper book in that
   same journal (`fixtures/live/live.sqlite`, gitignored) is empty: two books, never
   added. Before the leg it was 0.000460162486507929 ETH and 0.078742 USDG.
-- **The two live swaps:** `0x9c8ea67d…cfbbfa` (block 67,501,588, 0.00003 ETH into
-  0.078714 USDG) and `0x737e32b4…02a27` (block 67,501,988, 0.10 USDG into
-  0.000038026356590733 ETH). Both gas-sponsored. $0.1787 of the $1 live budget used.
+- **Four live swaps, two round trips.** 5.2: `0x9c8ea67d…cfbbfa` (block 67,501,588,
+  0.00003 ETH into 0.078714 USDG) and `0x737e32b4…02a27` (block 67,501,988, 0.10 USDG
+  into 0.000038026356590733 ETH). The rehearsal: `0x2d543870…23aa` (block 67,532,677)
+  and `0x871944…21a0` (block 67,532,956). All four gas-sponsored. **$0.357 of the $1
+  live budget used**, and the real book holds four fills at NAV $1.29.
+- **Credits:** $8.672898, after the rehearsal's three runs spent $3.774939.
 
 ### Config
 - **Set in the 2.2–2.5 batch:**
