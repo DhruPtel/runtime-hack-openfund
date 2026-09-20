@@ -365,3 +365,29 @@ def test_the_ledger_refuses_evidence_that_is_not_this_orders_and_nothing_is_book
         ledger.live_fill(dataclasses.replace(order, mode=ExecutionMode.PAPER,
                                              state=OrderState.SUBMITTED),
                          Amount(SOLD, 18, ETH), Amount(78_742, 6, USDG), SNAPSHOT)
+
+
+# --- the body that spends (5.1) --------------------------------------------------------------------
+
+WORKED = json.loads((Path(__file__).parent / "data" / "swap_request_0_10.json").read_text())
+
+
+def test_the_swap_body_is_the_one_that_filled_on_chain():
+    """Probe 0.10's submission is the only swap body this fund has ever had accepted.
+    The adapter sends that shape: the same eight fields, the floor as human text, and
+    no slippage figure — the floor is the order's own, from the quote it was
+    authorized on."""
+    request = execute.bankr_exec.SwapRequest(
+        sell=SELL, buy=USDG, idempotency_key=WORKED["body"]["idempotencyKey"],
+        min_buy=Amount.from_units(WORKED["body"]["minBuyAmount"], USDG_DECIMALS, USDG),
+        quote_id=WORKED["body"]["quoteId"])
+    assert request.body(execute.bankr_exec.Settings.load()) == WORKED["body"]
+
+
+def test_a_swap_with_no_floor_is_refused_before_the_wire():
+    with pytest.raises(ValueError, match="floor"):
+        execute.bankr_exec.submit(
+            execute.bankr_exec.SwapRequest(sell=SELL, buy=USDG, idempotency_key="k",
+                                           min_buy=Amount(0, USDG_DECIMALS, USDG)),
+            "SECRET", settings=execute.bankr_exec.Settings.load(),
+            transport=lambda *a: (_ for _ in ()).throw(AssertionError("nothing is sent")))

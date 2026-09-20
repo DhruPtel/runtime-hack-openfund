@@ -398,7 +398,8 @@ class LiveExecutor:
         if order.idempotency_key in self.sent:  # sent once in this process, as on the venue
             return self.sent[order.idempotency_key]
         request = bankr_exec.SwapRequest(sell=order.sell, buy=order.buy_asset,
-                                         idempotency_key=order.idempotency_key)
+                                         idempotency_key=order.idempotency_key,
+                                         min_buy=order.min_buy, quote_id=quote.quote_id)
         self._watch("sending", request.body(self.settings))
         reply = bankr_exec.submit(request, self._secret, settings=self.settings,
                                   transport=self._transport)

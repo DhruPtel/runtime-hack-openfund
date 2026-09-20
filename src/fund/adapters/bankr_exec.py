@@ -39,7 +39,6 @@ class Settings:
     credential: str
     auth_header: str
     timeout_s: float
-    slippage_bps: int
     user_agent: str
 
     @classmethod
@@ -51,25 +50,40 @@ class Settings:
                              "may send a swap")
         return cls(base_url=c["base_url"], path=c["path"], chain=c["chain"],
                    credential=credential.name, auth_header=c["auth_header"],
-                   timeout_s=c["request_timeout_seconds"], slippage_bps=c["slippage_bps"],
-                   user_agent=c["user_agent"])
+                   timeout_s=c["request_timeout_seconds"], user_agent=c["user_agent"])
+
+
+def _human(amount: Amount) -> str:
+    """A raw amount as the venue's human text: `0.00003`, never a float."""
+    whole, part = divmod(amount.raw, 10 ** amount.decimals)
+    return f"{whole}.{part:0{amount.decimals}d}".rstrip("0").rstrip(".")
 
 
 @dataclass(frozen=True)
 class SwapRequest:
-    """One swap: sell this amount of one asset for another, under this key."""
+    """One swap: sell this amount of one asset for another, under this key, and take
+    no less than `min_buy` for it.
+
+    **The body is the one probe 0.10 measured** (`probes/out/idempotency.json`): the
+    two chains and tokens, the human amount, `minBuyAmount`, `quoteId` and
+    `idempotencyKey`. `minBuyAmount` is the floor the *order* was authorized with, not
+    a slippage percentage: the venue enforces it, so a swap that cannot fill above what
+    was authorized reverts instead of filling badly. A revert costs gas and buys
+    nothing, which is the trade this fund prefers (PLAN §4)."""
 
     sell: Amount
     buy: AssetId
     idempotency_key: str
+    min_buy: Amount
+    quote_id: str | None = None
 
     def body(self, settings: Settings) -> dict[str, Any]:
-        whole, part = divmod(self.sell.raw, 10 ** self.sell.decimals)
-        human = f"{whole}.{part:0{self.sell.decimals}d}".rstrip("0").rstrip(".")
+        if self.min_buy.asset != self.buy:
+            raise ValueError("the floor is in the asset being bought")
         return {"fromChain": settings.chain, "fromToken": self.sell.asset.address,
                 "toChain": settings.chain, "toToken": self.buy.address,
-                "amount": human, "slippageBps": settings.slippage_bps,
-                "idempotencyKey": self.idempotency_key}
+                "amount": _human(self.sell), "minBuyAmount": _human(self.min_buy),
+                "quoteId": self.quote_id, "idempotencyKey": self.idempotency_key}
 
 
 @dataclass(frozen=True)
@@ -104,6 +118,8 @@ def submit(request: SwapRequest, secret: str, *, settings: Settings | None = Non
         raise ValueError("a swap sells one asset for another")
     if not request.idempotency_key:
         raise ValueError("a swap carries the order's idempotency key")
+    if request.min_buy.raw <= 0:
+        raise ValueError("a swap names the floor it will not fill below")
     send = transport or bankr_quote.keyed_transport(settings.user_agent, settings.auth_header,
                                                     secret)
     now = clock or (lambda: Instant(__import__("time").time_ns() // 1_000_000))

@@ -1,0 +1,13 @@
+{
+ "_what": "The exact request body probe 0.10 sent to POST /wallet/swap on 2026-09-18, which filled: 0.00003 ETH into USDG on 4663 (F0.10.1, F0.10.2). Recorded from probes/out/idempotency.json, which is not committed. The idempotency key and the quote id were that submission's own; tests/test_liveleg.py holds the adapter to the shape, not to them.",
+ "body": {
+  "amount": "0.00003",
+  "fromChain": "robinhood",
+  "fromToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "idempotencyKey": "da8dd080-1e78-4357-bca6-2502d8ad9724",
+  "minBuyAmount": "0.074804",
+  "quoteId": "6ad666aa-3d4d-4e32-8fb0-5dce0cd6213d",
+  "toChain": "robinhood",
+  "toToken": "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+ }
+}
