@@ -4822,3 +4822,81 @@ MSTR at a 362 bps gap is where that would happen.
 - **What the label did:** at 3.8's first run price-trend made no NVDA call. So
   relabelling did not cure the copying; replacing the example would.
 - **Why it cost nothing:** it is a hold, and no order came of it.
+
+---
+
+## Phase 5 — the live leg
+
+Two real swaps on 4663, 2026-09-20 00:14Z and 00:17Z, authorized once by the
+operator and sent by `run/liveleg.py`. Sizes: 0.00003 ETH (~$0.079) out, 0.10
+USDG (~$0.10) back. `fixtures/liveleg/` holds each instruction, its signature
+and what became of it.
+
+### F5.2.1 — The round trip works, and USDG → ETH is sponsored too
+
+**Confidence: measured, once each direction. Verdict: pass.**
+
+| | Transaction | Block | Gave | Got | Gas charged |
+|---|---|---|---|---|---|
+| ETH → USDG | `0x9c8ea67d…cfbbfa` | 67,501,588 | 30,000,000,000,000 wei | 78,714 USDG | **0** |
+| USDG → ETH | `0x737e32b4…02a27` | 67,501,988 | 100,000 USDG | 38,026,356,590,733 wei | **0** |
+
+Both `UserOperationEvent`s name **our wallet as `sender`** and report
+`success: true`. F0.10.2 measured only the first direction; `SIMPLIFICATION`
+said of USDG → ETH that "its sponsorship is inferred". It is now measured: the
+reverse direction was sponsored on the same terms. Two observations, one each
+way, at about ten cents — not a guarantee at size.
+
+### F5.2.2 — The 7702 delegation persists: later swaps are type-2 transactions
+
+**Confidence: measured. This changes what a receipt looks like.**
+
+Probe 0.10's swap arrived in a **type-4** transaction, which carried the
+authorization that delegated the wallet (F0.10.3). Both of these arrived in
+**type 2**. The delegation is already in place, so the bundler no longer sends
+one. What did *not* change is the shape that matters: an EntryPoint
+`UserOperationEvent` naming our wallet, inside a transaction sent by a bundler
+(`0x4a449c25…`, not our wallet). Anything that had keyed on type 4 would have
+read these two as not ours. `treasurer/reconcile.py` keys on the event, and
+records `tx_type` without judging it.
+
+### F5.2.3 — The 6 bps gap recurred, to the wei
+
+**Confidence: measured twice. Verdict: unresolved, and now reproducible.**
+
+F0.10.4 recorded 18 gwei of probe 0.10's sale that the logs did not name: the
+wallet's balance fell by 30,000,000,000,000 wei and the wrap log named
+29,982,000,000,000. **The ETH → USDG leg of 5.2 reproduced it exactly** — same
+size, same 18,000,000,000 wei, 6 bps. It is a fixed fraction of the sale at this
+size, not a fixed fee and not noise. The fund books what the wallet actually
+gave, so nothing is missing from the books; the gap is in the evidence trail,
+and the order's reason names it. 6.2 surfaces it as an exception.
+
+The USDG → ETH leg has no equivalent gap to measure: what the wallet gave is a
+`Transfer` log, exact at 100,000 units.
+
+### F5.2.4 — What the venue quotes is not what the chain delivers
+
+**Confidence: measured, one leg.**
+
+The USDG → ETH quote said 38,026,821,939,583 wei, with a floor of
+36,125,480,842,603. The chain delivered **38,026,356,590,733** — 465,348,850 wei
+less, about 1.2 bps below the quote and comfortably above the floor. The books
+take the chain's figure. A fund that booked the quote would be wrong by that
+much on every live fill, always in the same direction.
+
+### F5.2.5 — The explorer's transaction page returns 200 for any hash
+
+**Confidence: measured. It matters for what counts as proof.**
+
+`https://robinhoodchain.blockscout.com/tx/<hash>` answered **200** for both real
+transactions — and **200** for `0x000…001`, which is not a transaction. The page
+is a client-side application; the status code says nothing about whether the
+transaction exists. Its API (`/api/v2/transactions/<hash>`) answered **403**, which is what the
+mainnet explorer gave 0.T.3 when it tried to compare deployer addresses.
+
+So a 200 is not evidence, and no automated check here can use it. The evidence
+that these two swaps happened is the **RPC receipt**: the EntryPoint event, the
+`Transfer` logs and the wallet's balance across the block, which is what
+`treasurer/reconcile.py` reads and `tests/test_reconcile.py` holds it to. The
+explorer link is for a human to open.

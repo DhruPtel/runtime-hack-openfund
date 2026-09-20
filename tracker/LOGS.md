@@ -1303,6 +1303,70 @@ operator.**
 
 ---
 
+## 5.1, 5.3 — The one path that can spend, and the chain as the only answer
+**Date:** 2026-09-19 · **Commits:** 5dc4b77, 2c8d243, 2329034
+
+`adapters/bankr_exec.py` sends one swap and never retries; `treasurer/reconcile.py`
+says what became of it, from the receipt and not the reply. A swap on 4663 is a
+gas-sponsored 4337 UserOperation inside a bundler's transaction, so who swapped is the
+EntryPoint's `UserOperationEvent.sender`, whether it filled is that event's `success`,
+what moved is the wallet's `Transfer` logs — and, for the native leg, which emits none,
+its own balance across the block less any gas. Unsettled is `unknown`, never `failed`.
+`LiveExecutor` satisfies the paper executor's `submit(order, quote) -> Outcome`
+unchanged; what changed in the caller is only the authority, which `run_order` now
+takes as an argument. Gas is booked as a cost whether the swap filled or reverted.
+`config/cadence.json`'s `confirmation_depth` is **100 blocks**, about ten seconds at
+the 102 ms blocks measured, and it is a choice, not a measurement. The swap body is
+the one that filled on chain — `minBuyAmount` and `quoteId`, no slippage figure — so
+the venue enforces the floor the order was authorized with. Verified H: 8 breaks on
+the reconciler, 12 on the leg, each caught, against probe 0.10's real recorded
+receipt in `tests/data/`.
+
+## 5.2 — A signed instruction, because no analyst chose this trade
+**Date:** 2026-09-19 · **Commit:** 2c8d243
+
+Every order this fund sends is authorized in writing and verified at the chokepoint.
+The live leg has no analyst behind it — SIMPLIFICATION calls it a demonstration of the
+money path that no analyst chose, and forbids manufacturing a decision for it — so it
+carries its own artefact: `treasurer/instruct.py` writes one order in the plan's own
+layout, signed by the same key in the same envelope, its id the sha256 of its own
+bytes, so the order's id and idempotency key derive from exactly what was authorized.
+`admit_instruction` is the same chokepoint on a different authority: it drops `quorum`,
+`turnover`, `position-weight`, `tradeable` and the paper cash floor — nobody voted,
+there is no plan to turn over, and that floor is the paper book's — and adds the
+instruction's own expiry. Everything else an order passes, it passes. The treasurer
+cannot fetch a live quote (the quote adapter refuses a key that can transact), so it
+judges the one the instruction carries, by the same age rule, and a stale one is
+refused. `mandate.json` v3 sets `cumulative_budget_usd` to **$1**, the ceiling on
+everything the live leg may ever trade.
+
+## 5.2 ▶ — Two real swaps, reconciled and booked
+**Date:** 2026-09-20 · **Commit:** a3809ef
+
+On a snapshot 142 s old, `python3 -m fund.run.liveleg` printed the asset, size, wallet
+and chain, and stopped; run again with `--confirm` it sent one swap, once.
+
+- **ETH → USDG:** `0x9c8ea67dd8c17c9a7315f38ad427f8e0b3852d55b68af463d5f17027d3cfbbfa`,
+  block 67,501,588, 119 confirmations deep. Gave 30,000,000,000,000 wei, got 78,714
+  USDG, gas sponsored. 18 gwei the logs do not name (F5.2.3, F0.10.4 again).
+- **USDG → ETH:** `0x737e32b4ea091110fa0dc42daf8992c705a5d89edc24c5bdd4fae3553a802a27`,
+  block 67,501,988, 119 deep. Gave 100,000 USDG, got 38,026,356,590,733 wei, sponsored.
+
+The real book: **NAV $1.28581522201804455630**, opened $1.28604122805670792085 +
+realised −$0.0000015775 + unrealised −$0.0002244285 − costs $0 = NAV, exactly. The
+paper book in the same journal is empty: two books, never added. $0.1787 of the $1
+budget is used. Each order booked one fill, under its own key, and the instruction,
+its signature and its outcome are committed in `fixtures/liveleg/`.
+
+**Two bugs the run found.** An unsettled receipt returned no transaction reference, so
+an order left in flight carried no hash and a restart had nothing to read; and
+`live_fill` refused an order in state `unknown`, which is exactly the state a restart
+finds one in. Both fixed, each with a break to prove it. 4.9 left reading the chain to
+this unit: `startup.resolve` now takes a reader, and books the fill, its gas and the
+state in one write.
+
+---
+
 ## State at close — 2026-09-19, Phase 4 built; 4.11 shown at its stop
 
 **Read this first.** This note describes the repository at the commit that last

@@ -2840,3 +2840,74 @@ identity is an equality, not a tolerance.
 capital and no existing kind could carry them without calling one of them income or a
 cost. The fixture is its caller.
 **Affects:** 4.6, 6.1, 6.2, 6.3, 7.2; `core/ledger.py`, `store/schema.sql`.
+
+## 2026-09-20 — 5.2: the live leg is authorized, and not by a decision that never happened
+**What the plan proposed.** `planning/SIMPLIFICATION.md` decided the live leg is *a
+demonstration of the money path that no analyst chose* and that no decision is
+manufactured to justify it — then proposed, "not decided", that **the planner append
+one live order to each cycle that trades**.
+
+**Why that mechanic was not built.** A plan is one book's rebalance. Its orders carry
+weights against that book's NAV, and `cash_after_usd` and the cash floor count a
+buy's proceeds as that book's cash. The live leg trades the **real** book. Appending
+it to a paper plan would have written weights against the wrong NAV and counted the
+wallet's USDG as paper cash — two books added, which is the one thing the ledger
+refuses everywhere else (P9). Refusing to append it and sending it unauthorized was
+the worse option: it is the only path that spends real money.
+
+**What was built instead.** A signed instruction: one order in the plan's own layout,
+signed by the same key, in the same envelope, verified the same way, with its id the
+sha256 of its own bytes so the order's id and idempotency key derive from exactly what
+was authorized. `admit_instruction` is the same chokepoint over a different authority.
+It does not ask `quorum`, `turnover`, `position-weight`, `tradeable` or the cash
+floor, and the module says why for each: nobody voted, there is no plan to turn over,
+a sale of what the wallet holds opens no position, and that floor is the paper book's.
+It adds the instruction's expiry, because authority to spend should not outlive the
+window it was given in.
+
+**The operator should confirm this.** It is a second authority for spending, and the
+plan's own proposal was different. `planning/` was outside this batch's paths, so the
+plan still says what it said.
+**Affects:** 5.2, 5.7, 8.3; `treasurer/instruct.py`, `run/liveleg.py`,
+`planning/SIMPLIFICATION.md`.
+
+## 2026-09-20 — What the live leg could not fetch, and what it therefore judges
+**What we believed.** The chokepoint re-quotes: it trusts nothing the decision
+computed, and takes a fresh quote itself.
+
+**What the credential split makes true.** The quote adapter refuses any credential
+that can transact, and `BANKR_KEY_READ` is the analyst's alone. The treasurer's
+process — the only one that may spend — therefore cannot take a quote at all. On the
+paper path this never showed, because the fake venue needs no credential.
+
+**What the live leg does.** It judges the quote the instruction carries, through the
+same `execute.judge` and the same `bankr_quote.tradeability`, at the clock it runs at.
+A quote that aged past `quote_max_age_seconds` between the signature and the
+chokepoint is refused by the `quote` gate, exactly as a stale live quote would be, and
+the instruction's expiry bounds it a second time. What is given up is the re-fetch:
+the live chokepoint re-judges evidence it cannot re-take. It is written where it
+happens, in `treasurer/instruct.py:Carried`.
+**Affects:** 5.2, 5.7; `treasurer/instruct.py`, `credentials.py`, PLAN §13.
+
+## 2026-09-20 — Two bugs that only a real run could find
+**What the run found.** Both were in the path an order takes when the answer does not
+arrive at once — the path every test had exercised, and no test had exercised *twice*.
+- **An unsettled receipt returned no transaction reference.** Under the confirmation
+  depth, `reconcile.read` answered `unknown` and threw away what it had read, so the
+  order carried no hash. A restart then had nothing to read, and the only honest thing
+  left was to refuse every cycle until a human looked. An unknown outcome must carry
+  the evidence it does have.
+- **`live_fill` refused an order in state `unknown`.** P3's rule is that only an order
+  written before the act may fill. `unknown` *is* written-before-the-act — it is what
+  a submitted order becomes when the answer is missing — so a restart could read the
+  chain, find a fill, and be refused by its own ledger. `prepared` still may not fill.
+
+**Why they survived until now.** Every earlier test settled inside one call. The
+restart path was reasoned about (4.9 named it and left it to 5.3) but never run end to
+end, and the first thing that did run it was a real swap.
+
+**What changed.** `startup.resolve` now takes a reader, and books the fill, its gas and
+the order's new state in one write, through the same `execute.booked` the executor
+uses — so an order settles identically whether the run that sent it saw the answer or
+a later one did.
+**Affects:** 4.9, 5.1, 5.3; `run/startup.py`, `core/ledger.py`, `treasurer/`.
