@@ -4900,3 +4900,92 @@ that these two swaps happened is the **RPC receipt**: the EntryPoint event, the
 `Transfer` logs and the wallet's balance across the block, which is what
 `treasurer/reconcile.py` reads and `tests/test_reconcile.py` holds it to. The
 explorer link is for a human to open.
+
+---
+
+## Phase 8 rehearsal — three live runs, 2026-09-20 00:52Z to 01:08Z
+
+Three runs of the live pipeline, back to back, changing nothing between them:
+`make snapshot` → `fund.agents.runner --confirm` (four analysts) →
+`fund.run.decide --live-quotes --confirm` (live quotes, one risk call, a signed
+record). Plus one ETH↔USDG round trip on 4663 between runs 2 and 3. Credit
+balance before: **$12.447837**; after: **$8.672898**.
+
+### F8.R.1 — Three for three on the record; two for three on quorum
+
+| | Snapshot | Analysts | Decision | Record | Replays | Measured |
+|---|---|---|---|---|---|---|
+| 1 | 67,525,936 | **2 of 4** (two HTTP 504) | no rebalance: below quorum | `b6f0f50d…` | **yes** | $1.212898 |
+| 2 | 67,529,959 | 4 of 4 | 5 orders, **all vetoed by risk** | `5264a64e…` | **yes** | $1.412568 |
+| 3 | 67,533,212 | 4 of 4 | 8 orders, **all vetoed by risk** | `4103752c…` | **yes** | $1.149473 |
+
+Every snapshot replayed byte-identically from its own capture in the same run.
+Every record is signed, authorizes against the published key, and rebuilds byte
+for byte from the cycle's own carried inputs. **No run executed a stock order.**
+
+Durations: snapshot ~150 s, analysts 59–121 s, decision 0.25–26 s. A whole run is
+about four minutes, of which the snapshot is two and a half.
+
+### F8.R.2 — The LLM gateway is the pipeline's least reliable part
+
+Twelve analyst calls over three runs. **Two were lost to HTTP 504** — both in run
+1, both `cross-asset-macro` and `price-integrity` — and a lost call is never
+retried (PLAN §9: it is billed either way). Two reports are below the quorum of
+three, so run 1 could not rebalance. Runs 2 and 3 lost none.
+
+Four of the twelve needed the one retry the budget allows, after the **validator**
+refused the first reply: a figure that matched none of the fields it cited, and an
+asset address absent from the snapshot. That is the guard working — a fabricated
+citation never reaches a report — and the retry absorbed it every time.
+
+### F8.R.3 — The cost estimate undercounts exactly when a call is lost
+
+Run 1 estimated **$0.942612** and cost **$1.212898**: the two 504s are recorded by
+the fund as cost 0, because no reply arrived to count tokens from, and the gateway
+billed them anyway (F0.9.3 again, now measured on a real cycle). Over three runs
+the estimate was $3.362 against $3.775 measured, **12% low**. 6.3's inference cost
+line must therefore be labelled an estimate, and reconciled against `/v1/credits`
+rather than trusted.
+
+### F8.R.4 — The risk agent vetoed every plan it was shown, both times on a mark
+
+Runs 2 and 3 both reached quorum, planned orders ($112.50 and $153.12), and passed
+**every fixed gate**. Both were then vetoed outright:
+- **run 2, INTC:** price-integrity flagged its mark at −60.82 bps against a tightly
+  clustered venue/GeckoTerminal pair and called it the unreliable one;
+- **run 3, MSTR:** a frozen mark of 152.64, over 400 bps below the venue and
+  GeckoTerminal, flagged high-severity by two seats.
+
+In both the agent vetoed the single order *and* the plan, reasoning that a plan
+containing an order it must veto is vetoed as a whole. This is the veto 3.8
+predicted and did not get (F3.8.14), now twice in a row on live evidence. It is
+also the reason the fund has still never filled a stock order in a live cycle: in a
+closed session the equity marks are frozen, divergence against a live venue price
+grows, and price-integrity has something real to flag. **Whether an overall veto
+should follow from one bad order is the operator's to decide** — the brief was not
+touched here.
+
+### F8.R.5 — There is no command that runs a live cycle end to end
+
+The live pipeline is three commands, not one. `fund.run.decide` makes a live
+decision and executes nothing; `fund.run.cycle` executes but always decides with
+the fake venue and a scripted vote, and cannot be pointed at a record already made.
+So the *fills-and-book* half has never run against a live record — only against the
+committed capture (`make cycle-demo`) and, for real money, through
+`fund.run.liveleg`. That seam is 5.7 and 8.3, and it is unbuilt. Nothing was built
+here to close it.
+
+### F8.R.6 — The second round trip, and the 18 gwei a third time
+
+Between runs 2 and 3, on run 2's snapshot:
+
+| | Transaction | Block | Gave | Got | Gas | Settled in |
+|---|---|---|---|---|---|---|
+| ETH → USDG | `0x2d543870…23aa` | 67,532,677 | 0.00003 ETH | 0.078760 USDG | 0 | 17.1 s |
+| USDG → ETH | `0x871944…21a0` | 67,532,956 | 0.10 USDG | 0.000038077691442267 ETH | 0 | 19.9 s |
+
+Both confirmed from the EntryPoint's `UserOperationEvent` and the wallet's own
+logs and balance, never from the reply. The native leg again left exactly
+**18,000,000,000 wei** the logs do not name — the third observation at this size,
+after probe 0.10 and 5.2 (F5.2.3). The real book holds four live fills and
+reconciles exactly at NAV $1.29; $0.357 of the $1 live budget is used.
