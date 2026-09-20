@@ -4989,3 +4989,71 @@ logs and balance, never from the reply. The native leg again left exactly
 **18,000,000,000 wei** the logs do not name — the third observation at this size,
 after probe 0.10 and 5.2 (F5.2.3). The real book holds four live fills and
 reconciles exactly at NAV $1.29; $0.357 of the $1 live budget is used.
+
+---
+
+## The live cycle, in one command — 2026-09-20 01:25Z
+
+### F8.L.1 — One command took a live snapshot to a reconciling book in 252 seconds
+
+`PYTHONPATH=src python3 -m fund.run.cycle --live --db PATH --out DIR`, once,
+**$1.606257** measured against the credit balance:
+
+| Stage | What ran | Time |
+|---|---|---|
+| snapshot | live, block 67,545,399, captured and replayed from its own capture | ~150 s |
+| analysts | four seats live, in their own processes, **4 of 4 accepted** | ~60 s |
+| decision | live quotes, one live risk call, 62,163-token bundle | ~30 s |
+| execution | the chokepoint, ten paper fills, the book | ~2 s |
+
+Record `c55400f8…`, signed, authorizing against the published key, and it **replays
+byte for byte** from the cycle's own carried inputs. The paper book closed at NAV
+**$200.03**, `opened + realised + unrealised − costs = NAV` exactly, beside the real
+book's **$1.2858** in the same database — 14 confirmed orders, ten paper and four
+live, two books never added.
+
+**There is no second pipeline.** `cycle()` already took a venue; what it lacked was a
+risk credential. Given a live venue and a credential it decides live, and every line
+after the decision — the chokepoint, the treasurer's own process, the one write that
+puts a fill and its order state together — is the same code a paper cycle runs.
+
+**One bug this found before it cost anything:** a live quote is judged at an instant,
+and the cycle was judging at the instant it *started*. A live fetch takes seconds, so
+every quote would have been "fetched after the instant it is judged at" — age
+undetermined, which blocks. A live cycle now judges after the fetch. The paper path
+judges at the cycle's clock, as it always did, because the fake venue answers there.
+
+### F8.L.2 — The veto was the brief, and the brief's fix held on the first live run
+
+F8.R.4 recorded the risk agent vetoing two whole plans, each over a single flagged
+mark. The cause was `briefs/risk.v1.md`, which said only:
+
+> Then give an overall verdict. An overall veto vetoes every order.
+
+It named the consequence and never said when one is warranted, so an agent that had
+just vetoed one order concluded the plan containing it was unsafe — run 3 wrote
+exactly that: *"per the rules the whole plan is vetoed even though the other seven
+orders are individually fine."* The parser was faithful throughout: the model really
+did emit `OVERALL veto`, and the override rule applied it as documented.
+
+`risk.v2.md` adds what was missing — an overall veto is for a plan that is unsafe as a
+whole, and vetoing one order is not a reason to veto the plan, because the per-order
+veto has already stopped it. **No code changed.** A vetoed order is still blocked; a
+genuine overall veto still carries.
+
+On the first live run under v2, with two bad orders in a plan of twelve:
+
+| | Order | Outcome |
+|---|---|---|
+| 9 | META | **gate blocked** on price impact, 238 bps against a 50 bps limit, and risk vetoed it too |
+| 12 | MSTR | **risk vetoed** on price-integrity's flag: the mark at 152.64 is the outlier, not the venue |
+| rest | ten orders | approved, admitted, filled |
+
+and the overall line read: *"The plan as a whole follows from the reports and evidence;
+the two flawed orders are stopped individually and the rest stand on their own
+merits."* That is the judgement v1 made impossible to express.
+
+**A record names the brief it was decided under,** and `run/decide.replay` now rebuilds
+with that one rather than whichever is current, so every record written under v1 still
+replays byte for byte. Broken in a copy to prove it: pinning removed, three replay
+tests fail.
