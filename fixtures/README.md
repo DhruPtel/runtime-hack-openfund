@@ -1,4 +1,41 @@
-# Fixtures
+# `fixtures/` — recorded evidence
+
+What the fund produced, kept so it can be checked rather than believed.
+
+```
+  a live run                     what is kept                    what it proves
+  ──────────                     ────────────                    ──────────────
+  every adapter answer   ──►  snapshots/<block>-<sha>/   ──►  `make replay` rebuilds
+  at one pinned block         raw answers + the snapshot      the snapshot byte for
+                              built from them                 byte, network refused
+
+  four analyst calls     ──►  cycles/<time>/reports/     ──┐
+  the quotes it used     ──►  cycles/<time>/decision/     ─┼─►  the decision record
+  the risk reply         ──►  cycles/<time>/decision/     ─┤    rebuilds byte for byte
+  the config it read     ──►  decision/config/            ─┘    from these alone
+
+  one real swap          ──►  liveleg/<leg>/             ──►  what authorized it, and
+                              instruction + signature +       what the chain said
+                              the receipt it was booked from
+```
+
+## Why a decision rebuilds byte for byte
+
+A record names the sha256 of everything it was decided on: the snapshot, each report,
+each config file, the quotes, the risk reply, and the brief the risk agent read. Every
+one of those is kept **beside the record**, not referenced from the working tree.
+
+So a replay reads the config the record was decided under — not today's — and the brief
+that record names, not whichever is current. Tune a threshold tomorrow and last week's
+record still rebuilds to the same bytes, because the replay never sees the new value.
+That property is enforced by `tests/test_replay_cycle.py`, and it was once broken: an
+earlier replay silently read the working tree's `config/`, which would have made every
+"byte-identical" claim meaningless.
+
+A replay **never signs**. It rebuilds the bytes and compares; producing a signature
+would prove nothing except that the key still works.
+
+---
 
 `snapshots/` captures committed for replay (unit 1.9). Each directory is one
 live build's raw answers at the transport, its clock readings and config, and
@@ -42,6 +79,8 @@ Each is scanned for every declared credential before commit.
 
 It is **history, and nothing rebuilds it.** It predates the 3.8 sweep, which
 changed what a record holds, though its schema also says `openfund.decision/1`.
+## What is in each directory
+
 `accounting/` the known-answer accounting fixture (unit 4.11): thirteen
 constructed events, the answer worked out by hand in `answer.md` without running
 the ledger, and the same figures as data in `expected.json`.
