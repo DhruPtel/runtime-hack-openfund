@@ -2,7 +2,8 @@
   "version": 1,
   "_null_means": "unresolved, and blocks the check that depends on it. Never a default.",
 
-  "capital_usd": 200,
+  "capital_usd": 7,
+  "_capital_note": "What the paper book opens with, in USD of the cash leg. Set to the fund's own money at unit 8.x (2026-09-20), measured: on chain 4663 the execution wallet held 0.000476266534540929 ETH and 0.036216 USDG, $1.29 at the snapshot's Chainlink marks; on Base the same wallet held 5.07991 USDC and 0.000240960599709693 ETH, about $5.71, the ETH priced at 4663's ETH/USD feed because the fund reads no Base feed. $7.00 in total. It was 200 from 3.1 to 2026-09-20, which sized the simulation against money that did not exist. The paper book is still a simulation; what changed is that it is now the size of the real balance.",
   "intended_trade_size_usd": 25,
   "_sizing_resolved_by": "LESSONS 2026-09-17, capital and trade size",
 
@@ -27,7 +28,8 @@
   "_max_position_weight_note": "A fraction of the paper NAV: two $25 orders in one name at $200. The aggregator never raises a position past it, and a buy's step is a fraction of it (core/aggregate.py). Decimal text, never a float.",
   "turnover_max_bps": 10000,
   "_turnover_note": "A cycle may trade at most its paper NAV. Loose, and stated as loose (planning/SIMPLIFICATION.md).",
-  "cash_floor_usd": "20",
+  "cash_floor_usd": "0.70",
+  "_cash_floor_note": "Ten per cent of capital_usd, which is what 20 was of 200. Scaled with capital at 2026-09-20 rather than left at 20, which exceeds the whole book and would have dropped every buy.",
   "_cash_floor_note": "10% of the $200 paper capital. The aggregator funds new buys only from cash above it; the gate checks the plan against it. Decimal text.",
   "min_order_usd": "1",
   "_min_order_note": "An order under $1 is dust and is dropped when the plan is sized, so an unchanged view means no trade. Decimal text: as an integer, the boundary test would read every `x < 1` in the code as this threshold.",

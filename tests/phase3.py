@@ -41,9 +41,16 @@ ENTRIES = {a["asset"]["address"]: a for a in SNAPSHOT["assets"]}
 SYMBOLS = {a: e["asset"]["symbol"] for a, e in ENTRIES.items()}
 ADDRESS = {symbol: address for address, symbol in SYMBOLS.items()}
 CHAIN = SNAPSHOT["block"]["chain_id"]
-LIMITS = gates.Limits.from_config(config.load_json("thresholds.json"),
-                                  config.load_json("mandate.json"), config.load_json("models.json"))
-QUOTE_LIMITS = bankr_quote.Limits.from_thresholds(config.load_json("thresholds.json"))
+#: These tests exercise rules against a $200 book with a $20 floor, the paper book's
+#: size when they were written. Pinned here rather than read from `config/`, so that
+#: tuning what the fund trades with tunes the fund and not the meaning of a test.
+#: `capital_usd` became the operator's real holdings on 2026-09-20; the rules did not
+#: change, and neither did these.
+THRESHOLDS = {**config.load_json("thresholds.json"), "capital_usd": 200,
+              "cash_floor_usd": "20"}
+LIMITS = gates.Limits.from_config(THRESHOLDS, config.load_json("mandate.json"),
+                                  config.load_json("models.json"))
+QUOTE_LIMITS = bankr_quote.Limits.from_thresholds(THRESHOLDS)
 NAV = Decimal(200)
 
 #: When the fake venue answered, and when the plan judged it: both inputs, never a clock.

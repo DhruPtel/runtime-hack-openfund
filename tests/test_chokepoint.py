@@ -33,7 +33,8 @@ SNAPSHOT = json.loads(SNAPSHOT_BYTES)
 OTHER_SNAPSHOT = (REPO / "fixtures" / "snapshots" / "66852293-253315c0e691"
                   / "snapshot.json").read_bytes()
 MANDATE = mandate.load()
-THRESHOLDS = config.load_json("thresholds.json")
+THRESHOLDS = {**config.load_json("thresholds.json"), "capital_usd": 200,
+              "cash_floor_usd": "20"}  # the book these vectors were written against
 LIMITS = gates.Limits.from_config(THRESHOLDS, MANDATE, config.load_json("models.json"))
 PUBLISHED = keys.published_key()
 AT = Instant(int(datetime.fromisoformat(MANDATE["approved_at"].replace("Z", "+00:00"))

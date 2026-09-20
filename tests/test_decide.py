@@ -51,7 +51,7 @@ def gateway():
         g.close()
 
 
-def published(tmp_path) -> Path:
+def published(tmp_path, pin_book: bool = True) -> Path:
     """The config, with this test's scratch key published in `keys.json` in place of the
     fund's: the fund's key never signs fake inputs, and a record is checked against the
     published key only (S13)."""
@@ -60,6 +60,13 @@ def published(tmp_path) -> Path:
         Encoding.Raw, PublicFormat.Raw).hex()
     (tmp_path / "config" / "keys.json").write_text(json.dumps(
         {"decision_signing": {"algorithm": "ed25519", "public_key": public}}))
+    if pin_book:
+        # and the $200 book these expectations were written against: `capital_usd` is
+        # what the fund trades with, and it became real money on 2026-09-20. A caller
+        # comparing the carried config against `config/` byte for byte passes False.
+        thresholds = json.loads((tmp_path / "config" / "thresholds.json").read_text())
+        (tmp_path / "config" / "thresholds.json").write_text(json.dumps(
+            {**thresholds, "capital_usd": 200, "cash_floor_usd": "20"}))
     return tmp_path / "config"
 
 
@@ -178,7 +185,10 @@ def test_a_decision_reads_its_config_from_one_directory_and_carries_a_copy(tmp_p
     the same bytes, from the directory it was given (3.9: a replay passes the copy)."""
     expected = written()
     quotes, reply = quotes_file(tmp_path), scripted(expected)
-    done = run(tmp_path / "a", quotes=quotes, reply=reply)
+    # this one compares the carried config against `config/` byte for byte, so it
+    # reads the repository's thresholds and not the book the other tests pin
+    done = run(tmp_path / "a", quotes=quotes, reply=reply,
+               config_dir=published(tmp_path / "a", pin_book=False))
     carried = tmp_path / "a" / "out" / "config"
     assert sorted(p.name for p in carried.iterdir()) == sorted(record.CONFIG_FILES)
     assert done["record"]["config"] == {

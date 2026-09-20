@@ -49,6 +49,11 @@ def paper(tmp_path, **mandate_changes):
     """A config of the fund's, with this cycle's own scratch key published in it."""
     config_dir = tmp_path / "config"
     shutil.copytree(config.CONFIG_DIR, config_dir, dirs_exist_ok=True)
+    # the $200 book these cycles were written against, pinned here and not inherited:
+    # `capital_usd` is what the fund trades with, and it became real money on 2026-09-20
+    thresholds = json.loads((config_dir / "thresholds.json").read_text())
+    (config_dir / "thresholds.json").write_text(json.dumps(
+        {**thresholds, "capital_usd": 200, "cash_floor_usd": "20"}))
     key = Ed25519PrivateKey.generate()
     public = key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw).hex()
     (config_dir / "keys.json").write_text(json.dumps(
