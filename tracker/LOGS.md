@@ -1630,6 +1630,50 @@ timings — each a dash with its reason rather than a number.
 
 ---
 
+## Real capital, two stories, and prices you can trace to a feed
+**Date:** 2026-09-20 · **Commits:** ba3bfd3, fef5555
+
+**`capital_usd` is the operator's own money: $7.00**, measured rather than chosen — on
+4663 the wallet held 0.000476266534540929 ETH and 0.036216 USDG, $1.29 at the
+snapshot's own Chainlink marks; on Base, 5.07991 USDC and 0.000240960599709693 ETH,
+about $5.71 with the ETH priced at 4663's ETH/USD feed because the fund reads no Base
+feed. It was 200, which sized the simulation against money that did not exist. The
+paper book is still a simulation; it is now the size of the real balance. The cash
+floor scaled with it — ten per cent, as $20 was of $200 — because a $20 floor exceeds
+the whole book and would have dropped every buy.
+
+**Eleven tests encoded the old book** and now pin it themselves: a rule's test should
+not change meaning when a tunable is tuned. `tests/` was outside this batch's paths and
+that deviation is reported rather than hidden.
+
+**What the regenerated cycle cost.** A cycle at the new capital had to be made without
+spending, which means the fake venue and a scripted risk vote: the record says so, and
+it is signed by that cycle's own scratch key, because the fund's key never signs quotes
+that were not real. **The two live vetoes are not on the page as a result** — the live
+cycle that produced them was sized at $200. `--decision` now names which cycle the page
+shows, so either is one command away, and one live cycle at the new capital (about
+$1.20) would give real capital and real vetoes together.
+
+**The two stories, said in one line each** wherever they appear. On the basket and the
+paper book: *tokenized-stock execution is location-gated — the venue answered 403 to a
+real AAPL order, "Tokenized stocks (AAPL) are not available in your region", before
+broadcast and with no gas (F0.5.1) — so an equity order is sized, quoted and gated for
+real and filled on paper.* On the swaps: *each went through the same treasurer, the same
+chokepoint and the same reconciler as every other order; only the asset differed.*
+
+**The chain reads are visible.** Every price on the page now names the Chainlink feed it
+came from — "Robinhood AAPL / USD" beside the ticker, the feed's address on the price
+itself — and the card that answers "how do I verify this cycle" carries the pinned
+block, the chain, the price source and the attestation: 35 of 35 assets in this
+snapshot carry an identity and a beacon verdict, and `make selftest` attests all 235
+configured addresses live. The allocation trace names the feed behind the row it is
+explaining. All of it read from the snapshot already on disk; the page still makes no
+chain read of its own.
+
+12 headless checks over `file://` and 9 against the server, all passing. 795 tests.
+
+---
+
 ## State at close — 2026-09-20, Phase 5 built to 5.3; the live leg has run, and 5.4 is the stop
 
 **Read this first.** This note describes the repository at the commit that last
